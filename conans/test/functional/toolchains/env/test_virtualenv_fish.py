@@ -45,8 +45,11 @@ def test_virtualenv_fish():
 
 
 @pytest.mark.tool("fish")
-@pytest.mark.parametrize("fish_value, path_with_spaces", ([True, False], [False, True], [False, False], [True, True]))
-def test_transitive_tool_requires(fish_value, path_with_spaces):
+# TODO Pass variable with spaces
+@pytest.mark.parametrize("fish_value", [True, False])
+@pytest.mark.parametrize("path_with_spaces", [True, False])
+@pytest.mark.parametrize("value", ["Dulcinea del Toboso", "Dulcinea-Del-Toboso"])
+def test_transitive_tool_requires(fish_value, path_with_spaces, value):
     """Generate a tool require package, which provides and binary and a custom environment variable.
     Using fish, the binary should be available in the path, and the environment variable too.
     """
@@ -57,11 +60,11 @@ def test_transitive_tool_requires(fish_value, path_with_spaces):
     cmd_line = "echo ${LADY}" if platform.system() != "Windows" else "echo %LADY%"
     conanfile = str(GenConanfile("tool", "0.1.0")
                     .with_package_file("bin/pkg-echo-tool", cmd_line))
-    package_info = """
+    package_info = f"""
         os.chmod(os.path.join(self.package_folder, "bin", "pkg-echo-tool"), 0o777)
 
     def package_info(self):
-        self.buildenv_info.define("LADY", "Dulcinea-del-Toboso")
+        self.buildenv_info.define("LADY", "{value}")
     """
     conanfile += package_info
     client.save({"tool/conanfile.py": conanfile})
@@ -83,4 +86,9 @@ def test_transitive_tool_requires(fish_value, path_with_spaces):
     client.save({"app/conanfile.py": conanfile})
     client.run("create app")
 
-    assert "Dulcinea-del-Toboso" in client.out
+    assert value in client.out
+
+    # TODO: Check why is generating when running Conan create:
+    # - deactivate_conanbuildenv-release-armv8.fish
+    # - conanrunenv-release-armv8.fish
+    # No variables listed, only script_folder. Should not generate these files.

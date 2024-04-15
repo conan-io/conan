@@ -1,5 +1,7 @@
 import os
 import textwrap
+import random
+import string
 from jinja2 import Template
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -25,7 +27,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     bats, shs, ps1s, fishs = [], [], [], []
 
     accept = accepted_extensions or ("ps1", "bat", "sh", "fish")
-    # TODO: This implemantation is dirty, improve it
+    # TODO: This implementation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)
         if f.lower().endswith(".sh"):
@@ -34,7 +36,6 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
                 shs.append(f)
         elif f.lower().endswith(".fish"):
             if os.path.isfile(f) and "fish" in accept:
-                f = subsystem_path(subsystem, f)
                 fishs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f) and "bat" in accept:
@@ -55,7 +56,6 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
             if os.path.isfile(path_fish) and "fish" in accept:
-                path_fish = subsystem_path(subsystem, path_fish)
                 fishs.append(path_fish)
 
     if bool(bats + ps1s) + bool(shs) > 1 + bool(fishs) > 1:
@@ -75,8 +75,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
         return '{} && {}'.format(launchers, cmd)
     elif fishs:
         launchers = " && ".join('. "{}"'.format(f) for f in fishs)
-        print(f"LAUNCHERS: {launchers}")
-        return 'fish -c "{} && {}"'.format(launchers, cmd)
+        return 'fish -c "{}; and {}"'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
@@ -544,44 +543,44 @@ class EnvVars:
         """
         filepath, filename = os.path.split(file_location)
         function_name = f"deactivate_{Path(filename).stem}"
-        script_content = Template(textwrap.dedent("""\
+        group = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+        # TODO: Use local variables to store previous values when running the activate script instead
+        # https://fishshell.com/docs/current/language.html#variable-scope
+        # set -l varname $varname
+        script_content = Template(textwrap.dedent("""
             function {{ function_name }}
                 echo "echo Restoring environment"
-                {% for item in vars_unset %}
-                set -e {{ item }}
-                {% endfor %}
-                {% for item, value in vars_restore.items() %}
-                set -gx {{ item }} {{ value }}
+                for var in $conan_{{ group }}_del
+                    set -e $var
+                end
+                set -e $conan_{{ group }}_del
+                {% for item in vars_define.keys() %}
+                if set -q conan_{{ group }}_{{ item }}
+                    set -gx {{ item }} "$conan_{{ group }}_{{ item }}"
+                end
                 {% endfor %}
             end
-            {% for item, value in vars_prepend.items() %}
-            set -pgx {{ item }} '{{ value }}'
-            {% endfor %}
             {% for item, value in vars_define.items() %}
-            set -gx {{ item }} '{{ value }}'
+            if not set -q {{ item }}
+                set -ga conan_{{ group }}_del {{ item }}
+                set -gx {{ item }} "{{ value }}"
+            else
+                set -g conan_{{ group }}_{{ item }} "${{ item }}"
+                set -pgx {{ item }} "{{ value }}"
+            end
             {% endfor %}
             """))
         values = self._values.keys()
-        vars_unset = []
-        vars_restore = {}
-        vars_prepend = {}
         vars_define = {}
         for varname, varvalues in self._values.items():
-            current_value = os.getenv(varname)
             abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
             value = varvalues.get_str("", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
-            if current_value:
-                vars_restore[varname] = current_value
-                vars_prepend[varname] = value
-            else:
-                vars_define[varname] = value
-                vars_unset.append(varname)
+            vars_define[varname] = value
 
         if values:
-            content = script_content.render(function_name=function_name, vars_unset=vars_unset,
-                                            vars_restore=vars_restore, vars_prepend=vars_prepend,
+            content = script_content.render(function_name=function_name, group=group,
                                             vars_define=vars_define)
             save(file_location, content)
 
