@@ -137,19 +137,23 @@ def test_error_cmakedeps_transitive_build_requires():
     assert "tool/0.1: Created package" in c.out
 
 
-def test():
+def test_transitive_tool_requires_visible():
+    # https://github.com/conan-io/conan/issues/16058
+    # The "tool/0.1", even if visible doesn't generate any files in the "app" consumer side,
+    # even if the "app" declares it in build_context_activated, because it only works for direct
+    # dependencies. tool_requires(..., visible=True) only affects at the moment and version conflict
+    # detection
     c = TestClient()
     c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_package_type("application"),
-            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_tool_requirement("tool/0.1", visible=True),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_tool_requirement("tool/0.1",
+                                                                                   visible=True),
             "app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgb/0.1")
                                                           .with_settings("build_type")
-                                                          .with_tool_requirement("tool/0.1", visible=True)
                                                           .with_generator("CMakeDeps")})
 
     c.run("create tool")
     c.run("create pkgb")
     c.run("install app")
-    print(c.current_folder)
     cmake = c.load("app/pkgb-release-data.cmake")
+    # pkgb doesn't deepnd on tool, because it is a tool-require and not build-context activated
     assert "list(APPEND pkgb_FIND_DEPENDENCY_NAMES )" in cmake
-
