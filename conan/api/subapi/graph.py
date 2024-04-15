@@ -18,7 +18,7 @@ class GraphAPI:
                                       name=None, version=None, user=None, channel=None,
                                       update=None, remotes=None, lockfile=None,
                                       is_build_require=False):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
 
         if path.endswith(".py"):
             conanfile = app.loader.load_consumer(path,
@@ -62,7 +62,7 @@ class GraphAPI:
         :return: a graph Node, recipe=RECIPE_CONSUMER
         """
 
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         # necessary for correct resolution and update of remote python_requires
 
         loader = app.loader
@@ -88,7 +88,7 @@ class GraphAPI:
                                      lockfile, remotes, update, check_updates=False, python_requires=None):
         if not python_requires and not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         conanfile = app.loader.load_virtual(requires=requires,
                                             tool_requires=tool_requires,
                                             python_requires=python_requires,
@@ -151,7 +151,7 @@ class GraphAPI:
         return deps_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
-                   update=False, check_update=False):
+                   update=None, check_update=False):
         """ Compute the dependency graph, starting from a root package, evaluation the graph with
         the provided configuration in profile_build, and profile_host. The resulting graph is a
         graph of recipes, but packages are not computed yet (package_ids) will be empty in the
@@ -169,7 +169,7 @@ class GraphAPI:
         :param check_update: For "graph info" command, check if there are recipe updates
         """
         ConanOutput().title("Computing dependency graph")
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
 
         assert profile_host is not None
         assert profile_build is not None
@@ -196,7 +196,7 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        conan_app = ConanApp(self.conan_api)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)

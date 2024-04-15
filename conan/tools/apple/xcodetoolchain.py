@@ -57,7 +57,7 @@ class XcodeToolchain(object):
     @property
     def _cppstd(self):
         from conan.tools.build.flags import cppstd_flag
-        cppstd = cppstd_flag(self._conanfile.settings)
+        cppstd = cppstd_flag(self._conanfile)
         if cppstd.startswith("-std="):
             return cppstd[5:]
         return cppstd

@@ -31,7 +31,7 @@ def add_lockfile_args(parser):
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
-                        help="Lock package-id and package-revision information")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
     parser.add_argument("--lockfile-overrides",
@@ -47,13 +47,13 @@ def add_common_install_arguments(parser):
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
 
-    update_help = ("Will check the remote and in case a newer version and/or revision of "
-                   "the dependencies exists there, it will install those in the local cache. "
+    update_help = ("Will install newer versions and/or revisions in the local cache "
+                   "for the given reference, or all in case no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
-    parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help=update_help)
+
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
 
 
@@ -130,8 +130,6 @@ def validate_common_graph_args(args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
-    if args.channel and not args.user:
-        raise ConanException("Can't specify --channel without --user")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
     if args.path and (args.requires or args.tool_requires):

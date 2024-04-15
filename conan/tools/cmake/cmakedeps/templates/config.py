@@ -37,6 +37,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     @property
     def template(self):
         return textwrap.dedent("""\
+        {%- macro pkg_var(pkg_name, var, config_suffix) -%}
+             {{'${'+pkg_name+'_'+var+config_suffix+'}'}}
+        {%- endmacro -%}
         ########## MACROS ###########################################################################
         #############################################################################################
 
@@ -57,7 +60,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         check_build_type_defined()
 
-        foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
+        foreach(_DEPENDENCY {{ pkg_var(pkg_name, 'FIND_DEPENDENCY_NAMES', '') }} )
             # Check that we have not already called a find_package with the transitive dependency
             if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
                 find_dependency({{ '${_DEPENDENCY}' }} REQUIRED ${${_DEPENDENCY}_FIND_MODE})
@@ -65,13 +68,13 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         endforeach()
 
         set({{ file_name }}_VERSION_STRING "{{ version }}")
-        set({{ file_name }}_INCLUDE_DIRS {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
-        set({{ file_name }}_INCLUDE_DIR {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
-        set({{ file_name }}_LIBRARIES {{ '${' + pkg_name + '_LIBRARIES' + config_suffix + '}' }} )
-        set({{ file_name }}_DEFINITIONS {{ '${' + pkg_name + '_DEFINITIONS' + config_suffix + '}' }} )
+        set({{ file_name }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ file_name }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ file_name }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
+        set({{ file_name }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
 
         # Only the first installed configuration is included to avoid the collision
-        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
+        foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
@@ -80,7 +83,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         # Check that the specified components in the find_package(Foo COMPONENTS x y z) are there
         # This is the variable filled by CMake with the requested components in find_package
         if({{ file_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
+            foreach(_FIND_COMPONENT {{ pkg_var(file_name, 'FIND_COMPONENTS', '') }})
                 if (TARGET ${_FIND_COMPONENT})
                     message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
