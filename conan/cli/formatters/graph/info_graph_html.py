@@ -108,7 +108,8 @@ graph_info_html = r"""
                     if (filter_pkgs) {
                         let patterns = filter_pkgs.split(',')
                             .map(pattern => pattern.trim())
-                            .filter(pattern => pattern.length > 0);
+                            .filter(pattern => pattern.length > 0)
+                            .map(pattern => pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
                         if (patterns.some(pattern => label.match(pattern))) {
                             continue;
                         }
@@ -129,7 +130,8 @@ graph_info_html = r"""
                     if (search_pkgs) {
                         let patterns = search_pkgs.split(',')
                             .map(pattern => pattern.trim())
-                            .filter(pattern => pattern.length > 0);
+                            .filter(pattern => pattern.length > 0)
+                            .map(pattern => pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
                         if (patterns.some(pattern => label.match(pattern))) {
                             borderWidth = 3;
                             borderColor = "Magenta";
