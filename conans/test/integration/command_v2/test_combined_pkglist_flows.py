@@ -1,9 +1,10 @@
 import json
+from collections import OrderedDict
 
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class TestListUpload:
@@ -166,6 +167,92 @@ class TestGraphInfoToPkgList:
         pkglist = json.loads(c.stdout)
         assert len(pkglist["Local Cache"]) == 0
         assert len(pkglist["default"]) == 2
+
+
+class TestPkgListFindRemote:
+    """ we can recover a list of remotes for an already installed graph, for metadata download
+    """
+    def test_graph_2_pkg_list_remotes(self):
+        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create zlib")
+        c.run("create app ")
+        c.run("upload zlib* -c -r=default")
+        c.run("upload zlib* -c -r=remote2")
+        c.run("upload app* -c -r=remote2")
+
+        # This install, packages will be in the cache
+        c.run("install --requires=app/1.0 --format=json", redirect_stdout="graph.json")
+        # So list, will not have remote at all
+        c.run("list --graph=graph.json --format=json", redirect_stdout="pkglist.json")
+
+        pkglist = json.loads(c.load("pkglist.json"))
+        assert len(pkglist["Local Cache"]) == 2
+        assert "default" not in pkglist  # The remote doesn't even exist
+
+        # Lets now compute a list finding in the remotes
+        c.run("pkglist find-remote pkglist.json --format=json", redirect_stdout="remotepkg.json")
+        pkglist = json.loads(c.stdout)
+        assert "Local Cache" not in pkglist
+        assert len(pkglist["default"]) == 1
+        assert "zlib/1.0" in pkglist["default"]
+        assert len(pkglist["remote2"]) == 2
+        assert "app/1.0" in pkglist["remote2"]
+        assert "zlib/1.0" in pkglist["remote2"]
+
+        c.run("download --list=remotepkg.json -r=default --metadata=*")
+        assert "zlib/1.0: Retrieving recipe metadata from remote 'default'" in c.out
+        assert "zlib/1.0: Retrieving package metadata" in c.out
+        c.run("download --list=remotepkg.json -r=remote2 --metadata=*")
+        assert "app/1.0: Retrieving recipe metadata from remote 'remote2'" in c.out
+        assert "app/1.0: Retrieving package metadata" in c.out
+
+
+class TestPkgListMerge:
+    """ deep merge lists
+    """
+    def test_graph_2_pkg_list_remotes(self):
+        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        c = TestClient(servers=servers, inputs=2 * ["admin", "password"])
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("build_type"),
+                "bzip2/conanfile.py": GenConanfile("bzip2", "1.0").with_settings("build_type"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0", "bzip2/1.0")
+                                                              .with_settings("build_type")})
+        c.run("create zlib")
+        c.run("create bzip2")
+        c.run("create app ")
+
+        c.run("list zlib:* --format=json", redirect_stdout="list1.json")
+        c.run("list bzip2:* --format=json", redirect_stdout="list2.json")
+        c.run("list app:* --format=json", redirect_stdout="list3.json")
+        c.run("pkglist merge --list=list1.json --list=list2.json --list=list3.json --format=json",
+              redirect_stdout="release.json")
+        final = json.loads(c.stdout)
+        assert "app/1.0" in final["Local Cache"]
+        assert "zlib/1.0" in final["Local Cache"]
+        assert "bzip2/1.0" in final["Local Cache"]
+
+        c.run("create zlib -s build_type=Debug")
+        c.run("create bzip2 -s build_type=Debug")
+        c.run("create app -s build_type=Debug")
+        c.run("list *:* -fs build_type=Debug --format=json", redirect_stdout="debug.json")
+        c.run("pkglist merge --list=release.json --list=debug.json --format=json",
+              redirect_stdout="release.json")
+        final = json.loads(c.stdout)
+        rev = final["Local Cache"]["zlib/1.0"]["revisions"]["11f74ff5f006943c6945117511ac8b64"]
+        assert len(rev["packages"]) == 2  # Debug and Release
+        settings = rev["packages"]["efa83b160a55b033c4ea706ddb980cd708e3ba1b"]["info"]["settings"]
+        assert settings == {"build_type": "Release"}
+        settings = rev["packages"]["9e186f6d94c008b544af1569d1a6368d8339efc5"]["info"]["settings"]
+        assert settings == {"build_type": "Debug"}
+        rev = final["Local Cache"]["bzip2/1.0"]["revisions"]["9e0352b3eb99ba4ac79bc7eeae2102c5"]
+        assert len(rev["packages"]) == 2  # Debug and Release
+        settings = rev["packages"]["efa83b160a55b033c4ea706ddb980cd708e3ba1b"]["info"]["settings"]
+        assert settings == {"build_type": "Release"}
+        settings = rev["packages"]["9e186f6d94c008b544af1569d1a6368d8339efc5"]["info"]["settings"]
+        assert settings == {"build_type": "Debug"}
 
 
 class TestDownloadUpload:
