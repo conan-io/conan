@@ -539,38 +539,47 @@ class EnvVars:
 
         It generates a function to deactivate the environment variables configured in the Environment object.
 
+        # TODO: Honor append and prepend paths from recipe to the fish shell syntax.
+
         :param file_location: The path to the file to save the fish script.
         """
         filepath, filename = os.path.split(file_location)
         function_name = f"deactivate_{Path(filename).stem}"
         group = "".join(random.choices(string.ascii_letters + string.digits, k=8))
         script_content = Template(textwrap.dedent("""
+            function remove_path
+                set -l variable_name $argv[1]
+                set -l to_remove $argv[2]
+                if set -l index (contains -i $to_remove $$variable_name)
+                    set -l list (string split " " $$variable_name)
+                    set -e list[$index]
+                    set -gx $variable_name $list
+                end
+            end
             function {{ function_name }}
                 echo "echo Restoring environment"
                 for var in $conan_{{ group }}_del
-                    set -e $var
+                    set -e var
                 end
-                set -e $conan_{{ group }}_del
+                set -e conan_{{ group }}_del
                 {% for item in vars_define.keys() %}
                 if set -q conan_{{ group }}_{{ item }}
-                    set -gx {{ item }} "$conan_{{ group }}_{{ item }}"
+                    remove_path {{ item }} $conan_{{ group }}_{{ item }}
+                    set -e conan_{{ group }}_{{ item }}
                 end
                 {% endfor %}
             end
+
             {% for item, value in vars_define.items() %}
-            {% if item == "PATH" %}
-            set -g conan_{{ group }}_{{ item }} "${{ item }}"
-            fish_add_path -pg "{{ value }}"
-            {% else %}
             if not set -q {{ item }}
                 set -ga conan_{{ group }}_del {{ item }}
                 set -gx {{ item }} "{{ value }}"
             else
-                set -g conan_{{ group }}_{{ item }} "${{ item }}"
+                set -g conan_{{ group }}_{{ item }} "{{ value }}"
                 set -pgx {{ item }} "{{ value }}"
             end
-            {% endif %}
             {% endfor %}
+            exit 0
             """))
         values = self._values.keys()
         vars_define = {}
