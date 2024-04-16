@@ -81,3 +81,17 @@ def test_settings_user_convert_list_dict():
     c.run("install . -s arch=x86_64 -s arch.subarch=2 ")
     assert "arch=x86_64" in c.out
     assert "arch.subarch=2" in c.out
+
+
+def test_settings_user_breaking_universal_binaries():
+    # If you had a settings_user.yml with a custom architecture wit will error
+    # in the Apple block of CMakeToolchain
+    # https://github.com/conan-io/conan/issues/16086#issuecomment-2059118224
+    c = TestClient()
+    settings_user = textwrap.dedent("""\
+        arch: [universal]
+        """)
+    save(os.path.join(c.cache_folder, "settings_user.yml"), settings_user)
+    c.save({"conanfile.py": GenConanfile().with_settings("os").with_settings("arch").with_generator("CMakeToolchain")})
+    c.run('install . -s="arch=universal"')
+    assert "CMakeToolchain generated: conan_toolchain.cmake" in c.out
