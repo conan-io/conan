@@ -539,7 +539,10 @@ class EnvVars:
 
         It generates a function to deactivate the environment variables configured in the Environment object.
 
-        # TODO: Honor append and prepend paths from recipe to the fish shell syntax.
+        TODO: Honor append and prepend paths from recipe to the fish shell syntax.
+        buildenv_info.append_path should be fish set -a
+        buildenv_info.prepend_path should be fish set -p
+        buildenv_info.define_path should be fish set
 
         :param file_location: The path to the file to save the fish script.
         """
