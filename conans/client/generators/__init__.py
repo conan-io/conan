@@ -186,9 +186,11 @@ def _generate_aggregated_env(conanfile):
         if fishs:
             def fish_content(files):
                 return ". " + " && . ".join('"{}"'.format(s) for s in files)
-            filename = "conan{}.fish".format(group)
-            generated.append(filename)
-            save(os.path.join(conanfile.generators_folder, filename), fish_content(fishs))
+            fishs = [it for it in fishs if os.path.exists(it)]
+            if fishs:
+                filename = "conan{}.fish".format(group)
+                generated.append(filename)
+                save(os.path.join(conanfile.generators_folder, filename), fish_content(fishs))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
