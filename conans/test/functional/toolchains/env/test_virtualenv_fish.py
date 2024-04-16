@@ -25,6 +25,7 @@ def test_define_new_vars():
     def package_info(self):
         self.buildenv_info.define_path("MYPATH1", "/path/to/ar")
         self.buildenv_info.define("MYVAR1", "myvalue")
+        self.buildenv_info.define("MYVAR2", "var with spaces")
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
@@ -43,14 +44,17 @@ def test_define_new_vars():
         buildenv = f.read()
         assert 'set -gx MYPATH1 "/path/to/ar"' in buildenv
         assert 'set -gx MYVAR1 "myvalue"' in buildenv
+        assert 'set -gx MYVAR2 "var with spaces"' in buildenv
 
     client.run_command("fish -c 'source conanbuildenv.fish && set'")
     assert 'MYPATH1 /path/to/ar' in client.out
     assert 'MYVAR1 myvalue' in client.out
+    assert "MYVAR2 'var with spaces'" in client.out
 
     client.run_command('fish -c ". conanbuildenv.fish && set && deactivate_conanbuildenv && set"')
     assert str(client.out).count('MYPATH1 /path/to/ar') == 1
     assert str(client.out).count('MYVAR1 myvalue') == 1
+    assert str(client.out).count("MYVAR2 'var with spaces'") == 1
 
 
 @pytest.mark.tool("fish")
