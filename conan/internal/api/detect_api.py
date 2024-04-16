@@ -375,17 +375,16 @@ def detect_default_compiler():
             return detect_suncc_compiler(command)
         if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
                 and "clang" not in command):
-            return detect_msvc_compiler(command)
+            return detect_cl_compiler(command)
 
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None, None, None
 
     if platform.system() == "Windows":
-        version = _detect_vs_ide_version()
-        version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
-        if version:
-            return 'msvc', Version(version), None
+        compiler, version, compiler_exe = detect_msvc_compiler()
+        if compiler:
+            return compiler, version, compiler_exe
 
     if platform.system() == "SunOS":
         sun_cc, sun_cc_version, compiler_exe = detect_suncc_compiler()
@@ -520,7 +519,15 @@ def detect_clang_compiler(compiler_exe="clang"):
         return None, None, None
 
 
-def detect_msvc_compiler(compiler_exe="cl"):
+def detect_msvc_compiler():
+    version = _detect_vs_ide_version()
+    version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
+    if version:
+        return 'msvc', Version(version), None
+    return None, None, None
+
+
+def detect_cl_compiler(compiler_exe="cl"):
     """ only if CC/CXX env-vars are defined pointing to cl.exe, and the VS environment must
     be active to have them in the path
     """
