@@ -65,10 +65,12 @@ def test_config_install():
 def test_config_install_conanignore():
     tc = TestClient()
     conanignore = textwrap.dedent("""
-    a/*
+    a/*  # This is a tests
     b/c/*
     d/*
     tests/*
+    # Next line is commented out, so it should be ignored
+    # other_tests/*
     """)
     tc.save({
         'config_folder/.conanignore': conanignore,
