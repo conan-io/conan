@@ -62,8 +62,8 @@ class GnuToolchain:
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
 
-        # Cross build triplets
-        self.cross_build = {
+        # Host/Build triplets
+        self.triplets_info = {
             "host": {"triplet": self._conanfile.conf.get("tools.gnu:host_triplet")},
             "build": {"triplet": self._conanfile.conf.get("tools.gnu:build_triplet")}
         }
@@ -71,15 +71,15 @@ class GnuToolchain:
         if is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
             # Host triplet
-            if not self.cross_build["host"]["triplet"]:
+            if not self.triplets_info["host"]["triplet"]:
                 os_host = conanfile.settings.get_safe("os")
                 arch_host = conanfile.settings.get_safe("arch")
-                self.cross_build["host"] = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+                self.triplets_info["host"] = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
-            if not self.cross_build["build"]["triplet"]:
+            if not self.triplets_info["build"]["triplet"]:
                 os_build = conanfile.settings_build.get_safe('os')
                 arch_build = conanfile.settings_build.get_safe('arch')
-                self.cross_build["build"] = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+                self.triplets_info["build"] = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
@@ -248,7 +248,7 @@ class GnuToolchain:
 
     def _get_default_triplets(self):
         triplets = {}
-        for context, info in self.cross_build.items():
+        for context, info in self.triplets_info.items():
             if info.get("triplet") is not None:
                 triplets[f"--{context}"] = info["triplet"]
         return triplets
