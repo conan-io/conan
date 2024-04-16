@@ -47,7 +47,7 @@ graph_info_html = r"""
                     <input type="search" placeholder="Search packages..." oninput="searchPackages(this)">
                 </div>
                  <div>
-                    <input type="search" placeholder="Filter packages..." title="Add a comma to filter an additional package" oninput="filterPackages(this)">
+                    <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
                 </div>
                 <div>
                     <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
@@ -64,7 +64,7 @@ graph_info_html = r"""
             let hide_build = false;
             let hide_test = false;
             let search_pkgs = null;
-            let filter_pkgs = null;
+            let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
             let color_map = {Cache: "SkyBlue",
@@ -105,8 +105,8 @@ graph_info_html = r"""
                         if (existing) continue;
                         collapsed_packages[label] = node_id;
                     }
-                    if (filter_pkgs) {
-                        let patterns = filter_pkgs.split(',')
+                    if (excluded_pkgs) {
+                        let patterns = excluded_pkgs.split(',')
                             .map(pattern => pattern.trim())
                             .filter(pattern => pattern.length > 0)
                             .map(pattern => pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
@@ -316,8 +316,8 @@ graph_info_html = r"""
                 search_pkgs = e.value;
                 draw();
             }
-            function filterPackages(e) {
-                filter_pkgs = e.value;
+            function excludePackages(e) {
+                excluded_pkgs = e.value;
                 draw();
             }
             function showPackageType(e) {
