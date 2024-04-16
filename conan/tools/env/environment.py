@@ -554,9 +554,7 @@ class EnvVars:
                 set -l variable_name $argv[1]
                 set -l to_remove $argv[2]
                 if set -l index (contains -i $to_remove $$variable_name)
-                    set -l list (string split " " $$variable_name)
-                    set -e list[$index]
-                    set -gx $variable_name $list
+                    set -e {$variable_name}[$index]
                 end
             end
             function {{ function_name }}
