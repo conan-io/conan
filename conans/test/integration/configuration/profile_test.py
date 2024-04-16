@@ -524,7 +524,8 @@ def test_consumer_specific_settings():
         # Verify the cmake toolchain takes Debug
         assert "I'm dep and my shared is False" in client.out
         presets = json.loads(client.load("CMakePresets.json"))
-        assert presets["configurePresets"][0]["cacheVariables"]['CMAKE_BUILD_TYPE'] == "Debug"
+        expected = {"value": "Debug", "type": "STRING"}
+        assert presets["configurePresets"][0]["cacheVariables"]['CMAKE_BUILD_TYPE'] == expected
 
 
 def test_create_and_priority_of_consumer_specific_setting():
