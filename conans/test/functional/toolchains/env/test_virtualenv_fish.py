@@ -48,13 +48,13 @@ def test_define_new_vars():
     assert 'MYPATH1 /path/to/ar' in client.out
     assert 'MYVAR1 myvalue' in client.out
 
-    client.run_command("fish -c 'source conanbuildenv.fish && set && deactivate_conanbuildenv && set'")
+    client.run_command('fish -c ". conanbuildenv.fish && set && deactivate_conanbuildenv && set"')
     assert str(client.out).count('MYPATH1 /path/to/ar') == 1
     assert str(client.out).count('MYVAR1 myvalue') == 1
 
 
 @pytest.mark.tool("fish")
-def test_append_path():
+def test_prepend_path():
     """Test when appending to an existing path in buildenv_info.
 
     Path should be available as environment variable in the buildenv script, including the new value

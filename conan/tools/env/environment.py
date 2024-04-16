@@ -559,7 +559,7 @@ class EnvVars:
             function {{ function_name }}
                 echo "echo Restoring environment"
                 for var in $conan_{{ group }}_del
-                    set -e var
+                    set -e $var
                 end
                 set -e conan_{{ group }}_del
                 {% for item in vars_define.keys() %}
