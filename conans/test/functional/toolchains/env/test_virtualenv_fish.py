@@ -16,6 +16,8 @@ def test_define_new_vars():
 
     Variables should be available as environment variables in the buildenv script.
     And, should be deleted when deactivate_conanbuildenv is called.
+
+    Avoided pytest.mark.parametrize to check how it works when having multiple definitions at same time.
     """
     cache_folder = os.path.join(temp_folder(), "[sub] folder")
     client = TestClient(cache_folder)
@@ -58,14 +60,14 @@ def test_define_new_vars():
 
 
 @pytest.mark.tool("fish")
-def test_prepend_path():
+@pytest.mark.parametrize("fake_path", ["/path/to/fake/folder", "/path/with space/to/folder"])
+def test_prepend_path(fake_path):
     """Test when appending to an existing path in buildenv_info.
 
     Path should be available as environment variable in the buildenv script, including the new value
     as first element.
     Once deactivate_conanbuildenv is called, the path should be restored as before.
     """
-    fake_path = "/path/to/fake/folder"
     cache_folder = os.path.join(temp_folder(), "[sub] folder")
     client = TestClient(cache_folder)
     conanfile = str(GenConanfile("pkg", "0.1"))
@@ -93,14 +95,13 @@ def test_prepend_path():
         assert f'set -pgx PATH "{fake_path}"' in buildenv
 
     client.run_command(f'fish -c ". conanbuildenv.fish; set"')
-    assert f'PATH {fake_path}' in client.out
+    assert f"PATH '{fake_path}'" in client.out
 
     client.run_command(f'fish -c ". conanbuildenv.fish; deactivate_conanbuildenv; set"')
-    assert f'PATH {fake_path}' not in client.out
+    assert f"PATH '{fake_path}'" not in client.out
 
 
 @pytest.mark.tool("fish")
-# TODO Pass variable with spaces
 @pytest.mark.parametrize("fish_value", [True, False])
 @pytest.mark.parametrize("path_with_spaces", [True, False])
 @pytest.mark.parametrize("value", ["Dulcinea del Toboso", "Dulcinea-Del-Toboso"])

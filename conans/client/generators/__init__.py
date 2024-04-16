@@ -169,7 +169,7 @@ def _generate_aggregated_env(conanfile):
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
             elif env_script.endswith(".fish"):
-                path = os.path.relpath(path, conanfile.generators_folder)
+                path = os.path.abspath(path)
                 fishs.append(path)
             elif env_script.endswith(".ps1"):
                 path = os.path.relpath(path, conanfile.generators_folder)

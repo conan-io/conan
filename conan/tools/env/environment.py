@@ -74,7 +74,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
     elif fishs:
-        launchers = " && ".join('. "{}"'.format(f) for f in fishs)
+        launchers = " && ".join('. \\"{}\\"'.format(f) for f in fishs)
         return 'fish -c "{}; and {}"'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
