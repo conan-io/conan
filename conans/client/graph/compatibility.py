@@ -30,26 +30,45 @@ from conan.errors import ConanException
 def cppstd_compat(conanfile):
     # It will try to find packages with all the cppstd versions
     extension_properties = getattr(conanfile, "extension_properties", {})
-    if extension_properties.get("compatibility_cppstd") is False:
-        return []
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
     cppstd = conanfile.settings.get_safe("compiler.cppstd")
-    if not compiler or not compiler_version or not cppstd:
+    if not compiler or not compiler_version:
         return []
     base = dict(conanfile.settings.values_list)
-    cppstd_possible_values = supported_cppstd(conanfile)
-    if cppstd_possible_values is None:
-        conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
-        return []
-    ret = []
-    for _cppstd in cppstd_possible_values:
-        if _cppstd is None or _cppstd == cppstd:
-            continue
-        configuration = base.copy()
-        configuration["compiler.cppstd"] = _cppstd
-        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
+    factors = []  # List of list, each sublist is a potential combination
+    if cppstd is not None and extension_properties.get("compatibility_cppstd") is not False:
+        cppstd_possible_values = supported_cppstd(conanfile)
+        if cppstd_possible_values is None:
+            conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
+        else:
+            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
 
+    if compiler == "msvc":
+        msvc_fallback = {"193": "194", "194": "193"}.get(compiler_version)
+        if msvc_fallback:
+            factors.append([{"compiler.version": msvc_fallback}])
+
+    conanfile.output.info(f"FACTORS {factors}")
+    combinations = []
+    for factor in factors:
+        if not combinations:
+            combinations = factor
+            continue
+        new_combinations = []
+        for comb in combinations:
+            for f in factor:
+                comb = comb.copy()
+                comb.update(f)
+                new_combinations.append(comb)
+        combinations = new_combinations
+
+    conanfile.output.info(f"COMbINATIONS {combinations}")
+    ret = []
+    for comb in combinations:
+        configuration = base.copy()
+        configuration.update(comb)
+        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
     return ret
 """
 
