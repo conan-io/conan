@@ -102,9 +102,7 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("build .", assert_error=True)  # No CMakeLists.txt
-        toolchain_path = os.path.join(client.current_folder,
-                                      "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
+        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
     @pytest.mark.tool("visual_studio")
