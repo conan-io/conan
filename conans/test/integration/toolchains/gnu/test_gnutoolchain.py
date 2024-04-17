@@ -323,8 +323,8 @@ def test_autotools_crossbuild_ux():
         def generate(self):
             tc = GnuToolchain(self)
             if cross_building(self):
-                host_arch = tc.cross_build["host"]["machine"]
-                build_arch = tc.cross_build["build"]["machine"]
+                host_arch = tc.triplets_info["host"]["machine"]
+                build_arch = tc.triplets_info["build"]["machine"]
                 if host_arch and build_arch:
                     tc.configure_args["--host"] = f"{host_arch}-my-triplet-host"
                     tc.configure_args["--build"] = f"{build_arch}-my-triplet-build"
@@ -344,12 +344,9 @@ def test_autotools_crossbuild_ux():
     assert build_flags[0] == '--build=arm-my-triplet-build'
 
 
-def test_msvc_and_compilers_wrappers_build_context():
+def test_msvc_profile_defaults():
     """
-    Tests how GnuToolchain manages the build context profile if the build profile is
-    specifying another compiler wrapper path (using conf).
-
-    Apart from that, it tests the behavior of GnuToolchain and MSVC (defualt env variables).
+    Tests how GnuToolchain manages MSVC profile and its default env variables.
     """
     profile = textwrap.dedent("""\
     [settings]
@@ -365,29 +362,6 @@ def test_msvc_and_compilers_wrappers_build_context():
     # Fake installation path
     tools.microsoft.msbuild:installation_path={{os.getcwd()}}
     """)
-    tool = textwrap.dedent("""\
-    from conan import ConanFile
-    class toolRecipe(ConanFile):
-        name = "automake"
-        version = "1.0"
-        # Binary configuration
-        settings = "os", "compiler", "build_type", "arch"
-        generators = "GnuToolchain"
-
-        def package_info(self):
-            self.cpp_info.libdirs = []
-            self.cpp_info.includedirs = []
-            self.cpp_info.frameworkdirs = []
-            self.cpp_info.resdirs = ["res"]
-
-            # Defining some compiler wrappers
-            wrappers = {
-                "c": r"c\my\win\c_wrapper",
-                "cpp": r"c\my\win\cpp_wrapper",
-                "ar": r"c\my\win\lib_wrapper"
-            }
-            self.conf_info.define("tools.build:compiler_wrappers", wrappers)
-    """)
     # Consumer with default values
     consumer = textwrap.dedent("""\
     import os
@@ -400,16 +374,15 @@ def test_msvc_and_compilers_wrappers_build_context():
         # Binary configuration
         settings = "os", "compiler", "build_type", "arch"
         generators = "GnuToolchain"
-        tool_requires = "automake/1.0"
 
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
             content = load(self, toolchain)
-            # Default values
-            assert r'set "CC=c\my\win\c_wrapper clang"' in content
-            assert r'set "CXX=c\my\win\cpp_wrapper clang++"' in content
+            # Default values and conf ones
+            assert r'set "CC=clang"' in content  # conf value has precedence
+            assert r'set "CXX=clang++"' in content  # conf value has precedence
             assert 'set "LD=link -nologo"' in content
-            assert r'set "AR=c\my\win\lib_wrapper lib"' in content
+            assert r'set "AR=lib"' in content
             assert 'set "NM=dumpbin -symbols"' in content
             assert 'set "OBJDUMP=:"' in content
             assert 'set "RANLIB=:"' in content
@@ -418,10 +391,8 @@ def test_msvc_and_compilers_wrappers_build_context():
     client = TestClient()
     client.save({
         "profile": profile,
-        "automake/conanfile.py": tool,
         "consumer/conanfile.py": consumer
     })
-    client.run("export automake")
     client.run("create consumer -pr:a profile --build=missing")
     # Consumer changing default values
     consumer = textwrap.dedent("""\
@@ -435,10 +406,13 @@ def test_msvc_and_compilers_wrappers_build_context():
         version = "1.0"
         # Binary configuration
         settings = "os", "compiler", "build_type", "arch"
-        tool_requires = "automake/1.0"
 
         def generate(self):
             tc = GnuToolchain(self)
+            # Prepending compiler wrappers
+            tc.extra_env.prepend("CC", "compile")
+            tc.extra_env.prepend("CXX", "compile")
+            tc.extra_env.prepend("AR", "ar-lib")
             tc.extra_env.append("LD", "-fixed")
             tc.extra_env.define("OBJDUMP", "other-value")
             tc.extra_env.unset("RANLIB")
@@ -448,10 +422,10 @@ def test_msvc_and_compilers_wrappers_build_context():
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
             content = load(self, toolchain)
             # Default values
-            assert r'set "CC=c\my\win\c_wrapper clang"' in content
-            assert r'set "CXX=c\my\win\cpp_wrapper clang++"' in content
+            assert r'set "CC=compile clang"' in content
+            assert r'set "CXX=compile clang++"' in content
             assert 'set "LD=link -nologo -fixed"' in content  # appended new value
-            assert r'set "AR=c\my\win\lib_wrapper lib"' in content
+            assert r'set "AR=ar-lib lib"' in content
             assert 'set "NM=dumpbin -symbols"' in content
             assert 'set "OBJDUMP=other-value"' in content  # redefined
             assert 'set "RANLIB=:"' not in content  # removed

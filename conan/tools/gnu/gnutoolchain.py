@@ -1,9 +1,6 @@
-from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, \
-    apple_sdk_path, resolve_apple_flags
-from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
@@ -37,7 +34,6 @@ class GnuToolchain:
         self._namespace = namespace
         self._is_apple_system = is_apple_os(self._conanfile)
         self._prefix = prefix
-
         # Extra flags
         self.extra_cxxflags = []
         self.extra_cflags = []
@@ -147,17 +143,6 @@ class GnuToolchain:
                     # https://github.com/conan-io/conan/issues/13780
                     compiler = unix_path(self._conanfile, compiler)
                     extra_env_vars[env_var] = compiler  # User/tools ones have precedence
-        # Now, let's analyze the compiler wrappers if exist
-        compilers_wrappers = self._conanfile.conf.get("tools.build:compiler_wrappers", default={},
-                                                      check_type=dict)
-        if compilers_wrappers:
-            for comp, env_var in compilers_mapping.items():
-                if comp in compilers_wrappers:
-                    compiler_wrap = unix_path(self._conanfile, compilers_wrappers[comp])
-                    if env_var in extra_env_vars:
-                        extra_env_vars[env_var] = f"{compiler_wrap} {extra_env_vars[env_var]}"
-                    else:
-                        extra_env_vars[env_var] = compiler_wrap
         # Update the extra_env attribute with all the compiler values
         for env_var, env_value in extra_env_vars.items():
             self.extra_env.define(env_var, env_value)
