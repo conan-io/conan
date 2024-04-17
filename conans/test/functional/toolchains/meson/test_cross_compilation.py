@@ -1,12 +1,12 @@
 import os
 import platform
-import sys
+import tempfile
 import textwrap
-
 import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.conftest import tools_locations
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.runners import conan_run
@@ -176,9 +176,10 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
     profile_host = profile_host.format(
         arch=arch,
-        ndk_path=os.getenv("TEST_CONAN_ANDROID_NDK")
+        ndk_path=ndk_path
     )
 
     client = TestClient()
@@ -205,3 +206,41 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     if platform.system() == "Darwin":
         client.run_command('objdump -f "%s"' % libhello)
         assert "architecture: %s" % expected_arch in client.out
+
+
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("meson")  # so it easily works in Windows too
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+def test_use_meson_toolchain():
+    # TODO: Very similar to test in test_use_cmake_toolchain, refactor/restructure tests
+    # Overriding the default folders, so they are in the same unit drive in Windows
+    # otherwise AndroidNDK FAILS to build, it needs using the same unit drive
+    c = TestClient(cache_folder=tempfile.mkdtemp(),
+                   current_folder=tempfile.mkdtemp())
+    c.run("new meson_lib -d name=hello -d version=0.1")
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
+    pkgconf = tools_locations["pkg_config"]
+    pkgconf_path = pkgconf[pkgconf["default"]]["path"].get(platform.system()) + f'/pkg-config'
+    android = textwrap.dedent(f"""
+       [settings]
+       os=Android
+       os.api_level=23
+       arch=x86_64
+       compiler=clang
+       compiler.version=12
+       compiler.libcxx=c++_shared
+       build_type=Release
+       [conf]
+       tools.android:ndk_path={ndk_path}
+       tools.cmake.cmaketoolchain:generator=Ninja
+       tools.gnu:pkg_config={pkgconf_path}
+       """)
+    c.save({"android": android})
+    c.run('create . --profile:host=android')
+    assert "hello/0.1 (test package): Running test()" in c.out
+
+    # Build locally
+    c.run('build . --profile:host=android')
+    assert "conanfile.py (hello/0.1): Calling build()" in c.out

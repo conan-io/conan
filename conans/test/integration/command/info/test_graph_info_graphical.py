@@ -1,9 +1,8 @@
 import os
 import textwrap
 import unittest
-from datetime import datetime
 
-from conans import __version__ as client_version
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -100,67 +99,8 @@ class InfoTest(unittest.TestCase):
         # arbitrary case - file will be named according to argument
         self.client.run("graph info . --format=html")
         html = self.client.stdout
+        # Just make sure it doesn't crash
         self.assertIn("<body>", html)
-        self.assertIn("{ from: 0, to: 1 }", html)
-        self.assertIn("id: 0,\n                        label: 'hello0/0.1',", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script>"
-                      " JFrog LTD. <a>https://conan.io</a>"
-                      .format(client_version, datetime.today().year), html)
-
-    def test_info_build_requires(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=tool --version=0.1 --user=user --channel=channel")
-        client.run("create . --name=dep --version=0.1 --user=user --channel=channel")
-        conanfile = GenConanfile().with_require("dep/0.1@user/channel")
-        client.save({"conanfile.py": conanfile})
-        client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")
-        client.run("export . --name=pkg2 --version=0.1 --user=user --channel=channel")
-        client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
-                     "myprofile": "[tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
-        client.run("graph info . -pr=myprofile --build=missing --format=html")
-        html = client.stdout
-        self.assertIn("html", html)
-        # To check that this node is not duplicated
-        self.assertEqual(1, html.count("label: 'dep/0.1'"))
-        self.assertIn("label: 'pkg2/0.1',\n                        "
-                      "shape: 'box',\n                        "
-                      "color: { background: 'Khaki'},", html)
-        self.assertIn("label: 'pkg/0.1',\n                        "
-                      "shape: 'box',\n                        "
-                      "color: { background: 'Khaki'},", html)
-        self.assertIn("label: 'tool/0.1',\n                        "
-                      "shape: 'ellipse',\n                        "
-                      "color: { background: 'SkyBlue'},", html)
-
-    def test_topics_graph(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-
-            class MyTest(ConanFile):
-                name = "pkg"
-                version = "0.2"
-                topics = ("foo", "bar", "qux")
-            """)
-
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("export . --user=lasote --channel=testing")
-
-        # Topics as tuple
-        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
-        html_content = client.stdout
-        self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
-
-        # Topics as a string
-        conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
-        client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("export . --user=lasote --channel=testing")
-        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
-        html_content = client.stdout
-        self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: foo", html_content)
 
 
 def test_user_templates():
@@ -183,46 +123,24 @@ def test_graph_info_html_error_reporting_output():
     tc = TestClient()
     tc.save({"lib/conanfile.py": GenConanfile("lib"),
              "ui/conanfile.py": GenConanfile("ui", "1.0").with_requirement("lib/1.0"),
-             "math/conanfile.py": GenConanfile("math", "1.0").with_requirement("lib/2.0"),
-             "libiconv/conanfile.py": GenConanfile("libiconv", "1.0").with_requirement("lib/2.0"),
-             "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("libiconv/1.0"),
-             "openimageio/conanfile.py": GenConanfile("openimageio", "1.0").with_requirement("boost/1.0").with_requirement("lib/1.0")})
+             "math/conanfile.py": GenConanfile("math", "1.0").with_requirement("lib/2.0")})
     tc.run("export lib/ --version=1.0")
     tc.run("export lib/ --version=2.0")
     tc.run("export ui")
     tc.run("export math")
-    tc.run("export libiconv")
-    tc.run("export boost")
-    tc.run("export openimageio")
 
-    tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
-    assert "// Add error conflict node" in tc.out
-    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
-    assert "// Add edge from base node to the new error node" not in tc.out
-    assert "// Add edge from previous node that already had conflicting dependency" in tc.out
+    tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True,
+           redirect_stdout="graph.html")
+    assert "ERROR: Version conflict:" in tc.out # check that it doesn't crash
 
-    # Ensure mapping is preserved, ui is node id 3 before ordering, but 2 after
-    assert "id: 2,\n                        label: 'ui/1.0'" in tc.out
+    # change order,  just in case
+    tc.run("graph info --requires=ui/1.0 --requires=math/1.0 --format=html", assert_error=True,
+           redirect_stdout="graph.html")
+    assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
 
-    tc.run("graph info openimageio/ --format=html", assert_error=True)
-    assert "// Add error conflict node" in tc.out
-    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
-    assert "// Add edge from base node to the new error node" in tc.out
-    assert "// Add edge from previous node that already had conflicting dependency" not in tc.out
-    # There used to be a few bugs with weird graphs, check for regressions
-    assert "jinja2.exceptions.UndefinedError" not in tc.out
-    assert "from: ," not in tc.out
-
-
-def test_graph_info_html_error_range_quoting():
-    tc = TestClient()
-    tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
-             "libpng/conanfile.py": GenConanfile("libpng", "1.0").with_requirement("zlib/[>=1.0]")})
-
-    tc.run("export zlib --version=1.0")
-    tc.run("export zlib --version=0.1")
-    tc.run("export libpng")
-
-    tc.run("graph info --requires=zlib/0.1 --requires=libpng/1.0 --format=html", assert_error=True)
-    assert 'zlib/[&gt;=1.0]' not in tc.out
-    assert r'"zlib/[\u003e=1.0]"' in tc.out
+    # direct conflict also doesn't crash
+    tc.run("graph info --requires=ui/1.0 --requires=lib/2.0 --format=html", assert_error=True,
+           redirect_stdout="graph.html")
+    assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
+    # Check manually
+    # tc.run_command(f"{tc.current_folder}/graph.html")

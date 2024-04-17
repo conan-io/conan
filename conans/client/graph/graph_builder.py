@@ -15,7 +15,8 @@ from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import Lockfile
-from conans.model.options import Options
+from conans.model.options import Options, _PackageOptions
+from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -99,9 +100,30 @@ class DepsGraphBuilder(object):
             # print("Closing a loop from ", node, "=>", prev_node)
             # Keep previous "test" status only if current is also test
             prev_node.test = prev_node.test and (node.test or require.test)
+            self._save_options_conflicts(node, require, prev_node, graph)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
+
+    def _save_options_conflicts(self, node, require, prev_node, graph):
+        """ Store the discrepancies of options when closing a diamond, to later report
+        them. This list is not exhaustive, only the diamond vertix, not other transitives
+        """
+        down_options = self._compute_down_options(node, require, prev_node.ref)
+        down_options = down_options._deps_package_options  # noqa
+        if not down_options:
+            return
+        down_pkg_options = _PackageOptions()
+        for pattern, options in down_options.items():
+            if ref_matches(prev_node.ref, pattern, is_consumer=False):
+                down_pkg_options.update_options(options)
+        prev_options = {k: v for k, v in prev_node.conanfile.options.items()}
+        for k, v in down_pkg_options.items():
+            prev_value = prev_options.get(k)
+            if prev_value is not None and prev_value != v:
+                d = graph.options_conflicts.setdefault(str(prev_node.ref), {})
+                conflicts = d.setdefault(k, {"value": prev_value}).setdefault("conflicts", [])
+                conflicts.append((node.ref, v))
 
     @staticmethod
     def _conflicting_version(require, node,
@@ -242,8 +264,16 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
-        dep_type = "platform_tool_requires" if require.build else "platform_requires"
-        system_reqs = getattr(profile, dep_type)
+        if node.context == CONTEXT_BUILD:
+            # If we are in the build context, the platform_tool_requires ALSO applies to the
+            # regular requires. It is not possible in the build context to have tool-requires
+            # and regular requires to the same package from Conan and from Platform
+            system_reqs = profile.platform_tool_requires
+            if not require.build:
+                system_reqs = system_reqs + profile.platform_requires
+        else:
+            system_reqs = profile.platform_tool_requires if require.build \
+                else profile.platform_requires
         if system_reqs:
             version_range = require.version_range
             for d in system_reqs:
@@ -348,6 +378,29 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
 
+        down_options = self._compute_down_options(node, require, new_ref)
+
+        if recipe_status != RECIPE_PLATFORM:
+            self._prepare_node(new_node, profile_host, profile_build, down_options)
+        if dep_conanfile.package_type is PackageType.CONF and node.recipe != RECIPE_VIRTUAL:
+            raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
+                                 f"requirement, but {node.ref} is requiring it")
+
+        require.process_package_type(node, new_node)
+        graph.add_node(new_node)
+        graph.add_edge(node, new_node, require)
+        if node.propagate_downstream(require, new_node):
+            raise GraphRuntimeError(node, new_node)
+
+        # This is necessary to prevent infinite loops even when visibility is False
+        ancestor = node.check_loops(new_node)
+        if ancestor is not None:
+            raise GraphLoopError(new_node, require, ancestor)
+
+        return new_node, graph_lock
+
+    @staticmethod
+    def _compute_down_options(node, require, new_ref):
         # The consumer "up_options" are the options that come from downstream to this node
         if require.options is not None:
             # If the consumer has specified "requires(options=xxx)", we need to use it
@@ -368,20 +421,7 @@ class DepsGraphBuilder(object):
                 down_options = node.conanfile.private_up_options
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
-
-        self._prepare_node(new_node, profile_host, profile_build, down_options)
-        require.process_package_type(node, new_node)
-        graph.add_node(new_node)
-        graph.add_edge(node, new_node, require)
-        if node.propagate_downstream(require, new_node):
-            raise GraphRuntimeError(node, new_node)
-
-        # This is necessary to prevent infinite loops even when visibility is False
-        ancestor = node.check_loops(new_node)
-        if ancestor is not None:
-            raise GraphLoopError(new_node, require, ancestor)
-
-        return new_node, graph_lock
+        return down_options
 
     @staticmethod
     def _remove_overrides(dep_graph):

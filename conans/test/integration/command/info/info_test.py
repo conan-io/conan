@@ -202,6 +202,8 @@ class TestAdvancedCliOutput:
         info = json.loads(client.stdout)
         pyrequires = info["graph"]["nodes"]["0"]["python_requires"]
         tool = pyrequires["tool/0.1#4d670581ccb765839f2239cc8dff8fbd"]
+        info = info["graph"]["nodes"]["0"]["info"]
+        assert info["python_requires"] == ["tool/0.1.Z"]
         # lets make sure the path exists
         assert tool["recipe"] == "Cache"
         assert tool["remote"] is None
@@ -403,3 +405,23 @@ def test_info_not_hit_server():
     c.run("graph info --requires=consumer/0.1@", assert_error=True)
     assert "'NoneType' object " not in c.out
     assert "No remote defined" in c.out
+
+
+def test_graph_info_user():
+    """
+    https://github.com/conan-io/conan/issues/15791
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            user = "user"
+        """)
+
+    c.save({"conanfile.py": conanfile})
+    c.run("graph info .")
+    assert "pkg/0.1@user" in c.out
+    c.run("graph info . --channel=channel")
+    assert "pkg/0.1@user/channel" in c.out

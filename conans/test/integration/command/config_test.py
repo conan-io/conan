@@ -65,9 +65,12 @@ def test_config_install():
 def test_config_install_conanignore():
     tc = TestClient()
     conanignore = textwrap.dedent("""
-    a/*
+    a/*  # This is a tests
     b/c/*
     d/*
+    tests/*
+    # Next line is commented out, so it should be ignored
+    # other_tests/*
     """)
     tc.save({
         'config_folder/.conanignore': conanignore,
@@ -78,7 +81,9 @@ def test_config_install_conanignore():
         'config_folder/b/c/helmet': '',
         'config_folder/d/prix': '',
         'config_folder/d/foo/bar': '',
-        'config_folder/foo': ''
+        'config_folder/foo': '',
+        'config_folder/tests/tester': '',
+        'config_folder/other_tests/tester2': ''
     })
     def _assert_config_exists(path):
         assert os.path.exists(os.path.join(tc.cache_folder, path))
@@ -106,6 +111,9 @@ def test_config_install_conanignore():
     _assert_config_not_exists("d")
 
     _assert_config_exists("foo")
+
+    _assert_config_not_exists("tests/tester")
+    _assert_config_exists("other_tests/tester2")
 
     os.listdir(tc.current_folder)
 

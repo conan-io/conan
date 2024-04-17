@@ -482,6 +482,7 @@ class ConfigInstallTest(unittest.TestCase):
         folder = self._create_profile_folder()
         with self.client.chdir(folder):
             self.client.run_command('git init .')
+            self.client.run_command('git checkout -b master')
             self.client.run_command('git add .')
             self.client.run_command('git config user.name myname')
             self.client.run_command('git config user.email myname@mycompany.com')
@@ -543,6 +544,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
     def setUp(self):
         self.folder = temp_folder(path_with_spaces=False)
+        # FIXME: This is broken, this config no longer exist, but it doesn't raise, fix it
         save_files(self.folder, {"global.conf": "core:config_install_interval=5m"})
         self.client = TestClient()
         self.client.save({"conanfile.txt": ""})
@@ -616,3 +618,123 @@ class TestConfigInstall:
             client.save({"profiles/debug/address-sanitizer": ""})
             client.run("config install .")
         assert os.path.isdir(debug_cache_folder)
+
+
+class TestConfigInstallPkg:
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            package_type = "configuration"
+            def package(self):
+                copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "global.conf": "user.myteam:myconf=myvalue"})
+        c.run("export-pkg .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    def test_config_install_from_pkg(self, client):
+        # Now install it
+        c = client
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+        # Just to make sure it doesn't crash in the update
+        c.run("config install-pkg myconf/[*]")
+        # Conan will not re-download fromthe server the same revision
+        assert "myconf/0.1: Downloaded package revision" not in c.out
+        # It doesn't re-install either
+        assert "Copying file global.conf" not in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+        # We can force the re-installation
+        c.run("config install-pkg myconf/[*] --force")
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+    def test_update_flow(self, client):
+        # Now try the update flow
+        c = client
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        c2.save({"conanfile.py": self.conanfile,
+                 "global.conf": "user.myteam:myconf=othervalue"})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
+
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: othervalue" in c.out
+
+    def test_cant_use_as_dependency(self):
+        c = TestClient()
+        conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration")
+        c.save({"myconf/conanfile.py": conanfile,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("myconf/0.1")})
+        c.run("create myconf")
+        c.run("install pkg", assert_error=True)
+        assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement, " \
+               "but pkg/0.1 is requiring it" in c.out
+
+    def test_cant_use_without_type(self):
+        c = TestClient()
+        conanfile = GenConanfile("myconf", "0.1")
+        c.save({"myconf/conanfile.py": conanfile})
+        c.run("create myconf")
+        c.run("config install-pkg myconf/[*]", assert_error=True)
+        assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
+
+    def test_lockfile(self, client):
+        """ it should be able to install the config using a lockfile
+        """
+        c = client
+        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        # Make sure we bump the version, otherwise only a package revision will be created
+        c2.save({"conanfile.py": self.conanfile.replace("0.1", "0.2"),
+                 "global.conf": "user.myteam:myconf=othervalue"})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
+
+        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+    def test_create_also(self):
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           class Conf(ConanFile):
+               name = "myconf"
+               version = "0.1"
+               package_type = "configuration"
+               exports_sources = "*.conf"
+               def package(self):
+                   copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
+               """)
+
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": conanfile,
+                "global.conf": "user.myteam:myconf=myvalue"})
+        c.run("create .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+
+        c.run("config install-pkg myconf/[*]")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out

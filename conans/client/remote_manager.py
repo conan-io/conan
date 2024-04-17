@@ -4,6 +4,8 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
+from conan.api.model import LOCAL_RECIPES_INDEX
+from conans.client.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
@@ -18,13 +20,16 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_N
 from conans.util.files import mkdir, tar_extract
 
 
-class RemoteManager(object):
+class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
-
     def __init__(self, cache, auth_manager):
         self._cache = cache
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache)
+
+    def _local_folder_remote(self, remote):
+        if remote.remote_type == LOCAL_RECIPES_INDEX:
+            return RestApiClientLocalRecipesIndex(remote, self._cache)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -45,6 +50,12 @@ class RemoteManager(object):
 
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
+
+        export_folder = layout.export()
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            local_folder_remote.get_recipe(ref, export_folder)
+            return layout
 
         download_export = layout.download_export()
         try:
@@ -100,6 +111,11 @@ class RemoteManager(object):
 
         download_folder = layout.download_export()
         export_sources_folder = layout.export_sources()
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            local_folder_remote.get_recipe_sources(ref, export_sources_folder)
+            return
+
         zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
@@ -234,6 +250,9 @@ class RemoteManager(object):
         enforce_disabled = kwargs.pop("enforce_disabled", True)
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            return local_folder_remote.call_method(method, *args, **kwargs)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
