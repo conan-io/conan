@@ -45,7 +45,7 @@ def cppstd_compat(conanfile):
             factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
 
     if compiler == "msvc":
-        msvc_fallback = {"193": "194", "194": "193"}.get(compiler_version)
+        msvc_fallback = {"194": "193"}.get(compiler_version)
         if msvc_fallback:
             factors.append([{"compiler.version": msvc_fallback}])
 

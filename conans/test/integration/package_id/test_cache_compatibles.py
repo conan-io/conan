@@ -398,27 +398,6 @@ class TestDefaultCompat:
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
 
-    def test_msvc_194_forward(self):
-        c = TestClient()
-        save(c.cache.default_profile_path, "")
-        c.save({"conanfile.py": GenConanfile("mylib", "1.0").with_settings("os", "arch",
-                                                                           "compiler", "build_type"),
-                "profile_build": "[settings]\nos=Windows\narch=x86_64"})
-
-        c.run("create . -s os=Windows -s arch=x86_64 -s build_type=Release "
-              "-s compiler=msvc "
-              "-s compiler.version=194 -s compiler.cppstd=17 "
-              "-s compiler.runtime=dynamic -pr:b=profile_build")
-        package_id1 = c.created_package_id("mylib/1.0")
-
-        # Try to install with cppstd 14, it will find cppstd 17 as compatible
-        c.run("install --requires=mylib/1.0@ -s os=Windows -s arch=x86_64 -s build_type=Release "
-              "-s compiler=msvc "
-              "-s compiler.version=193 -s compiler.cppstd=14 "
-              "-s compiler.runtime=dynamic -pr:b=profile_build")
-        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
-               f"Using compatible package '{package_id1}'"
-
 
 class TestErrorsCompatibility:
     """ when the plugin fails, we want a clear message and a helpful trace
