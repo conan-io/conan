@@ -11,7 +11,7 @@ class TimeTest(unittest.TestCase):
     def test_time_conversions(self):
         timestamp = 1547138099
         iso = from_timestamp_to_iso8601(timestamp)
-        self.assertEqual(iso, "2019-01-10T16:34:59Z")
+        self.assertEqual(iso, "2019-01-10T16:34:59+00:00")
 
         dt = _from_iso8601_to_datetime(iso)
         expected = datetime.datetime(year=2019, month=1, day=10, hour=16, minute=34, second=59,
