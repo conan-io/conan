@@ -558,7 +558,7 @@ class EnvVars:
                 end
             end
             function {{ function_name }}
-                echo "echo Restoring environment"
+                echo "Restoring environment"
                 for var in $conan_{{ group }}_del
                     set -e $var
                 end

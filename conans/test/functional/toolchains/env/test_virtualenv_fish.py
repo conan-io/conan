@@ -62,13 +62,20 @@ def test_buildenv_define_new_vars(fake_path, my_var1, my_var2, my_path):
     wrap_with_quotes = lambda s: f"'{s}'" if ' ' in s else s
     client.run_command('fish -c ". conanbuild.fish; and set; and deactivate_conanbuildenv; and set"')
     # Define variables only once and remove after running deactivate_conanbuildenv
-    assert str(client.out).count(f"\nMYPATH1 {wrap_with_quotes(my_path)}") == 1
-    assert str(client.out).count(f"\nMYVAR1 {wrap_with_quotes(my_var1)}") == 1
-    assert str(client.out).count(f"\nMYVAR2 {wrap_with_quotes(my_var2)}") == 1
+    assert str(client.out).count(f"\nMYPATH1 {wrap_with_quotes(my_path)}\n") == 1
+    assert str(client.out).count(f"\nMYVAR1 {wrap_with_quotes(my_var1)}\n") == 1
+    assert str(client.out).count(f"\nMYVAR2 {wrap_with_quotes(my_var2)}\n") == 1
     assert str(client.out).count(f"\nPATH '{fake_path}'") == 1
     # Temporary variables to store names should be removed as well
-    assert str(client.out).count(f"_PATH {wrap_with_quotes(fake_path)}") == 1
-    assert str(client.out).count("_del 'MYPATH1'  'MYVAR1'  'MYVAR2'") == 1
+    assert str(client.out).count(f"_PATH {wrap_with_quotes(fake_path)}\n") == 1
+    assert str(client.out).count("_del 'MYPATH1'  'MYVAR1'  'MYVAR2'\n") == 1
+
+    # Running conanbuild.fish twice should append variables, but not override them
+    client.run_command('fish -c ". conanbuild.fish; . conanbuild.fish; and set"')
+    assert str(client.out).count(f"\nMYPATH1 '{my_path}'  '{my_path}'") == 1
+    assert str(client.out).count(f"\nMYVAR1 '{my_var1}'  '{my_var1}'") == 1
+    assert str(client.out).count(f"\nMYVAR2 '{my_var2}'  '{my_var2}'") == 1
+    assert str(client.out).count(f"\nPATH '{fake_path}'  '{fake_path}'") == 1
 
 
 @pytest.mark.tool("fish")
@@ -176,6 +183,26 @@ def test_runenv_buildenv_define_new_vars(fake_path, fake_define):
     assert client.out.count('FAKE_PATH') == 2
     assert client.out.count('FAKE_DEFINE') == 2
 
-    deactivated_content = client.out[client.out.index("echo Restoring environment"):]
+    deactivated_content = client.out[client.out.index("Restoring environment"):]
     assert deactivated_content.count('FAKE_PATH') == 0
     assert deactivated_content.count('FAKE_DEFINE') == 0
+
+
+def test_no_generate_fish():
+    """Test when not defining variables and using Fish as virtualenv
+
+       Conan should not generate any .fish file as there is no variables to be exported
+    """
+    cache_folder = os.path.join(temp_folder(), "[sub] folder")
+    client = TestClient(cache_folder)
+    conanfile = str(GenConanfile("pkg", "0.1"))
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    save(client.cache.new_config_path, "tools.env.virtualenv:fish=True\n")
+    client.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1")})
+    client.run("install . -s:a os=Linux")
+
+    # Do not generate any virtualenv
+    for ext in ["*.sh", "*.bat", "*.fish"]:
+        not_expected_files = glob.glob(os.path.join(client.current_folder, ext))
+        assert not not_expected_files
