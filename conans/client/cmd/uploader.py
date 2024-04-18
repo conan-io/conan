@@ -224,10 +224,7 @@ class UploadExecutor:
 
         cache_files = bundle["files"]
 
-        total_size = 0
-        for file in cache_files.values():
-            stat = os.stat(file)
-            total_size += stat.st_size
+        total_size = _total_size(cache_files)
 
         if total_size > 1000000:  # 1MB
             upload_msg += f" ({total_size / 100000} MB)"
@@ -247,10 +244,7 @@ class UploadExecutor:
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        total_size = 0
-        for file in cache_files.values():
-            stat = os.stat(file)
-            total_size += stat.st_size
+        total_size = _total_size(cache_files)
 
         if total_size > 10000000:  # 10MB
             upload_msg += f" ({total_size / 1000000} MB)"
@@ -278,3 +272,11 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
     duration = time.time() - t1
     ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path
+
+
+def _total_size(cache_files):
+    total_size = 0
+    for file in cache_files.values():
+        stat = os.stat(file)
+        total_size += stat.st_size
+    return total_size
