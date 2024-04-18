@@ -8,6 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 class TestProfileDetectAPI:
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     @pytest.mark.tool("visual_studio", "17")
     def test_profile_detect_compiler(self):
 

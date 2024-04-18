@@ -713,7 +713,7 @@ def test_build_vs_project_with_a_vs2017():
 
 
 @pytest.mark.tool("visual_studio", "17")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
     check_build_vs_project_with_a("193")
@@ -803,7 +803,7 @@ def test_build_vs_project_with_test_requires_vs2017():
 
 
 @pytest.mark.tool("visual_studio", "17")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
     check_build_vs_project_with_test_requires("193")
