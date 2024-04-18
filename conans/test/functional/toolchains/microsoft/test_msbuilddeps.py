@@ -783,12 +783,15 @@ def check_build_vs_project_with_a(vs_version):
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
     props = os.path.join(client.current_folder, "conandeps.props")
-    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
-    new = old + '<Import Project="{props}" />'.format(props=props)
+    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />'
+    new = old + f'<Import Project="{props}" />' + f'<Import Project="{toolchain}" />'
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
     client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
+    print(client.out)
+    print(client.current_folder)
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
     # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly

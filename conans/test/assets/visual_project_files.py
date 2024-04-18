@@ -1,9 +1,9 @@
 # All harcoded (names, paths etc), refactor it if needed
 
-sln_file = '''
+sln_file = r'''\
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.757
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyProject", "MyProject\MyProject.vcxproj", "{143D99A7-C9F3-434F-BA39-514BB63835E8}"
 EndProject
@@ -38,8 +38,8 @@ EndGlobal
 
 '''
 
-vcxproj_file = '''<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+vcxproj_file = r'''<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
@@ -67,7 +67,9 @@ vcxproj_file = '''<?xml version="1.0" encoding="utf-8"?>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{143D99A7-C9F3-434F-BA39-514BB63835E8}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
     <RootNamespace>MyProject</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -214,7 +216,7 @@ vcxproj_file = '''<?xml version="1.0" encoding="utf-8"?>
 </Project>'''
 
 filters_file = '''<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
