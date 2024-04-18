@@ -3,21 +3,25 @@ import json
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 from conans.model.version_range import VersionRange
 
+LOCAL_RECIPES_INDEX = "local-recipes-index"
+
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None):
+    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None,
+                 remote_type=None):
         self.name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
         self.allowed_packages = allowed_packages
+        self.remote_type = remote_type
 
     def __eq__(self, other):
         if other is None:
@@ -29,6 +33,9 @@ class Remote:
         allowed_msg = ""
         if self.allowed_packages:
             allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
+        if self.remote_type == LOCAL_RECIPES_INDEX:
+            return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, LOCAL_RECIPES_INDEX,
+                                                       not self.disabled, allowed_msg)
         return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
                                                                not self.disabled, allowed_msg)
 
@@ -39,6 +46,9 @@ class Remote:
 class MultiPackagesList:
     def __init__(self):
         self.lists = {}
+
+    def setdefault(self, key, default):
+        return self.lists.setdefault(key, default)
 
     def __getitem__(self, name):
         try:
@@ -56,6 +66,10 @@ class MultiPackagesList:
         return {k: v.serialize() if isinstance(v, PackagesList) else v
                 for k, v in self.lists.items()}
 
+    def merge(self, other):
+        for k, v in other.lists.items():
+            self.lists.setdefault(k, PackagesList()).merge(v)
+
     @staticmethod
     def load(file):
         content = json.loads(load(file))
@@ -70,8 +84,17 @@ class MultiPackagesList:
         return pkglist
 
     @staticmethod
+    def from_graph(graph, graph_recipes=None, graph_binaries=None):
+        graph = {"graph": graph.serialize()}
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
         graph = json.loads(load(graphfile))
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
+    def _define_graph(graph, graph_recipes=None, graph_binaries=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -135,6 +158,16 @@ class MultiPackagesList:
 class PackagesList:
     def __init__(self):
         self.recipes = {}
+
+    def merge(self, other):
+        def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
+            for k, v in u.items():
+                if isinstance(v, dict):
+                    d[k] = recursive_dict_update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+        recursive_dict_update(self.recipes, other.recipes)
 
     def split(self):
         """
@@ -278,7 +311,7 @@ class ListPattern:
 
     def check_refs(self, refs):
         if not refs and self.ref and "*" not in self.ref:
-            raise ConanException(f"Recipe '{self.ref}' not found")
+            raise NotFoundException(f"Recipe '{self.ref}' not found")
 
     def filter_rrevs(self, rrevs):
         if self._only_latest(self.rrev):

@@ -86,7 +86,7 @@ class FileDownloader:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
-                raise AuthenticationException()
+                raise AuthenticationException(response_to_str(response))
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         def get_total_length():

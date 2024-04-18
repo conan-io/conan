@@ -521,7 +521,7 @@ def test_private_transitive():
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=. -v")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
-    assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
+    assert 'list(APPEND pkg_FIND_DEPENDENCY_NAMES )' in data_cmake
 
 
 @pytest.mark.tool("cmake")

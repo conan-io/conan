@@ -22,6 +22,7 @@ from conans.util.files import exception_message_safe
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
+
 class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
@@ -33,6 +34,7 @@ class Cli:
         assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
+        self._conan_api.command.cli = self
         self._groups = defaultdict(list)
         self._commands = {}
 
@@ -234,6 +236,14 @@ class Cli:
         return ERROR_UNEXPECTED
 
 
+def _warn_python_version():
+    version = sys.version_info
+    if version.minor == 6:
+        ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
+                              "Conan future versions will drop support for it, "
+                              "please upgrade Python", warn_tag="deprecated")
+
+
 def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
@@ -279,6 +289,7 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
+        _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)
