@@ -49,7 +49,7 @@ homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
 
 tools_locations = {
     "clang": {"disabled": True},
-    'visual_studio': {"default": "17",
+    'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
                       "17": {}},
