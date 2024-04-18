@@ -220,10 +220,20 @@ class UploadExecutor:
 
     def upload_recipe(self, ref, bundle, remote):
         output = ConanOutput(scope=str(ref))
-        output.info(f"Uploading recipe '{ref.repr_notime()}'")
-        t1 = time.time()
+        upload_msg = f"Uploading recipe '{ref.repr_notime()}'"
+
         cache_files = bundle["files"]
 
+        total_size = 0
+        for file in cache_files.values():
+            stat = os.stat(file)
+            total_size += stat.st_size
+
+        if total_size > 1000000:  # 1MB
+            upload_msg += f" ({total_size / 100000} MB)"
+        output.info(upload_msg)
+
+        t1 = time.time()
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
@@ -232,10 +242,19 @@ class UploadExecutor:
 
     def upload_package(self, pref, prev_bundle, remote):
         output = ConanOutput(scope=str(pref.ref))
-        output.info(f"Uploading package '{pref.repr_notime()}'")
+        upload_msg = f"Uploading package '{pref.repr_notime()}'"
         cache_files = prev_bundle["files"]
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
+
+        total_size = 0
+        for file in cache_files.values():
+            stat = os.stat(file)
+            total_size += stat.st_size
+
+        if total_size > 10000000:  # 10MB
+            upload_msg += f" ({total_size / 1000000} MB)"
+        output.info(upload_msg)
 
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
