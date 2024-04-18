@@ -361,39 +361,38 @@ def detect_default_compiler():
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if "clang" in command.lower():
-            return _clang_compiler(command)
+            return detect_clang_compiler(command)
         if "gnu-cc" in command or "gcc" in command or "g++" in command or "c++" in command:
-            gcc, gcc_version, compiler_exe = _gcc_compiler(command)
+            gcc, gcc_version, compiler_exe = detect_gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
                              "Compiler not supported" % command)
             return gcc, gcc_version, compiler_exe
         if "icpx" in command or "icx" in command:
-            intel, intel_version, compiler_exe = _intel_compiler(command)
+            intel, intel_version, compiler_exe = detect_intel_compiler(command)
             return intel, intel_version, compiler_exe
         if platform.system() == "SunOS" and command.lower() == "cc":
-            return _sun_cc_compiler(command)
+            return detect_suncc_compiler(command)
         if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
                 and "clang" not in command):
-            return _msvc_cl_compiler(command)
+            return detect_cl_compiler(command)
 
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None, None, None
 
     if platform.system() == "Windows":
-        version = _detect_vs_ide_version()
-        version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
-        if version:
-            return 'msvc', Version(version), None
+        compiler, version, compiler_exe = detect_msvc_compiler()
+        if compiler:
+            return compiler, version, compiler_exe
 
     if platform.system() == "SunOS":
-        sun_cc, sun_cc_version, compiler_exe = _sun_cc_compiler()
+        sun_cc, sun_cc_version, compiler_exe = detect_suncc_compiler()
         if sun_cc:
             return sun_cc, sun_cc_version, compiler_exe
 
     if platform.system() in ["Darwin", "FreeBSD"]:
-        clang, clang_version, compiler_exe = _clang_compiler()  # prioritize clang
+        clang, clang_version, compiler_exe = detect_clang_compiler()  # prioritize clang
         if clang:
             return clang, clang_version, compiler_exe
         return None, None, None
@@ -401,10 +400,10 @@ def detect_default_compiler():
         compiler, compiler_version, compiler_exe = _cc_compiler()
         if compiler:
             return compiler, compiler_version, compiler_exe
-        gcc, gcc_version, compiler_exe = _gcc_compiler()
+        gcc, gcc_version, compiler_exe = detect_gcc_compiler()
         if gcc:
             return gcc, gcc_version, compiler_exe
-        return _clang_compiler()
+        return detect_clang_compiler()
 
 
 def default_msvc_ide_version(version):
@@ -441,7 +440,7 @@ def _cc_compiler():
         return None, None, None
 
 
-def _gcc_compiler(compiler_exe="gcc"):
+def detect_gcc_compiler(compiler_exe="gcc"):
     try:
         if platform.system() == "Darwin":
             # In Mac OS X check if gcc is a fronted using apple-clang
@@ -471,7 +470,7 @@ def detect_compiler():
     return compiler, version
 
 
-def _intel_compiler(compiler_exe="icx"):
+def detect_intel_compiler(compiler_exe="icx"):
     try:
         ret, out = detect_runner("%s --version" % compiler_exe)
         if ret != 0:
@@ -485,7 +484,7 @@ def _intel_compiler(compiler_exe="icx"):
         return None, None, None
 
 
-def _sun_cc_compiler(compiler_exe="cc"):
+def detect_suncc_compiler(compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
@@ -501,7 +500,7 @@ def _sun_cc_compiler(compiler_exe="cc"):
         return None, None, None
 
 
-def _clang_compiler(compiler_exe="clang"):
+def detect_clang_compiler(compiler_exe="clang"):
     try:
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
@@ -520,7 +519,15 @@ def _clang_compiler(compiler_exe="clang"):
         return None, None, None
 
 
-def _msvc_cl_compiler(compiler_exe="cl"):
+def detect_msvc_compiler():
+    version = _detect_vs_ide_version()
+    version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
+    if version:
+        return 'msvc', Version(version), None
+    return None, None, None
+
+
+def detect_cl_compiler(compiler_exe="cl"):
     """ only if CC/CXX env-vars are defined pointing to cl.exe, and the VS environment must
     be active to have them in the path
     """
