@@ -365,10 +365,12 @@ def redirect_input(target):
         sys.stdin = original_stdin
 
 
-class TestClient(object):
+class TestClient:
     """ Test wrap of the conans application to launch tests in the same way as
     in command line
     """
+    # Preventing Pytest collects any tests from here
+    __test__ = False
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
