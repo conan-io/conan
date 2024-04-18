@@ -782,16 +782,19 @@ def check_build_vs_project_with_a(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+    # INJECT PROPS FILES
     props = os.path.join(client.current_folder, "conandeps.props")
-    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
     old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />'
-    new = old + f'<Import Project="{props}" />' + f'<Import Project="{toolchain}" />'
+    new = old + f'<Import Project="{props}" />'
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />'
+    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
+    new = f'<Import Project="{toolchain}" />' + old
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+
     client.save(files, clean_first=True)
     client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
-    print(client.out)
-    print(client.current_folder)
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
     # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
@@ -840,10 +843,17 @@ def check_build_vs_project_with_test_requires(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+
+    # INJECT PROPS FILES
     props = os.path.join(client.current_folder, "conandeps.props")
-    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
-    new = old + '<Import Project="{props}" />'.format(props=props)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />'
+    new = old + f'<Import Project="{props}" />'
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />'
+    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
+    new = f'<Import Project="{toolchain}" />' + old
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+
     client.save(files, clean_first=True)
     client.run('build .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
