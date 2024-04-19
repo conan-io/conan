@@ -205,7 +205,7 @@ class Settings(object):
 
     def get_safe(self, name, default=None):
         """
-        Get the setting value avoiding
+        Get the setting value avoiding throwing if it does not exist or has been removed
         :param name:
         :param default:
         :return:
@@ -232,7 +232,10 @@ class Settings(object):
             except KeyError:
                 pass
         else:
-            self._data.pop(name, None)
+            if name == "*":
+                self.clear()
+            else:
+                self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive

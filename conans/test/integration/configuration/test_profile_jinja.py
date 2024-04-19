@@ -198,3 +198,10 @@ class TestProfileDetectAPI:
             os={the_os}
             """)
         assert expected in client.out
+
+
+def test_profile_jinja_error():
+    c = TestClient(light=True)
+    c.save({"profile1": "{% set kk = other() %}"})
+    c.run("profile show -pr=profile1", assert_error=True)
+    assert "ERROR: Error while rendering the profile template file" in c.out
