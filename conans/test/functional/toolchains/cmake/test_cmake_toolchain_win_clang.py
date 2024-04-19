@@ -154,7 +154,7 @@ class TestVSClangCL:
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__16" in client.out
+        assert "main __clang_major__17" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2017" in client.out
@@ -163,7 +163,7 @@ class TestVSClangCL:
         assert "-m64" not in client.out
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
+        check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
 
 @pytest.mark.tool("cmake")
