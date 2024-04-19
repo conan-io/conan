@@ -21,16 +21,17 @@ def test_version_json():
     t.run("version --format=json")
     js = json.loads(t.stdout)
     assert js["version"] == __version__
-    assert js["conan_script_path"] == sys.argv[0]
+    assert js["conan_path"] == sys.argv[0]
     assert js["python"]["version"] == _python_version()
     assert js["python"]["sys_version"] == _sys_version()
     assert js["python"]["sys_executable"] == sys.executable
     assert js["python"]["is_frozen"] == getattr(sys, 'frozen', False)
     assert js["python"]["architecture"] == platform.machine()
     assert js["system"]["version"] == platform.version()
-    assert js["system"]["version"] == platform.platform()
-    assert js["system"]["version"] == platform.system() + ' ' + platform.release()
-    assert js["system"]["version"] == platform.processor()
+    assert js["system"]["platform"] == platform.platform()
+    assert js["system"]["system"] == platform.system()
+    assert js["system"]["release"] == platform.release()
+    assert js["system"]["cpu"] == platform.processor()
 
 
 def test_version_text():
@@ -55,7 +56,7 @@ def test_version_raw():
 def _validate_text_output(output):
     lines = output.splitlines()
     assert f'version: {__version__}' in lines
-    assert f'conan_script_path: {sys.argv[0]}' in lines
+    assert f'conan_path: {sys.argv[0]}' in lines
     assert 'python' in lines
     assert f'  version: {_python_version()}' in lines
     assert f'  sys_version: {_sys_version()}' in lines
@@ -65,5 +66,6 @@ def _validate_text_output(output):
     assert 'system' in lines
     assert f'  version: {platform.version()}' in lines
     assert f'  platform: {platform.platform()}' in lines
-    assert f'  os: {platform.system() + " " + platform.release()}' in lines
+    assert f'  system: {platform.system()}' in lines
+    assert f'  release: {platform.release()}' in lines
     assert f'  cpu: {platform.processor()}' in lines

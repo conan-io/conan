@@ -25,7 +25,8 @@ def version(conan_api, parser, *args):
             'system': {
                 'version': platform.version(),
                 'platform': platform.platform(),
-                'os': platform.system() + ' ' + platform.release(),
+                'system': platform.system(),
+                'release': platform.release(),
                 'cpu': platform.processor(),
                 }
             }
