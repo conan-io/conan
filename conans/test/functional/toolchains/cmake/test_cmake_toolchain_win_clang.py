@@ -152,10 +152,10 @@ class TestVSClangCL:
         client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
                    "-s compiler.cppstd=17 -s compiler.runtime_version=v143 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
-        print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__17" in client.out
+        # My local is 17, but CI ClangCL still 16
+        assert "main __clang_major__16" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2017" in client.out
