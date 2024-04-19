@@ -52,7 +52,7 @@ tools_locations = {
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
-                      "17": {"disabled": True}},
+                      "17": {}},
     'pkg_config': {
         "exe": "pkg-config",
         "default": "0.28",

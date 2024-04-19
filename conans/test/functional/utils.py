@@ -46,7 +46,8 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                     assert "libunwind.dll" not in client.out
                     assert "libc++.dll" not in client.out
                 else:
-                    assert "libunwind.dll" in client.out
+                    # Latest clangs from subsystems no longer depend on libunwind
+                    assert "libunwind.dll" not in client.out
                     assert "libc++.dll" in client.out
             else:
                 raise Exception("unknown {}".format(subsystem))
