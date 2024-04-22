@@ -78,7 +78,11 @@ def _env_for_Popen():
                 'windir'
                 ]
         newenv = { key: os.environ[key] for key in whitelist_env_keys }
-        newenv['Path'] = 'C:\\WINDOWS\\system32;C:\\WINDOWS'
+        # Also get the path to conan's python, as some packages assume access to python
+        # eg dav1d
+        # This will also give access to ninja.exe and whatever else is installed in the devenv
+        python_path = os.path.dirname(sys.executable)
+        newenv['PATH'] = f'C:\\WINDOWS\\system32;C:\\WINDOWS;{python_path}'
     return newenv
 
 
