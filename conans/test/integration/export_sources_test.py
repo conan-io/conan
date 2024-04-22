@@ -72,7 +72,7 @@ def test_test_package_copied():
     assert "Copied 2 '.txt' file" in client.out
 
 
-def test_generated_revisions():
+def test_source_changes_generate_new_revisions():
     tc = TestClient(light=True)
     tc.save({"conanfile.py": GenConanfile("lib", "1.0").with_exports_sources("file.h"),
              "file.h": "Hello World!"})
