@@ -143,15 +143,13 @@ class RestCommonMethods(object):
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities')
+        if not server_capabilities and not ret.ok:
+            # Old Artifactory might return 401/403 without capabilities, we don't want
+            # to cache them #5687, so raise the exception and force authentication
+            raise get_exception_from_error(ret.status_code)(response_to_str(ret))
         if server_capabilities is None:
-            # Any valid conan server should return some capabilities, specifically revisions,
-            # otherwise it will fail later with the "revisions not supported"
-            if not ret.ok:
-                # Old Artifactory might return 401/403 without capabilities, we don't want
-                # to cache them #5687, so raise the exception and force authentication
-                raise get_exception_from_error(ret.status_code)(response_to_str(ret))
-            else:  # Some servers returning 200-ok, even if not valid repo
-                raise ConanException(f"Remote {self.remote_url} doesn't seem like a valid Conan remote")
+            # Some servers returning 200-ok, even if not valid repo
+            raise ConanException(f"Remote {self.remote_url} doesn't seem like a valid Conan remote")
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
