@@ -49,7 +49,7 @@ def test_buildenv_define_new_vars(fake_path, my_var1, my_var2, my_path):
         assert not not_expected_files
 
     # It does not generate conanrun because there is no variables to be exported
-    expected_files = glob.glob(os.path.join(client.current_folder, "*.fish"))
+    expected_files = sorted(glob.glob(os.path.join(client.current_folder, "*.fish")))
     assert [os.path.join(client.current_folder, "conanbuild.fish"),
             os.path.join(client.current_folder, "conanbuildenv.fish")] == expected_files
 
@@ -151,11 +151,11 @@ def test_runenv_buildenv_define_new_vars(fake_path, fake_define):
         not_expected_files = glob.glob(os.path.join(client.current_folder, ext))
         assert not not_expected_files
 
-    expected_files = glob.glob(os.path.join(client.current_folder, "*.fish"))
-    assert [os.path.join(client.current_folder, "conanrunenv.fish"),
+    expected_files = sorted(glob.glob(os.path.join(client.current_folder, "*.fish")))
+    assert [os.path.join(client.current_folder, "conanbuild.fish"),
+            os.path.join(client.current_folder, "conanbuildenv.fish"),
             os.path.join(client.current_folder, "conanrun.fish"),
-            os.path.join(client.current_folder, "conanbuild.fish"),
-            os.path.join(client.current_folder, "conanbuildenv.fish")] == expected_files
+            os.path.join(client.current_folder, "conanrunenv.fish")] == expected_files
 
     # Do not mix buildenv and runenv variables
     script_path = os.path.join(client.current_folder, "conanbuildenv.fish")
