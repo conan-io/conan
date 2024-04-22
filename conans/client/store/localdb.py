@@ -49,7 +49,7 @@ class LocalDB:
                 cursor = connection.cursor()
                 query = "DELETE FROM %s" % REMOTES_USER_TABLE
                 if remote_url:
-                    query += ' WHERE remote_url="{}"'.format(remote_url)
+                    query += " WHERE remote_url='{}'".format(remote_url)
                 cursor.execute(query)
                 try:
                     # https://github.com/ghaering/pysqlite/issues/109
@@ -74,7 +74,7 @@ class LocalDB:
         with self._connect() as connection:
             try:
                 statement = connection.cursor()
-                statement.execute('select user, token, refresh_token from %s where remote_url="%s"'
+                statement.execute("select user, token, refresh_token from %s where remote_url='%s'"
                                   % (REMOTES_USER_TABLE, remote_url))
                 rs = statement.fetchone()
                 if not rs:
