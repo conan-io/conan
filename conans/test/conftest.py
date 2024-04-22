@@ -178,16 +178,15 @@ tools_locations = {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
         }
     },
+    'fish': {
+        "default": "3.6",
+        "3.6": {"path": {"Darwin": f"{homebrew_root}/bin"}}
+    }
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
     #     "exe": "dpcpp",
     #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
-    # }
-    # TODO: Fish is not yet installed in CI. Uncomment this line whenever it's done
-    # 'fish': {
-    #     "default": "3.6",
-    #     "3.6": {"path": {"Darwin": f"{homebrew_root}/bin"}}
     # }
 }
 
