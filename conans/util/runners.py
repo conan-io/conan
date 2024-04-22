@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import sys
 import tempfile
@@ -32,6 +33,55 @@ else:
         yield
 
 
+# Windows (and possibly other platforms) should have a clean environment,
+# unpolluted by anything in the user's environment.
+# Anything except the bare minimum should be added to the environment through
+# conan's environment mechanisms.
+# This whitelist could potentially be slimmed down further.
+def _env_for_Popen():
+    newenv = None
+    if platform.system() == 'Windows':
+        whitelist_env_keys = [
+                'ALLUSERSPROFILE',
+                'APPDATA',
+                'CommonProgramFiles',
+                'CommonProgramFiles(x86)',
+                'CommonProgramW6432',
+                'COMPUTERNAME',
+                'ComSpec',
+                'DriverData',
+                'HOMEDRIVE',
+                'HOMEPATH',
+                'LOCALAPPDATA',
+                'LOGONSERVER',
+                'NUMBER_OF_PROCESSORS',
+                'OS',
+                'PATHEXT',
+                'PROCESSOR_ARCHITECTURE',
+                'PROCESSOR_IDENTIFIER',
+                'PROCESSOR_LEVEL',
+                'PROCESSOR_REVISION',
+                'ProgramData',
+                'ProgramFiles',
+                'ProgramFiles(x86)',
+                'ProgramW6432',
+                'PUBLIC',
+                'SESSIONNAME',
+                'SystemDrive',
+                'SystemRoot',
+                'TEMP',
+                'TMP',
+                'USERDOMAIN',
+                'USERDOMAIN_ROAMINGPROFILE',
+                'USERNAME',
+                'USERPROFILE',
+                'windir'
+                ]
+        newenv = { key: os.environ[key] for key in whitelist_env_keys }
+        newenv['Path'] = 'C:\\WINDOWS\\system32;C:\\WINDOWS'
+    return newenv
+
+
 def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     """
     @param shell:
@@ -48,7 +98,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 
     with pyinstaller_bundle_env_cleaned():
         try:
-            proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd)
+            proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd, env=_env_for_Popen())
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
@@ -65,7 +115,8 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 def detect_runner(command):
     # Running detect.py automatic detection of profile
     proc = subprocess.Popen(command, shell=True, bufsize=1, universal_newlines=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            env=_env_for_Popen())
 
     output_buffer = []
     while True:
@@ -88,7 +139,7 @@ def check_output_runner(cmd, stderr=None, ignore_error=False):
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
         command = '{} > "{}"'.format(cmd, tmp_file)
-        process = subprocess.Popen(command, shell=True, stderr=stderr)
+        process = subprocess.Popen(command, shell=True, stderr=stderr, env=_env_for_Popen())
         stdout, stderr = process.communicate()
 
         if process.returncode and not ignore_error:
