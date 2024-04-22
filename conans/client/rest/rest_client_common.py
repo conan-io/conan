@@ -151,7 +151,7 @@ class RestCommonMethods(object):
                 # to cache them #5687, so raise the exception and force authentication
                 raise get_exception_from_error(ret.status_code)(response_to_str(ret))
             else:  # Some servers returning 200-ok, even if not valid repo
-                raise ConanException(f"Remote {self.remote_url} doesn't seem a valid Conan remote")
+                raise ConanException(f"Remote {self.remote_url} doesn't seem like a valid Conan remote")
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
