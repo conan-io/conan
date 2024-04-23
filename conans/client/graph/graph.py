@@ -128,6 +128,8 @@ class Node(object):
             if require.build and (self.context == CONTEXT_HOST or  # switch context
                                   require.ref.version != self.ref.version):  # or different version
                 pass
+            elif require.visible is False and require.ref.version != self.ref.version:
+                pass  # An invisible require doesn't conflict with itself
             else:
                 return None, self, self  # First is the require, as it is a loop => None
 
