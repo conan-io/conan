@@ -12,7 +12,7 @@ def docker_skip(test_image=None):
     try:
         docker_client = docker.from_env()
         if test_image:
-            docker_client.images.get(test_image)
+            docker_client.images.pull(test_image)
     except docker.errors.DockerException:
         return True
     except docker.errors.ImageNotFound:
@@ -34,7 +34,7 @@ def dockerfile_path(name=None):
     return path
 
 
-@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_folder_path():
     """
@@ -120,7 +120,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     assert "Removing container" in client.out
 
 
-@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_file_path():
     """
@@ -180,7 +180,7 @@ def test_create_docker_runner_dockerfile_file_path():
     assert "Removing container" in client.out
 
 
-@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
@@ -246,7 +246,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
-@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_profile_abs_path():
     """
@@ -306,7 +306,7 @@ def test_create_docker_runner_profile_abs_path():
     assert "Removing container" in client.out
 
 
-@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_profile_abs_path_from_configfile():
     """
