@@ -242,6 +242,54 @@ def _warn_python_version():
         ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
                               "Conan future versions will drop support for it, "
                               "please upgrade Python", warn_tag="deprecated")
+def _clear_env():
+    if True: # if platform.system() == 'Windows':
+        whitelist_env_keys = [
+                'ALLUSERSPROFILE',
+                'APPDATA',
+                'COMMONPROGRAMFILES(X86)',
+                'COMMONPROGRAMFILES',
+                'COMMONPROGRAMW6432',
+                'COMPUTERNAME',
+                'COMSPEC',
+                'DRIVERDATA',
+                'HOMEDRIVE',
+                'HOMEPATH',
+                'LOCALAPPDATA',
+                'LOGONSERVER',
+                'NUMBER_OF_PROCESSORS',
+                'OS',
+                'PATHEXT',
+                'PROCESSOR_ARCHITECTURE',
+                'PROCESSOR_IDENTIFIER',
+                'PROCESSOR_LEVEL',
+                'PROCESSOR_REVISION',
+                'PROGRAMDATA',
+                'PROGRAMFILES(X86)',
+                'PROGRAMFILES',
+                'PROGRAMW6432',
+                'PSMODULEPATH',
+                'PUBLIC',
+                'SESSIONNAME',
+                'SYSTEMDRIVE',
+                'SYSTEMROOT',
+                'SYSTEMROOT',
+                'TEMP',
+                'TMP',
+                'USERDOMAIN',
+                'USERDOMAIN_ROAMINGPROFILE',
+                'USERNAME',
+                'USERPROFILE',
+                'WINDIR',
+                ]
+        for key in list(os.environ.keys()):
+            if key not in whitelist_env_keys:
+                del os.environ[key]
+        # Also get the path to conan's python, as some packages assume access to python
+        # eg dav1d
+        # This will also give access to ninja.exe and whatever else is installed in the devenv
+        python_path = os.path.dirname(sys.executable)
+        os.environ['PATH'] = f'C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;{python_path}'
 
 
 def main(args):
@@ -284,6 +332,8 @@ def main(args):
 
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
+
+    _clear_env()
 
     cli = Cli(conan_api)
     error = SUCCESS
