@@ -75,6 +75,9 @@ class Meson(object):
     def install(self, destdir=None):
         """
         Runs ``meson install -C "." --destdir`` in the build folder.
+
+        :param destdir: ``str`` Specifies the destination folder. If ``None``, it will use
+                        the ``conanfile.package_folder`` value.
         """
         meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
         meson_package_folder = self._conanfile.package_folder.replace("\\", "/")

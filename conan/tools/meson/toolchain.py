@@ -93,6 +93,8 @@ class MesonToolchain(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
+        :param prefix: ``str`` ``prefix`` Meson project option value. By default, ``/``. Notice that
+                       this must be an absolute path, otherwise, meson complains.
         """
         raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
