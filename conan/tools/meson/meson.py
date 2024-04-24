@@ -48,8 +48,6 @@ class Meson(object):
 
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
-        # Issue related: https://github.com/mesonbuild/meson/issues/12880
-        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -74,14 +72,17 @@ class Meson(object):
         self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
-    def install(self):
+    def install(self, destdir=None):
         """
         Runs ``meson install -C "." --destdir`` in the build folder.
         """
         meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
         meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
+        destdir = meson_package_folder if destdir is None else destdir
         # Assuming meson >= 0.57.0
-        cmd = f'meson install -C "{meson_build_folder}" --destdir "{meson_package_folder}"'
+        cmd = f'meson install -C "{meson_build_folder}"'
+        if destdir:
+            cmd += f' --destdir "{destdir}"'
         verbosity = self._install_verbosity
         if verbosity:
             cmd += " " + verbosity

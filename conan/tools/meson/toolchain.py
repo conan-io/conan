@@ -89,7 +89,7 @@ class MesonToolchain(object):
     {% endfor %}
     """)
 
-    def __init__(self, conanfile, backend=None):
+    def __init__(self, conanfile, backend=None, prefix="/"):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
@@ -145,6 +145,8 @@ class MesonToolchain(object):
         self.preprocessor_definitions = {}
         # Add all the default dirs
         self.project_options.update(self._get_default_dirs())
+        # Issue related: https://github.com/mesonbuild/meson/issues/12880
+        self.project_options["prefix"] = prefix
 
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
