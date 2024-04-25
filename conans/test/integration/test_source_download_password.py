@@ -41,9 +41,10 @@ def test_source_download_password():
     c.run("source .")
     assert "Content: hello world!" in c.out
 
-    # Errors
-    for invalid in [{"token": "mytoken"},
-                    {"url": server_url, "token": "mytoken2"},  # Unauthorized
+    # Errors loading file
+    for invalid in ["",
+                    "potato",
+                    {"token": "mytoken"},
                     {},
                     {"url": server_url},
                     {"auth": {}},
@@ -51,4 +52,10 @@ def test_source_download_password():
         content = {"credentials": [invalid]}
         save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
         c.run("source .", assert_error=True)
-        assert "Authentication" in c.out or "Unknown credentials" in c.out
+        assert "Error loading 'source_credentials.json'" in c.out
+
+    content = {"credentials": [{"url": server_url, "token": "mytoken2"}]}
+    save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
+    c.run("source .", assert_error=True)
+    assert "ERROR: conanfile.py: Error in source() method, line 6" in c.out
+    assert "Authentication" in c.out

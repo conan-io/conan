@@ -19,8 +19,8 @@ class _ConanIgnoreMatcher:
         if os.path.exists(conanignore_path):
             with open(conanignore_path, 'r') as conanignore:
                 for line in conanignore:
-                    line_content = line.strip()
-                    if line_content != "":
+                    line_content = line.split("#", maxsplit=1)[0].strip()
+                    if line_content:
                         self._ignored_entries.add(line_content)
         if ignore:
             self._ignored_entries.update(ignore)

@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 import unittest
 from collections import OrderedDict
@@ -156,6 +157,9 @@ class ConanLib(ConanFile):
         client.run("create . --name=hello --version=0.1")
         rrev = client.exported_recipe_revision()
         client.run("upload hello/0.1 -r server0")
+        # Ensure we uploaded it
+        assert re.search(r"Uploading recipe 'hello/0.1#.*' \(.*\)", client.out)
+        assert re.search(r"Uploading package 'hello/0.1#.*' \(.*\)", client.out)
         client.run("remove * -c")
 
         # install from server0 that has the sources, upload to server1 (does not have the package)

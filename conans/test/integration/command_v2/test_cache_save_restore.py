@@ -211,3 +211,9 @@ def test_cache_save_subfolder():
     c.run("export .")
     c.run("cache save * --file=subfolder/cache.tgz")
     assert os.path.exists(os.path.join(c.current_folder, "subfolder", "cache.tgz"))
+
+
+def test_error_restore_not_existing():
+    c = TestClient()
+    c.run("cache restore potato.tgz", assert_error=True)
+    assert "ERROR: Restore archive doesn't exist in " in c.out

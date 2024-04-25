@@ -155,6 +155,8 @@ class CacheAPI:
             tgz.close()
 
     def restore(self, path):
+        if not os.path.isfile(path):
+            raise ConanException(f"Restore archive doesn't exist in {path}")
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
             fileobj = the_tar.extractfile("pkglist.json")
