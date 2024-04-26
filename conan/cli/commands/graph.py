@@ -14,9 +14,8 @@ from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
-from conans.errors import ConanConnectionError, NotFoundException
+from conans.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
-from conans.model.version_range import VersionRange
 
 
 def explain_formatter_text(data):
@@ -214,10 +213,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          remotes, args.update,
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
-    if deps_graph.error:
-        ConanOutput().info("Graph error", Color.BRIGHT_RED)
-        ConanOutput().info("    {}".format(deps_graph.error), Color.BRIGHT_RED)
-    else:
+    if not deps_graph.error:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
