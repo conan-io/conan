@@ -86,7 +86,7 @@ def run_validate_package_id(conanfile):
     # Once we are done, call package_id() to narrow and change possible values
     if hasattr(conanfile, "package_id"):
         with conanfile_exception_formatter(conanfile, "package_id"):
-            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+            with conanfile_remove_attr(conanfile, ['cpp_info', 'options'], "package_id"):
                 conanfile.package_id()
     elif "auto_header_only" in conanfile.implements:
         auto_header_only_package_id(conanfile)

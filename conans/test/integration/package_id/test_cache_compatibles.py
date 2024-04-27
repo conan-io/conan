@@ -377,6 +377,28 @@ class TestDefaultCompat:
         c.run("install --requires=app/0.1  --build=missing")
         assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
 
+    def test_forced_cppstd(self):
+        # https://github.com/conan-io/conan/issues/16147
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                def package_id(self):
+                    self.output.info(f"INFO: {self.info.settings.get_safe('compiler.cppstd')}")
+                    self.output.info(f"SETTINGS: {self.settings.get_safe('compiler.cppstd')}")
+                """)
+
+        c.save({"dep/conanfile.py": dep,
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("dep/0.1")})
+
+        settings = "-s os=Linux -s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        c.run(f"create dep {settings} -s compiler.cppstd=14")
+        c.run(f"install --requires=dep/0.1 {settings} -s compiler.cppstd=20")
+        print(c.out)
+
 
 class TestErrorsCompatibility:
     """ when the plugin fails, we want a clear message and a helpful trace
