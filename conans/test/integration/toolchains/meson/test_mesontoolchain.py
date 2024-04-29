@@ -87,6 +87,8 @@ def test_extra_flags_via_conf():
         tools.build:cflags=["-flag3", "-flag4"]
         tools.build:sharedlinkflags+=["-flag5"]
         tools.build:exelinkflags+=["-flag6"]
+        # Issue related: https://github.com/conan-io/conan/issues/16169
+        tools.build:defines=["_ITERATOR_DEBUG_LEVEL=0"]
    """)
     t = TestClient()
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
@@ -94,8 +96,8 @@ def test_extra_flags_via_conf():
 
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
-    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
+    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-D_ITERATOR_DEBUG_LEVEL=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
+    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4', '-D_ITERATOR_DEBUG_LEVEL=0']" in content
     assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
 
