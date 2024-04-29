@@ -48,8 +48,9 @@ class TestRemoveEditablePackageTest:
         c.save({'pkg/conanfile.py': GenConanfile()})
         c.run('editable add pkg --name=lib --version=version')
         shutil.rmtree(os.path.join(c.current_folder, "pkg"))
-        c.run("editable remove pkg", assert_error=True)
-        c.run("editable remove --refs=lib/version")
+        # https://github.com/conan-io/conan/issues/16164
+        # Making it possible, repeated issue
+        c.run("editable remove pkg")
         assert "Removed editable 'lib/version'" in c.out
         c.run("editable list")
         assert "lib" not in c.out
