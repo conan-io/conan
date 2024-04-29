@@ -15,24 +15,6 @@ from conans.model.version import Version
 
 
 def config_parser(file_path):
-    '''
-    - image (str)
-    run:
-        - name -> name (str)
-        - containerEnv -> environment (dict)
-        - containerUser -> user (str or int)
-        - privileged -> privileged (boolean)
-        - capAdd -> cap_add (list)
-        - securityOpt -> security_opt (list)
-        - mounts -> volumes (dict)
-
-    dockerfile:
-        - build.dockerfile -> dockerfile (str) -> dockerfile.read()
-        - build.context -> path (str)
-        - build.args -> buildargs (dict)
-        build.options -> X (python extra params [extra_hosts, network_mode, ...])
-        - build.cacheFrom -> cache_from (list)
-    '''
     Build = namedtuple('Build', ['dockerfile', 'build_context', 'build_args', 'cache_from'])
     Run = namedtuple('Run', ['name', 'environment', 'user', 'privileged', 'cap_add', 'security_opt', 'volumes'])
     Conf = namedtuple('Conf', ['image', 'build', 'run'])
@@ -57,7 +39,7 @@ def config_parser(file_path):
                 user=_instans_or_error(runnerfile.get('run', {}).get('containerUser'), str),
                 privileged=_instans_or_error(runnerfile.get('run', {}).get('privileged'), bool),
                 cap_add=_instans_or_error(runnerfile.get('run', {}).get('capAdd'), list),
-                security_opt=_instans_or_error(runnerfile.get('run', {}).get('securityOpt'), dict),
+                security_opt=_instans_or_error(runnerfile.get('run', {}).get('securityOpt'), list),
                 volumes=_instans_or_error(runnerfile.get('run', {}).get('mounts'), dict),
             )
         )
