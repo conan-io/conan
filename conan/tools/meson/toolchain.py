@@ -352,10 +352,12 @@ class MesonToolchain(object):
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        defines = [f"-D{d}" for d in self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)]
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags,
+            "defines": defines
         }
 
     @staticmethod
@@ -377,13 +379,13 @@ class MesonToolchain(object):
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
 
-        self.c_args.extend(apple_flags + extra_flags["cflags"])
-        self.cpp_args.extend(apple_flags + extra_flags["cxxflags"])
+        self.c_args.extend(apple_flags + extra_flags["cflags"] + extra_flags["defines"])
+        self.cpp_args.extend(apple_flags + extra_flags["cxxflags"] + extra_flags["defines"])
         self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
         # Objective C/C++
-        self.objc_args.extend(self.c_args)
-        self.objcpp_args.extend(self.cpp_args)
+        self.objc_args.extend(self.c_args + extra_flags["defines"])
+        self.objcpp_args.extend(self.cpp_args + extra_flags["defines"])
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
         self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
