@@ -87,36 +87,20 @@ def test_create_docker_runner_dockerfile_folder_path():
     remove=True
     """)
 
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class MyTest(ConanFile):
-            name = "pkg"
-            version = "0.2"
-            settings = "build_type", "compiler"
-            author = "John Doe"
-            license = "MIT"
-            url = "https://foo.bar.baz"
-            homepage = "https://foo.bar.site"
-            topics = "foo", "bar", "qux"
-            provides = "libjpeg", "libjpg"
-            deprecated = "other-pkg"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
-        """)
-    client.save({"conanfile.py": conanfile, "host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
+    client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h host_copy -pr:b build")
 
     assert "Restore: pkg/0.2" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
     client.run("create . -pr:h host_clean -pr:b build")
 
     assert "Restore: pkg/0.2" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
 
@@ -154,29 +138,13 @@ def test_create_docker_runner_dockerfile_file_path():
     cache=copy
     remove=True
     """)
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class MyTest(ConanFile):
-            name = "pkg"
-            version = "0.2"
-            settings = "build_type", "compiler"
-            author = "John Doe"
-            license = "MIT"
-            url = "https://foo.bar.baz"
-            homepage = "https://foo.bar.site"
-            topics = "foo", "bar", "qux"
-            provides = "libjpeg", "libjpg"
-            deprecated = "other-pkg"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
-        """)
-    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h host -pr:b build")
-
+    print(client.out)
     assert "Restore: pkg/0.2" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
 
@@ -280,29 +248,14 @@ def test_create_docker_runner_profile_abs_path():
     cache=copy
     remove=True
     """)
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class MyTest(ConanFile):
-            name = "pkg"
-            version = "0.2"
-            settings = "build_type", "compiler"
-            author = "John Doe"
-            license = "MIT"
-            url = "https://foo.bar.baz"
-            homepage = "https://foo.bar.site"
-            topics = "foo", "bar", "qux"
-            provides = "libjpeg", "libjpg"
-            deprecated = "other-pkg"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
-        """)
-    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
+    
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
 
     assert "Restore: pkg/0.2" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
 
@@ -347,27 +300,12 @@ def test_create_docker_runner_profile_abs_path_from_configfile():
     cache=copy
     remove=True
     """)
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class MyTest(ConanFile):
-            name = "pkg"
-            version = "0.2"
-            settings = "build_type", "compiler"
-            author = "John Doe"
-            license = "MIT"
-            url = "https://foo.bar.baz"
-            homepage = "https://foo.bar.site"
-            topics = "foo", "bar", "qux"
-            provides = "libjpeg", "libjpg"
-            deprecated = "other-pkg"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
-        """)
-    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
+    
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
 
     assert "Restore: pkg/0.2" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
-    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out

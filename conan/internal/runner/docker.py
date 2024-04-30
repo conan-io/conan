@@ -51,22 +51,13 @@ def config_parser(file_path):
         )
 
 
-def docker_info(msg, error=False):
+def _docker_info(msg, error=False):
     fg=Color.BRIGHT_MAGENTA
     if error:
         fg=Color.BRIGHT_RED
     ConanOutput().status('\n┌'+'─'*(2+len(msg))+'┐', fg=fg)
     ConanOutput().status(f'| {msg} |', fg=fg)
     ConanOutput().status('└'+'─'*(2+len(msg))+'┘\n', fg=fg)
-
-
-def list_patterns(cache_info):
-    _pattern = []
-    for reference, info in cache_info.items():
-        for revisions in info.get('revisions', {}).values():
-            for package in revisions.get('packages').keys():
-                _pattern.append(f'{reference}:{package}')
-    return _pattern
 
 
 class DockerRunner:
@@ -80,7 +71,7 @@ class DockerRunner:
         except:
             raise ConanException("Docker Client failed to initialize."
                                  "\n - Check if docker is installed and running"
-                                 "\n - Run 'pip install docker>=5.0.0, <=5.0.3'")
+                                 "\n - Run 'pip install pip install conan[runners]'")
         self.conan_api = conan_api
         self.build_profile = build_profile
         self.args = args
@@ -125,13 +116,13 @@ class DockerRunner:
         run conan inside a Docker continer
         """
         if self.dockerfile:
-            docker_info(f'Building the Docker image: {self.image}')
+            _docker_info(f'Building the Docker image: {self.image}')
             self.build_image()
         volumes, environment = self.create_runner_environment()
         error = False
         try:
             if self.docker_client.containers.list(all=True, filters={'name': self.name}):
-                docker_info('Starting the docker container')
+                _docker_info('Starting the docker container')
                 self.container = self.docker_client.containers.get(self.name)
                 self.container.start()
             else:
@@ -139,7 +130,7 @@ class DockerRunner:
                     environment.update(self.configfile.run.environment)
                 if self.configfile.run.volumes:
                     volumes.update(self.configfile.run.volumes)
-                docker_info('Creating the docker container')
+                _docker_info('Creating the docker container')
                 self.container = self.docker_client.containers.run(
                     self.image,
                     "/bin/bash -c 'while true; do sleep 30; done;'",
@@ -152,7 +143,7 @@ class DockerRunner:
                     security_opt=self.configfile.run.security_opt,
                     detach=True,
                     auto_remove=False)
-            docker_info(f'Container {self.name} running')
+            _docker_info(f'Container {self.name} running')
         except Exception as e:
             raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'
                                  f'\n\n{str(e)}')
@@ -170,10 +161,10 @@ class DockerRunner:
         finally:
             if self.container:
                 error_prefix = 'ERROR: ' if error else ''
-                docker_info(f'{error_prefix}Stopping container', error)
+                _docker_info(f'{error_prefix}Stopping container', error)
                 self.container.stop()
                 if self.remove:
-                    docker_info(f'{error_prefix}Removing container', error)
+                    _docker_info(f'{error_prefix}Removing container', error)
                     self.container.remove()
 
     def build_image(self):
@@ -200,7 +191,7 @@ class DockerRunner:
 
     def run_command(self, command, log=True):
         if log:
-            docker_info(f'Running in container: "{command}"')
+            _docker_info(f'Running in container: "{command}"')
         exec_instance = self.docker_api.exec_create(self.container.id, f"/bin/bash -c '{command}'", tty=True)
         exec_output = self.docker_api.exec_start(exec_instance['Id'], tty=True, stream=True, demux=True,)
         stderr_log, stdout_log = '', ''
@@ -248,7 +239,7 @@ class DockerRunner:
 
             if self.cache == 'copy':
                 tgz_path = os.path.join(self.abs_runner_home_path, 'local_cache_save.tgz')
-                docker_info(f'Save host cache in: {tgz_path}')
+                _docker_info(f'Save host cache in: {tgz_path}')
                 self.conan_api.cache.save(self.conan_api.list.select(ListPattern("*:*")), tgz_path)
         return volumes, environment
 
@@ -274,5 +265,5 @@ class DockerRunner:
             self.run_command('conan list --graph=create.json --graph-binaries=build --format=json > pkglist.json', log=False)
             self.run_command('conan cache save --list=pkglist.json --file "'+self.abs_docker_path+'"/.conanrunner/docker_cache_save.tgz')
             tgz_path = os.path.join(self.abs_runner_home_path, 'docker_cache_save.tgz')
-            docker_info(f'Restore host cache from: {tgz_path}')
+            _docker_info(f'Restore host cache from: {tgz_path}')
             package_list = self.conan_api.cache.restore(tgz_path)

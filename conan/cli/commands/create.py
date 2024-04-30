@@ -67,11 +67,19 @@ def create(conan_api, parser, *args):
 
     print_profiles(profile_host, profile_build)
     if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
-        return {
-            'docker': DockerRunner,
-            'ssh': SSHRunner,
-            'wsl': WSLRunner,
-        }[profile_host.runner.get('type')](conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+        try:
+            runner_type = profile_host.runner['type']
+        except KeyError:
+            raise ConanException(f"Invalid runner configuration. 'type' must be defined")
+        try:
+            runner_instance = {
+                'docker': DockerRunner,
+                'ssh': SSHRunner,
+                'wsl': WSLRunner,
+            }[runner_type]
+        except KeyError:
+            raise ConanException(f"Invalid runner type '{runner_type}'. Allowed values: 'docker' 'ssh' 'wsl'")
+        return runner_instance(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
 
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
