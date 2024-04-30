@@ -14,13 +14,22 @@ from conans.util.runners import conan_run
 @pytest.mark.tool("meson")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
 def test_apple_meson_toolchain_cross_compiling():
-    arch = 'armv8' if platform.machine() == "x86_64" else "x86_64"
+    arch_host = 'armv8' if platform.machine() == "x86_64" else "x86_64"
+    arch_build = 'armv8' if platform.machine() != "x86_64" else "x86_64"
     profile = textwrap.dedent(f"""
     [settings]
     os = Macos
-    arch = {arch}
+    arch = {arch_host}
     compiler = apple-clang
-    compiler.version = 12.0
+    compiler.version = 13.0
+    compiler.libcxx = libc++
+    """)
+    profile_build = textwrap.dedent(f"""
+    [settings]
+    os = Macos
+    arch = {arch_build}
+    compiler = apple-clang
+    compiler.version = 13.0
     compiler.libcxx = libc++
     """)
     conanfile_py = textwrap.dedent("""
@@ -72,17 +81,18 @@ def test_apple_meson_toolchain_cross_compiling():
                  "hello.h": hello_h,
                  "hello.cpp": hello_cpp,
                  "mygen.cpp": my_gen_cpp,
-                 "profile_host": profile})
-    client.run("build . --profile:build=default --profile:host=profile_host")
+                 "profile_host": profile,
+                 "profile_build": profile_build})
+    client.run("build . --profile:build=profile_build --profile:host=profile_host")
     libhello = os.path.join(client.current_folder, "build", "libhello.a")
     assert os.path.isfile(libhello) is True
     # Now, ensuring that we can run the mygen executable
     mygen = os.path.join(client.current_folder, "build", "mygen")
     client.run_command(f"'{mygen}'")
-    assert "Hello" in client.out
+    assert "Release!" in client.out
     # Extra check for lib arch
     conanfile = ConanFileMock({}, runner=conan_run)
     xcrun = XCRun(conanfile)
     lipo = xcrun.find('lipo')
     client.run_command('"%s" -info "%s"' % (lipo, libhello))
-    assert "architecture: %s" % _to_apple_arch(arch) in client.out
+    assert "architecture: %s" % _to_apple_arch(arch_host) in client.out
