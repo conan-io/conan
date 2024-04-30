@@ -64,7 +64,6 @@ def test_apple_meson_toolchain_cross_compiling():
     executable('mygen', 'mygen.cpp', native: true)
     """)
     my_gen_cpp = gen_function_cpp(name="main")
-    """)
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello")
     client = TestClient()
