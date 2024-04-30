@@ -149,6 +149,10 @@ class MesonToolchain(object):
         self._conanfile = conanfile
         self._native = native
         self._is_apple_system = is_apple_os(self._conanfile)
+        is_cross_building = cross_building(conanfile, skip_x64_x86=True)
+        if not is_cross_building and native:
+            raise ConanException("You can only pass native=True if you're cross-building, "
+                                 "otherwise, it could cause unexpected results.")
         self._conanfile_conf = self._conanfile.conf_build if native else self._conanfile.conf
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
@@ -209,7 +213,7 @@ class MesonToolchain(object):
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if native is False and cross_building(conanfile, skip_x64_x86=True):
+        if native is False and is_cross_building:
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
@@ -233,9 +237,6 @@ class MesonToolchain(object):
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
 
-        if self.cross_build and native:
-            raise ConanException("You can only pass native=True if you're cross-building, "
-                                 "otherwise, it could cause unexpected results.")
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
