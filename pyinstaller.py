@@ -19,18 +19,10 @@ import argparse
 import os
 import platform
 import shutil
-import subprocess
 import sys
 
 from conans import __version__
 from conans.util.files import save
-
-
-def _install_pyinstaller(pyinstaller_path):
-    subprocess.call(f"{sys.executable} -m pip install pyinstaller", shell=True)
-    # try to install pyinstaller if not installed
-    if not os.path.exists(pyinstaller_path):
-        os.mkdir(pyinstaller_path)
 
 
 def _run_bin(pyinstaller_path):
@@ -93,9 +85,16 @@ VSVersionInfo(
 
 
 def pyinstall(source_folder, onefile=False):
-    pyinstaller_path = os.path.join(os.getcwd(), 'pyinstaller')
-    _install_pyinstaller(pyinstaller_path)
+    try:
+        import PyInstaller.__main__  # noqa  Pyinstaller is not in the default requirements.txt
+    except ImportError:
+        print(f"ERROR: PyInstaller not found. Please install it with "
+              f"'python -m pip install pyinstaller'")
+        sys.exit(-1)
 
+    pyinstaller_path = os.path.join(os.getcwd(), 'pyinstaller')
+    if not os.path.exists(pyinstaller_path):
+        os.mkdir(pyinstaller_path)
     try:
         shutil.rmtree(os.path.join(pyinstaller_path))
     except Exception as e:
@@ -133,14 +132,14 @@ def pyinstall(source_folder, onefile=False):
     else:
         distpath = os.path.join(pyinstaller_path, "dist")
 
-    command_args = [conan_path, "--noconfirm", f"--paths={source_folder}",  "--console", f"--distpath={distpath}"]
+    command_args = [conan_path, "--noconfirm", f"--paths={source_folder}",
+                    "--console", f"--distpath={distpath}"]
     command_args.extend(hidden.split(" "))
     if win_ver:
         command_args.extend(win_ver)
     if onefile:
         command_args.append("--onefile")
 
-    import PyInstaller.__main__
     PyInstaller.__main__.run(command_args)
 
     _run_bin(pyinstaller_path)
