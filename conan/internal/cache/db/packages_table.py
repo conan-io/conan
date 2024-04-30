@@ -39,7 +39,7 @@ class PackagesDBTable(BaseDbTable):
             self.columns.prev: pref.revision,
         }
         where_expr = ' AND '.join(
-            [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+            [f"{k}='{v}' " if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
     def _set_clause(self, pref: PkgReference, path=None, build_id=None):
@@ -52,7 +52,7 @@ class PackagesDBTable(BaseDbTable):
             self.columns.timestamp: pref.timestamp,
             self.columns.build_id: build_id,
         }
-        set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
+        set_expr = ', '.join([f"{k} = '{v}'" for k, v in set_dict.items() if v is not None])
         return set_expr
 
     def get(self, pref: PkgReference):
@@ -107,7 +107,7 @@ class PackagesDBTable(BaseDbTable):
         where_clause = self._where_clause(pref)
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.lru} = "{lru}" ' \
+                f"SET {self.columns.lru} = '{lru}' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             conn.execute(query)
@@ -115,7 +115,7 @@ class PackagesDBTable(BaseDbTable):
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.build_id} = "null" ' \
+                f"SET {self.columns.build_id} = 'null' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             try:
@@ -126,8 +126,8 @@ class PackagesDBTable(BaseDbTable):
     def remove_recipe(self, ref: RecipeReference):
         # can't use the _where_clause, because that is an exact match on the package_id, etc
         query = f"DELETE FROM {self.table_name} " \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
         with self.db_connection() as conn:
             conn.execute(query)
 
@@ -141,7 +141,7 @@ class PackagesDBTable(BaseDbTable):
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         assert pref.ref.revision, "To search package revisions you must provide a recipe revision."
         assert pref.package_id, "To search package revisions you must provide a package id."
-        check_prev = f'AND {self.columns.prev} = "{pref.revision}" ' if pref.revision else ''
+        check_prev = f"AND {self.columns.prev} = '{pref.revision}' " if pref.revision else ""
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -152,17 +152,17 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.build_id}, ' \
                     f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{pref.ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(pref.ref)}" ' \
-                    f'AND {self.columns.pkgid} = "{pref.package_id}" ' \
+                    f"WHERE {self.columns.rrev} = '{pref.ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(pref.ref)}' " \
+                    f"AND {self.columns.pkgid} = '{pref.package_id}' " \
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{pref.ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(pref.ref)}" ' \
-                    f'AND {self.columns.pkgid} = "{pref.package_id}" ' \
+                    f"WHERE {self.columns.rrev} = '{pref.ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(pref.ref)}' " \
+                    f"AND {self.columns.pkgid} = '{pref.package_id}' " \
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
@@ -185,13 +185,13 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.build_id}, ' \
                     f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(ref)}' " \
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(ref)}' " \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:

@@ -398,13 +398,13 @@ class AppleSystemBlock(Block):
         if not is_apple_os(self._conanfile):
             return None
 
-        def to_apple_archs(conanfile, default=None):
+        def to_apple_archs(conanfile):
             f"""converts conan-style architectures into Apple-style archs
             to be used by CMake also supports multiple architectures
             separated by '{universal_arch_separator}'"""
             arch_ = conanfile.settings.get_safe("arch") if conanfile else None
             if arch_ is not None:
-                return ";".join([_to_apple_arch(arch, default) for arch in
+                return ";".join([_to_apple_arch(arch, default=arch) for arch in
                                  arch_.split(universal_arch_separator)])
 
         # check valid combinations of architecture - os ?

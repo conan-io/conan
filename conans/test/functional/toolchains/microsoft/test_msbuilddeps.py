@@ -713,7 +713,7 @@ def test_build_vs_project_with_a_vs2017():
 
 
 @pytest.mark.tool("visual_studio", "17")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
     check_build_vs_project_with_a("193")
@@ -782,10 +782,16 @@ def check_build_vs_project_with_a(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+    # INJECT PROPS FILES
     props = os.path.join(client.current_folder, "conandeps.props")
-    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
-    new = old + '<Import Project="{props}" />'.format(props=props)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />'
+    new = old + f'<Import Project="{props}" />'
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />'
+    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
+    new = f'<Import Project="{toolchain}" />' + old
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+
     client.save(files, clean_first=True)
     client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
@@ -803,7 +809,7 @@ def test_build_vs_project_with_test_requires_vs2017():
 
 
 @pytest.mark.tool("visual_studio", "17")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
     check_build_vs_project_with_test_requires("193")
@@ -837,10 +843,17 @@ def check_build_vs_project_with_test_requires(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+
+    # INJECT PROPS FILES
     props = os.path.join(client.current_folder, "conandeps.props")
-    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
-    new = old + '<Import Project="{props}" />'.format(props=props)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />'
+    new = old + f'<Import Project="{props}" />'
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />'
+    toolchain = os.path.join(client.current_folder, "conantoolchain.props")
+    new = f'<Import Project="{toolchain}" />' + old
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+
     client.save(files, clean_first=True)
     client.run('build .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
