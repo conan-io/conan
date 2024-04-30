@@ -45,6 +45,7 @@ def test_cmake_make_program(conanfile):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
+    conanfile.folders.set_base_source(temp_folder())
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
 
     with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
