@@ -53,7 +53,7 @@ def test_bazel_relative_paths():
     assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+    load("@@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
     # Components precompiled libs
     # Root package precompiled libs
@@ -150,7 +150,7 @@ def test_bazeldeps_and_tool_requires():
     c.run("install --requires=dep/0.1 -g BazelDeps --build=missing")
     build_file = c.load("dep/BUILD.bazel")
     expected = textwrap.dedent("""\
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+    load("@@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
     # Components precompiled libs
     # Root package precompiled libs
