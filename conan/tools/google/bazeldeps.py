@@ -205,12 +205,16 @@ def _relativize_path(path, pattern):
 
 class _BazelDependenciesBZLGenerator:
     """
-    Bazel needs to know all the dependencies for its current project. So, the only way
+    Bazel 6.0 needs to know all the dependencies for its current project. So, the only way
     to do that is to tell the WORKSPACE file how to load all the Conan ones. This is the goal
     of the function created by this class, the ``load_conan_dependencies`` one.
 
     More information:
         * https://bazel.build/reference/be/workspace#new_local_repository
+
+    Bazel >= 7.1 needs to know all the dependencies as well, but provided via the MODULE.bazel file.
+    Therefor we provide a static repository rule to load the dependencies. This rule is used by a
+    module extension, passing the package path and the BUILD file path to the repository rule.
     """
 
     repository_filename = "dependencies.bzl"
@@ -596,14 +600,27 @@ class BazelDeps:
 
     def generate(self):
         """
-        Generates all the targets <DEP>/BUILD.bazel files and the dependencies.bzl one in the
-        build folder. It's important to highlight that the dependencies.bzl file should be loaded
-        by your WORKSPACE Bazel file:
+        Generates all the targets <DEP>/BUILD.bazel files, a dependencies.bzl (for bazel<7), a
+        conan_deps_repo_rules.bzl and a conan_deps_module_extension.bzl file (for bazel>=7.1) one in the
+        build folder.
+
+        In case of bazel < 7, it's important to highlight that the dependencies.bzl file should
+        be loaded by your WORKSPACE Bazel file:
 
         .. code-block:: python
 
             load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
             load_conan_dependencies()
+
+        In case of bazel >= 7.1, the conan_deps_module_extension.bzl file should be loaded by your
+        Module.bazel file, e.g. like this:
+
+        .. code-block:: python
+                load_conan_dependencies = use_extension(
+                    "//build:conan_deps_module_extension.bzl",
+                    "load_dependencies"
+                )
+                use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
         """
         check_duplicated_generator(self, self._conanfile)
         requirements = _get_requirements(self._conanfile, self.build_context_activated)
