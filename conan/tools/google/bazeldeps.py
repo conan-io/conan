@@ -213,8 +213,8 @@ class _BazelDependenciesBZLGenerator:
         * https://bazel.build/reference/be/workspace#new_local_repository
     """
 
-    filename = "dependencies.bzl"
-    template = textwrap.dedent("""\
+    repository_filename = "dependencies.bzl"
+    repository_template = textwrap.dedent("""\
         # This Bazel module should be loaded by your WORKSPACE file.
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
@@ -235,11 +235,12 @@ class _BazelDependenciesBZLGenerator:
         self._dependencies = dependencies
 
     def generate(self):
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
-        content = template.render(dependencies=self._dependencies)
+        repository_template = Template(self.repository_template, trim_blocks=True,
+                                       lstrip_blocks=True,
+                                       undefined=StrictUndefined)
+        content = repository_template.render(dependencies=self._dependencies)
         # Saving the BUILD (empty) and dependencies.bzl files
-        save(self.filename, content)
+        save(self.repository_filename, content)
         save("BUILD.bazel", "# This is an empty BUILD file to be able to load the "
                             "dependencies.bzl one.")
 
