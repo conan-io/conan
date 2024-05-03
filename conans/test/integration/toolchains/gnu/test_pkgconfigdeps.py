@@ -227,6 +227,55 @@ def test_custom_content_and_version_components():
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content
 
+    # Now with lockfile
+    # https://github.com/conan-io/conan/issues/16197
+    lockfile = textwrap.dedent("""
+        {
+            "version": "0.5",
+            "requires": [
+                "pkg/0.1#9a5fed2bf506fd28817ddfbc92b07fc1"
+            ]
+        }
+        """)
+    client.save({"conan.lock": lockfile})
+    client.run("install --requires=pkg/0.1 -g PkgConfigDeps --lockfile=conan.lock")
+    pc_content = client.load("pkg-mycomponent.pc")
+    assert "componentdir=${prefix}/mydir" in pc_content
+    assert "Version: 19.8.199" in pc_content
+
+
+def test_custom_version():
+    # https://github.com/conan-io/conan/issues/16197
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.set_property("system_package_version", "19.8.199")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=pkg --version=0.1")
+    client.run("install --requires=pkg/0.1 -g PkgConfigDeps")
+
+    pc_content = client.load("pkg.pc")
+    assert "Version: 19.8.199" in pc_content
+
+    # Now with lockfile
+    # https://github.com/conan-io/conan/issues/16197
+    lockfile = textwrap.dedent("""
+        {
+            "version": "0.5",
+            "requires": [
+                "pkg/0.1#0fe93a852dd6a177bca87cb2d4491a18"
+            ]
+        }
+        """)
+    client.save({"conan.lock": lockfile})
+    client.run("install --requires=pkg/0.1 -g PkgConfigDeps --lockfile=conan.lock")
+    pc_content = client.load("pkg.pc")
+    assert "Version: 19.8.199" in pc_content
+
 
 def test_pkg_with_public_deps_and_component_requires():
     """
