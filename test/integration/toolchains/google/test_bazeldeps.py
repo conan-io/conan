@@ -1,4 +1,5 @@
 import os
+import pathlib
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -625,7 +626,16 @@ def test_with_editable_layout():
                 path="{recipes_folder}/dep",
                 build_file="{recipes_folder}/pkg/dep/BUILD.bazel",
             )""") in content
+        content = client.load("conan_deps_module_extension.bzl")
+        assert textwrap.dedent(f"""\
+        def _load_dependenies_impl(mctx):
+            conan_dependency_repo(
+                name = "dep",
+                package_path = "{recipes_folder}/dep",
+                build_file_path = "{recipes_folder}/pkg/dep/BUILD.bazel",
+            )""") in content
         content = client.load("dep/BUILD.bazel")
+        assert pathlib.Path(client.current_folder, "conan_deps_repo_rules.bzl").exists()
         assert textwrap.dedent("""\
         cc_import(
             name = "mylib_precompiled",
