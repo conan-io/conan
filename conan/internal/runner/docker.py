@@ -247,7 +247,6 @@ class DockerRunner:
         min_conan_version = '2.1'
         stdout, _ = self.run_command('conan --version', log=True)
         docker_conan_version = str(stdout.split('Conan version ')[1].replace('\n', '').replace('\r', '')) # Remove all characters and color
-        print(docker_conan_version)
         if Version(docker_conan_version) <= Version(min_conan_version):
             ConanOutput().status(f'ERROR: conan version inside the container must be greater than {min_conan_version}', fg=Color.BRIGHT_RED)
             raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
