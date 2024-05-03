@@ -74,8 +74,8 @@ def create(conan_api, parser, *args):
         try:
             runner_instance = {
                 'docker': DockerRunner,
-                'ssh': SSHRunner,
-                'wsl': WSLRunner,
+                # 'ssh': SSHRunner,
+                # 'wsl': WSLRunner,
             }[runner_type]
         except KeyError:
             raise ConanException(f"Invalid runner type '{runner_type}'. Allowed values: 'docker' 'ssh' 'wsl'")
