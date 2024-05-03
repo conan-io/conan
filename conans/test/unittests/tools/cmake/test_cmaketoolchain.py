@@ -231,7 +231,7 @@ def test_toolset_update_version_overflow(conanfile_msvc):
     conanfile_msvc.settings.compiler.version = "194"
     conanfile_msvc.settings.compiler.update = "8"
     toolchain = CMakeToolchain(conanfile_msvc)
-    assert 'set(CMAKE_GENERATOR_TOOLSET "v144,version=14.48" CACHE STRING "" FORCE)' in toolchain.content
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.48" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_x64(conanfile_msvc):
