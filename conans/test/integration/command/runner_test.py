@@ -309,3 +309,60 @@ def test_create_docker_runner_profile_abs_path_from_configfile():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
+
+
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
+def test_create_docker_runner_profile_abs_path_from_configfile_with_args():
+    """
+    Tests the ``conan create . ``
+    """
+    client = TestClient()
+    configfile = textwrap.dedent(f"""
+        image: conan-runner-default-test-with-args
+        build:
+            dockerfile: {dockerfile_path("Dockerfile_args")}
+            build_context: {conan_base_path()}
+            build_args:
+                BASE_IMAGE: ubuntu:22.04
+        run:
+            name: my-conan-runner-container-with-args
+        """)
+    client.save({"configfile.yaml": configfile})
+
+
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    configfile={os.path.join(client.current_folder, 'configfile.yaml')}
+    cache=copy
+    remove=True
+    """)
+    
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
+    print(client.out)
+    assert "test/integration/command/dockerfiles/Dockerfile_args" in client.out
+    assert "Restore: pkg/0.2" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
+    assert "Removing container" in client.out
