@@ -389,7 +389,7 @@ def test_lib_dirs_windows(lib_dir_setup):
     lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
     lib_dirs_path = re.findall(pattern_lib_dirs_paths, lib_dirs)
 
-    assert len(lib_path.split(''" "'')) == len(lib_dirs_path)
+    assert len(lib_path.split('" "')) == len(lib_dirs_path)
     assert all(lib_dir[-3:] == "bin" for lib_dir in lib_dirs_path)
 
 
