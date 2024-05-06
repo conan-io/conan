@@ -9,7 +9,6 @@ from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
-
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 

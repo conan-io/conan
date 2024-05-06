@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.tools.files import load
 from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
 
@@ -418,3 +419,101 @@ def test_subproject_options():
     assert "option2 = 'disabled'" in content
     assert "option3 = 'enabled'" in content
     assert "option4 = 'disabled'" in content
+
+
+def test_native_attribute():
+    """
+    Tests that native file only has the build context (not as a build require) content.
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [buildenv]
+    STRIP=False
+    PKG_CONFIG=/usr/bin/pkg-config
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [buildenv]
+    STRIP=True
+    PKG_CONFIG=/usr/lib/meson/pkgconfig
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.generate()
+            # We're cross-building, no need to check it
+            tc = MesonToolchain(self, native=True)
+            tc.generate()
+    """)
+    client.save({"host": host,
+                 "build": build,
+                 "conanfile.py": conanfile})
+    client.run("install . -pr:h host -pr:b build")
+    native_content = load(None, os.path.join(client.current_folder, MesonToolchain.native_filename))
+    cross_content = load(None, os.path.join(client.current_folder, MesonToolchain.cross_filename))
+    expected_native = textwrap.dedent("""
+    [binaries]
+    c = 'clang'
+    cpp = 'clang++'
+    strip = 'True'
+    pkgconfig = '/usr/lib/meson/pkgconfig'
+    pkg-config = '/usr/lib/meson/pkgconfig'
+    """)
+    expected_cross = textwrap.dedent("""
+    [binaries]
+    c = 'gcc'
+    cpp = 'g++'
+    strip = 'False'
+    pkgconfig = '/usr/bin/pkg-config'
+    pkg-config = '/usr/bin/pkg-config'
+    """)
+    assert expected_native in native_content
+    assert "[host_machine]" not in native_content
+    assert "[build_machine]" not in native_content
+    assert expected_cross in cross_content
+    assert "[build_machine]" in cross_content
+    assert "[host_machine]" in cross_content
+
+
+def test_native_attribute_error():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.generate()
+            tc = MesonToolchain(self, native=True)
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .", assert_error=True)
+    assert "You can only pass native=True if you're cross-building" in client.out

@@ -29,24 +29,22 @@ class Meson(object):
                                            " Removing in Conan 2.x.", warn_tag="deprecated")
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
-        cmd = "meson setup"
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
-        meson_filenames = []
-        if os.path.exists(cross):
-            cmd_param = " --cross-file"
-            meson_filenames.append(cross)
-        else:
-            cmd_param = " --native-file"
-            meson_filenames.append(native)
-
+        is_cross_build = os.path.exists(cross)
         machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
                                                  default=[], check_type=list)
-        if machine_files:
-            meson_filenames.extend(machine_files)
-
-        cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
+        cmd = "meson setup "
+        if is_cross_build:
+            machine_files.insert(0, cross)
+            cmd += "".join([f'--cross-file "{file}"' for file in machine_files])
+        if os.path.exists(native):
+            if not is_cross_build:  # machine files are only appended to the cross or the native one
+                machine_files.insert(0, native)
+                cmd += "".join([f'--native-file "{file}"' for file in machine_files])
+            else:  # extra native file for cross-building scenarios
+                cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         # Issue related: https://github.com/mesonbuild/meson/issues/12880
         cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
