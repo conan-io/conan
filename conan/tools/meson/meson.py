@@ -38,11 +38,11 @@ class Meson(object):
         cmd = "meson setup "
         if is_cross_build:
             machine_files.insert(0, cross)
-            cmd += "".join([f'--cross-file "{file}"' for file in machine_files])
+            cmd += " ".join([f'--cross-file "{file}"' for file in machine_files])
         if os.path.exists(native):
             if not is_cross_build:  # machine files are only appended to the cross or the native one
                 machine_files.insert(0, native)
-                cmd += "".join([f'--native-file "{file}"' for file in machine_files])
+                cmd += " ".join([f'--native-file "{file}"' for file in machine_files])
             else:  # extra native file for cross-building scenarios
                 cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
