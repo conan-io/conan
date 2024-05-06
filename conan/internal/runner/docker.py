@@ -21,7 +21,7 @@ def config_parser(file_path):
     if file_path:
         def _instans_or_error(value, obj):
             if value and (not isinstance(value, obj)):
-                raise Exception(f"{value} must be a {obj}")
+                raise ConanException(f"docker runner configfile syntax error: {value} must be a {obj.__name__}")
             return value
         with open(file_path, 'r') as f:
             runnerfile = yaml.safe_load(f)
