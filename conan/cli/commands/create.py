@@ -68,7 +68,7 @@ def create(conan_api, parser, *args):
     print_profiles(profile_host, profile_build)
     if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
         try:
-            runner_type = profile_host.runner['type']
+            runner_type = profile_host.runner['type'].lower()
         except KeyError:
             raise ConanException(f"Invalid runner configuration. 'type' must be defined")
         runner_instances_map = {
