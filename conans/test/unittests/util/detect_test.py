@@ -48,7 +48,7 @@ class DetectTest(unittest.TestCase):
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])
 
-    @mock.patch("conan.internal.api.detect_api._clang_compiler",
+    @mock.patch("conan.internal.api.detect_api.detect_clang_compiler",
                 return_value=("clang", Version("9"), "clang"))
     def test_detect_clang_gcc_toolchain(self, _):
         output = RedirectedTestOutput()

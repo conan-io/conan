@@ -23,7 +23,7 @@ class TestConflictDiamondTest:
         c.run("create engine")
         c.run("create ai")
         c.run("install game", assert_error=True)
-        assert "Version conflict: ai/1.0->math/1.0.1, game/1.0->math/1.0" in c.out
+        assert "Version conflict: Conflict between math/1.0.1 and math/1.0 in the graph" in c.out
         # This shouldnt error, so we are able to diagnose our dependency graph
         # The UX still need to be improved, but this is start
         c.run("graph info game --filter=requires", assert_error=True)

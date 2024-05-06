@@ -1,21 +1,22 @@
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, \
-    apple_sdk_path, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
+from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
+    build_type_link_flags, \
+    libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
+
     def __init__(self, conanfile, namespace=None, prefix="/"):
         """
-
         :param conanfile: The current recipe object. Always use ``self``.
         :param namespace: This argument avoids collisions when you have multiple toolchain calls in
                the same recipe. By setting this argument, the *conanbuild.conf* file used to pass
@@ -68,10 +69,10 @@ class AutotoolsToolchain:
 
             compiler = self._conanfile.settings.get_safe("compiler")
             if not self._host:
-                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)["triplet"]
             # Build triplet
             if not self._build:
-                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)["triplet"]
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None

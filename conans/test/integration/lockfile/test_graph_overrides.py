@@ -315,7 +315,7 @@ def test_introduced_conflict(override, force):
             })
 
     c.run("graph info pkgd --lockfile=pkgd/conan.lock --lockfile-partial", assert_error=True)
-    assert "Version conflict: pkgc/0.1->pkga/[>=0.2 <0.3], pkgd/0.1->pkga/0.1" in c.out
+    assert "Version conflict: Conflict between pkga/[>=0.2 <0.3] and pkga/0.1 in the graph" in c.out
     # Resolve the conflict with an override or force
     c.save({"pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("pkgb/0.1")
                                                             .with_requirement("pkgc/0.1")

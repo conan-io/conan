@@ -131,7 +131,7 @@ def test_graph_info_html_error_reporting_output():
 
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True,
            redirect_stdout="graph.html")
-    assert "ERROR: Version conflict:" in tc.out # check that it doesn't crash
+    assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
 
     # change order,  just in case
     tc.run("graph info --requires=ui/1.0 --requires=math/1.0 --format=html", assert_error=True,
@@ -144,3 +144,20 @@ def test_graph_info_html_error_reporting_output():
     assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
     # Check manually
     # tc.run_command(f"{tc.current_folder}/graph.html")
+
+
+def test_graph_conflict_diamond():
+    c = TestClient()
+    c.save({"math/conanfile.py": GenConanfile("math"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
+            "ai/conanfile.py": GenConanfile("ai", "1.0").with_requires("math/1.0.1"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/1.0", "ai/1.0"),
+            })
+    c.run("create math --version=1.0")
+    c.run("create math --version=1.0.1")
+    c.run("create math --version=1.0.2")
+    c.run("create engine")
+    c.run("create ai")
+    c.run("graph info game --format=html", assert_error=True, redirect_stdout="graph.html")
+    # check that it doesn't crash
+    assert "ERROR: Version conflict: Conflict between math/1.0.1 and math/1.0 in the graph." in c.out
