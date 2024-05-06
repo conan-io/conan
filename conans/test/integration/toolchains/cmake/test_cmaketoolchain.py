@@ -356,13 +356,15 @@ def test_find_builddirs():
 @pytest.fixture
 def lib_dir_setup():
     client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_generator("CMakeToolchain")})
+    client.run("create . --name=onelib --version=1.0")
+    client.run("create . --name=twolib --version=1.0")
     conanfile = textwrap.dedent("""
             from conan import ConanFile
 
             class Conan(ConanFile):
+                requires = "onelib/1.0", "twolib/1.0"
 
-                def package_info(self):
-                    self.cpp_info.builddirs = ["/path/to/builddir"]
             """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=dep --version=1.0")
@@ -381,12 +383,14 @@ def test_lib_dirs_windows(lib_dir_setup):
 
     contents = client.load("conan_toolchain.cmake")
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
-    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS \$<\$<CONFIG:Release>:"(.*)">'
-    lib_path_group = re.search(pattern_lib_path, contents).groups()
-    lib_dirs_group = re.search(pattern_lib_dirs, contents).groups()
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS (.*)\)'
+    pattern_lib_dirs_paths = r"\$<\$<CONFIG:Release>:(.*?)>"
+    lib_path = re.search(pattern_lib_path, contents).group(1)
+    lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+    lib_dirs_path = re.findall(pattern_lib_dirs_paths, lib_dirs)
 
-    assert len(lib_path_group) == len(lib_dirs_group)
-    assert all(lib_dir[-3:] == "bin" for lib_dir in lib_dirs_group)
+    assert len(lib_path) == len(lib_dirs_path)
+    assert all(lib_dir[-3:] == "bin" for lib_dir in lib_dirs_path)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Only Linux and OSX")
@@ -395,11 +399,13 @@ def test_lib_dirs_no_windows(lib_dir_setup):
 
     contents = client.load("conan_toolchain.cmake")
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
-    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS \$<\$<CONFIG:Release>:"(.*)">'
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS (.*)\)'
+    pattern_lib_dirs_paths = r"\$<\$<CONFIG:Release>:(.*?)>"
     lib_path = re.search(pattern_lib_path, contents).group(1)
     lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+    lib_dirs_path = re.findall(pattern_lib_dirs_paths, lib_dirs)
 
-    assert lib_path == lib_dirs
+    assert lib_path == '" "'.join(lib_dirs_path)
 
 
 def test_lib_dirs_multiconf(lib_dir_setup):

@@ -154,7 +154,7 @@ class VSDebuggerEnvironment(Block):
 
         if not config_dict:
             return None
-        
+
         vs_debugger_path = ""
         for config, value in config_dict.items():
             vs_debugger_path += f"$<$<CONFIG:{config}>:{value}>"
@@ -507,7 +507,7 @@ class FindFiles(Block):
 
     @staticmethod
     def _multiconfig_generator(prop):
-        return ''.join(f'$<$<CONFIG:{c}>:{v}>' for c, v in prop.items())
+        return ''.join(f'$<$<CONFIG:{c}>:{i}>' for c, v in prop.items() for i in v)
 
     def _get_host_runtime_dirs_mc(self, host_req):
         settings = self._conanfile.settings
@@ -522,7 +522,9 @@ class FindFiles(Block):
             if msvc_runtime_value:
                 capture = msvc_runtime_value.group(1)
                 matches = re.findall(r"\$<\$<CONFIG:(.*)>:(.*)>", capture)
-                host_runtime_dirs = dict(matches)
+                host_runtime_dirs = {}
+                for k, v in matches:
+                    host_runtime_dirs.setdefault(k, []).append(v)
         build_type = settings.get_safe("build_type")
 
         # Calculate the dirs for the actual build_type
@@ -531,7 +533,7 @@ class FindFiles(Block):
             cppinfo = req.cpp_info.aggregated_components()
             build_type_runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
 
-        host_runtime_dirs[build_type] = self._join_paths(build_type_runtime_dirs)
+        host_runtime_dirs[build_type] = build_type_runtime_dirs
 
         return host_runtime_dirs
 
