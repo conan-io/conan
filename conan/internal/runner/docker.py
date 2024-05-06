@@ -86,7 +86,11 @@ class DockerRunner:
         # Update conan command and some paths to run inside the container
         raw_args[raw_args.index(args.path)] = self.abs_docker_path
         self.profiles = []
-        profile_list = set(self.args.profile_build + self.args.profile_host)
+        if self.args.profile_build and self.args.profile_host:
+            profile_list = set(self.args.profile_build + self.args.profile_host)
+        else:
+            profile_list = self.args.profile_host or self.args.profile_build
+        
         # Update the profile paths
         for i, raw_arg in enumerate(raw_args):
             for i, raw_profile in enumerate(profile_list):
@@ -95,6 +99,7 @@ class DockerRunner:
                 if raw_profile in raw_arg:
                     raw_args[raw_args.index(raw_arg)] = raw_arg.replace(raw_profile, os.path.join(self.abs_docker_path, '.conanrunner/profiles', _name))
                 self.profiles.append([_profile, os.path.join(self.abs_runner_home_path, 'profiles', _name)])
+
         self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
 
         # Container config

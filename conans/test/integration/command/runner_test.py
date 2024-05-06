@@ -7,7 +7,6 @@ from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 
 
-
 def docker_skip(test_image=None):
     try:
         docker_client = docker.from_env()
@@ -51,6 +50,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     compiler.version=11
     os=Linux
     """)
+
     profile_host_copy = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -214,6 +214,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
+
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 # @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_profile_abs_path():
@@ -366,3 +367,71 @@ def test_create_docker_runner_profile_abs_path_from_configfile_with_args():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
+
+
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
+def test_create_docker_runner_default_build_profile():
+    """
+    Tests the ``conan create . ``
+    """
+    client = TestClient()
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path("Dockerfile_profile_detect")}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=clean
+    remove=True
+    """)
+
+    client.save({"host_clean": profile_host})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    client.run("create . -pr:h host_clean")
+
+    assert "Restore: pkg/0.2" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
+    assert "Removing container" in client.out
+
+
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
+def test_create_docker_runner_default_build_profile_error():
+    """
+    Tests the ``conan create . ``
+    """
+    client = TestClient()
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=clean
+    remove=True
+    """)
+
+    client.save({"host_clean": profile_host})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    with pytest.raises(Exception, match="ERROR: The default build profile '/root/.conan2/profiles/default' doesn't exist.") as exception:
+        client.run("create . -pr:h host_clean")

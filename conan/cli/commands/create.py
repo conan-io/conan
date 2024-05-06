@@ -10,9 +10,6 @@ from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conans.client.graph.graph import BINARY_BUILD
-from conan.internal.runner.docker import DockerRunner
-from conan.internal.runner.ssh import SSHRunner
-from conan.internal.runner.wsl import WSLRunner
 from conans.util.files import mkdir
 
 
@@ -67,6 +64,9 @@ def create(conan_api, parser, *args):
 
     print_profiles(profile_host, profile_build)
     if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
+        from conan.internal.runner.docker import DockerRunner
+        from conan.internal.runner.ssh import SSHRunner
+        from conan.internal.runner.wsl import WSLRunner
         try:
             runner_type = profile_host.runner['type'].lower()
         except KeyError:
