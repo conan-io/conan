@@ -531,7 +531,7 @@ class FindFiles(Block):
         build_type_runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_type_runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
+            build_type_runtime_dirs.extend(cppinfo.bindirs.replace("\\", "\\\\") if is_win else cppinfo.libdirs)
 
         host_runtime_dirs[build_type] = build_type_runtime_dirs
 
