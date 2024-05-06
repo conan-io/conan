@@ -144,6 +144,10 @@ class MesonToolchain(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
+        :param native: ``bool`` Indicates whether you want Conan to create the
+                       ``conan_meson_native.ini`` in a cross-building context. Notice that it only
+                       makes sense if your project's ``meson.build`` uses the ``native=true``
+                       (see also https://mesonbuild.com/Cross-compilation.html#mixing-host-and-build-targets).
         """
         raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
