@@ -119,21 +119,24 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path):
         cache_folder = self.conan_api.cache_folder
-        app = ConanApp(self.conan_api)
+        global_conf = self.conan_api.config.global_conf
+        cache = ClientCache(cache_folder, global_conf)
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
+        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
+                                            compresslevel=compresslevel)
             for ref, ref_bundle in package_list.refs().items():
-                ref_layout = app.cache.recipe_layout(ref)
+                ref_layout = cache.recipe_layout(ref)
                 recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
                 recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
                 ref_bundle["recipe_folder"] = recipe_folder
                 out.info(f"Saving {ref}: {recipe_folder}")
                 tgz.add(os.path.join(cache_folder, recipe_folder), recipe_folder, recursive=True)
                 for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
-                    pref_layout = app.cache.pkg_layout(pref)
+                    pref_layout = cache.pkg_layout(pref)
                     pkg_folder = pref_layout.package()
                     folder = os.path.relpath(pkg_folder, cache_folder)
                     folder = folder.replace("\\", "/")  # make win paths portable
