@@ -507,7 +507,7 @@ class FindFiles(Block):
 
     @staticmethod
     def _multiconfig_generator(prop):
-        return ''.join(f'$<$<CONFIG:{c}>:"{i}">' for c, v in prop.items() for i in v)
+        return ''.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in prop.items() for i in v)
 
     def _get_host_runtime_dirs_mc(self, host_req):
         settings = self._conanfile.settings
@@ -531,13 +531,9 @@ class FindFiles(Block):
         build_type_runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            if is_win:
-                bin_dirs = [s.replace('\\', '/')for s in cppinfo.bindirs]
-                build_type_runtime_dirs.extend(bin_dirs)
-            else:
-                build_type_runtime_dirs.extend(cppinfo.libdirs)
+            build_type_runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
 
-        host_runtime_dirs[build_type] = build_type_runtime_dirs
+        host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in build_type_runtime_dirs]
 
         return host_runtime_dirs
 
