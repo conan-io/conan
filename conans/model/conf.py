@@ -64,6 +64,7 @@ BUILT_IN_CONFS = {
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
     "tools.compilation:verbosity": "Verbosity of compilation tools if set. Possible values are 'quiet' and 'verbose'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
+    "tools.cmake.cmaketoolchain:generator_instance": "Define CMAKE_GENERATOR_INSTANCE in CMakeToolchain",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
     "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchains at the beginning of conan_toolchain.cmake",

@@ -1414,3 +1414,22 @@ def test_toolchain_and_compilers_build_context():
     })
     client.run("export tool")
     client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+def test_toolchain_generator_instance():
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:generator_instance="C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/"
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
+                 "windows": windows_profile})
+    client.run("install . --profile:build=windows --profile:host=windows")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert 'set(CMAKE_GENERATOR_INSTANCE "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/")' in toolchain
