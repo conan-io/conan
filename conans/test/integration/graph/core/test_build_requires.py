@@ -801,7 +801,7 @@ def test_tool_requires():
     introduced to provide a compatible recipe with 2.0. At 2.0, the meaning of a build require being
     a 'tool' will be a tool_require."""
 
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=tool1 --version=1.0")
     client.run("create . --name=tool2 --version=1.0")

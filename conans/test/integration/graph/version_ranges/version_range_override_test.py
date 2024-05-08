@@ -9,7 +9,7 @@ class TestVersionRangeOverride:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.t = TestClient()
+        self.t = TestClient(light=True)
         self.t.save({"libb/conanfile.py": GenConanfile(),
                      "libc/conanfile.py":
                          GenConanfile().with_require("libb/[<=2.0]@user/channel")})
@@ -60,7 +60,7 @@ class TestVersionRangeOverrideFail:
            \\-----> pkgb  -----------/
         """
         # https://github.com/conan-io/conan/issues/8071
-        t = TestClient()
+        t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile()})
         t.run("create . --name=ros_core --version=1.1.4 --user=3rdparty --channel=unstable")
         t.run("create . --name=ros_core --version=pr-53 --user=3rdparty --channel=snapshot")
