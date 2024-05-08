@@ -250,7 +250,7 @@ def test_conditional():
             def package_info(self):
                 self.info.clear()
     """)
-    t = TestClient()
+    t = TestClient(light=True)
     t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
             'app.py': conanfile})
     t.run("create requires.py")

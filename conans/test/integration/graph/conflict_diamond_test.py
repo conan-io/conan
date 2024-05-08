@@ -10,7 +10,7 @@ class TestConflictDiamondTest:
         game -> engine/1.0 -> math/1.0
           |---> ai/1.0 -----> math/1.0.1 (conflict)
         """
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"math/conanfile.py": GenConanfile("math"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
                 "ai/conanfile.py": GenConanfile("ai", "1.0").with_requires("math/1.0.1"),

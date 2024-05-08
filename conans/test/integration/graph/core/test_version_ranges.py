@@ -348,7 +348,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
 def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846
-    t = TestClient(default_server_user=True)
+    t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name=pkg --version=1.0")
     t.run("create . --name=pkg --version=1.1")
@@ -366,7 +366,7 @@ def test_mixed_user_channel():
 
 
 def test_remote_version_ranges():
-    t = TestClient(default_server_user=True)
+    t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
@@ -395,21 +395,21 @@ def test_different_user_channel_resolved_correctly():
     server2 = TestServer()
     servers = OrderedDict([("server1", server1), ("server2", server2)])
 
-    client = TestClient(servers=servers, inputs=2*["admin", "password"])
+    client = TestClient(servers=servers, inputs=2*["admin", "password"], light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
     client.run("upload lib/1.0@conan/stable -r=server1")
     client.run("upload lib/1.0@conan/testing -r=server2")
 
-    client2 = TestClient(servers=servers)
+    client2 = TestClient(servers=servers, light=True)
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out
 
 
 def test_unknown_options():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("lib", "2.0")})
     c.run("create .")
 
@@ -428,7 +428,7 @@ def test_unknown_options():
 def test_bad_options_syntax(version_range, should_warn):
     """We don't error out on bad options, maybe we should,
     but for now this test ensures we don't change it without realizing"""
-    tc = TestClient()
+    tc = TestClient(light=True)
     tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
              "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"lib/[{version_range}]")})
     tc.run("export lib")

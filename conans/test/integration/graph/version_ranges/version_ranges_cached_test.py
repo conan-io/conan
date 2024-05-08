@@ -31,7 +31,7 @@ class TestVersionRangesCache:
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
 
-        client = TestClient(servers=servers, inputs=["user", "password", "user", "password"])
+        client = TestClient(light=True, servers=servers, inputs=["user", "password", "user", "password"])
 
         # server0 does not satisfy range
         # server1 does
@@ -70,7 +70,7 @@ class TestVersionRangesDiamond:
 
     def test_caching_errors(self):
         # https://github.com/conan-io/conan/issues/6110
-        c = TestClient(default_server_user=True)
+        c = TestClient(light=True, default_server_user=True)
         c.save({"conanfile.py": GenConanfile("zlib")})
         c.run("create . --version=1.0")
         c.run("create . --version=1.1")
@@ -90,7 +90,7 @@ def test_prefer_cache_version():
     """ the latest version whenever it is
     https://github.com/conan-io/conan/issues/6544
     """
-    c = TestClient(default_server_user=True)
+    c = TestClient(light=True, default_server_user=True)
     c.save({"pkg/conanfile.py": GenConanfile("pkg"),
             "consumer/conanfile.py": GenConanfile().with_requires("pkg/[*]")})
     c.run("create pkg --version=1.0")

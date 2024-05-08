@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 class LoopDetectionTest(unittest.TestCase):
 
     def test_transitive_loop(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({
             'pkg1.py': GenConanfile().with_require('pkg2/0.1@lasote/stable'),
             'pkg2.py': GenConanfile().with_require('pkg3/0.1@lasote/stable'),
@@ -21,7 +21,7 @@ class LoopDetectionTest(unittest.TestCase):
         self.assertIn("ERROR: There is a cycle/loop in the graph",  client.out)
 
     def test_self_loop(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({'pkg1.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'), })
         client.run('export pkg1.py --name=pkg1 --version=0.1 --user=lasote --channel=stable')
         client.run("install --requires=pkg1/0.1@lasote/stable --build='*'", assert_error=True)
@@ -29,7 +29,7 @@ class LoopDetectionTest(unittest.TestCase):
 
 
 def test_install_order_infinite_loop():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"fmt/conanfile.py": GenConanfile("fmt", "1.0"),
             "tool/conanfile.py": GenConanfile("tool", "1.0").with_requires("fmt/1.0"),
             "tool_profile": "[tool_requires]\n!tool/*: tool/1.0"})

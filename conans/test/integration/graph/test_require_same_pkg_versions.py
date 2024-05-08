@@ -113,7 +113,7 @@ def test_require_different_versions_profile_override_build_script():
     """ build-scripts by default do the right thing, because they have run=True
     (they could be runnable shell scripts)
     """
-    c = TestClient()
+    c = TestClient(light=True)
     buildscripts = GenConanfile("buildscripts").with_package_type("build-scripts")
     wine = GenConanfile("wine", "1.0").with_tool_requirement("buildscripts/1.0")
     c.save({"buildscripts/conanfile.py": buildscripts,
