@@ -111,9 +111,10 @@ class LocalAPI:
             with chdir(conanfile.build_folder):
                 conanfile.test()
 
-    def inspect(self, conanfile_path, remotes, lockfile):
+    def inspect(self, conanfile_path, remotes, lockfile, name=None, version=None, user=None,
+                channel=None):
         app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
-                                          user=None, channel=None, remotes=remotes, graph_lock=lockfile)
+        conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
+                                          channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
 
