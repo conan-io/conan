@@ -3,7 +3,7 @@ from conans.test.utils.tools import TestClient
 
 
 def test_version_range_conf_nonexplicit_expression():
-    tc = TestClient()
+    tc = TestClient(light=True)
 
     tc.save({"base/conanfile.py": GenConanfile("base")})
     tc.run("create base/conanfile.py --version=1.5.1")
@@ -33,7 +33,7 @@ def test_version_range_conf_nonexplicit_expression():
 
 
 def test_version_range_conf_explicit_expression():
-    tc = TestClient()
+    tc = TestClient(light=True)
 
     tc.save({"base/conanfile.py": GenConanfile("base")})
     tc.run("create base/conanfile.py --version=1.5.1")

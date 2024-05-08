@@ -31,7 +31,7 @@ class Pkg(ConanFile):
 
 @pytest.mark.parametrize("conanfile", [simple, pkg_type, remove])
 def test_auto_package_type(conanfile):
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": conanfile})
     c.run("graph info . --filter package_type")
     assert "package_type: static-library" in c.out

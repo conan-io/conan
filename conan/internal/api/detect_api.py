@@ -360,6 +360,8 @@ def detect_default_compiler():
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
+        if "/usr/bin/cc" == command or "/usr/bin/c++" == command:  # Symlinks of linux "alternatives"
+            return _cc_compiler(command)
         if "clang" in command.lower():
             return detect_clang_compiler(command)
         if "gnu-cc" in command or "gcc" in command or "g++" in command or "c++" in command:
@@ -424,10 +426,9 @@ def _detect_vs_ide_version():
     return None
 
 
-def _cc_compiler():
+def _cc_compiler(compiler_exe="cc"):
     # Try to detect the "cc" linux system "alternative". It could point to gcc or clang
     try:
-        compiler_exe = "cc"
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
             return None, None, None
