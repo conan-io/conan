@@ -10,7 +10,7 @@ def test_require_different_versions():
 
     https://github.com/conan-io/conan/issues/13521
     """
-    c = TestClient(light=True)
+    c = TestClient()
     gcc = textwrap.dedent(r"""
         import os
         from conan import ConanFile
@@ -64,7 +64,7 @@ def test_require_different_versions():
 def test_require_different_versions_profile_override():
     """ same as above but what if the profile is the one overriding the version?
     """
-    c = TestClient(light=True)
+    c = TestClient()
     gcc = textwrap.dedent(r"""
         import os
         from conan import ConanFile
@@ -136,7 +136,7 @@ def test_require_different_options():
 
     https://github.com/conan-io/conan/issues/13521
     """
-    c = TestClient(light=True)
+    c = TestClient()
     gcc = textwrap.dedent(r"""
         import os
         from conan import ConanFile
