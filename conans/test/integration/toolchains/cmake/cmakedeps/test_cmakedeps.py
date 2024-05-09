@@ -707,3 +707,39 @@ def test_cmakedeps_set_property_overrides():
     assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
     other = c.load("app/other-release-data.cmake")
     assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
+
+def test_cmakedeps_set_legacy_variable_name():
+    client = TestClient()
+    conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class libRecipe(ConanFile):
+                name = "dep"
+                version = "1.0"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_legacy_variable_prefix", "DEP")
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+
+        class libRecipe(ConanFile):
+            name = "lib"
+            version = "1.0"
+
+            settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires("dep/1.0")
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.generate()
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    dep_config = client.load("dep-config.cmake")
+    assert "DEP_VERSION" in dep_config

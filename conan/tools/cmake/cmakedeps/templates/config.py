@@ -28,7 +28,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         targets_include += "{}Targets.cmake".format(self.file_name)
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
-                "file_name": self.file_name,
+                "file_name": self.legacy_variable_prefix or self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
