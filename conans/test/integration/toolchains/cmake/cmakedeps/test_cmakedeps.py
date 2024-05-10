@@ -718,10 +718,10 @@ def test_cmakedeps_set_legacy_variable_name():
                 version = "1.0"
 
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_legacy_variable_prefix", "DEP")
+                    self.cpp_info.set_property("cmake_file_name", "lib")
     """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create .")
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
@@ -741,5 +741,22 @@ def test_cmakedeps_set_legacy_variable_name():
     """)
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    dep_config = client.load("dep-config.cmake")
+    dep_config = client.load("lib-config.cmake")
+    assert "lib_VERSION" in dep_config
+
+    conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class libRecipe(ConanFile):
+                name = "dep"
+                version = "1.0"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_name", "lib2")
+                    self.cpp_info.set_property("cmake_legacy_variable_prefix", "DEP")
+    """)
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install .")
+    dep_config = client.load("lib2-config.cmake")
     assert "DEP_VERSION" in dep_config
