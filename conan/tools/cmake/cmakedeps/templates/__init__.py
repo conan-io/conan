@@ -26,7 +26,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def legacy_variable_prefix(self):
-        return self.cmakedeps.get_property("cmake_legacy_variable_prefix", self.conanfile)
+        return self.cmakedeps.get_property("cmake_legacy_variable_prefix", self.conanfile) or self.file_name
 
     @property
     def suffix(self):

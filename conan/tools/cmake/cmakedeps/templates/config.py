@@ -68,17 +68,11 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
-        {% if legacy_variable_prefix %}
-            {% set prefix_name = legacy_variable_prefix %}
-        {% else %}
-            {% set prefix_name = file_name %}
-        {% endif %}
-
-        set({{ prefix_name }}_VERSION_STRING "{{ version }}")
-        set({{ prefix_name }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ prefix_name }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ prefix_name }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
-        set({{ prefix_name }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
+        set({{ legacy_variable_prefix }}_VERSION_STRING "{{ version }}")
+        set({{ legacy_variable_prefix }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ legacy_variable_prefix }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ legacy_variable_prefix }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
+        set({{ legacy_variable_prefix }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
