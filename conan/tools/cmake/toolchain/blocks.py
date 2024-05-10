@@ -959,7 +959,6 @@ class GenericSystemBlock(Block):
         system_version, winsdk_version, gen_platform_sdk_version = result
 
         generator_instance = self._conanfile.conf.get("tools.cmake.cmaketoolchain:generator_instance")
-        generator_instance = generator_instance.strip('\'').strip('"') if generator_instance is not None else None
 
         return {"toolset": toolset,
                 "generator_platform": generator_platform,

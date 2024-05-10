@@ -1422,7 +1422,7 @@ def test_toolchain_generator_instance():
         os=Windows
         arch=x86_64
         [conf]
-        tools.cmake.cmaketoolchain:generator_instance="C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/"
+        tools.cmake.cmaketoolchain:generator_instance=C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/
         """)
 
     client = TestClient(path_with_spaces=False)
@@ -1437,9 +1437,9 @@ def test_toolchain_generator_instance():
     # Test input from command line passing path between doble quotes
     client.run('install . --profile:build=windows --profile:host=windows -c tools.cmake.cmaketoolchain:generator_instance="C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/"')
     toolchain = client.load("conan_toolchain.cmake")
-    assert "set(CMAKE_GENERATOR_INSTANCE \"C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/\")" in toolchain
+    assert 'set(CMAKE_GENERATOR_INSTANCE "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/")' in toolchain
 
     # Test input from command line passing path between simple quotes
     client.run('install . --profile:build=windows --profile:host=windows -c tools.cmake.cmaketoolchain:generator_instance=\'C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/\'')
     toolchain = client.load("conan_toolchain.cmake")
-    assert "set(CMAKE_GENERATOR_INSTANCE \"C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/\")" in toolchain
+    assert 'set(CMAKE_GENERATOR_INSTANCE "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/")' in toolchain
