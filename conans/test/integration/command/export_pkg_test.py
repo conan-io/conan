@@ -638,3 +638,34 @@ def test_remote_none_tool_requires():
     c.run(f"export-pkg pkg {settings} -s:b compiler.cppstd=17")  # This used to crash
     # No longer crash
     assert "pkg/0.1 (test package): Running test()" in c.out
+
+
+def test_export_pkg_set_version_python_requires():
+    # https://github.com/conan-io/conan/issues/16223
+    c = TestClient(light=True)
+    py_require = textwrap.dedent("""
+        from conan import ConanFile
+
+        class TestBuild:
+            def set_version(self):
+                assert self.version
+
+        class TestModule(ConanFile):
+            name = "pyreq"
+            version = "0.1"
+            package_type = "python-require"
+    """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+
+        class TestPkgConan(ConanFile):
+            name="testpkg"
+            python_requires = "pyreq/0.1"
+            python_requires_extend = "pyreq.TestBuild"
+        """)
+    c.save({"pyreq/conanfile.py": py_require,
+            "pkg/conanfile.py": pkg})
+
+    c.run("create pyreq")
+    c.run("export-pkg pkg --version=1.0+0")
+    assert "conanfile.py (testpkg/1.0+0): Exported package binary" in c.out
