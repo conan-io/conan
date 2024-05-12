@@ -49,7 +49,6 @@ def cppstd_compat(conanfile):
         if msvc_fallback:
             factors.append([{"compiler.version": msvc_fallback}])
 
-    conanfile.output.info(f"FACTORS {factors}")
     combinations = []
     for factor in factors:
         if not combinations:
@@ -63,7 +62,6 @@ def cppstd_compat(conanfile):
                 new_combinations.append(comb)
         combinations = new_combinations
 
-    conanfile.output.info(f"COMbINATIONS {combinations}")
     ret = []
     for comb in combinations:
         configuration = base.copy()
