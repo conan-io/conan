@@ -104,7 +104,7 @@ class TestVersionRangeOverrideFail:
                 "ros_core/pr-53@3rdparty/snapshot"
             ],
             "ros_core/1.1.4@3rdparty/unstable": [
-                "ros_core/pr-53@3rdparty/snapshot#4d670581ccb765839f2239cc8dff8fbd"
+                "ros_core/pr-53@3rdparty/snapshot"
             ]
         }
         assert info['graph']["overrides"] == expected_overrides
