@@ -98,6 +98,7 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
             if existing.require.override and existing.require.ref != require.ref:
+                # If it is an override, but other value, it has been overriden too
                 existing.require.overriden_ref = existing.require.ref
                 existing.require.override_ref = require.ref
 
@@ -278,8 +279,6 @@ class Overrides:
         overrides = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
-                #if r.override:
-                #    continue
                 if r.overriden_ref and not r.force:
                     overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
