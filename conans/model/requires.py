@@ -518,16 +518,6 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def override(self, ref):
-        req = Requirement(ref)
-        old_requirement = self._requires.get(req)
-        if old_requirement is not None:
-            req.force = True
-            self._requires[req] = req
-        else:
-            req.override = True
-            self._requires[req] = req
-
     def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest

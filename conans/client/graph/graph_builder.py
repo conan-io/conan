@@ -81,9 +81,11 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                require.overriden_ref = require.ref  # Store that the require has been overriden
-                require.override_ref = prev_ref
-                require.ref = prev_ref
+                require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
+                # require.override_ref can be !=None if lockfile-overrides defined
+                require.override_ref = (require.override_ref or prev_require.override_ref
+                                        or prev_require.ref.copy())  # New one
+                require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous, self._resolve_prereleases)
@@ -194,6 +196,8 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
+            if graph_lock:
+                graph_lock.resolve_overrides(require)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
