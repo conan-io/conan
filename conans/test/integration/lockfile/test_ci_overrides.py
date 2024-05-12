@@ -221,7 +221,7 @@ def test_single_config_decentralized_overrides_multi():
     lock = json.loads(c.load("pkgc/conan.lock"))
     assert len(lock["overrides"]) == 2
     assert set(lock["overrides"]["libf/1.0"]) == {"libf/4.0", "libf/2.0", "libf/3.0"}
-    assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0", None}
+    assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0"}
 
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
     to_build = json.loads(c.stdout)
