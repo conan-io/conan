@@ -90,7 +90,7 @@ class DockerRunner:
             profile_list = set(self.args.profile_build + self.args.profile_host)
         else:
             profile_list = self.args.profile_host or self.args.profile_build
-        
+
         # Update the profile paths
         for i, raw_arg in enumerate(raw_args):
             for i, raw_profile in enumerate(profile_list):
@@ -111,7 +111,7 @@ class DockerRunner:
         if not (self.dockerfile or self.image):
             raise ConanException("'dockerfile' or docker image name is needed")
         self.image = self.image or 'conan-runner-default'
-        self.name = self.configfile.image or f'conan-runner-{host_profile.runner.get("suffix", "docker")}'
+        self.name = self.configfile.run.name or f'conan-runner-{host_profile.runner.get("suffix", "docker")}'
         self.remove = str(host_profile.runner.get('remove', 'false')).lower() == 'true'
         self.cache = str(host_profile.runner.get('cache', 'clean'))
         self.container = None
