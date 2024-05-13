@@ -26,8 +26,8 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def additional_variables_prefixes(self):
-        prefix_list = self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile)
-        prefix_list = prefix_list if prefix_list else []
+        prefix_list = (
+            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile) or [])
         return list(set([self.file_name] + prefix_list))
 
     @property
