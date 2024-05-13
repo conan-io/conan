@@ -179,6 +179,7 @@ class CMakeToolchain(object):
         self.presets_prefix = "conan"
         self.presets_build_environment = None
         self.presets_run_environment = None
+        self.absolute_paths = False  # By default use relative paths to toolchain and presets
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -268,7 +269,7 @@ class CMakeToolchain(object):
 
         write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
                             self.user_presets_path, self.presets_prefix, buildenv, runenv,
-                            cmake_executable)
+                            cmake_executable, self.absolute_paths)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
