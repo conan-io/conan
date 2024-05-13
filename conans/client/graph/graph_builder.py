@@ -81,18 +81,12 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                #print(f"CLOSING LOOP {node}->{require}")
-                #print(f"   Previos require {prev_require.ref} force {prev_require.force} base {base_previous}")
-                #print(f"   Previous defining id={id(prev_require.defining_require)} {prev_require.defining_require.ref}")
-                #print(f"   Current defining id={id(require)}")
                 if prev_require.defining_require is not require:
-                    #print(f"   it is an override!!!!!!!!!!!!!")
                     require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
                     # require.override_ref can be !=None if lockfile-overrides defined
                     require.override_ref = (require.override_ref or prev_require.override_ref
                                             or prev_require.ref.copy())  # New one
                     require.defining_require = prev_require.defining_require
-                    #print(f"   *** OVERRIDE: {require.overriden_ref}->{repr(require.override_ref)}")
                 require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,

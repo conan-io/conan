@@ -280,9 +280,7 @@ class Overrides:
     def create(nodes):
         overrides = {}
         for n in nodes:
-            #print(f"NODE {n.ref}")
             for r in n.conanfile.requires.values():
-                #print(f"  {n.ref}->{repr(r.ref)} {repr(r.overriden_ref)}->{repr(r.override_ref)}")
                 if r.override and not r.overriden_ref:
                     continue
                 if r.overriden_ref:

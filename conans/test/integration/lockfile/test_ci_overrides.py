@@ -225,12 +225,14 @@ def test_single_config_decentralized_overrides_multi(forced):
     c.run("export pkga")
     c.run("export pkgb")
     c.run("lock create pkgc")
-    print(c.out)
     lock = json.loads(c.load("pkgc/conan.lock"))
-    print(c.load("pkgc/conan.lock"))
     assert len(lock["overrides"]) == 2
     assert set(lock["overrides"]["libf/1.0"]) == {"libf/4.0", "libf/2.0", "libf/3.0"}
-    assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0"}
+
+    if forced:  # When forced, there is one libf/2.0 that is not overriden
+        assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0", None}
+    else:
+        assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0"}
 
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
     to_build = json.loads(c.stdout)
