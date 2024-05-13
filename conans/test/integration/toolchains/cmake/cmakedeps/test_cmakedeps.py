@@ -710,53 +710,32 @@ def test_cmakedeps_set_property_overrides():
 
 def test_cmakedeps_set_legacy_variable_name():
     client = TestClient()
-    conanfile = textwrap.dedent("""\
-            from conan import ConanFile
-
-            class libRecipe(ConanFile):
-                name = "dep"
-                version = "1.0"
-
-                def package_info(self):
-                    self.cpp_info.set_property("cmake_file_name", "lib")
-    """)
+    conanfile = str(GenConanfile("dep", "1.0"))
+    conanfile += """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "CMakeFileName")
+    """
     client.save({"dep/conanfile.py": conanfile})
     client.run("create dep")
-    conanfile = textwrap.dedent("""\
-        from conan import ConanFile
-        from conan.tools.cmake import CMakeDeps
-
-        class libRecipe(ConanFile):
-            name = "lib"
-            version = "1.0"
-
-            settings = "os", "compiler", "build_type", "arch"
-
-            def requirements(self):
-                self.requires("dep/1.0")
-
-            def generate(self):
-                deps = CMakeDeps(self)
-                deps.generate()
-    """)
-    client.save({"conanfile.py": conanfile})
+    client.save({"conanfile.py": GenConanfile("lib", "1.0")
+                .with_requires("dep/1.0").with_generator("CMakeDeps").with_setting("build_type")})
     client.run("install .")
-    dep_config = client.load("lib-config.cmake")
-    assert "lib_VERSION" in dep_config
+    dep_config = client.load("CMakeFileNameConfig.cmake")
+    cmake_variables = ["VERSION_STRING", "INCLUDE_DIRS", "INCLUDE_DIR", "LIBRARIES", "DEFINITIONS"]
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
 
-    conanfile = textwrap.dedent("""\
-            from conan import ConanFile
-
-            class libRecipe(ConanFile):
-                name = "dep"
-                version = "1.0"
-
-                def package_info(self):
-                    self.cpp_info.set_property("cmake_file_name", "lib2")
-                    self.cpp_info.set_property("cmake_legacy_variable_prefix", "DEP")
-    """)
+    conanfile = str(GenConanfile("dep", "1.0"))
+    conanfile += """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
+        self.cpp_info.set_property("cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+    """
     client.save({"dep/conanfile.py": conanfile})
     client.run("create dep")
     client.run("install .")
-    dep_config = client.load("lib2-config.cmake")
-    assert "DEP_VERSION" in dep_config
+    dep_config = client.load("NewCMakeFileNameConfig.cmake")
+    for variable in cmake_variables:
+        assert f"NewCMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config

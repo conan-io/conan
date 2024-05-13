@@ -29,7 +29,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name":  self.file_name,
-                "legacy_variable_prefix": self.legacy_variable_prefix,
+                "additional_variables_prefixes": self.additional_variables_prefixes,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
@@ -68,11 +68,14 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
-        set({{ legacy_variable_prefix }}_VERSION_STRING "{{ version }}")
-        set({{ legacy_variable_prefix }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ legacy_variable_prefix }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ legacy_variable_prefix }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
-        set({{ legacy_variable_prefix }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
+        {% for prefix in additional_variables_prefixes %}
+        set({{ prefix }}_VERSION_STRING "{{ version }}")
+        set({{ prefix }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ prefix }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ prefix }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
+        set({{ prefix }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
+
+        {% endfor %}
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
