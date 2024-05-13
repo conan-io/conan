@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -167,7 +169,8 @@ def test_single_config_decentralized_overrides_nested():
     assert "Install finished successfully" in c.out
 
 
-def test_single_config_decentralized_overrides_multi():
+@pytest.mark.parametrize("forced", [False, True])
+def test_single_config_decentralized_overrides_multi(forced):
     r""" same scenario as "test_single_config_centralized()", but distributing the build in
     different build servers, using the "build-order"
     Now with overrides
@@ -181,20 +184,24 @@ def test_single_config_decentralized_overrides_multi():
     pkgc -> toola/1.2 -> libb/1.0 -> libc/1.0 -> libd/1.0 -> libe/1.0 -> libf/1.0
                                            \-----------override--------> libf/2.0
     """
+    override, force = (True, False) if not forced else (False, True)
     c = TestClient()
     c.save({"libf/conanfile.py": GenConanfile("libf"),
             "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
             "libd/conanfile.py": GenConanfile("libd", "1.0").with_requires("libe/1.0"),
             "libc/conanfile.py": GenConanfile("libc", "1.0").with_requirement("libd/1.0")
                                                             .with_requirement("libf/2.0",
-                                                                              override=True),
+                                                                              override=override,
+                                                                              force=force),
             "libb/conanfile.py": GenConanfile("libb", "1.0").with_requires("libc/1.0"),
             "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("libb/1.0")
                                                               .with_requirement("libf/3.0",
-                                                                                override=True),
+                                                                                override=override,
+                                                                                force=force),
             "toola1/conanfile.py": GenConanfile("toola", "1.1").with_requirement("libb/1.0")
                                                                .with_requirement("libf/4.0",
-                                                                                 override=True),
+                                                                                 override=override,
+                                                                                 force=force),
             "toola2/conanfile.py": GenConanfile("toola", "1.2").with_requirement("libb/1.0"),
             "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_tool_requires("toola/1.0"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0")
@@ -221,7 +228,7 @@ def test_single_config_decentralized_overrides_multi():
     lock = json.loads(c.load("pkgc/conan.lock"))
     assert len(lock["overrides"]) == 2
     assert set(lock["overrides"]["libf/1.0"]) == {"libf/4.0", "libf/2.0", "libf/3.0"}
-    assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0"}
+    assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0", "libf/2.0"}
 
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
     to_build = json.loads(c.stdout)

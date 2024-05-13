@@ -81,10 +81,11 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
-                # require.override_ref can be !=None if lockfile-overrides defined
-                require.override_ref = (require.override_ref or prev_require.override_ref
-                                        or prev_require.ref.copy())  # New one
+                if base_previous is not node:
+                    require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
+                    # require.override_ref can be !=None if lockfile-overrides defined
+                    require.override_ref = (require.override_ref or prev_require.override_ref
+                                            or prev_require.ref.copy())  # New one
                 require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
