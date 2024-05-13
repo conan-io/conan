@@ -122,6 +122,7 @@ class Node(object):
         if down_require is None:
             return
 
+        down_require.defining_require = require.defining_require
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
@@ -165,6 +166,7 @@ class Node(object):
             # print("    No need to check downstream more")
             return result
 
+        down_require.defining_require = require.defining_require
         source_node = dependant.src
         return source_node.check_downstream_exists(down_require) or result
 
@@ -278,7 +280,9 @@ class Overrides:
     def create(nodes):
         overrides = {}
         for n in nodes:
+            #print(f"NODE {n.ref}")
             for r in n.conanfile.requires.values():
+                #print(f"  {n.ref}->{repr(r.ref)} {repr(r.overriden_ref)}->{repr(r.override_ref)}")
                 if r.override and not r.overriden_ref:
                     continue
                 if r.overriden_ref:
