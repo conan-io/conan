@@ -844,6 +844,11 @@ class GenericSystemBlock(Block):
         message(STATUS "Conan toolchain: CMAKE_GENERATOR_TOOLSET={{ toolset }}")
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
+        {% if extra_variables %}
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} "{{ value }}")
+        {% endfor %}
+        {% endif %}
         """)
 
     @staticmethod
@@ -1009,6 +1014,9 @@ class GenericSystemBlock(Block):
         result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
 
+        # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
+        extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={}, check_type=dict)
+
         return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
@@ -1016,7 +1024,8 @@ class GenericSystemBlock(Block):
                 "cmake_system_processor": system_processor,
                 "cmake_sysroot": cmake_sysroot,
                 "winsdk_version": winsdk_version,
-                "gen_platform_sdk_version": gen_platform_sdk_version}
+                "gen_platform_sdk_version": gen_platform_sdk_version,
+                "extra_variables": extra_variables}
 
 
 class OutputDirsBlock(Block):
