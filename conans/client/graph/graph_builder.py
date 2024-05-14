@@ -198,9 +198,9 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
+            self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
                 graph_lock.resolve_overrides(require)
-            self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):

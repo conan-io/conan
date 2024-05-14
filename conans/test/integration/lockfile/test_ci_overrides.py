@@ -300,3 +300,90 @@ def test_single_config_decentralized_overrides_multi(forced):
     # All works, all binaries exist now
     assert "pkga/1.0: Already installed!" in c.out
     assert "pkgb/1.0: Already installed!" in c.out
+
+
+@pytest.mark.parametrize("replace_pattern", ["*", "1.0", "2.0", "3.0", "4.0"])
+@pytest.mark.parametrize("forced", [False, True])
+def test_single_config_decentralized_overrides_multi_replace_requires(replace_pattern, forced):
+    r""" same scenario as "test_single_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    Now with overrides
+
+    pkga -> toola/1.0 -> libb/1.0 -> libc/1.0 -> libd/1.0 -> libe/1.0 -> libf/1.0
+      |         \                          \-----------override--------> libf/2.0
+      |          \--------------------override-------------------------> libf/3.0
+    pkgb -> toola/1.1 -> libb/1.0 -> libc/1.0 -> libd/1.0 -> libe/1.0 -> libf/1.0
+      |         \                          \-----------override--------> libf/2.0
+      |          \--------------------override-------------------------> libf/4.0
+    pkgc -> toola/1.2 -> libb/1.0 -> libc/1.0 -> libd/1.0 -> libe/1.0 -> libf/1.0
+                                           \-----------override--------> libf/2.0
+    """
+    override, force = (True, False) if not forced else (False, True)
+    c = TestClient()
+    c.save({"libf/conanfile.py": GenConanfile("libf"),
+            "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
+            "libd/conanfile.py": GenConanfile("libd", "1.0").with_requires("libe/1.0"),
+            "libc/conanfile.py": GenConanfile("libc", "1.0").with_requirement("libd/1.0")
+                                                            .with_requirement("libf/2.0",
+                                                                              override=override,
+                                                                              force=force),
+            "libb/conanfile.py": GenConanfile("libb", "1.0").with_requires("libc/1.0"),
+            "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("libb/1.0")
+                                                              .with_requirement("libf/3.0",
+                                                                                override=override,
+                                                                                force=force),
+            "toola1/conanfile.py": GenConanfile("toola", "1.1").with_requirement("libb/1.0")
+                                                               .with_requirement("libf/4.0",
+                                                                                 override=override,
+                                                                                 force=force),
+            "toola2/conanfile.py": GenConanfile("toola", "1.2").with_requirement("libb/1.0"),
+            "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_tool_requires("toola/1.0"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0")
+                                                            .with_tool_requires("toola/1.1"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0")
+                                                            .with_tool_requires("toola/1.2"),
+            "profile": f"include(default)\n[replace_requires]\nlibf/{replace_pattern}: libf/system"
+            })
+
+    c.run("export libf --version=2.0")
+    c.run("export libf --version=3.0")
+    c.run("export libf --version=4.0")
+    c.run("export libf --version=system")
+    c.run("export libe")
+    c.run("export libd")
+    c.run("export libc")
+    c.run("export libb")
+
+    c.run("export toola")
+    c.run("export toola1")
+    c.run("export toola2")
+
+    c.run("export pkga")
+    c.run("export pkgb")
+    c.run("lock create pkgc -pr:b=profile")
+
+    # overrides will be different everytime, just checking that things can be built
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json -pr:b=profile "
+          "--build=missing")
+
+    to_build = json.loads(c.stdout)
+    for level in to_build:
+        for elem in level:
+            ref = elem["ref"]
+            if "libc" in ref:
+                pass
+            for package in elem["packages"][0]:  # assumes no dependencies between packages
+                binary = package["binary"]
+                if binary != "Build":
+                    continue
+                build_args = package["build_args"]
+                c.run(f"install {build_args} --lockfile=pkgc/conan.lock -pr:b=profile")
+
+    c.run("install pkgc --lockfile=pkgc/conan.lock -pr:b=profile")
+    # All works, all binaries exist now
+    assert "pkga/1.0: Already installed!" in c.out
+    assert "pkgb/1.0: Already installed!" in c.out
+    if replace_pattern == "1.0":  # These will overriden by downstream
+        assert "libf/system#7fb6d926dabeb955bcea1cafedf953c8 - Cache" not in c.out
+    else:
+        assert "libf/system#7fb6d926dabeb955bcea1cafedf953c8 - Cache" in c.out
