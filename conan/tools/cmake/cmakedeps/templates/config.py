@@ -1,3 +1,4 @@
+import fnmatch
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
@@ -26,7 +27,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
-        cmake_required_inc = self.file_name in getattr(self.cmakedeps, "cmake_required_includes", [])
+        patterns = self.cmakedeps.cmake_checks_required or []
+        cmake_required = any(fnmatch.fnmatch(self.file_name, p) for p in patterns)
+        cmake_required_library = self.root_target_name if cmake_required else None
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name":  self.file_name,
@@ -35,7 +38,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
                 "targets_include_file": targets_include,
-                "cmake_required_includes": cmake_required_inc}
+                "cmake_required_library": cmake_required_library}
 
     @property
     def template(self):
@@ -79,8 +82,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         {% endfor %}
 
-        {% if cmake_required_includes %}
-        list(PREPEND CMAKE_REQUIRED_INCLUDES {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }})
+        {% if cmake_required_library %}
+        list(PREPEND CMAKE_REQUIRED_LIBRARIES {{ cmake_required_library }})
         {% endif %}
 
         # Only the first installed configuration is included to avoid the collision

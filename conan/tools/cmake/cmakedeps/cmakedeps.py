@@ -37,6 +37,8 @@ class CMakeDeps(object):
 
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
+        # by default all deps will be injected in CMake try-compile and check_xxxx calls
+        self.cmake_checks_required = ["*"]
         self._properties = {}
 
     def generate(self):

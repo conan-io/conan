@@ -1446,57 +1446,6 @@ def test_cmaketoolchain_and_pkg_config_path():
     assert "Found dep, version 1.0" in client.out
 
 
-@pytest.mark.tool("cmake")
-def test_check_c_source_compiles():
-    """
-    https://github.com/conan-io/conan/issues/12012
-    """
-    client = TestClient()
-    client.run("new cmake_lib -d name=dep -d version=1.0")
-    client.run("create . -tf=")
-
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.cmake import cmake_layout, CMakeDeps
-        class PkgConan(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
-            requires = "dep/1.0"
-            generators = "CMakeToolchain"
-
-            def generate(self):
-                tc = CMakeDeps(self)
-                tc.cmake_required_includes = ["dep"]
-                # tc.cmake_required_libs = ["dep"]
-                tc.generate()
-        """)
-
-    # COMMENT set(MYLIB ... ) and UNCOMMENT get_target_property( ) for test to pass
-    cmakelist = textwrap.dedent("""\
-        cmake_minimum_required(VERSION 3.15)
-        project(Hello LANGUAGES CXX)
-
-        find_package(dep CONFIG REQUIRED)
-        include(CheckCXXSourceCompiles)
-
-        message(STATUS "CMAKE_REQUIRED_INCLUDES= ${CMAKE_REQUIRED_INCLUDES}")
-        # get_target_property(MYLIB CONAN_LIB::dep_dep_RELEASE IMPORTED_LOCATION_RELEASE)
-        # set(MYLIB ${dep_LIBRARIES_TARGETS})
-        # message(STATUS "LIBS DEPS ${dep_LIBRARIES_TARGETS}")
-        # list(PREPEND CMAKE_REQUIRED_LIBRARIES ${MYLIB})
-
-        check_cxx_source_compiles("#include <dep.h>
-                                  int main(void) { return 0; }" IT_COMPILES)
-        """)
-
-    client.save({"conanfile.py": consumer,
-                 "CMakeLists.txt": cmakelist}, clean_first=True)
-    client.run("install .")
-
-    with client.chdir("build"):
-        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ")
-        assert "Performing Test IT_COMPILES - Success" in client.out
-
-
 def test_cmaketoolchain_conf_from_tool_require():
     # https://github.com/conan-io/conan/issues/13914
     c = TestClient()
@@ -1966,63 +1915,52 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert "CPLUSPLUS: __cplusplus19" in c.out
 
 
+@pytest.mark.tool("cmake")
 class TestCMakeTry:
 
-    def test_cmake_check_cxx_compile(self):
-        client = TestClient()
+    def test_check_c_source_compiles(self, matrix_client):
+        """
+        https://github.com/conan-io/conan/issues/12012
+        """
+        client = matrix_client  # it brings the "matrix" package dependency pre-built
 
-        conanfile = textwrap.dedent("""
+        consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.cmake import CMake
-
-            class AppConan(ConanFile):
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = "CMakeLists.txt"
-                name = "foo"
-                version = "1.0"
+            from conan.tools.cmake import cmake_layout, CMakeDeps
+            class PkgConan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                requires = "matrix/1.0"
                 generators = "CMakeToolchain"
 
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
+                def generate(self):
+                    tc = CMakeDeps(self)
+                    # tc.cmake_checks_required = ["*"] is default
+                    tc.generate()
             """)
 
-        cmake = textwrap.dedent("""
+        # COMMENT set(MYLIB ... ) and UNCOMMENT get_target_property( ) for test to pass
+        cmakelist = textwrap.dedent("""\
             cmake_minimum_required(VERSION 3.15)
-            project(foo LANGUAGES CXX)
+            project(Hello LANGUAGES CXX)
 
+            find_package(matrix CONFIG REQUIRED)
             include(CheckCXXSourceCompiles)
-            check_cxx_source_compiles("
-            #if defined(_MSC_VER)
-            #include <intrin.h>
-            #else  // !defined(_MSC_VER)
-            #include <xmmintrin.h>
-            #endif  // defined(_MSC_VER)
 
-            int main() {
-              char data = 0;
-              const char* address = &data;
-              _mm_prefetch(address, _MM_HINT_NTA);
-              return 0;
-            }
-            "  HAVE_MY_FEATURE)
-
-            message(STATUS "MY_FEATURE ${HAVE_MY_FEATURE}!!!")
+            set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
+            check_cxx_source_compiles("#include <matrix.h>
+                                      int main(void) { matrix();return 0; }" IT_COMPILES)
             """)
 
-        client.save({"conanfile.py": conanfile,
-                     "CMakeLists.txt": cmake})
-        client.run("create . ")
-        assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
-        assert "-- MY_FEATURE 1!!!" in client.out
+        client.save({"conanfile.py": consumer,
+                     "CMakeLists.txt": cmakelist}, clean_first=True)
+        client.run("install .")
 
-    pytest.mark.tool("cmake")
+        with client.chdir("build"):
+            client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ")
+            assert "Performing Test IT_COMPILES - Success" in client.out
 
-    def test_cmake_check_cxx_compile_with_deps(self):
-        client = TestClient()
-        client.run("new cmake_lib -d name=lib -d version=0.1")
-        client.run("create . -tf=")
+    def test_cmake_check_cxx_compile_with_deps(self, matrix_client):
+        client = matrix_client
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -2033,7 +1971,7 @@ class TestCMakeTry:
                 exports_sources = "CMakeLists.txt"
                 name = "foo"
                 version = "1.0"
-                requires = "lib/0.1"
+                requires = "matrix/1.0"
                 generators = "CMakeToolchain", "CMakeDeps"
 
                 def build(self):
@@ -2046,7 +1984,9 @@ class TestCMakeTry:
             cmake_minimum_required(VERSION 3.15)
             project(foo LANGUAGES CXX)
 
-            find_package(lib CONFIG REQUIRED)
+            find_package(matrix CONFIG REQUIRED)
+
+            set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
 
             include(CheckCXXSourceCompiles)
             check_cxx_source_compiles("
