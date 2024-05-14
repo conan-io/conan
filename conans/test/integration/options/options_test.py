@@ -23,7 +23,7 @@ class OptionsTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=2")
-        assert 'Unscoped option definition is ambiguous' in client.out
+        assert 'legacy: Unscoped option definition is ambiguous' in client.out
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,

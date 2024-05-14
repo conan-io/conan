@@ -102,7 +102,7 @@ class ProfilesAPI:
             ConanOutput().warning("Unscoped option definition is ambiguous.\n"
                                   f"Use '&:{k}={v}' to refer to the current package.\n"
                                   f"Use '*:{k}={v}' or other pattern if the intent was to apply to "
-                                  f"dependencies")
+                                  f"dependencies", warn_tag="legacy")
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
