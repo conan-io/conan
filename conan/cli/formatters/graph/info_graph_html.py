@@ -44,7 +44,10 @@ graph_info_html = r"""
                     <label for="show_package_type">Show package type</label>
                 </div>
                  <div>
-                    <input type="search" placeholder="Search package..." oninput="searchPackage(this)">
+                    <input type="search" placeholder="Search packages..." oninput="searchPackages(this)">
+                </div>
+                 <div>
+                    <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
                 </div>
                 <div>
                     <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
@@ -60,7 +63,8 @@ graph_info_html = r"""
             const graph_data = {{ deps_graph | tojson }};
             let hide_build = false;
             let hide_test = false;
-            let search_pkg = null;
+            let search_pkgs = null;
+            let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
             let color_map = {Cache: "SkyBlue",
@@ -101,6 +105,15 @@ graph_info_html = r"""
                         if (existing) continue;
                         collapsed_packages[label] = node_id;
                     }
+                    if (excluded_pkgs) {
+                        let patterns = excluded_pkgs.split(',')
+                            .map(pattern => pattern.trim())
+                            .filter(pattern => pattern.length > 0)
+                            .map(pattern => pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+                        if (patterns.some(pattern => label.match(pattern))) {
+                            continue;
+                        }
+                    }
                     if (show_package_type) {
                          label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
                     }
@@ -114,9 +127,15 @@ graph_info_html = r"""
                         color = "Black";
                         shape = "circle";
                     }
-                    if (search_pkg && label.match(search_pkg)) {
-                        borderWidth = 3;
-                        borderColor = "Magenta";
+                    if (search_pkgs) {
+                        let patterns = search_pkgs.split(',')
+                            .map(pattern => pattern.trim())
+                            .filter(pattern => pattern.length > 0)
+                            .map(pattern => pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+                        if (patterns.some(pattern => label.match(pattern))) {
+                            borderWidth = 3;
+                            borderColor = "Magenta";
+                        }
                     }
                     if (node.test) {
                         font.background = "lightgrey";
@@ -293,8 +312,12 @@ graph_info_html = r"""
                 collapse_packages = !collapse_packages;
                 draw();
             }
-            function searchPackage(e) {
-                search_pkg = e.value;
+            function searchPackages(e) {
+                search_pkgs = e.value;
+                draw();
+            }
+            function excludePackages(e) {
+                excluded_pkgs = e.value;
                 draw();
             }
             function showPackageType(e) {

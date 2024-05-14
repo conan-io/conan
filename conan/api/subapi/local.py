@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conans.client.cache.editable import EditablePackages
@@ -60,7 +61,8 @@ class LocalAPI:
 
     def editable_remove(self, path=None, requires=None, cwd=None):
         if path:
-            path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+            path = make_abs_path(path, cwd)
+            path = os.path.join(path, "conanfile.py")
         return self.editable_packages.remove(path, requires)
 
     def editable_list(self):

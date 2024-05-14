@@ -344,6 +344,13 @@ def test_add_wrong_conancenter():
     assert "the correct remote API is https://center.conan.io" in c.out
 
 
+def test_wrong_remotes_json_file():
+    c = TestClient(light=True)
+    c.save_home({"remotes.json": ""})
+    c.run("remote list", assert_error=True)
+    assert "ERROR: Error loading JSON remotes file" in c.out
+
+
 def test_allowed_packages_remotes():
     tc = TestClient(light=True, default_server_user=True)
     tc.save({"conanfile.py": GenConanfile(),

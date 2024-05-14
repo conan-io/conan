@@ -257,7 +257,10 @@ def _load(remotes_file):
         _save(remotes_file, [remote])
         return [remote]
 
-    data = json.loads(load(remotes_file))
+    try:
+        data = json.loads(load(remotes_file))
+    except Exception as e:
+        raise ConanException(f"Error loading JSON remotes file '{remotes_file}': {e}")
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),

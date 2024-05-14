@@ -14,7 +14,8 @@ def test_cache_save_restore():
     c.run("create . --name=pkg --version=1.0 -s os=Linux")
     c.run("create . --name=pkg --version=1.1 -s os=Linux")
     c.run("create . --name=other --version=2.0 -s os=Linux")
-    c.run("cache save pkg/*:* ")
+    # Force the compress level just to make sure it doesn't crash
+    c.run("cache save pkg/*:* -cc core.gzip:compresslevel=9")
     cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
     assert os.path.exists(cache_path)
     _validate_restore(cache_path)
@@ -211,3 +212,9 @@ def test_cache_save_subfolder():
     c.run("export .")
     c.run("cache save * --file=subfolder/cache.tgz")
     assert os.path.exists(os.path.join(c.current_folder, "subfolder", "cache.tgz"))
+
+
+def test_error_restore_not_existing():
+    c = TestClient()
+    c.run("cache restore potato.tgz", assert_error=True)
+    assert "ERROR: Restore archive doesn't exist in " in c.out

@@ -57,11 +57,12 @@ def compute_package_id(node, new_config, config_version):
 
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
-            try:
-                conanfile.validate_build()
-            except ConanInvalidConfiguration as e:
-                # This 'cant_build' will be ignored if we don't have to build the node.
-                node.cant_build = str(e)
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
 
     run_validate_package_id(conanfile)
 

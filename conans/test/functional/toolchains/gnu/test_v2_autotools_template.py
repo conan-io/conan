@@ -338,3 +338,39 @@ def test_autotools_fix_shared_libs():
     # Running the test-package also works
     client.run("test test_package hello/0.1@ -o hello/*:shared=True")
     assert "Bye, bye!" in client.out
+
+
+@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+@pytest.mark.tool("msys2")
+class TestAutotoolsTemplateWindows:
+    def test_msys2_autotools_windows(self):
+        c = TestClient(path_with_spaces=False)
+        c.run("new autotools_lib -d name=hello -d version=1.0")
+        # TODO: Can we reduce the configuration? maybe path=bash can be defaulted?
+        msys2 = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.microsoft.bash:subsystem=msys2
+            tools.microsoft.bash:path=bash
+            tools.build:compiler_executables={"c": "cl", "cpp": "cl"}
+            """)
+        c.save({"msys2": msys2})
+        # FIXME: Need to deactivate test_package because AutotoolsDeps doesn't work in Win
+        c.run("create . -pr=msys2 -tf=")
+        # This will not crash
+        assert "conanvcvars.bat: Activating environment" in c.out
+        assert "hello/1.0: package(): Packaged 1 '.lib' file: hello.lib" in c.out
+
+    def test_msys2_autotools_exe_windows(self):
+        c = TestClient(path_with_spaces=False)
+        c.run("new autotools_exe -d name=hello -d version=1.0")
+        msys2 = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.microsoft.bash:subsystem=msys2
+            tools.microsoft.bash:path=bash
+            tools.build:compiler_executables={"c": "cl", "cpp": "cl"}
+            """)
+        c.save({"msys2": msys2})
+        c.run("create . -pr=msys2")
+        assert "hello/1.0: _MSC_VER19" in c.out
