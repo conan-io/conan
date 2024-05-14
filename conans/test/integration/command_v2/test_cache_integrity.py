@@ -24,3 +24,20 @@ def test_cache_integrity():
     assert "ERROR: pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out
     assert "ERROR: pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out
 
+
+def test_cache_integrity_export_sources():
+    # https://github.com/conan-io/conan/issues/14840
+    t = TestClient(default_server_user=True)
+    t.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports_sources("src/*"),
+            "src/mysource.cpp": ""})
+    t.run("create .")
+    t.run("cache check-integrity *")
+    assert "pkg/0.1: Integrity checked: ok" in t.out
+
+    # If we download, integrity should be ok
+    # (it failed before, because the manifest is not complete)
+    t.run("upload * -r=default -c")
+    t.run("remove * -c")
+    t.run("install --requires=pkg/0.1")
+    t.run("cache check-integrity *")
+    assert "pkg/0.1: Integrity checked: ok" in t.out

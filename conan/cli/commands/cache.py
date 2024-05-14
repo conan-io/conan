@@ -1,10 +1,18 @@
+import json
+
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern
-from conan.api.output import cli_out_write
+from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.output import cli_out_write, ConanOutput
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
+from conan.cli.commands.list import print_list_text, print_list_json
 from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+
+
+def json_export(data):
+    cli_out_write(json.dumps({"cache_path": data}))
 
 
 @conan_command(group="Consumer")
@@ -15,7 +23,7 @@ def cache(conan_api: ConanAPI, parser, *args):
     pass
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand(formatters={"text": cli_out_write, "json": json_export})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
     Show the path to the Conan cache for a given reference.
@@ -71,6 +79,8 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                            help="Clean download and metadata folders")
     subparser.add_argument("-t", "--temp", action='store_true', default=False,
                            help="Clean temporary folders")
+    subparser.add_argument("-bs", "--backup-sources", action='store_true', default=False,
+                           help="Clean backup sources")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Remove only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -78,14 +88,15 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
 
     ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    if args.build or args.source or args.download or args.temp:
+    if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
-                              download=args.download, temp=args.temp)
+                              download=args.download, temp=args.temp,
+                              backup_sources=args.backup_sources)
     else:
         conan_api.cache.clean(package_list)
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand()
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the integrity of the local cache for the given references
@@ -99,3 +110,57 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
+    ConanOutput().success("Integrity check: ok")
+
+
+@conan_subcommand(formatters={"text": print_list_text,
+                              "json": print_list_json})
+def cache_save(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Get the artifacts from a package list and archive them
+    """
+    subparser.add_argument('pattern', nargs="?",
+                           help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                                "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                                "If revision is not specified, it is assumed latest one.")
+    subparser.add_argument("-l", "--list", help="Package list of packages to save")
+    subparser.add_argument('--file', help="Save to this tgz file")
+    args = parser.parse_args(*args)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot define both the pattern and the package list file")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern)
+        package_list = conan_api.list.select(ref_pattern)
+    tgz_path = make_abs_path(args.file or "conan_cache_save.tgz")
+    conan_api.cache.save(package_list, tgz_path)
+    return {"results": {"Local Cache": package_list.serialize()}}
+
+
+@conan_subcommand(formatters={"text": print_list_text,
+                              "json": print_list_json})
+def cache_restore(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Put  the artifacts from an archive into the cache
+    """
+    subparser.add_argument("file", help="Path to archive to restore")
+    args = parser.parse_args(*args)
+    path = make_abs_path(args.file)
+    package_list = conan_api.cache.restore(path)
+    return {"results": {"Local Cache": package_list.serialize()}}
+
+
+@conan_subcommand()
+def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Upload all the source backups present in the cache
+    """
+    files = conan_api.cache.get_backup_sources()
+    conan_api.upload.upload_backup_sources(files)

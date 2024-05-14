@@ -8,22 +8,22 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir, load
 from conans.util.runners import detect_runner
 
 
-class ConanIgnoreMatcher:
-    def __init__(self, conanignore_path):
-        self.conanignore_path = os.path.abspath(conanignore_path)
+class _ConanIgnoreMatcher:
+    def __init__(self, conanignore_path, ignore=None):
+        conanignore_path = os.path.abspath(conanignore_path)
         self._ignored_entries = {".conanignore"}
-        self._parse_conanignore()
-
-    def _parse_conanignore(self):
-        with open(self.conanignore_path, 'r') as conanignore:
-            for line in conanignore:
-                line_content = line.strip()
-                if line_content != "":
-                    self._ignored_entries.add(line_content)
+        if os.path.exists(conanignore_path):
+            with open(conanignore_path, 'r') as conanignore:
+                for line in conanignore:
+                    line_content = line.split("#", maxsplit=1)[0].strip()
+                    if line_content:
+                        self._ignored_entries.add(line_content)
+        if ignore:
+            self._ignored_entries.update(ignore)
 
     def matches(self, path):
         for ignore_entry in self._ignored_entries:
@@ -106,30 +106,27 @@ def _process_file(directory, filename, config, cache, folder):
         else:
             target_folder = os.path.join(cache.cache_folder, relpath)
 
-        if os.path.exists(target_folder):
-            if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
-                remove(target_folder)
+        if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
+            remove(target_folder)
 
         mkdir(target_folder)
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
 
-def _process_folder(config, folder, cache):
+def _process_folder(config, folder, cache, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
     conanignore_path = os.path.join(folder, '.conanignore')
-    conanignore = None
-    if os.path.exists(conanignore_path):
-        conanignore = ConanIgnoreMatcher(conanignore_path)
+    conanignore = _ConanIgnoreMatcher(conanignore_path, ignore)
     for root, dirs, files in os.walk(folder):
         # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
             rel_path = os.path.relpath(os.path.join(root, f), folder)
-            if conanignore is None or not conanignore.matches(rel_path):
+            if not conanignore.matches(rel_path):
                 _process_file(root, f, config, cache, folder)
 
 
@@ -150,51 +147,27 @@ def _process_download(config, cache, requester):
 
 
 class _ConfigOrigin(object):
-    def __init__(self, data):
-        self.type = data.get("type")
-        self.uri = data.get("uri")
-        self.verify_ssl = data.get("verify_ssl")
-        self.args = data.get("args")
-        self.source_folder = data.get("source_folder")
-        self.target_folder = data.get("target_folder")
-
-    def __eq__(self, other):
-        return (self.type == other.type and self.uri == other.uri and
-                self.args == other.args and self.source_folder == other.source_folder
-                and self.target_folder == other.target_folder)
-
-    def json(self):
-        return {"type": self.type,
-                "uri": self.uri,
-                "verify_ssl": self.verify_ssl,
-                "args": self.args,
-                "source_folder": self.source_folder,
-                "target_folder": self.target_folder}
-
-    @staticmethod
-    def from_item(uri, config_type, verify_ssl, args, source_folder, target_folder):
-        config = _ConfigOrigin({})
+    def __init__(self, uri, config_type, verify_ssl, args, source_folder, target_folder):
         if config_type:
-            config.type = config_type
+            self.type = config_type
         else:
             if uri.endswith(".git"):
-                config.type = "git"
+                self.type = "git"
             elif os.path.isdir(uri):
-                config.type = "dir"
+                self.type = "dir"
             elif os.path.isfile(uri):
-                config.type = "file"
+                self.type = "file"
             elif uri.startswith("http"):
-                config.type = "url"
+                self.type = "url"
             else:
                 raise ConanException("Unable to deduce type config install: %s" % uri)
-        config.source_folder = source_folder
-        config.target_folder = target_folder
-        config.args = args
-        config.verify_ssl = verify_ssl
+        self.source_folder = source_folder
+        self.target_folder = target_folder
+        self.args = args
+        self.verify_ssl = verify_ssl
         if os.path.exists(uri):
             uri = os.path.abspath(uri)
-        config.uri = uri
-        return config
+        self.uri = uri
 
 
 def _is_compressed_file(filename):
@@ -202,20 +175,19 @@ def _is_compressed_file(filename):
     import zipfile
     if zipfile.is_zipfile(filename):
         return True
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar") or filename.endswith(".gz") or
-            filename.endswith(".tar.xz") or filename.endswith(".txz")):
-        return True
-    return False
+    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".gz", ".tar.xz", ".txz")
+    return any(filename.endswith(e) for e in tgz_exts)
 
 
-def _process_config(config, cache, requester):
+def configuration_install(app, uri, verify_ssl, config_type=None,
+                          args=None, source_folder=None, target_folder=None, ignore=None):
+    cache, requester = app.cache, app.requester
+    config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":
             _process_git_repo(config, cache)
         elif config.type == "dir":
-            _process_folder(config, config.uri, cache)
+            _process_folder(config, config.uri, cache, ignore)
         elif config.type == "file":
             if _is_compressed_file(config.uri):
                 with tmp_config_install_folder(cache) as tmp_folder:
@@ -229,13 +201,3 @@ def _process_config(config, cache, requester):
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:
         raise ConanException("Failed conan config install: %s" % str(e))
-
-
-def configuration_install(app, uri, verify_ssl, config_type=None,
-                          args=None, source_folder=None, target_folder=None):
-    cache, requester = app.cache, app.requester
-
-    # Execute and store the new one
-    config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
-                                     source_folder, target_folder)
-    _process_config(config, cache, requester)

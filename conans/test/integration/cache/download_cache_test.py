@@ -14,7 +14,18 @@ class TestDownloadCache:
         """ basic proof that enabling download_cache avoids downloading things again
         """
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
+        # generate large random package file
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+            class Pkg(ConanFile):
+                def package(self):
+                    fileSizeInBytes = 11000000
+                    with open(os.path.join(self.package_folder, "data.txt"), 'wb') as fout:
+                        fout.write(os.urandom(fileSizeInBytes))
+                """)
+        client.save({"conanfile.py": conanfile})
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
         client.run("remove * -c")
@@ -24,24 +35,25 @@ class TestDownloadCache:
         client.save({"global.conf": f"core.download:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
         client.run("install --requires=mypkg/0.1@user/testing")
-        assert "Downloading" in client.out
+        assert "mypkg/0.1@user/testing: Downloading" in client.out
 
         client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
-        # TODO assert "Downloading" not in client.out
-
+        assert "mypkg/0.1@user/testing: Downloading" not in client.out
+        assert "conan_package.tgz from download cache, instead of downloading it" in client.out
         # removing the config downloads things
         client.save({"global.conf": ""}, path=client.cache.cache_folder)
         client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
-        assert "Downloading" in client.out
+        assert "mypkg/0.1@user/testing: Downloading" in client.out
 
         client.save({"global.conf": f"core.download:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
 
         client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
-        # TODO assert "Downloading" not in client.out
+        assert "mypkg/0.1@user/testing: Downloading" not in client.out
+        assert "conan_package.tgz from download cache, instead of downloading it" in client.out
 
     def test_dirty_download(self):
         # https://github.com/conan-io/conan/issues/8578

@@ -1,22 +1,21 @@
 import unittest
 
-import pytest
-
-from conan.tools.build.flags import cppstd_flag
-from conans.client.conf.detect import _cppstd_default
+from conan.internal.api.detect_api import default_cppstd
+from conan.tools.build import cppstd_flag
 from conans.model.version import Version
-from conans.test.utils.mocks import MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 def _make_cppstd_flag(compiler, compiler_version, cppstd=None):
-    settings = MockSettings({"compiler": compiler,
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"compiler": compiler,
                              "compiler.version": compiler_version,
                              "compiler.cppstd": cppstd})
-    return cppstd_flag(settings)
+    return cppstd_flag(conanfile)
 
 
 def _make_cppstd_default(compiler, compiler_version):
-    return _cppstd_default(compiler, Version(compiler_version))
+    return default_cppstd(compiler, Version(compiler_version))
 
 
 class CompilerFlagsTest(unittest.TestCase):
@@ -127,6 +126,12 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("clang", "12", "17"), '-std=c++17')
         self.assertEqual(_make_cppstd_flag("clang", "12", "20"), '-std=c++20')
         self.assertEqual(_make_cppstd_flag("clang", "12", "23"), '-std=c++2b')
+
+        self.assertEqual(_make_cppstd_flag("clang", "17", "11"), '-std=c++11')
+        self.assertEqual(_make_cppstd_flag("clang", "17", "14"), '-std=c++14')
+        self.assertEqual(_make_cppstd_flag("clang", "17", "17"), '-std=c++17')
+        self.assertEqual(_make_cppstd_flag("clang", "17", "20"), '-std=c++20')
+        self.assertEqual(_make_cppstd_flag("clang", "17", "23"), '-std=c++23')
 
     def test_clang_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("clang", "2"), "gnu98")
@@ -266,81 +271,12 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("msvc", "192"), "14")
         self.assertEqual(_make_cppstd_default("msvc", "193"), "14")
 
-    @pytest.mark.xfail(reason="Intel-cc compiler c++flags to be defined")
-    def test_intel_visual_cppstd_flag(self):
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "11"), '/Qstd=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "14"), '/Qstd=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "17"), '/Qstd=c++17')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "20"), '/Qstd=c++20')
-
-        self.assertEqual(_make_cppstd_flag("intel", "19", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "19", "11"), '/Qstd=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "14"), '/Qstd=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "17"), '/Qstd=c++17')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "17", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "17", "11"), '/Qstd=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "17", "14"), '/Qstd=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "17", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "17", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "15", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "15", "11"), '/Qstd=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "15", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "15", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "15", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "12", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "12", "11"), '/Qstd=c++0x')
-        self.assertEqual(_make_cppstd_flag("intel", "12", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "12", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "12", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "11", "gnu98"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "11"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "20"), None)
-
-    @pytest.mark.xfail(reason="Intel-cc compiler c++flags to be defined")
-    def test_intel_gcc_cppstd_flag(self):
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "11"), '-std=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "14"), '-std=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "17"), '-std=c++17')
-        self.assertEqual(_make_cppstd_flag("intel", "19.1", "20"), '-std=c++20')
-
-        self.assertEqual(_make_cppstd_flag("intel", "19", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "11"), '-std=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "14"), '-std=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "17"), '-std=c++17')
-        self.assertEqual(_make_cppstd_flag("intel", "19", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "17", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "17", "11"), '-std=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "17", "14"), '-std=c++14')
-        self.assertEqual(_make_cppstd_flag("intel", "17", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "17", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "15", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "15", "11"), '-std=c++11')
-        self.assertEqual(_make_cppstd_flag("intel", "15", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "15", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "15", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "12", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "12", "11"), '-std=c++0x')
-        self.assertEqual(_make_cppstd_flag("intel", "12", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "12", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "12", "20"), None)
-
-        self.assertEqual(_make_cppstd_flag("intel", "11", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel", "11", "11"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "14"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "17"), None)
-        self.assertEqual(_make_cppstd_flag("intel", "11", "20"), None)
+    def test_intel_cppstd_flag(self):
+        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "gnu98"), '-std=gnu++98')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "11"), '-std=c++11')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "14"), '-std=c++14')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "17"), '-std=c++17')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "20"), '-std=c++20')
 
     def test_mcst_lcc_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("mcst-lcc", "1.19"), "gnu98")

@@ -46,7 +46,8 @@ def test_architecture_flag_if_intel_cc(os_, arch, expected):
     ("gnu23", "gnu++2b"),
 ])
 def test_cppstd_flag_if_intel_cc(cppstd, flag):
-    settings = MockSettings({
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({
         "compiler": "intel-cc",
         "compiler.version": "2021.3",
         "compiler.mode": "classic",
@@ -54,7 +55,7 @@ def test_cppstd_flag_if_intel_cc(cppstd, flag):
         "os": "Linux",
         "compiler.cppstd": cppstd
     })
-    assert cppstd_flag(settings) == "-std=%s" % flag
+    assert cppstd_flag(conanfile) == "-std=%s" % flag
 
 
 @pytest.mark.parametrize("mode", ["icx", "dpcpp"])

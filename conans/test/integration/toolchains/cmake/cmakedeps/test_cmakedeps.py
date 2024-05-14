@@ -108,15 +108,15 @@ def test_cpp_info_component_objects():
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say
-                     PROPERTY INTERFACE_LINK_LIBRARIES
+                     APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:Release>:${hello_hello_say_OBJECTS_RELEASE}>
                      $<$<CONFIG:Release>:${hello_hello_say_LIBRARIES_TARGETS}>
-                     APPEND)""" in content
+                     )""" in content
         # If there are componets, there is not a global cpp so this is not generated
         assert "hello_OBJECTS_RELEASE" not in content
         # But the global target is linked with the targets from the components
-        assert "set_property(TARGET hello::hello PROPERTY INTERFACE_LINK_LIBRARIES " \
-               "hello::say APPEND)" in content
+        assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES " \
+               "hello::say)" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
@@ -597,3 +597,148 @@ class TestCMakeVersionConfigCompat:
         c.run("create .")
         c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
         assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out
+
+    def test_cmake_version_config_compatibility_consumer(self):
+        c = TestClient()
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class Pkg(ConanFile):
+                settings = "build_type"
+                requires = "dep/0.1"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_config_version_compat", "AnyNewerVersion")
+                    deps.generate()
+                """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app")
+        dep = c.load("app/dep-config-version.cmake")
+        expected = textwrap.dedent("""\
+            if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+                set(PACKAGE_VERSION_COMPATIBLE FALSE)
+            else()
+                set(PACKAGE_VERSION_COMPATIBLE TRUE)
+
+                if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+                    set(PACKAGE_VERSION_EXACT TRUE)
+                endif()
+            endif()""")
+        assert expected in dep
+
+
+class TestSystemPackageVersion:
+    def test_component_version(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "system"
+                def package_info(self):
+                    self.cpp_info.set_property("system_package_version", "1.0")
+                    self.cpp_info.components["mycomp"].set_property("component_version", "2.3")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/system -g CMakeDeps -g PkgConfigDeps")
+        dep = c.load("dep-config-version.cmake")
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
+        dep = c.load("dep.pc")
+        assert 'Version: 1.0' in dep
+        dep = c.load("dep-mycomp.pc")
+        assert 'Version: 2.3' in dep
+
+    def test_component_version_consumer(self):
+        c = TestClient()
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class Pkg(ConanFile):
+                settings = "build_type"
+                requires = "dep/system"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "system_package_version", "1.0")
+                    deps.generate()
+                """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "system"),
+                "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app")
+        dep = c.load("app/dep-config-version.cmake")
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
+
+
+def test_cmakedeps_set_property_overrides():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1", "other/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                # Need the absolute path inside package
+                dep = self.dependencies["dep"].package_folder
+                deps.set_property("dep", "cmake_build_modules", [os.path.join(dep, "my_module1")])
+                deps.set_property("dep", "nosoname", True)
+                deps.set_property("other::mycomp1", "nosoname", True)
+                deps.generate()
+            """)
+
+    pkg_info = {"components": {"mycomp1": {"libs": ["mylib"]}}}
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
+            "other/conanfile.py": GenConanfile("other", "0.1").with_package_type("shared-library")
+                                                              .with_package_info(pkg_info, {}),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create other")
+    c.run("install app")
+    dep = c.load("app/dep-release-data.cmake")
+    assert 'set(dep_BUILD_MODULES_PATHS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/my_module1")' in dep
+    assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
+    other = c.load("app/other-release-data.cmake")
+    assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
+
+def test_cmakedeps_set_legacy_variable_name():
+    client = TestClient()
+    base_conanfile = str(GenConanfile("dep", "1.0"))
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "CMakeFileName")
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name
+    dep_config = client.load("CMakeFileNameConfig.cmake")
+    cmake_variables = ["VERSION_STRING", "INCLUDE_DIRS", "INCLUDE_DIR", "LIBRARIES", "DEFINITIONS"]
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
+        self.cpp_info.set_property("cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name and both prefixes
+    dep_config = client.load("NewCMakeFileNameConfig.cmake")
+    for variable in cmake_variables:
+        assert f"NewCMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+    # Check that variables are not duplicated
+    assert dep_config.count("PREFIX_VERSION") == 1

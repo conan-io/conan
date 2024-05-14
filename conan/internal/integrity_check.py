@@ -1,3 +1,5 @@
+import os
+
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -31,13 +33,19 @@ class IntegrityChecker:
         layout = self._app.cache.recipe_layout(ref)
         output = ConanOutput()
         read_manifest, expected_manifest = layout.recipe_manifests()
+        # Filter exports_sources from read manifest if there are no exports_sources locally
+        # This happens when recipe is downloaded without sources (not built from source)
+        export_sources_folder = layout.export_sources()
+        if not os.path.exists(export_sources_folder):
+            read_manifest.file_sums = {k: v for k, v in read_manifest.file_sums.items()
+                                       if not k.startswith("export_source")}
 
         if read_manifest != expected_manifest:
-            output.error(f"{ref}: Manifest mismatch")
-            output.error(f"Folder: {layout.export()}")
+            output.error(f"{ref}: Manifest mismatch", error_type="exception")
+            output.error(f"Folder: {layout.export()}", error_type="exception")
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})")
+                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})", error_type="exception")
             return True
         output.info(f"{ref}: Integrity checked: ok")
 
@@ -47,10 +55,10 @@ class IntegrityChecker:
         read_manifest, expected_manifest = layout.package_manifests()
 
         if read_manifest != expected_manifest:
-            output.error(f"{ref}: Manifest mismatch")
-            output.error(f"Folder: {layout.package()}")
+            output.error(f"{ref}: Manifest mismatch", error_type="exception")
+            output.error(f"Folder: {layout.package()}", error_type="exception")
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})")
+                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})", error_type="exception")
             return True
         output.info(f"{ref}: Integrity checked: ok")

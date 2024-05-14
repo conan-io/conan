@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 def test_dependencies_visit():
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile().with_shared_option(True)})
     client.run("create . --name=openssl --version=0.1")
     client.run("create . --name=openssl --version=0.2")
@@ -29,6 +29,18 @@ def test_dependencies_visit():
                 self.output.info("DefPRefBuild: {}!!!".format(dep.pref.repr_notime()))
                 for r, d in self.dependencies.build.items():
                     self.output.info("DIRECTBUILD {}: {}".format(r.direct, d))
+
+                if "openssl" in self.dependencies:
+                    self.output.info("OpenSSL found in deps")
+
+                if "cmake" in self.dependencies:
+                    self.output.info("cmake found in default deps")
+
+                if "cmake" in self.dependencies.build:
+                    self.output.info("cmake found in deps.build")
+
+                if "badlib" in self.dependencies:
+                    self.output.info("badlib found in deps")
         """)
     client.save({"conanfile.py": conanfile})
 
@@ -48,9 +60,15 @@ def test_dependencies_visit():
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
 
+    assert "OpenSSL found in deps" in client.out
+    assert "badlib found in deps" not in client.out
+
+    assert "cmake found in default deps" not in client.out
+    assert "cmake found in deps.build" in client.out
+
 
 def test_dependencies_visit_settings_options():
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile().with_settings("os").
                 with_option("shared", [True, False]).with_default_option("shared", False)})
     client.run("create . --name=openssl --version=0.1 -s os=Linux")
@@ -81,7 +99,7 @@ asserts = [
      False, "=>zlib/0.1"),
     ('print("=>{}".format(self.dependencies.get("zlib", build=False).ref))',
      False, "=>zlib/0.2"),
-    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=True).ref))',
+    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=False).ref))',
      False, "=>zlib/0.1"),
     ('self.dependencies.get("cmake", build=True)', True,
      'There are more than one requires matching the specified filters: {\'build\': True}\n'
@@ -89,6 +107,9 @@ asserts = [
      '- cmake/0.2, Traits: build=True, headers=False, libs=False, run=False, visible=False'
      ),
     ('self.dependencies["missing"]', True, "'missing' not found in the dependency set"),
+    ('self.output.info("Missing in deps: " + str("missing" in self.dependencies))', False, "Missing in deps: False"),
+    ('self.output.info("Zlib in deps: " + str("zlib" in self.dependencies))', False, "Zlib in deps: True"),
+    ('self.output.info("Zlib in deps.build: " + str("zlib" in self.dependencies.build))', False, "Zlib in deps.build: True"),
 ]
 
 
@@ -97,7 +118,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     # app (br)---> cmake (0.1) -> zlib/0.1
     #  \     ----> zlib/0.2
     #  \  (br)---> cmake (0.2)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=zlib --version=0.1")
     client.run("create . --name=zlib --version=0.2")
@@ -133,7 +154,7 @@ def test_invisible_not_colliding_test_requires():
     """
     # app ---> foo/0.1 --test_require--> gtest/0.1
     #  \  ---> bar/0.1 --test_require--> gtest/0.2
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=gtest --version=0.1")
     client.run("create . --name=gtest --version=0.2")
@@ -167,7 +188,7 @@ def test_dependencies_visit_build_requires_profile():
     at generate() time it will have all the graph info, including build-requires
     """
     # https://github.com/conan-io/conan/issues/10304
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile("cmake", "0.1")})
     client.run("create .")
     conanfile = textwrap.dedent("""
@@ -195,7 +216,7 @@ def test_dependencies_visit_build_requires_profile():
 
 
 def test_dependencies_package_type():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library")})
     c.run("create .")
     conanfile = textwrap.dedent("""
@@ -219,7 +240,7 @@ def test_dependency_interface():
     """
     Quick test for the ConanFileInterface exposed
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -260,7 +281,7 @@ def test_dependency_interface_validate():
     and we want to keep it that way
     https://github.com/conan-io/conan/issues/11959
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -288,7 +309,7 @@ def test_dependency_interface_validate():
 
 def test_validate_visibility():
     # https://github.com/conan-io/conan/issues/12027
-    c = TestClient()
+    c = TestClient(light=True)
     t1 = textwrap.dedent("""
         from conan import ConanFile
         class t1Conan(ConanFile):

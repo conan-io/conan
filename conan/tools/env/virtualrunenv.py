@@ -29,13 +29,15 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, auto_generate=False):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
         """
+        self._runenv = None
         self._conanfile = conanfile
-        self._conanfile.virtualrunenv = False
+        if not auto_generate:
+            self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"
         self.configuration = conanfile.settings.get_safe("build_type")
         if self.configuration:
@@ -59,23 +61,26 @@ class VirtualRunEnv:
 
         :return: an ``Environment`` object instance containing the obtained variables.
         """
-        runenv = Environment()
+
+        if self._runenv is None:
+            self._runenv = Environment()
+        else:
+            return self._runenv
 
         # Top priority: profile
         profile_env = self._conanfile.runenv
-        runenv.compose_env(profile_env)
-        # FIXME: Cache value?
+        self._runenv.compose_env(profile_env)
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
         for require, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
-                runenv.compose_env(dep.runenv_info)
+                self._runenv.compose_env(dep.runenv_info)
             if require.run:  # Only if the require is run (shared or application to be run)
                 _os = self._conanfile.settings.get_safe("os")
-                runenv.compose_env(runenv_from_cpp_info(dep, _os))
+                self._runenv.compose_env(runenv_from_cpp_info(dep, _os))
 
-        return runenv
+        return self._runenv
 
     def vars(self, scope="run"):
         """

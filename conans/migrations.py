@@ -22,15 +22,15 @@ class Migrator(object):
         try:
             old_version = self._load_old_version()
             if old_version is None or old_version < self.current_version:
-                self._update_version_file()
                 self._apply_migrations(old_version)
+                self._update_version_file()
             elif self.current_version < old_version:  # backwards migrations
                 ConanOutput().warning(f"Downgrading cache from Conan {old_version} to "
                                       f"{self.current_version}")
-                self._update_version_file()
                 self._apply_back_migrations()
+                self._update_version_file()
         except Exception as e:
-            ConanOutput().error(str(e))
+            ConanOutput().error(str(e), error_type="exception")
             raise ConanMigrationError(e)
 
     def _update_version_file(self):
@@ -81,5 +81,6 @@ class Migrator(object):
                 migrate_method(self.conf_path)
             except Exception as e:
                 ConanOutput().error(f"There was an error running downgrade migration: {e}. "
-                                    f"Recommended to remove the cache and start from scratch")
+                                    f"Recommended to remove the cache and start from scratch",
+                                    error_type="exception")
             os.remove(migration)

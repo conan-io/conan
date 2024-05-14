@@ -66,6 +66,7 @@ class RequirementInfo:
         self._package_id = package_id
         self.name = self.version = self.user = self.channel = self.package_id = None
         self.recipe_revision = None
+        self.package_id_mode = default_package_id_mode
 
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
@@ -148,6 +149,14 @@ class RequirementInfo:
         self.package_id = self._package_id
         self.recipe_revision = None
 
+    def revision_mode(self):
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
+        self.recipe_revision = self._ref.revision
+
     def full_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
@@ -167,7 +176,7 @@ class RequirementsInfo(UserRequirementsDict):
         return RequirementsInfo(data)
 
     def serialize(self):
-        return [str(r) for r in sorted(self._data.values())]
+        return [r.dumps() for r in self._data.values()]
 
     def __bool__(self):
         return bool(self._data)
@@ -222,6 +231,10 @@ class RequirementsInfo(UserRequirementsDict):
         for r in self._data.values():
             r.full_package_mode()
 
+    def revision_mode(self):
+        for r in self._data.values():
+            r.revision_mode()
+
     def full_mode(self):
         for r in self._data.values():
             r.full_mode()
@@ -234,15 +247,19 @@ class PythonRequiresInfo:
     def __init__(self, refs, default_package_id_mode):
         self._default_package_id_mode = default_package_id_mode
         if refs:
-            self._refs = [RequirementInfo(r, None, default_package_id_mode=default_package_id_mode)
-                          for r in sorted(refs)]
+            self._refs = [RequirementInfo(r, None,
+                                          default_package_id_mode=mode or default_package_id_mode)
+                          for r, mode in sorted(refs.items())]
         else:
             self._refs = None
 
     def copy(self):
         # For build_id() implementation
-        refs = [r._ref for r in self._refs] if self._refs else None
+        refs = {r._ref: r.package_id_mode for r in self._refs} if self._refs else None
         return PythonRequiresInfo(refs, self._default_package_id_mode)
+
+    def serialize(self):
+        return [r.dumps() for r in self._refs or []]
 
     def __bool__(self):
         return bool(self._refs)
@@ -280,6 +297,10 @@ class PythonRequiresInfo:
         for r in self._refs:
             r.full_recipe_mode()
 
+    def revision_mode(self):
+        for r in self._refs:
+            r.revision_mode()
+
     def full_mode(self):
         for r in self._refs:
             r.full_mode()
@@ -304,7 +325,7 @@ def load_binary_info(text):
 class ConanInfo:
 
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
-                 python_requires=None, conf=None):
+                 python_requires=None, conf=None, config_version=None):
         self.invalid = None
         self.settings = settings
         self.settings_target = None  # needs to be explicitly defined by recipe package_id()
@@ -313,6 +334,7 @@ class ConanInfo:
         self.build_requires = build_requires_info
         self.python_requires = python_requires
         self.conf = conf
+        self.config_version = config_version
 
     def clone(self):
         """ Useful for build_id implementation and for compatibility()
@@ -325,6 +347,37 @@ class ConanInfo:
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
         result.conf = self.conf.copy()
+        result.settings_target = self.settings_target.copy() if self.settings_target else None
+        result.config_version = self.config_version.copy() if self.config_version else None
+        return result
+
+    def serialize(self):
+        result = {}
+        settings_dumps = self.settings.serialize()
+        if settings_dumps:
+            result["settings"] = settings_dumps
+        if self.settings_target is not None:
+            settings_target_dumps = self.settings_target.serialize()
+            if settings_target_dumps:
+                result["settings_target"] = settings_target_dumps
+        options_dumps = self.options.serialize()
+        if options_dumps:
+            result["options"] = options_dumps
+        requires_dumps = self.requires.serialize()
+        if requires_dumps:
+            result["requires"] = requires_dumps
+        python_requires_dumps = self.python_requires.serialize()
+        if python_requires_dumps:
+            result["python_requires"] = python_requires_dumps
+        build_requires_dumps = self.build_requires.serialize()
+        if build_requires_dumps:
+            result["build_requires"] = build_requires_dumps
+        conf_dumps = self.conf.serialize()
+        if conf_dumps:
+            result["conf"] = conf_dumps
+        config_version_dumps = self.config_version.serialize() if self.config_version else None
+        if config_version_dumps:
+            result["config_version"] = config_version_dumps
         return result
 
     def dumps(self):
@@ -366,6 +419,10 @@ class ConanInfo:
             # TODO: Think about the serialization of Conf, not 100% sure if dumps() is the best
             result.append("[conf]")
             result.append(self.conf.dumps())
+        config_version_dumps = self.config_version.dumps() if self.config_version else None
+        if config_version_dumps:
+            result.append("[config_version]")
+            result.append(config_version_dumps)
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
@@ -392,6 +449,11 @@ class ConanInfo:
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+        self.conf.clear()
+        self.build_requires.clear()
+        self.python_requires.clear()
+        if self.config_version is not None:
+            self.config_version.clear()
 
     def validate(self):
         # If the options are not fully defined, this is also an invalid case

@@ -11,7 +11,6 @@ from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
-from conans.util.env import get_env
 from conans.util.files import load
 
 
@@ -130,41 +129,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertEqual(local_rev, pref.ref.revision)
         self.assertEqual(local_prev, pref.revision)
 
-    @pytest.mark.xfail(reason="cache2.0 rewrite with db info instead of metadata")
-    def test_revision_metadata_update_on_update(self):
-        """
-        A client v2 upload a recipe revision
-        Another client v2 upload a new recipe revision
-        The first client can upgrade from the remote"""
-        client = TurboTestClient(servers={"default": self.server})
-        client2 = TurboTestClient(servers={"default": self.server})
-
-        pref1 = client.create(self.ref)
-        client.upload_all(self.ref)
-
-        rrev1_time_remote = self.server.recipe_revision_time(pref1.ref)
-        prev1_time_remote = self.server.package_revision_time(pref1)
-
-        time.sleep(1)  # Wait a second, to be considered an update
-        pref2 = client2.create(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
-        client2.upload_all(self.ref)
-
-        rrev2_time_remote = self.server.recipe_revision_time(pref2.ref)
-        prev2_time_remote = self.server.package_revision_time(pref2)
-
-        # Check different revision times
-        self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
-        self.assertNotEqual(prev1_time_remote, prev2_time_remote)
-
-        client.run("install --requires={} --update".format(self.ref))
-        self.assertIn("Package installed {}".format(pref2.package_id), client.out)
-
-        rrev = client.recipe_revision(self.ref)
-        self.assertIsNotNone(rrev)
-
-        prev = client.package_revision(pref2)
-        self.assertIsNotNone(prev)
-
     def test_revision_update_on_package_update(self):
         """
         A client v2 upload RREV with PREV1
@@ -255,6 +219,25 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
+
+    def test_revision_build_requires(self):
+        conanfile = GenConanfile()
+
+        refs = []
+        for _ in range(1, 4):  # create different revisions
+            conanfile.with_build_msg("any change to get another rrev")
+            pref = self.c_v2.create(self.ref, conanfile=conanfile)
+            self.c_v2.upload_all(pref.ref)
+            refs.append(pref.ref)
+            assert refs.count(pref.ref) == 1 # make sure that all revisions are different
+
+        client = self.c_v2  # revisions enabled
+        client.remove_all()
+
+        for ref in refs:
+            command = "install --update --tool-require={}".format(repr(ref))
+            client.run(command)
+            self.assertIn("Downloaded recipe revision {}".format(ref.revision), client.out)
 
 
 class RemoveWithRevisionsTest(unittest.TestCase):
@@ -448,294 +431,6 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         fakeref.revision = "fakerev"
         self.assertIn(f"ERROR: Package revision '{fakeref.repr_notime()}' not found",
                       remover_client.out)
-
-
-class SearchingPackagesWithRevisions(unittest.TestCase):
-
-    def setUp(self):
-        self.server = TestServer()
-        self.server2 = TestServer()
-        servers = OrderedDict([("default", self.server),
-                               ("remote2", self.server2)])
-        self.c_v2 = TurboTestClient(servers=servers)
-        self.ref = RecipeReference.loads("lib/1.0@conan/testing")
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_all_remotes_with_rrev(self):
-        """If we search for the packages of a ref with the RREV in the "all" remote:
-
-         - With an v2 client, it shows the packages for that specific RREV, in all the remotes,
-           in an isolated way, just as we made it calling Conan N times
-
-         No matter how many PREVS are uploaded it returns package references not duplicated"""
-        # First revision with 1 binary, Windows
-        # Second revision with 1 binary for Macos
-        # Third revision with 2 binaries for SunOS and FreeBSD
-        revisions = [{"os": "Windows"}], \
-                    [{"os": "Macos"}], \
-                    [{"os": "SunOS"}, {"os": "FreeBSD"}]
-        refs = self.c_v2.massive_uploader(self.ref, revisions, remote="default", num_prev=2)
-        self.c_v2.remove_all()
-        # In the second remote only one revision, with one binary (two PREVS)
-        revisions = [[{"os": "Linux"}]]
-        refs2 = self.c_v2.massive_uploader(self.ref, revisions, remote="remote2", num_prev=2)
-        self.c_v2.remove_all()
-
-        # Ensure that the first revision in the first remote is the same than in the second one
-        revision_ref = refs[0][0].ref
-        self.assertEqual(revision_ref.revision, refs2[0][0].ref.revision)
-        self.assertNotEqual(refs[1][0].ref.revision, refs2[0][0].ref.revision)
-
-        # Check that in the remotes there are the packages we expect
-        self.assertTrue(self.server.package_exists(refs[0][0]))
-        self.assertTrue(self.server2.package_exists(refs2[0][0]))
-
-        client = self.c_v2
-
-        data = client.search(repr(revision_ref), remote="all")
-        oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
-        self.assertEqual(["Windows"], oss_r1)
-        self.assertEqual(["Linux"], oss_r2)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_all_remotes_without_rrev(self):
-        """If we search for the packages of a ref without specifying the RREV in the "all" remote:
-
-         - With an v2 client, it shows the packages for the latest, in all the remotes,
-           in an isolated way, just as we made it calling Conan N times
-
-         No matter how many PREVS are uploaded it returns package references not duplicated"""
-        # First revision with 1 binary, Windows
-        # Second revision with 1 binary for Macos
-        # Third revision with 2 binaries for SunOS and FreeBSD
-        revisions = [{"os": "Windows"}], \
-                    [{"os": "Macos"}], \
-                    [{"os": "SunOS"}, {"os": "FreeBSD"}]
-        self.c_v2.massive_uploader(self.ref, revisions, remote="default", num_prev=2)
-        self.c_v2.remove_all()
-        # In the second remote only one revision, with one binary (two PREVS)
-        revisions = [[{"os": "Linux"}]]
-        self.c_v2.massive_uploader(self.ref, revisions, remote="remote2", num_prev=2)
-        self.c_v2.remove_all()
-
-        client = self.c_v2
-
-        data = client.search(str(self.ref), remote="all")
-        oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
-        self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss_r1))
-        self.assertEqual(set(["Linux"]), set(oss_r2))
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_a_remote_package_without_rrev(self):
-        """If we search for the packages of a ref without specifying the RREV:
-
-         - With an v2 client, it shows the packages for the latest
-
-         No matter how many PREVS are uploaded it returns package references not duplicated"""
-
-        # Upload to the server 3 RREVS for "lib" each one with 5 package_ids, each one with
-        # 2 PREVS
-
-        # First revision with 2 binaries, Windows and Linux
-        # Second revision with 1 binary for Macos
-        # Third revision with 2 binaries for SunOS and FreeBSD
-        revisions = [{"os": "Windows"}, {"os": "Linux"}], \
-                    [{"os": "Macos"}], \
-                    [{"os": "SunOS"}, {"os": "FreeBSD"}]
-        self.c_v2.massive_uploader(self.ref, revisions, num_prev=2)
-
-        client = self.c_v2
-        client.remove_all()
-
-        data = client.search(str(self.ref), remote="default")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss))
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_a_local_package_without_rrev(self):
-        """If we search for the packages of a ref without specifying the RREV:
-
-         - With an v2 client, it shows the packages in local for the latest, not showing the
-           packages that doesn't belong to the recipe"""
-        client = self.c_v2
-
-        # Create two RREVs, first with Linux and Windows, second with Mac only (one PREV)
-        conanfile = GenConanfile().with_build_msg("Rev1").with_setting("os")
-        pref1a = client.create(self.ref, conanfile=conanfile, args="-s os=Linux")
-        client.create(self.ref, conanfile=conanfile, args="-s os=Windows")
-
-        conanfile2 = GenConanfile().with_build_msg("Rev2").with_setting("os")
-        pref2a = client.create(self.ref, conanfile=conanfile2, args="-s os=Macos")
-
-        self.assertNotEqual(pref1a.ref.revision, pref2a.ref.revision)
-
-        # Search without RREV
-        data = client.search(self.ref)
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-
-        self.assertEqual(set(["Macos"]), set(oss))
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_a_remote_package_with_rrev(self):
-        """If we search for the packages of a ref specifying the RREV:
-         1. With v2 client it shows the packages for that RREV"""
-
-        # Upload to the server two rrevs for "lib" and two rrevs for "lib2"
-        conanfile = GenConanfile().with_build_msg("REV1").with_setting("os")
-        pref = self.c_v2.create(self.ref, conanfile, args="-s os=Linux")
-        self.c_v2.upload_all(self.ref)
-
-        conanfile = GenConanfile().with_build_msg("REV2").with_setting("os")
-        pref2 = self.c_v2.create(self.ref, conanfile, args="-s os=Windows")
-        self.c_v2.upload_all(self.ref)
-
-        # Ensure we have uploaded two different revisions
-        self.assertNotEqual(pref.ref.revision, pref2.ref.revision)
-
-        client = self.c_v2
-        client.remove_all()
-        data = client.search(repr(pref.ref), remote="default")
-        items = data["results"][0]["items"][0]["packages"]
-        self.assertEqual(1, len(items))
-        oss = items[0]["settings"]["os"]
-        self.assertEqual(oss, "Linux")
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_recipes_in_local_by_pattern(self):
-        """If we search for recipes with a pattern:
-         1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
-
-        client = self.c_v2
-        # Create a couple of recipes locally
-        client.export(self.ref)
-        ref2 = RecipeReference.loads("lib2/1.0@conan/testing")
-        client.export(ref2)
-
-        # Search for the recipes
-        data = client.search("lib*")
-        items = data["results"][0]["items"]
-        self.assertEqual(2, len(items))
-        expected = [str(self.ref), str(ref2)]
-        result = [i["recipe"]["id"] for i in items]
-        # check if the reference is in the output
-        # TODO: fix search output in 2.0
-        assert [recipe for recipe in result if expected[0] in recipe]
-        assert [recipe for recipe in result if expected[1] in recipe]
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_recipes_in_local_by_revision_pattern(self):
-        """If we search for recipes with a pattern containing even the RREV:
-         1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
-
-        client = self.c_v2
-        # Create a couple of recipes locally
-        client.export(self.ref)
-        ref2 = RecipeReference.loads("lib2/1.0@conan/testing")
-        client.export(ref2)
-
-        # Search for the recipes
-        data = client.search("{}*".format(repr(self.ref)))
-        items = data["results"][0]["items"]
-        self.assertEqual(1, len(items))
-        expected = str(self.ref)
-        result = items[0]["recipe"]["id"]
-        self.assertIn(expected, result)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_recipes_in_remote_by_pattern(self):
-        """If we search for recipes with a pattern:
-         1. With v2 client it return the refs matching of the latests, the refs doesnt contain RREV"""
-
-        # Upload to the server two rrevs for "lib" and two rrevs for "lib2"
-        self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
-
-        pref1b = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
-        self.c_v2.upload_all(self.ref)
-
-        ref2 = RecipeReference.loads("lib2/1.0@conan/testing")
-        self.c_v2.create(ref2)
-        self.c_v2.upload_all(ref2)
-
-        pref2b = self.c_v2.create(ref2, conanfile=GenConanfile().with_build_msg("REv2"))
-        self.c_v2.upload_all(ref2)
-
-        # Search from the client for "lib*"
-
-        client = self.c_v2
-        client.remove_all()
-        data = client.search("lib*", remote="default")
-        items = data["results"][0]["items"]
-        self.assertEqual(2, len(items))
-        expected = [str(pref1b.ref), str(pref2b.ref)]
-
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    @pytest.mark.skipif(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
-                        reason="Not implemented in artifactory")
-    def test_search_in_remote_by_revision_pattern(self):
-        """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
-         1. With v2 client: We get the revs without refs matching the pattern
-
-         The same for "lib/*@conan/stable#rev" and "*lib/*@conan/stable#rev"
-
-         But if we search an invalid revision it is not found
-         """
-
-        # Upload to the server two rrevs for "lib" and one rrevs for "lib2"
-        self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
-
-        pref2_lib = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
-        self.c_v2.upload_all(self.ref)
-
-        ref2 = RecipeReference.loads("lib2/1.0@conan/testing")
-        self.c_v2.create(ref2)
-        self.c_v2.upload_all(ref2)
-
-        client = self.c_v2
-
-        data = client.search("{}*".format(repr(pref2_lib.ref)), remote="default")
-        items = data["results"][0]["items"]
-        expected = [str(self.ref)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
-
-        data = client.search("{}".format(repr(pref2_lib.ref)).replace("1.0", "*"),
-                             remote="default")
-        items = data["results"][0]["items"]
-        expected = [str(self.ref)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
-
-        data = client.search("*{}".format(repr(pref2_lib.ref)).replace("1.0", "*"),
-                             remote="default")
-        items = data["results"][0]["items"]
-        expected = [str(self.ref)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
-
-        data = client.search("*{}#fakerev".format(pref2_lib.ref),
-                             remote="default")
-        items = data["results"]
-        expected = []
-        self.assertEqual(expected, items)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_revisions_regular_results(self):
-        """If I upload several revisions to a server, we can list the times"""
-        server = TestServer()
-        servers = OrderedDict([("default", server)])
-        c_v2 = TurboTestClient(servers=servers)
-        pref = c_v2.create(self.ref)
-        c_v2.upload_all(self.ref)
-        pref_rev = copy.copy(pref)
-        pref_rev.revision = None
-
-        c_v2.run("search {} --revisions -r default".format(repr(pref_rev)))
-        # I don't want to mock here because I want to run this test against Artifactory
-        self.assertIn("cf924fbb5ed463b8bb960cf3a4ad4f3a (", c_v2.out)
-        self.assertIn(" UTC)", c_v2.out)
 
 
 class UploadPackagesWithRevisions(unittest.TestCase):

@@ -40,6 +40,9 @@ class TestParamErrors:
         c.run("list * --graph-recipes=x", assert_error=True)
         assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
 
+        c.run("list * -p os=Linux", assert_error=True)
+        assert "--package-query and --filter-xxx can only be done for binaries" in c.out
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -100,7 +103,7 @@ class TestListRefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -129,6 +132,21 @@ class TestListRefs:
             "zlib/1.0.0@user/channel": {},
             "zlib/2.0.0@user/channel": {},
             "zlix/1.0.0": {}
+        }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipes_only_user_channel(self, client, remote):
+        pattern = "*@user/channel"
+        expected = textwrap.dedent(f"""\
+              zlib
+                zlib/1.0.0@user/channel
+                zlib/2.0.0@user/channel
+            """)
+        self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zlib/1.0.0@user/channel": {},
+            "zlib/2.0.0@user/channel": {},
         }
         self.check_json(client, pattern, remote, expected_json)
 
@@ -293,7 +311,7 @@ class TestListPrefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -731,9 +749,8 @@ class TestListHTML:
         c.run("create dep")
         c.run("create pkg -s os=Windows -s arch=x86")
         # Revision is needed explicitly!
-        c.run("list pkg/2.3.4#latest --format=html", redirect_stdout="table.html")
-        table = c.load("table.html")
-        assert "<!DOCTYPE html>" in table
+        c.run("list pkg/2.3.4#latest --format=html")
+        assert "<!DOCTYPE html>" in c.stdout
         # TODO: The actual good html is missing
 
     def test_list_html_custom(self):
@@ -747,3 +764,117 @@ class TestListHTML:
         c.save({"list_packages.html": '{{ base_template_path }}'}, path=template_folder)
         c.run("list lib/0.1#latest --format=html")
         assert template_folder in c.stdout
+
+
+class TestListCompact:
+    def test_list_compact(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("os", "arch")
+                                                          .with_shared_option(False)})
+        c.run("create . -s os=Windows -s arch=x86")
+        c.run("create . -s os=Linux -s arch=armv8")
+        c.run("create . -s os=Macos -s arch=armv8 -o shared=True")
+        c.run("list pkg:* --format=compact")
+
+        expected = textwrap.dedent("""\
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2a67a51fbf36a4ee345b2125dd2642be60ffd3ec
+              settings: Macos, armv8
+              options: shared=True
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2d46abc802bbffdf2af11591e3e452bc6149ea2b
+              settings: Linux, armv8
+              options: shared=False
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:d2e97769569ac0a583d72c10a37d5ca26de7c9fa
+              settings: Windows, x86
+              options: shared=False
+            """)
+        assert textwrap.indent(expected, "      ") in c.stdout
+
+    def test_list_compact_no_settings_no_options(self):
+        c = TestClient()
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os", "arch"),
+                "other/conanfile.py": GenConanfile("other", "1.0")})
+        c.run("create pkg -s os=Windows -s arch=x86")
+        c.run("create other")
+        c.run("list *:* --format=compact")
+        expected_output = re.sub(r"%.* ", "%timestamp ",
+                                 re.sub(r"\(.*\)", "(timestamp)", c.stdout))
+
+        expected = textwrap.dedent("""\
+            Local Cache
+              other/1.0
+                other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd%timestamp (timestamp)
+                  other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd:da39a3ee5e6b4b0d3255bfef95601890afd80709
+              pkg/1.0
+                pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e%timestamp (timestamp)
+                  pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e:c11e463c49652ba9c5adc62573ee49f966bd8417
+                    settings: Windows, x86
+            """)
+
+        assert expected == expected_output
+
+
+class TestListBinaryFilter:
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_filter(self, remote):
+        r = "-r=default" if remote else ""
+        c = TestClient(default_server_user=remote)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os", "arch")
+                                                              .with_shared_option(False),
+                "header/conanfile.py": GenConanfile("header", "1.0"),
+                "profile_linux": "[settings]\nos=Linux",
+                "profile_armv8": "[settings]\narch=armv8",
+                "profile_shared": "[options]\n*:shared=True"})
+        c.run("create pkg -s os=Windows -s arch=x86")
+        c.run("create pkg -s os=Linux -s arch=armv8")
+        c.run("create pkg -s os=Macos -s arch=armv8 -o shared=True")
+        c.run("create header")
+        if remote:
+            c.run("upload *:* -r=default -c")
+        pkg_key = "default" if remote else "Local Cache"
+
+        c.run(f"list *:* -fp=profile_linux --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 1
+        settings = pkg["packages"]["2d46abc802bbffdf2af11591e3e452bc6149ea2b"]["info"]["settings"]
+        assert settings == {"arch": "armv8", "os": "Linux"}
+
+        # for linux + x86 only the header-only is a match
+        c.run(f"list *:* -fp=profile_linux -fs=arch=x86 --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert pkg["packages"] == {}
+
+        c.run(f"list *:* -fp=profile_armv8 --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 2
+        settings = pkg["packages"]["2d46abc802bbffdf2af11591e3e452bc6149ea2b"]["info"]["settings"]
+        assert settings == {"arch": "armv8", "os": "Linux"}
+        settings = pkg["packages"]["2a67a51fbf36a4ee345b2125dd2642be60ffd3ec"]["info"]["settings"]
+        assert settings == {"arch": "armv8", "os": "Macos"}
+
+        c.run(f"list *:* -fp=profile_shared --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 1
+        settings = pkg["packages"]["2a67a51fbf36a4ee345b2125dd2642be60ffd3ec"]["info"]["settings"]
+        assert settings == {"arch": "armv8", "os": "Macos"}
+
+        c.run(f"list *:* -fs os=Windows -fo *:shared=False --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 1
+        settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
+        assert settings == {"arch": "x86", "os": "Windows"}

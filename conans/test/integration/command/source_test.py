@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 import unittest
 from collections import OrderedDict
@@ -156,6 +157,9 @@ class ConanLib(ConanFile):
         client.run("create . --name=hello --version=0.1")
         rrev = client.exported_recipe_revision()
         client.run("upload hello/0.1 -r server0")
+        # Ensure we uploaded it
+        assert re.search(r"Uploading recipe 'hello/0.1#.*' \(.*\)", client.out)
+        assert re.search(r"Uploading package 'hello/0.1#.*' \(.*\)", client.out)
         client.run("remove * -c")
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
@@ -277,3 +281,16 @@ class TestSourceWithoutDefaultProfile:
         client.run("source .")
         assert "conanfile.py: Calling source()" in client.out
         assert "CACHE:MYCACHE!!" in client.out
+
+
+def test_source_python_requires():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pytool", "0.1")})
+    c.run("export . ")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+
+    c.save({"conanfile.py": GenConanfile().with_python_requires("pytool/0.1")}, clean_first=True)
+    c.run("source . ")
+    assert "pytool/0.1: Not found in local cache, looking in remotes" in c.out
+    assert "pytool/0.1: Downloaded recipe" in c.out

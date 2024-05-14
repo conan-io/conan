@@ -1,8 +1,8 @@
 import textwrap
 
-import pytest
-
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import save
 
 
 def test_double_package_id_call():
@@ -47,39 +47,32 @@ def test_remove_option_setting():
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
-@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_value_parse():
     # https://github.com/conan-io/conan/issues/2816
     conanfile = textwrap.dedent("""
-        import os
         from conan import ConanFile
-        from conan.tools.files import copy
 
         class TestConan(ConanFile):
             name = "test"
             version = "0.1"
             settings = "os", "arch", "build_type"
-            exports_sources = "header.h"
 
             def package_id(self):
                 self.info.settings.arch = "kk=kk"
-
-            def package(self):
-                copy(self, "header.h", self.source_folder,
-                     os.path.join(self.package_folder, "include"), keep_path=True)
+                self.info.settings.os = "yy=yy"
         """)
-    server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-    servers = {"default": server}
-    client = TestClient(servers=servers, inputs=["lasote", "mypass"])
-    client.save({"conanfile.py": conanfile,
-                 "header.h": "header content"})
-    client.run("create . danimtb/testing")
-    client.run("search test/0.1@danimtb/testing")
+
+    client = TestClient(default_server_user=True)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . ")
+    client.run("list *:*")
     assert "arch: kk=kk" in client.out
-    client.run("upload test/0.1@danimtb/testing -r default")
-    client.run("remove test/0.1@danimtb/testing --confirm")
-    client.run("install --requires=test/0.1@danimtb/testing")
-    client.run("search test/0.1@danimtb/testing")
+    client.run("upload * -r default -c")
+    client.run("list *:* -r=default")
+    assert "arch: kk=kk" in client.out
+    client.run("remove * -c")
+    client.run("install --requires=test/0.1")
+    client.run("list *:*")
     assert "arch: kk=kk" in client.out
 
 
@@ -167,8 +160,7 @@ def test_package_id_requires_info():
 
 
 def test_package_id_validate_settings():
-    """ ``self.info`` has some validation, the first time it executes
-    https://github.com/conan-io/conan/issues/12693
+    """ ``self.info`` has no validation, as it allows to be mutated
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -181,5 +173,79 @@ def test_package_id_validate_settings():
         """)
     c = TestClient()
     c.save({"conanfile.py": conanfile})
-    c.run("create . --name=pkg --version=0.1", assert_error=True)
-    assert "ConanException: Invalid setting 'DONT_EXIST' is not a valid 'settings.os' value" in c.out
+    c.run("create . --name=pkg --version=0.1")
+    # It used to fail,
+
+
+class TestBuildRequiresHeaderOnly:
+    def test_header_only(self):
+        c = TestClient(light=True)
+        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                tool_requires = "tool/[*]"
+                def package_id(self):
+                    self.info.clear()
+                """)
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "pkg/conanfile.py": pkg})
+        c.run("create tool --version=1.0")
+        c.run("create pkg")
+        pkgid = c.created_package_id("pkg/0.1")
+        c.run("create tool --version=1.2")
+        c.run("install --requires=pkg/0.1")
+        c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
+
+    def test_header_only_implements(self):
+        c = TestClient(light=True)
+        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                tool_requires = "tool/[*]"
+                package_type = "header-library"
+                implements = ["auto_header_only"]
+                """)
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "pkg/conanfile.py": pkg})
+        c.run("create tool --version=1.0")
+        c.run("create pkg")
+        pkgid = c.created_package_id("pkg/0.1")
+        c.run("create tool --version=1.2")
+        c.run("install --requires=pkg/0.1")
+        c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
+
+
+def test_explicit_implements():
+    c = TestClient()
+    pkg = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os"
+            options = {"header_only": [True, False]}
+
+            def package_id(self):
+                if self.package_type == "header-library":
+                    self.info.clear()
+             """)
+    c.save({"conanfile.py": pkg})
+    c.run("create . -s os=Windows -o *:header_only=True")
+    pkgid = c.created_package_id("pkg/0.1")
+    c.run("create . -s os=Linux -o *:header_only=True")
+    pkgid2 = c.created_package_id("pkg/0.1")
+    assert pkgid == pkgid2
+
+    c.run("create . -s os=Windows -o *:header_only=False")
+    pkgid3 = c.created_package_id("pkg/0.1")
+    assert pkgid3 != pkgid
+    c.run("create . -s os=Linux -o *:header_only=False")
+    pkgid4 = c.created_package_id("pkg/0.1")
+    assert pkgid4 != pkgid
+    assert pkgid3 != pkgid4

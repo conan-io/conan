@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 import pytest
 
 from conan.api.model import Remote
@@ -7,7 +6,6 @@ from conans.client.graph.graph_error import GraphConflictError, GraphMissingErro
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save
 
 
 class TestVersionRanges(GraphManagerTest):
@@ -324,9 +322,10 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, liba])
 
-    def test_two_ranges_overriden_conflict(self):
+    def test_two_ranges_overriden_no_conflict(self):
         # app -> libb/0.1 -(range >0)-> liba/0.1
         #   \ ---------liba/[<0.3>]-------------/
+        # Conan learned to solve this conflict in 2.0.14
         self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("liba/0.3")
@@ -335,21 +334,21 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.3]"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        # This is no longer a conflict, and Conan knows that liba/2.0 is a valid joint solution
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(liba, "liba/0.3#123", dependents=[libb], deps=[])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
 
 
 def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846
-    t = TestClient(default_server_user=True)
+    t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name=pkg --version=1.0")
     t.run("create . --name=pkg --version=1.1")
@@ -367,7 +366,7 @@ def test_mixed_user_channel():
 
 
 def test_remote_version_ranges():
-    t = TestClient(default_server_user=True)
+    t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
@@ -391,33 +390,26 @@ def test_remote_version_ranges():
                                                     "Download (default)")})
 
 
-@pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
-def test_remote_version_ranges_optimized():
-    t = TestClient(default_server_user=True)
-    save(t.cache.default_profile_path, "")
-    save(t.cache.settings_path, "")
-
-
 def test_different_user_channel_resolved_correctly():
     server1 = TestServer()
     server2 = TestServer()
     servers = OrderedDict([("server1", server1), ("server2", server2)])
 
-    client = TestClient(servers=servers, inputs=2*["admin", "password"])
+    client = TestClient(servers=servers, inputs=2*["admin", "password"], light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
     client.run("upload lib/1.0@conan/stable -r=server1")
     client.run("upload lib/1.0@conan/testing -r=server2")
 
-    client2 = TestClient(servers=servers)
+    client2 = TestClient(servers=servers, light=True)
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out
 
 
 def test_unknown_options():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("lib", "2.0")})
     c.run("create .")
 
@@ -426,3 +418,22 @@ def test_unknown_options():
 
     c.run("graph info --requires=lib/[>1.2,unknown_conf]")
     assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
+
+
+@pytest.mark.parametrize("version_range,should_warn", [
+    [">=0.1, include_prereleases", False],
+    [">=0.1, include_prerelease=True", True],
+    [">=0.1, include_prerelease=False", True]
+])
+def test_bad_options_syntax(version_range, should_warn):
+    """We don't error out on bad options, maybe we should,
+    but for now this test ensures we don't change it without realizing"""
+    tc = TestClient(light=True)
+    tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"lib/[{version_range}]")})
+    tc.run("export lib")
+    tc.run("graph info app/conanfile.py")
+    if should_warn:
+        assert "its presence unconditionally enables prereleases" in tc.out
+    else:
+        assert "its presence unconditionally enables prereleases" not in tc.out

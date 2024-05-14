@@ -32,9 +32,6 @@ class URLCredentials:
         creds_path = os.path.join(cache_folder, "source_credentials.json")
         if not os.path.exists(creds_path):
             return
-        template = Template(load(creds_path))
-        content = template.render({"platform": platform, "os": os})
-        content = json.loads(content)
 
         def _get_auth(credentials):
             result = {}
@@ -52,10 +49,13 @@ class URLCredentials:
                 raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
 
         try:
+            template = Template(load(creds_path))
+            content = template.render({"platform": platform, "os": os})
+            content = json.loads(content)
             self._urls = {credentials["url"]: _get_auth(credentials)
                           for credentials in content["credentials"]}
-        except KeyError as e:
-            raise ConanException(f"Authentication error, wrong source_credentials.json layout: {e}")
+        except Exception as e:
+            raise ConanException(f"Error loading 'source_credentials.json' {creds_path}: {repr(e)}")
 
     def add_auth(self, url, kwargs):
         for u, creds in self._urls.items():
@@ -81,6 +81,8 @@ class ConanRequester(object):
             adapter = HTTPAdapter(max_retries=self._get_retries(config))
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
+        else:
+            self._http_requester = requests
 
         self._url_creds = URLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
@@ -171,7 +173,7 @@ class ConanRequester(object):
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(requests, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             return tmp
         finally:
             if popped:

@@ -12,8 +12,8 @@ from conans.test.utils.tools import redirect_output, TestRequester
 from conans.util.files import save, load, chdir, mkdir
 
 
-@pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "
-                      "very little conan code, mostly python")
+@pytest.mark.skip(reason="This causes more troubles than benefits, external ftp download is testing "
+                         "very little conan code, mostly python")
 class TestFTP:
 
     def test_ftp_auth(self):
@@ -76,6 +76,27 @@ class TestDownload:
         with pytest.raises(AuthenticationException) as exc:
             download(conanfile, file_server.fake_url + "/forbidden", dest)
         assert "403 Forbidden" in str(exc.value)
+
+    def test_download_unauthorized_no_credentials(self, _manual):
+        conanfile, file_server = _manual
+        dest = os.path.join(temp_folder(), "manual.html")
+        # Not authorized without credentials
+        with pytest.raises(AuthenticationException) as exc:
+            download(conanfile, file_server.fake_url + "/basic-auth/manual.html", dest)
+        assert "401 Unauthorized" in str(exc.value)
+        assert "Not authorized" in str(exc.value)
+
+    def test_download_unauthorized_literal_none_credentials(self, _manual):
+        conanfile, file_server = _manual
+        dest = os.path.join(temp_folder(), "manual.html")
+        # os.getenv('SOME_UNSET_VARIABLE') causes source_credentials.json to contain
+        # "None" as a string literal, causing auth to be ("None", "None") or with
+        # a "None" token.
+        auth = ("None", "None")
+        with pytest.raises(AuthenticationException) as exc:
+            download(conanfile, file_server.fake_url + "/basic-auth/manual.html", dest, auth=auth)
+        assert "401 Unauthorized" in str(exc.value)
+        assert "Bad credentials" in str(exc.value)
 
     def test_download_authorized(self, _manual):
         conanfile, file_server = _manual

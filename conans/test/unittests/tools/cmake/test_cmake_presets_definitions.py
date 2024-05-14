@@ -7,7 +7,6 @@ from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture(scope="module")
@@ -42,10 +41,11 @@ def test_cmake_cmake_program(conanfile):
 
 
 def test_cmake_make_program(conanfile):
-    def run(command):
+    def run(command, **kwargs):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
+    conanfile.folders.set_base_source(temp_folder())
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
 
     with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):

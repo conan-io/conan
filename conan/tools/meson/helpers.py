@@ -1,4 +1,6 @@
+from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
+from conans.model.options import _PackageOption
 
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
 
@@ -33,6 +35,7 @@ _meson_cpu_family_map = {
     'armv8': ('aarch64', 'armv8', 'little'),
     'armv8_32': ('aarch64', 'armv8_32', 'little'),
     'armv8.3': ('aarch64', 'armv8.3', 'little'),
+    'arm64ec': ('aarch64', 'arm64ec', 'little'),
     'avr': ('avr', 'avr', 'little'),
     'mips': ('mips', 'mips', 'big'),
     'mips64': ('mips64', 'mips64', 'big'),
@@ -47,7 +50,9 @@ _meson_cpu_family_map = {
     'sparcv9': ('sparc64', 'sparc64', 'big'),
     'wasm': ('wasm32', 'wasm32', 'little'),
     'x86': ('x86', 'x86', 'little'),
-    'x86_64': ('x86_64', 'x86_64', 'little')
+    'x86_64': ('x86_64', 'x86_64', 'little'),
+    'riscv32': ('riscv32', 'riscv32', 'little'),
+    'riscv64': ('riscv64', 'riscv32', 'little')
 }
 
 
@@ -90,12 +95,17 @@ def to_meson_value(value):
     :return: formatted value as a ``str``.
     """
     # https://mesonbuild.com/Machine-files.html#data-types
+    # we don't need to transform the integer values
     if isinstance(value, str):
-        return "'%s'" % value
+        return f"'{value}'"
     elif isinstance(value, bool):
-        return 'true' if value else "false"
+        return 'true' if value else 'false'
     elif isinstance(value, list):
-        return '[%s]' % ', '.join([str(to_meson_value(val)) for val in value])
+        return '[{}]'.format(', '.join([str(to_meson_value(val)) for val in value]))
+    elif isinstance(value, _PackageOption):
+        ConanOutput().warning(f"Please, do not use a Conan option value directly. "
+                              f"Convert 'options.{value.name}' into a valid Python"
+                              f"data type, e.g, bool(self.options.shared)", warn_tag="deprecated")
     return value
 
 

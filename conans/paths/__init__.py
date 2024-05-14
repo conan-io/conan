@@ -3,6 +3,8 @@ import os
 import platform
 from pathlib import Path
 
+from conans.errors import ConanException
+
 if platform.system() == "Windows":
     from conans.util.windows import conan_expand_user
 else:
@@ -46,7 +48,7 @@ def get_conan_user_home():
     else:  # Do an expansion, just in case the user is using ~/something/here
         user_home = conan_expand_user(user_home)
     if not os.path.isabs(user_home):
-        raise Exception("Invalid CONAN_HOME value '%s', "
+        raise ConanException("Invalid CONAN_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
                         "(relative to user home)" % user_home)
     return user_home
@@ -60,5 +62,4 @@ CONANINFO = "conaninfo.txt"
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
-DEFAULT_PROFILE_NAME = "default"
 DATA_YML = "conandata.yml"

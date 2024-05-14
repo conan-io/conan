@@ -7,7 +7,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_filename
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 _expected_dep_xconfig = [
     "SYSTEM_HEADER_SEARCH_PATHS = $(inherited) $(SYSTEM_HEADER_SEARCH_PATHS_{name}_{name})",
@@ -111,7 +111,7 @@ def test_generator_files_with_custom_config():
             options = {"XcodeConfigName": [None, "ANY"]}
             default_options = {"XcodeConfigName": None}
             requires = "hello/0.1", "goodbye/0.1"
-            
+
             def generate(self):
                 xcode = XcodeDeps(self)
                 if self.options.get_safe("XcodeConfigName"):
@@ -127,9 +127,9 @@ def test_generator_files_with_custom_config():
             cli_command = "install . -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1  --build missing".format(build_type)
             if use_custom_config:
                 cli_command += " -o XcodeConfigName={}".format(custom_config_name)
-                configuration_name = custom_config_name 
+                configuration_name = custom_config_name
             else:
-                configuration_name = build_type            
+                configuration_name = build_type
 
             client.run(cli_command)
 
@@ -325,14 +325,15 @@ def test_xcodedeps_traits():
                 clean_first=True)
     client.run("install lib_b.py -g XcodeDeps")
 
-    not_existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
+    # this changed from non-existing to existing after https://github.com/conan-io/conan/pull/15128
+    existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
                     f"conan_lib_a_cmp2_release_{arch}.xcconfig", "conan_lib_a_cmp2.xcconfig",
                     "conan_lib_a.xcconfig"]
 
-    for file in not_existing:
-        assert not os.path.exists(os.path.join(client.current_folder, file))
+    for file in existing:
+        assert os.path.exists(os.path.join(client.current_folder, file))
 
-    assert '#include "conan_lib_a.xcconfig"' not in client.load("conandeps.xcconfig")
+    assert '#include "conan_lib_a.xcconfig"' in client.load("conandeps.xcconfig")
 
     requirements = """
     def requirements(self):
@@ -534,3 +535,50 @@ def test_skipped_not_included():
     assert re.search(r"Skipped binaries\n\s+(.*?)", client.out, re.DOTALL)
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
+
+
+def test_correctly_handle_transitive_components():
+    # https://github.com/conan-io/conan/issues/14887
+    client = TestClient()
+    has_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgWithComponents(ConanFile):
+            name = 'has_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def package_info(self):
+                self.cpp_info.components['first'].libs = ['first']
+                self.cpp_info.components['second'].libs = ['donottouch']
+                self.cpp_info.components['second'].requires = ['first']
+        """)
+
+    uses_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'uses_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def requirements(self):
+                self.requires('has_components/1.0')
+            def package_info(self):
+                self.cpp_info.libs = ['uses_only_first']
+                self.cpp_info.requires = ['has_components::first']
+        """)
+
+    consumer = textwrap.dedent("""
+        [requires]
+        uses_components/1.0
+        """)
+
+    client.save({"has_components.py": has_components,
+                 "uses_components.py": uses_components,
+                 "consumer.txt": consumer})
+    client.run("create has_components.py")
+    client.run("create uses_components.py")
+    client.run("install consumer.txt -g XcodeDeps")
+    conandeps = client.load("conandeps.xcconfig")
+    assert '#include "conan_has_components.xcconfig"' not in conandeps
+    assert '#include "conan_uses_components.xcconfig"' in conandeps
+    conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
+    assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
+    assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig

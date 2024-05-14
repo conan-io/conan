@@ -2,7 +2,6 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
-from conan.errors import ConanException
 
 
 class Meson(object):
@@ -19,37 +18,36 @@ class Meson(object):
 
     def configure(self, reconfigure=False):
         """
-        Runs ``meson setup [FILE] "BUILD_FOLDER" "SOURCE_FOLDER" [-Dprefix=PACKAGE_FOLDER]``
+        Runs ``meson setup [FILE] "BUILD_FOLDER" "SOURCE_FOLDER" [-Dprefix=/]``
         command, where ``FILE`` could be ``--native-file conan_meson_native.ini``
         (if native builds) or ``--cross-file conan_meson_cross.ini`` (if cross builds).
 
         :param reconfigure: ``bool`` value that adds ``--reconfigure`` param to the final command.
         """
+        if reconfigure:
+            self._conanfile.output.warning("reconfigure param has been deprecated."
+                                           " Removing in Conan 2.x.", warn_tag="deprecated")
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
-        cmd = "meson setup"
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
-        meson_filenames = []
-        if os.path.exists(cross):
-            cmd_param = " --cross-file"
-            meson_filenames.append(cross)
-        else:
-            cmd_param = " --native-file"
-            meson_filenames.append(native)
-
+        is_cross_build = os.path.exists(cross)
         machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
                                                  default=[], check_type=list)
-        if machine_files:
-            meson_filenames.extend(machine_files)
-
-        cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
+        cmd = "meson setup "
+        if is_cross_build:
+            machine_files.insert(0, cross)
+            cmd += " ".join([f'--cross-file "{file}"' for file in machine_files])
+        if os.path.exists(native):
+            if not is_cross_build:  # machine files are only appended to the cross or the native one
+                machine_files.insert(0, native)
+                cmd += " ".join([f'--native-file "{file}"' for file in machine_files])
+            else:  # extra native file for cross-building scenarios
+                cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
-        if self._conanfile.package_folder:
-            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
-        if reconfigure:
-            cmd += ' --reconfigure'
+        # Issue related: https://github.com/mesonbuild/meson/issues/12880
+        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -76,12 +74,12 @@ class Meson(object):
 
     def install(self):
         """
-        Runs ``meson install -C "."`` in the build folder. Notice that it will execute
-        ``self.configure(reconfigure=True)`` at first.
+        Runs ``meson install -C "." --destdir`` in the build folder.
         """
-        self.configure(reconfigure=True)  # To re-do the destination package-folder
-        meson_build_folder = self._conanfile.build_folder
-        cmd = 'meson install -C "{}"'.format(meson_build_folder)
+        meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
+        meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
+        # Assuming meson >= 0.57.0
+        cmd = f'meson install -C "{meson_build_folder}" --destdir "{meson_package_folder}"'
         verbosity = self._install_verbosity
         if verbosity:
             cmd += " " + verbosity

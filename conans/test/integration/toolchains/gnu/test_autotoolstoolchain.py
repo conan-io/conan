@@ -46,6 +46,43 @@ def test_extra_flags_via_conf():
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
 
 
+def test_extra_flags_order():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                at = AutotoolsToolchain(self)
+                at.extra_cxxflags = ["extra_cxxflags"]
+                at.extra_cflags = ["extra_cflags"]
+                at.extra_ldflags = ["extra_ldflags"]
+                at.extra_defines = ["extra_defines"]
+                at.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
+        tools.build:defines+=['defines']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
+
+    assert '-Dextra_defines -Ddefines' in toolchain
+    assert 'extra_cxxflags cxxflags' in toolchain
+    assert 'extra_cflags cflags' in toolchain
+    assert 'extra_ldflags sharedlinkflags exelinkflags' in toolchain
+
+
 def test_autotools_custom_environment():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -158,3 +195,84 @@ def test_unknown_compiler():
     # this used to crash, because of build_type_flags in AutotoolsToolchain returning empty string
     client.run("install . -s compiler=xlc")
     assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how AutotoolsToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++", "rc": "windres"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "AutotoolsToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="clang"' in content
+            assert 'export CXX="clang++"' in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "AutotoolsToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="gcc"' in content
+            assert 'export CXX="g++"' in content
+            assert 'export RC="windres"' in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")

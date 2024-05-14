@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 import pytest
@@ -47,6 +48,32 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
+
+    def test_nested_any(self):
+        yml = textwrap.dedent("""\
+            os:
+                ANY:
+                    version: [null, ANY]
+                Ubuntu:
+                    version: ["18.04", "20.04"]
+            """)
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        settings.validate()
+        self.assertTrue(settings.os == "Windows")
+        self.assertIn("os=Windows", settings.dumps())
+        settings.os.version = 2
+        self.assertTrue(settings.os == "Windows")
+        self.assertEqual("os=Windows\nos.version=2", settings.dumps())
+        settings.os = "Ubuntu"
+        with self.assertRaisesRegex(ConanException, "'settings.os.version' value not defined"):
+            settings.validate()
+        with self.assertRaisesRegex(ConanException,
+                                    "Invalid setting '3' is not a valid 'settings.os.version'"):
+            settings.os.version = 3
+        settings.os.version = "20.04"
+        self.assertEqual("os=Ubuntu\nos.version=20.04", settings.dumps())
+        self.assertTrue(settings.os.version == "20.04")
 
     def test_getattr_none(self):
         yml = "os: [None, Windows]"
@@ -436,6 +463,17 @@ def test_rm_safe():
     with pytest.raises(Exception) as e:
         settings.compiler.libcxx = "libstdc++"
     assert "'settings.compiler.libcxx' doesn't exist for 'clang'" in str(e.value)
+
+
+def test_rm_safe_wildcard():
+    settings = Settings.loads(default_settings_yml)
+    settings.compiler = "gcc"
+    settings.compiler.version = "4.8"
+    settings.compiler.libcxx = "libstdc++"
+    settings.rm_safe("compiler.*")
+    assert settings.compiler == "gcc"
+    assert settings.get_safe("compiler.version") is None
+    assert settings.get_safe("compiler.libcxx") is None
 
 
 def test_settings_intel_cppstd_03():

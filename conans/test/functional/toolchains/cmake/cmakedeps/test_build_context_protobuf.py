@@ -77,7 +77,9 @@ consumer_conanfile = textwrap.dedent("""
         settings = "build_type", "os", "arch", "compiler"
         exports_sources = "CMakeLists.txt", "main.cpp"
         requires = "protobuf/1.0"
-        build_requires = "protobuf/1.0"
+
+        def build_requirements(self):
+            self.requires("protobuf/1.0", visible=False, build=True)
 
         def generate(self):
             toolchain = CMakeToolchain(self)
@@ -126,7 +128,6 @@ def test_build_modules_from_build_context(client):
     assert "Generated code in build context!" in client.out
 
 
-@pytest.mark.xfail(reason="cannot get inlcudes from build context, not in model")
 def test_build_modules_and_target_from_build_context(client):
     consumer_cmake = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -156,7 +157,6 @@ def test_build_modules_and_target_from_build_context(client):
     assert "Generated code in build context!" in client.out
 
 
-@pytest.mark.xfail(reason="cannot get inlcudes from build context, not in model")
 def test_build_modules_from_host_and_target_from_build_context(client):
     consumer_cmake = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)

@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
+from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -73,6 +73,17 @@ class UserRequirementsDict(object):
     def values(self):
         return self._data.values()
 
+    def __contains__(self, item):
+        try:
+            self.get(item)
+            return True
+        except KeyError:
+            return False
+        except ConanException:
+            # ConanException is raised when there are more than one matching the filters
+            # so it's definitely in the dict
+            return True
+
 
 class ConanFileDependencies(UserRequirementsDict):
 
@@ -82,7 +93,7 @@ class ConanFileDependencies(UserRequirementsDict):
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
-    def filter(self, require_filter, remove_system_tools=False):
+    def filter(self, require_filter, remove_system=True):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
         def filter_fn(require):
             for k, v in require_filter.items():
@@ -91,10 +102,10 @@ class ConanFileDependencies(UserRequirementsDict):
             return True
 
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
-        if remove_system_tools:
+        if remove_system:
             data = OrderedDict((k, v) for k, v in data.items()
                                # TODO: Make "recipe" part of ConanFileInterface model
-                               if v._conanfile._conan_node.recipe != RECIPE_SYSTEM_TOOL)
+                               if v._conanfile._conan_node.recipe != RECIPE_PLATFORM)
         return ConanFileDependencies(data, require_filter)
 
     def transitive_requires(self, other):
@@ -133,7 +144,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True}, remove_system_tools=True)
+        return self.filter({"build": True, "direct": True})
 
     @property
     def host(self):
@@ -147,14 +158,16 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def build(self):
-        return self.filter({"build": True}, remove_system_tools=True)
+        return self.filter({"build": True})
 
 
 def get_transitive_requires(consumer, dependency):
     """ the transitive requires that we need are the consumer ones, not the current dependencey
     ones, so we get the current ones, then look for them in the consumer, and return those
     """
-    pkg_deps = dependency.dependencies.filter({"direct": True})
+    # The build dependencies cannot be transitive in generators like CMakeDeps,
+    # even if users make them visible
+    pkg_deps = dependency.dependencies.filter({"direct": True, "build": False})
     result = consumer.dependencies.transitive_requires(pkg_deps)
     result = result.filter({"skip": False})
     return result

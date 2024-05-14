@@ -1,5 +1,3 @@
-import textwrap
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
@@ -188,7 +186,7 @@ def test_mixing_aliases_and_fix_versions():
     # cd/1.0 -----------------------------> cb/latest -(alias)-> cb/1.0 -> ca/1.0
     #   \-----> cc/latest -(alias)-> cc/1.0 ->/                             /
     #                                    \------ ca/latest -(alias)------->/
-    client = TestClient()
+    client = TestClient(light=True)
 
     client.save({"conanfile.py": GenConanfile("ca", "1.0")})
     client.run("create . ")

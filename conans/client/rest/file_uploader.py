@@ -76,7 +76,7 @@ class FileUploader(object):
                     raise
                 else:
                     if self._output:
-                        self._output.error(exc)
+                        self._output.warning(exc, warn_tag="network")
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 

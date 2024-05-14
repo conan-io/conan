@@ -438,3 +438,45 @@ class TestUpdateFlows:
         self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
                "from remote 'server2' " in self.client.out
+
+
+@pytest.mark.parametrize("update,result", [
+                                           # Not a real pattern, works to support legacy syntax
+                                           ["*", {"liba/1.1": "Downloaded (default)",
+                                                  "libb/1.1": "Downloaded (default)"}],
+                                           ["libc", {"liba/1.0": "Cache",
+                                                     "libb/1.0": "Cache"}],
+                                           ["liba", {"liba/1.1": "Downloaded (default)",
+                                                       "libb/1.0": "Cache"}],
+                                           ["libb", {"liba/1.0": "Cache",
+                                                       "libb/1.1": "Downloaded (default)"}],
+                                           ["", {"liba/1.0": "Cache",
+                                                 "libb/1.0": "Cache"}],
+                                           # Patterns not supported, only full name match
+                                           ["lib*", {"liba/1.0": "Cache",
+                                                     "libb/1.0": "Cache"}],
+                                           ["liba/*", {"liba/1.0": "Cache",
+                                                       "libb/1.0": "Cache"}],
+                                           # None only passes legacy --update without args,
+                                           # to ensure it works, it should be the same as passing *
+                                           [None, {"liba/1.1": "Downloaded (default)",
+                                                   "libb/1.1": "Downloaded (default)"}]
+                                           ])
+def test_muliref_update_pattern(update, result):
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"liba/conanfile.py": GenConanfile("liba"),
+             "libb/conanfile.py": GenConanfile("libb")})
+    tc.run("create liba --version=1.0")
+    tc.run("create libb --version=1.0")
+
+    tc.run("create liba --version=1.1")
+    tc.run("create libb --version=1.1")
+
+    tc.run("upload * -c -r default")
+    tc.run('remove "*/1.1" -c')
+
+    update_flag = f"--update={update}" if update is not None else "--update"
+
+    tc.run(f'install --requires="liba/[>=1.0]" --requires="libb/[>=1.0]" -r default {update_flag}')
+
+    tc.assert_listed_require(result)

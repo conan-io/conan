@@ -7,7 +7,6 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -217,13 +216,9 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         save(self.client.cache.new_config_path, "tools.build:jobs=1")
-        install_out = self._run_build(settings, options)
-
-        # FIXME: Hardcoded VS version and partial toolset check
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
+        self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
@@ -313,12 +308,10 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        install_out = self._run_build(settings, options)
+        self._run_build(settings, options)
         self.assertIn("The C compiler identification is GNU", self.client.out)
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "MinGW Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
@@ -371,18 +364,17 @@ class LinuxTest(Base):
                     "arch": arch,
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
-        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
-                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
-                  '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
-                  '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;' \
+                  '$<$<CONFIG:debug>:MYDEFINE_CONFIG="MYDEF_DEBUG">' \
+                  '$<$<CONFIG:release>:MYDEFINE_CONFIG="MYDEF_RELEASE">;' \
+                  '$<$<CONFIG:debug>:MYDEFINEINT_CONFIG=421>' \
+                  '$<$<CONFIG:release>:MYDEFINEINT_CONFIG=422>' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
@@ -430,10 +422,8 @@ class AppleTest(Base):
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
 
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
@@ -624,6 +614,7 @@ class TestCmakeTestMethod:
                     cmake.configure()
                     cmake.build()
                     cmake.test()
+                    cmake.ctest()
             """)
 
         cmakelist = textwrap.dedent("""
@@ -648,7 +639,8 @@ class TestCmakeTestMethod:
 
         # The create flow must work
         c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
-        assert "1/1 Test #1: example ..........................   Passed" in c.out
+        assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
+        assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
 
 @pytest.mark.tool("cmake")

@@ -25,6 +25,12 @@ class CMakeDepsFileTemplate(object):
         return self.cmakedeps.get_cmake_package_name(self.conanfile, module_mode=self.generating_module) + self.suffix
 
     @property
+    def additional_variables_prefixes(self):
+        prefix_list = (
+            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile) or [])
+        return list(set([self.file_name] + prefix_list))
+
+    @property
     def suffix(self):
         if not self.require.build:
             return ""

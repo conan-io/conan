@@ -57,6 +57,7 @@ def test_invalid_target_triple():
     assert "Unknown 'UNKNOWN_ARCH' machine, Conan doesn't know how " \
            "to translate it to the GNU triplet," in str(excinfo)
 
+
 def test_custom_host_triple():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86"})
@@ -66,6 +67,18 @@ def test_custom_host_triple():
     tc.generate_args()
     obj = load_toolchain_args()
     assert "--host=i686-pc-linux-gnu" in obj["configure_args"]
+
+
+def test_custom_build_triple():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86"})
+    conanfile.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf.define("tools.gnu:build_triplet", "i686-pc-linux-gnu")
+    tc = AutotoolsToolchain(conanfile)
+    tc.generate_args()
+    obj = load_toolchain_args()
+    assert "--build=i686-pc-linux-gnu" in obj["configure_args"]
+
 
 def test_cppstd():
     # Using "cppstd" is discarded
@@ -298,7 +311,7 @@ def test_apple_arch_flag():
 
     # Only set when crossbuilding
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -336,7 +349,7 @@ def test_crossbuild_from_macos_to_non_apple_os():
     conanfile.settings = MockSettings({"os": "Android", "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    assert be.apple_min_version_flag == ''
+    assert be.apple_min_version_flag == ""
     assert be.apple_arch_flag is None
     assert be.apple_isysroot_flag is None
 
@@ -365,7 +378,7 @@ def test_apple_isysrootflag():
 
     # Only set when crossbuilding
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",

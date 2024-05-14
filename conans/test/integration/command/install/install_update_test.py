@@ -1,6 +1,5 @@
 import os
 import textwrap
-import time
 from time import sleep
 
 from conans.model.recipe_ref import RecipeReference
@@ -36,7 +35,6 @@ def test_update_binaries():
 
     value = get_value_from_output(client2.out)
 
-    time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
     client.run("upload pkg/0.1@lasote/testing -r default")
 
@@ -50,7 +48,6 @@ def test_update_binaries():
     assert value != new_value
 
     # Now check newer local modifications are not overwritten
-    time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload pkg/0.1@lasote/testing -r default")
 
@@ -81,8 +78,6 @@ def test_update_not_date():
 
     initial_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
     initial_package_timestamp = prev.timestamp
-
-    time.sleep(1)
 
     # Change and rebuild package
     client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_class_attribute("author = 'O'")},

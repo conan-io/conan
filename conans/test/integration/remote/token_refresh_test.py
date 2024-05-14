@@ -3,7 +3,7 @@ import unittest
 import mock
 from mock import Mock
 
-from conans.client.cache.remote_registry import Remote
+from conan.api.model import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
@@ -83,9 +83,8 @@ class TestTokenRefresh(unittest.TestCase):
         self.localdb = LocalDBMock()
         cache = Mock()
         cache.localdb = self.localdb
-        cache.new_config = config
         cache.cache_folder = temp_folder()
-        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache)
+        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache, config)
         self.remote = Remote("myremote", "myurl", True, True)
         self.ref = RecipeReference.loads("lib/1.0@conan/stable#myreciperev")
 

@@ -93,6 +93,18 @@ def test_profile_template_profile_dir():
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
 
 
+def test_profile_conf_backslash():
+    # https://github.com/conan-io/conan/issues/15726
+    c = TestClient()
+    profile = textwrap.dedent(r"""
+        [conf]
+        user.team:myconf = "hello\test"
+        """)
+    c.save({"profile": profile})
+    c.run("profile show -pr=profile")
+    assert r"hello\test" in c.out
+
+
 def test_profile_version():
     client = TestClient()
     tpl1 = textwrap.dedent("""
@@ -161,3 +173,35 @@ def test_profile_template_profile_name():
     # included profiles should respect the inherited profile name
     client.run("install . -pr=include_folder/include_default")
     assert "conanfile.py: PROFILE NAME: include_default" in client.out
+
+
+class TestProfileDetectAPI:
+    def test_profile_detect_os_arch(self):
+        """ testing OS & ARCH just to test the UX and interface
+        """
+        client = TestClient()
+        tpl1 = textwrap.dedent("""
+            [settings]
+            os={{detect_api.detect_os()}}
+            arch={{detect_api.detect_arch()}}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+        pr = client.get_default_host_profile()
+        the_os = pr.settings['os']
+        arch = pr.settings['arch']
+        expected = textwrap.dedent(f"""\
+            Host profile:
+            [settings]
+            arch={arch}
+            os={the_os}
+            """)
+        assert expected in client.out
+
+
+def test_profile_jinja_error():
+    c = TestClient(light=True)
+    c.save({"profile1": "{% set kk = other() %}"})
+    c.run("profile show -pr=profile1", assert_error=True)
+    assert "ERROR: Error while rendering the profile template file" in c.out

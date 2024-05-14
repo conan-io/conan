@@ -3,6 +3,7 @@ import sqlite3
 from conan.internal.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 
 
 class RecipesDBTable(BaseDbTable):
@@ -10,7 +11,8 @@ class RecipesDBTable(BaseDbTable):
     columns_description = [('reference', str),
                            ('rrev', str),
                            ('path', str, False, None, True),
-                           ('timestamp', float)]
+                           ('timestamp', float),
+                           ('lru', int)]
     unique_together = ('reference', 'rrev')
 
     @staticmethod
@@ -21,6 +23,7 @@ class RecipesDBTable(BaseDbTable):
         return {
             "ref": ref,
             "path": row.path,
+            "lru": row.lru,
         }
 
     def _where_clause(self, ref):
@@ -30,7 +33,7 @@ class RecipesDBTable(BaseDbTable):
             self.columns.rrev: ref.revision,
         }
         where_expr = ' AND '.join(
-            [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+            [f"{k}='{v}' " if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
     def create(self, path, ref: RecipeReference):
@@ -38,11 +41,12 @@ class RecipesDBTable(BaseDbTable):
         assert ref.revision is not None
         assert ref.timestamp is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        lru = timestamp_now()
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
                              f'VALUES ({placeholders})',
-                             [str(ref), ref.revision, path, ref.timestamp])
+                             [str(ref), ref.revision, path, ref.timestamp, lru])
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
@@ -50,9 +54,20 @@ class RecipesDBTable(BaseDbTable):
         assert ref.revision is not None
         assert ref.timestamp is not None
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
-                f'WHERE {self.columns.reference}="{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"SET {self.columns.timestamp} = '{ref.timestamp}' " \
+                f"WHERE {self.columns.reference}='{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
+        with self.db_connection() as conn:
+            conn.execute(query)
+
+    def update_lru(self, ref):
+        assert ref.revision is not None
+        assert ref.timestamp is not None
+        where_clause = self._where_clause(ref)
+        lru = timestamp_now()
+        query = f"UPDATE {self.table_name} " \
+                f"SET {self.columns.lru} = '{lru}' " \
+                f"WHERE {where_clause};"
         with self.db_connection() as conn:
             conn.execute(query)
 
@@ -68,9 +83,11 @@ class RecipesDBTable(BaseDbTable):
         query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
                     f'{self.columns.path} ,' \
-                    f'{self.columns.timestamp} ' \
+                    f'{self.columns.timestamp}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
+
         with self.db_connection() as conn:
             r = conn.execute(query)
             result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
@@ -78,8 +95,8 @@ class RecipesDBTable(BaseDbTable):
 
     def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference}="{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"WHERE {self.columns.reference}='{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
@@ -92,9 +109,10 @@ class RecipesDBTable(BaseDbTable):
         query = f'SELECT {self.columns.reference}, ' \
                 f'{self.columns.rrev}, ' \
                 f'{self.columns.path}, ' \
-                f'MAX({self.columns.timestamp}) ' \
+                f'MAX({self.columns.timestamp}), ' \
+                f'{self.columns.lru} ' \
                 f'FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
                 f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
 
         with self.db_connection() as conn:
@@ -108,7 +126,7 @@ class RecipesDBTable(BaseDbTable):
     def get_recipe_revisions_references(self, ref: RecipeReference):
         assert ref.revision is None
         query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
                 f'ORDER BY {self.columns.timestamp} DESC'
 
         with self.db_connection() as conn:

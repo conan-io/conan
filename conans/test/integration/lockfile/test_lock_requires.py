@@ -591,3 +591,56 @@ def test_revision_timestamp():
     locked_ref = RecipeReference.loads(lock["requires"][0])
     assert locked_ref == ref
     assert locked_ref.timestamp and locked_ref.timestamp != server_timestamp
+
+
+class TestLockfileUpdate:
+    """
+    Check that --update works
+    """
+
+    @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
+    def test_conanfile_txt_deps_ranges(self, requires):
+        """
+        conanfile.txt locking it dependencies (with version ranges)
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg"),
+                "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]"})
+        c.run("create pkg --version=0.1")
+        c.run("create pkg --version=0.2")
+        c.run("upload pkg/0.2 -r=default -c")
+        c.run("remove pkg/0.2 -c")
+        c.run("list *")
+        assert "pkg/0.2" not in c.out
+        c.run("lock create consumer/conanfile.txt --update")
+        assert "pkg/0.1" not in c.out
+        assert "pkg/0.2" in c.out
+        lock = c.load("consumer/conan.lock")
+        assert "pkg/0.1" not in lock
+        assert "pkg/0.2" in lock
+
+
+def test_error_test_explicit():
+    # https://github.com/conan-io/conan/issues/14833
+    client = TestClient()
+    test = GenConanfile().with_test("pass").with_class_attribute("test_type = 'explicit'")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                 "test_package/conanfile.py": test})
+    client.run("lock create conanfile.py --lockfile-out=my.lock")
+    client.run("create . --lockfile=my.lock")
+
+
+def test_lock_error_create():
+    # https://github.com/conan-io/conan/issues/15801
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_type("build-scripts")})
+    c.run("lock create . -u --lockfile-out=none.lock")
+    lock = json.loads(c.load("none.lock"))
+    assert lock["requires"] == []
+    assert lock["build_requires"] == []
+    c.run("create . --lockfile=none.lock --lockfile-out=none_updated.lock")
+    # It doesn't crash, it used to
+    lock = json.loads(c.load("none_updated.lock"))
+    assert lock["requires"] == []
+    assert len(lock["build_requires"]) == 1
+    assert "pkg/0.1#4e9dba5c3041ba4c87724486afdb7eb4" in lock["build_requires"][0]

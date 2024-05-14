@@ -4,6 +4,7 @@ import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 def test_transitive_py_requires():
@@ -85,6 +86,23 @@ def test_transitive_matching_ranges():
     assert "pkga/0.2: dep: dep/0.1!!" in client.out
     assert "pkgb/0.2: tool: tool/0.3!!" in client.out
     assert "pkgb/0.2: dep: dep/0.2!!" in client.out
+
+
+def test_lock_pyrequires_prereleases():
+    tc = TestClient()
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0-0.1"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_python_requires("dep/[>=0]")})
+    tc.run("export dep")
+    dep_rrev = tc.exported_recipe_revision()
+    tc.run("lock create app --lockfile-out=app.lock", assert_error=True)
+    # Makes sense, prereleases are not active
+    assert "Version range '>=0' from requirement 'dep/[>=0]' required by 'python_requires' could not be resolved"
+
+    tc.save_home({"global.conf": "core.version_ranges:resolve_prereleases=True"})
+    # This used to crash even with the conf activated
+    tc.run("lock create app --lockfile-out=app.lock")
+    data = json.loads(load(os.path.join(tc.current_folder, "app.lock")))
+    assert data["python_requires"][0].startswith(f"dep/1.0-0.1#{dep_rrev}")
 
 
 def test_lock_pyrequires_create():

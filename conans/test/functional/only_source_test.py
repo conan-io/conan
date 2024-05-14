@@ -26,18 +26,18 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("or try to build locally from sources using the '--build=hello0/0.0@lasote/stable "
+        self.assertIn("Try to build locally from sources using the '--build=hello0/0.0@lasote/stable "
                       "--build=hello1/1.1@lasote/stable'",
                       client.out)
         # Only 1 reference!
-        assert "Check the available packages using 'conan list hello0/0.0@lasote/stable:* -r=remote'" in client.out
+        assert "List all available packages using 'conan list hello0/0.0@lasote/stable:* -r=remote'" in client.out
 
         # We generate the package for hello0/0.0
         client.run("install --requires=hello0/0.0@lasote/stable --build hello0*")
 
         # Still missing hello1/1.1
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("or try to build locally from sources using the "
+        self.assertIn("Try to build locally from sources using the "
                       "'--build=hello1/1.1@lasote/stable'", client.out)
 
         # We generate the package for hello1/1.1

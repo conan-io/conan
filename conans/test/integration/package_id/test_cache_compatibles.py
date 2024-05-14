@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -125,6 +126,59 @@ def test_cppstd_validated():
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17", assert_error=True)
     assert "dep/0.1: Invalid: Current cppstd (17) is lower than the required C++ standard (20)." \
            in client.out
+
+
+def test_cppstd_server():
+    """ this test proves the order, first from cache
+    """
+    c = TestClient(default_server_user=True)
+    compatibles = textwrap.dedent("""\
+        def compatibility(conanfile):
+            return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+        """)
+    compatible_folder = os.path.join(c.cache.plugins_path, "compatibility")
+    save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+
+    conanfile = GenConanfile("dep", "0.1").with_settings("compiler")
+    c.save({"dep/conanfile.py": conanfile,
+            "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+
+    base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
+    c.run(f"create dep {base_settings} -s compiler.cppstd=20")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+
+    c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking servers" in c.out
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
+           "Using compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
+           "compiler.cppstd=20" in c.out
+    c.assert_listed_binary({"dep/0.1": ("326c500588d969f55133fdda29506ef61ef03eee",
+                                        "Download (default)")})
+    # second time, not download, already in cache
+    c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
+           "Using compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
+           "compiler.cppstd=20" in c.out
+    c.assert_listed_binary({"dep/0.1": ("326c500588d969f55133fdda29506ef61ef03eee", "Cache")})
+
+    # update checks in servers
+    c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+    c2.save({"dep/conanfile.py": conanfile})
+    c2.run(f"create dep {base_settings} -s compiler.cppstd=14")
+    c2.run("upload * -r=default -c")
+
+    c.run(f"install consumer {base_settings} -s compiler.cppstd=17 --update")
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
+           "Using compatible package 'ce92fac7c26ace631e30875ddbb3a58a190eb601': " \
+           "compiler.cppstd=14" in c.out
+    c.assert_listed_binary({"dep/0.1": ("ce92fac7c26ace631e30875ddbb3a58a190eb601",
+                                        "Download (default)")})
 
 
 class TestDefaultCompat:
@@ -304,6 +358,24 @@ class TestDefaultCompat:
         c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
         c.run(f"create . {settings} -s compiler.cppstd=17")
         c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})
+
+    def test_unnecessary_builds(self):
+        # https://github.com/conan-io/conan/issues/15657
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1").with_tool_requires("tool/0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("dep/0.1")
+                                                              .with_tool_requires("tool/0.1"),})
+        c.run("create tool")
+        c.run("create dep ")
+        c.run("create app ")
+        c.run("remove tool:* -c")
+        c.run("install --requires=dep/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("graph info --requires=app/0.1 --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("install --requires=app/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
 
 
 class TestErrorsCompatibility:

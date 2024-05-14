@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import stat
@@ -7,6 +8,7 @@ from collections import OrderedDict
 import pytest
 import requests
 from mock import patch
+from requests import Response
 
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -126,8 +128,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default --only-recipe")
-        self.assertIn("WARN: hello0/1.2.1@user/testing: Removing conan_sources.tgz, "
-                      "marked as dirty", client.out)
+        self.assertIn("Removing conan_sources.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -154,9 +155,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default")
-        self.assertIn("WARN: hello0/1.2.1@user/testing:%s: "
-                      "Removing conan_package.tgz, marked as dirty" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        self.assertIn("WARN: Removing conan_package.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -487,6 +486,21 @@ class UploadTest(unittest.TestCase):
         client.run("upload hello0/1.2.1@user/testing -r default")
         assert "Uploading recipe 'hello0/1.2.1@user/testing" in client.out
 
+    def test_server_returns_200_ok(self):
+        # https://github.com/conan-io/conan/issues/16104
+        # If server returns 200 ok, without headers, it raises an error
+        class MyHttpRequester(TestRequester):
+            def get(self, _, **kwargs):
+                resp = Response()
+                resp.status_code = 200
+                return resp
+
+        client = TestClient(requester_class=MyHttpRequester, servers={"default": TestServer()})
+        client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
+        client.run("create . ")
+        client.run("upload * -c -r default", assert_error=True)
+        assert "doesn't seem like a valid Conan remote" in client.out
+
 
 def test_upload_only_without_user_channel():
     """
@@ -527,3 +541,25 @@ def test_upload_with_python_requires():
     c.run("upload dep* -c -r=default")
     # This used to fail, but adding the enabled remotes to python_requires resolution, it works
     assert "tool/0.1: Downloaded recipe" in c.out
+
+
+def test_upload_list_only_recipe():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+    c.run("create .")
+    c.run("install --requires=liba/0.1 --format=json", redirect_stdout="graph.json")
+    c.run("list --graph=graph.json --format=json", redirect_stdout="installed.json")
+    c.run("upload --list=installed.json --only-recipe -r=default -c")
+    assert "conan_package.tgz" not in c.out
+
+
+def test_upload_json_output():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
+                                                       .with_shared_option(False)})
+    c.run("create . -s os=Linux")
+    c.run("upload * -r=default -c --format=json")
+    list_pkgs = json.loads(c.stdout)
+    revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
+    pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}

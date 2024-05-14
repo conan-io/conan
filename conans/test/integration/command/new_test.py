@@ -88,6 +88,12 @@ class TestNewCommandUserTemplate:
         conanfile = client.load("conanfile.py")
         assert 'name = "hello"' in conanfile
 
+    def test_user_template_filenames(self):
+        client = TestClient()
+        save(os.path.join(client.cache_folder, "templates/command/new/mytemplate/{{name}}"), "Hi!")
+        client.run(f"new mytemplate -d name=pkg.txt")
+        assert "Hi!" == client.load("pkg.txt")
+
     def test_skip_files(self):
         client = TestClient()
         template1 = textwrap.dedent("""
@@ -138,3 +144,12 @@ class TestNewErrors:
         conanfile = client.load("conanfile.py")
         assert 'name = "bye"' in conanfile
         assert 'version = "0.2"' in conanfile
+
+    def test_duplicated(self):
+        client = TestClient()
+        client.run("new cmake_lib -d name=hello -d name=0.1", assert_error=True)
+        assert "ERROR: name argument can't be multiple: ['hello', '0.1']" in client.out
+
+        # It will create a list and assign to it, but it will not fail ugly
+        client.run("new cmake_lib -d name=pkg -d version=0.1 -d version=0.2")
+        assert "['0.1', '0.2']" in client.load("conanfile.py")

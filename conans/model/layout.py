@@ -81,7 +81,8 @@ class Folders(object):
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_export_sources = output_folder or base_folder
-        self._base_recipe_metadata = base_folder
+        self._base_recipe_metadata = os.path.join(base_folder, "metadata")
+        # TODO: It is likely that this base_pkg_metadata is not really used with this value
         self._base_pkg_metadata = output_folder or base_folder
 
     @property
@@ -89,7 +90,7 @@ class Folders(object):
         if self._base_source is None:
             return None
         if not self.source:
-            return self._base_source
+            return os.path.normpath(self._base_source)
 
         return os.path.normpath(os.path.join(self._base_source, self.source))
 
@@ -105,7 +106,7 @@ class Folders(object):
         if self._base_build is None:
             return None
         if not self.build:
-            return self._base_build
+            return os.path.normpath(self._base_build)
         return os.path.normpath(os.path.join(self._base_build, self.build))
 
     @property
@@ -146,7 +147,7 @@ class Folders(object):
         if self._base_generators is None:
             return None
         if not self.generators:
-            return self._base_generators
+            return os.path.normpath(self._base_generators)
         return os.path.normpath(os.path.join(self._base_generators, self.generators))
 
     def set_base_generators(self, folder):
