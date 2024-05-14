@@ -1964,3 +1964,112 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert 'DEFINE conan_test_answer=123' in c.out
     assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
+
+
+class TestCMakeTry:
+
+    def test_cmake_check_cxx_compile(self):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt"
+                name = "foo"
+                version = "1.0"
+                generators = "CMakeToolchain"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(foo LANGUAGES CXX)
+
+            include(CheckCXXSourceCompiles)
+            check_cxx_source_compiles("
+            #if defined(_MSC_VER)
+            #include <intrin.h>
+            #else  // !defined(_MSC_VER)
+            #include <xmmintrin.h>
+            #endif  // defined(_MSC_VER)
+
+            int main() {
+              char data = 0;
+              const char* address = &data;
+              _mm_prefetch(address, _MM_HINT_NTA);
+              return 0;
+            }
+            "  HAVE_MY_FEATURE)
+
+            message(STATUS "MY_FEATURE ${HAVE_MY_FEATURE}!!!")
+            """)
+
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmake})
+        client.run("create . ")
+        assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
+        assert "-- MY_FEATURE 1!!!" in client.out
+
+    pytest.mark.tool("cmake")
+
+    def test_cmake_check_cxx_compile_with_deps(self):
+        client = TestClient()
+        client.run("new cmake_lib -d name=lib -d version=0.1")
+        client.run("create . -tf=")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt"
+                name = "foo"
+                version = "1.0"
+                requires = "lib/0.1"
+                generators = "CMakeToolchain", "CMakeDeps"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(foo LANGUAGES CXX)
+
+            find_package(lib CONFIG REQUIRED)
+
+            include(CheckCXXSourceCompiles)
+            check_cxx_source_compiles("
+            #if defined(_MSC_VER)
+            #include <intrin.h>
+            #else  // !defined(_MSC_VER)
+            #include <xmmintrin.h>
+            #endif  // defined(_MSC_VER)
+
+            int main() {
+              char data = 0;
+              const char* address = &data;
+              _mm_prefetch(address, _MM_HINT_NTA);
+              return 0;
+            }
+            "  HAVE_MY_FEATURE)
+
+            message(STATUS "MY_FEATURE ${HAVE_MY_FEATURE}!!!")
+            """)
+
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmake}, clean_first=True)
+        client.run("create . ")
+        print(client.out)
+        assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
+        assert "-- MY_FEATURE 1!!!" in client.out
