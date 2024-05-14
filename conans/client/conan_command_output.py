@@ -8,9 +8,10 @@ from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONAN_MANIFEST
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.search.binary_html_table import html_binary_graph
-from conans.util.dates import iso8601_to_str
+from conans.util.dates import iso8601_to_str, timestamp_to_str
 from conans.util.files import save
 from conans import __version__ as client_version
 from conans.util.misc import make_tuple
@@ -85,11 +86,13 @@ class CommandOutputer(object):
 
     def _read_dates(self, deps_graph):
         ret = {}
-        for node in sorted(deps_graph.nodes):
+        for node in deps_graph.nodes:
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.package_layout(ref).recipe_manifest()
-                ret[ref] = manifest.time_str
+                manifest = os.path.join(self._cache.package_layout(ref).export(), CONAN_MANIFEST)
+                with open(manifest, 'r', encoding="utf-8") as f:
+                    first_line = f.readline().strip('\n')
+                ret[ref] = timestamp_to_str(int(first_line))
         return ret
 
     def nodes_to_build(self, nodes_to_build):
@@ -121,6 +124,7 @@ class CommandOutputer(object):
         remotes = self._cache.registry.load_remotes()
         ret = []
 
+        node_times = self._read_dates(deps_graph)
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
             if node.recipe == RECIPE_VIRTUAL:
@@ -203,7 +207,6 @@ class CommandOutputer(object):
                 if node.binary_remote:
                     item_data["binary_remote"] = node.binary_remote.name
 
-            node_times = self._read_dates(deps_graph)
             if node_times and node_times.get(ref, None):
                 item_data["creation_date"] = node_times.get(ref, None)
 
