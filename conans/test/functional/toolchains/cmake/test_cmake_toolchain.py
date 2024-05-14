@@ -1915,7 +1915,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert "CPLUSPLUS: __cplusplus19" in c.out
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 class TestCMakeTry:
 
     def test_check_c_source_compiles(self, matrix_client):
@@ -1938,7 +1938,6 @@ class TestCMakeTry:
                     tc.generate()
             """)
 
-        # COMMENT set(MYLIB ... ) and UNCOMMENT get_target_property( ) for test to pass
         cmakelist = textwrap.dedent("""\
             cmake_minimum_required(VERSION 3.15)
             project(Hello LANGUAGES CXX)
@@ -1955,9 +1954,9 @@ class TestCMakeTry:
                      "CMakeLists.txt": cmakelist}, clean_first=True)
         client.run("install .")
 
-        with client.chdir("build"):
-            client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ")
-            assert "Performing Test IT_COMPILES - Success" in client.out
+        preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+        client.run_command(f"cmake --preset {preset}")
+        assert "Performing Test IT_COMPILES - Success" in client.out
 
     def test_cmake_check_cxx_compile_with_deps(self, matrix_client):
         client = matrix_client
@@ -2010,6 +2009,5 @@ class TestCMakeTry:
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmake}, clean_first=True)
         client.run("create . ")
-        print(client.out)
         assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
         assert "-- MY_FEATURE 1!!!" in client.out
