@@ -404,8 +404,8 @@ class GraphBinariesAnalyzer(object):
 
             # TODO: This could be set by a conf
             # Not using os.cpu_count() to support docker
-            parallel_downloads = cpu_count()
-            evaluate_pool = ThreadPool(parallel_downloads*2)
+            parallel_downloads = min(cpu_count()*2, len(nodes))
+            evaluate_pool = ThreadPool(parallel_downloads)
             evaluate_pool.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
             evaluate_pool.close()
             evaluate_pool.join()
