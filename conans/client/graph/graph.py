@@ -97,6 +97,7 @@ class Node(object):
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 return True
             require.aggregate(existing.require)
+            # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
                 # If it is an override, but other value, it has been overriden too
                 existing.require.overriden_ref = existing.require.ref
@@ -281,7 +282,7 @@ class Overrides:
         overrides = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
-                if r.override and not r.overriden_ref:
+                if r.override and not r.overriden_ref:  # overrides are not real graph edges
                     continue
                 if r.overriden_ref:
                     overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)

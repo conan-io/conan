@@ -273,6 +273,9 @@ class Lockfile(object):
             raise
 
     def resolve_overrides(self, require):
+        """ The lockfile contains the overrides to be able to inject them when the lockfile is
+        applied to upstream dependencies, that have the overrides downstream
+        """
         if not self._overrides:
             return
 

@@ -29,7 +29,9 @@ class Requirement:
         self._direct = direct
         self.options = options
         # Meta and auxiliary information
-        self.defining_require = self
+        # The "defining_require" is the require that defines the current value. If this require is
+        # overriden/forced, this attribute will point to the overriding/forcing requirement.
+        self.defining_require = self  # if not overriden, it points to itself
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too

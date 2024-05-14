@@ -27,6 +27,7 @@ class RecipeReference:
         self.timestamp = timestamp
 
     def copy(self):
+        # Used for creating copy in lockfile-overrides mechanism
         return RecipeReference(self.name, self.version, self.user, self.channel, self.revision,
                                self.timestamp)
 

@@ -86,7 +86,7 @@ class DepsGraphBuilder(object):
                     # require.override_ref can be !=None if lockfile-overrides defined
                     require.override_ref = (require.override_ref or prev_require.override_ref
                                             or prev_require.ref.copy())  # New one
-                    require.defining_require = prev_require.defining_require
+                    require.defining_require = prev_require.defining_require  # The overrider
                 require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
