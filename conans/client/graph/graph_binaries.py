@@ -1,6 +1,7 @@
 import json
 import os
 from collections import OrderedDict
+from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -19,6 +20,7 @@ from conans.model.info import RequirementInfo, RequirementsInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
+from conans.util.thread import cpu_count
 
 
 class GraphBinariesAnalyzer(object):
@@ -142,8 +144,8 @@ class GraphBinariesAnalyzer(object):
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):
-                conanfile.output.info(f"'{package_id}': "
-                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.verbose(f"'{package_id}': "
+                                         f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
             self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
@@ -153,8 +155,8 @@ class GraphBinariesAnalyzer(object):
         if not update:
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             for package_id, compatible_package in compatibles.items():
-                conanfile.output.info(f"'{package_id}': "
-                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.verbose(f"'{package_id}': "
+                                         f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 self._evaluate_download(node, remotes, update)
@@ -399,10 +401,14 @@ class GraphBinariesAnalyzer(object):
             nodes = {}
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
-            # PARALLEL, this is the slow part that can query servers for packages, and compatibility
-            for pref, pref_nodes in nodes.items():
-                _evaluate_single(pref_nodes[0])
-            # END OF PARALLEL
+
+            # TODO: This could be set by a conf
+            # Not using os.cpu_count() to support docker
+            parallel_downloads = cpu_count()
+            evaluate_pool = ThreadPool(parallel_downloads*2)
+            evaluate_pool.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
+            evaluate_pool.close()
+            evaluate_pool.join()
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
