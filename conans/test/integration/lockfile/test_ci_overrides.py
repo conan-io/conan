@@ -50,6 +50,54 @@ def test_graph_build_order_override_error():
     assert "libc/0.1: Already installed!" in c.out
 
 
+@pytest.mark.parametrize("replace_pattern", ["*", "3.0"])
+def test_graph_build_order_override_replace_requires(replace_pattern):
+    """
+    libc -> libb -> liba -> zlib/1.2
+              |--------------/
+      |-----override------> zlib/1.3
+
+    replace_requires zlib -> zlib/system
+    """
+    c = TestClient()
+    c.save({"zlib/conanfile.py": GenConanfile("zlib"),
+            "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("zlib/1.0"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1", "zlib/2.0"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_requirement("zlib/3.0",
+                                                                              override=True),
+            "profile": f"[replace_requires]\nzlib/{replace_pattern}: zlib/system"
+            })
+    c.run("export zlib --version=2.0")
+    c.run("export zlib --version=3.0")
+    c.run("export zlib --version=system")
+    c.run("export liba")
+    c.run("export libb")
+    c.run("export libc")
+    c.run("lock create --requires=libc/0.1 --lockfile-out=output.lock -pr=profile")
+
+    c.run("graph build-order --requires=libc/0.1 --lockfile=output.lock --order-by=configuration "
+          "--build=missing -pr=profile --format=json")
+
+    to_build = json.loads(c.stdout)
+    for level in to_build["order"]:
+        for package in level:
+            binary = package["binary"]
+            if binary != "Build":
+                continue
+            build_args = package["build_args"]
+            c.run(f"install {build_args} --lockfile=output.lock -pr=profile")
+            ref = RecipeReference.loads(package["ref"])
+            assert f"{ref}: Building from source"
+
+    c.run("install --requires=libc/0.1 --lockfile=output.lock -pr=profile")
+    # All works, all binaries exist now
+    assert "zlib/system: Already installed!" in c.out
+    assert "liba/0.1: Already installed!" in c.out
+    assert "libb/0.1: Already installed!" in c.out
+    assert "libc/0.1: Already installed!" in c.out
+
+
 def test_single_config_decentralized_overrides():
     r""" same scenario as "test_single_config_centralized()", but distributing the build in
     different build servers, using the "build-order"
