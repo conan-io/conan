@@ -237,15 +237,10 @@ class ConanFile:
         """
         return self.folders.source_folder
 
-    def _deprecate_path_warning(self):
-        function_name = inspect.stack()[1].function
-        new_function_name = function_name.replace("_path", "_folder")
-        ConanOutput().warning(f"{self.display_name}: Use of '{function_name}' is deprecated, "
-                              f"please use '{new_function_name}' instead", warn_tag="deprecated")
-
     @property
     def source_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'source_path' is deprecated, please use 'source_folder' instead",
+                            warn_tag="deprecated")
         assert self.source_folder is not None, "`source_folder` is `None`"
         return Path(self.source_folder)
 
@@ -266,7 +261,8 @@ class ConanFile:
 
     @property
     def export_sources_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'export_sources_path' is deprecated, please use "
+                            f"'export_sources_folder' instead", warn_tag="deprecated")
         assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
         return Path(self.export_sources_folder)
 
@@ -276,7 +272,9 @@ class ConanFile:
 
     @property
     def export_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'export_path' is deprecated, please use 'export_folder' instead",
+                            warn_tag="deprecated")
+
         assert self.export_folder is not None, "`export_folder` is `None`"
         return Path(self.export_folder)
 
@@ -301,7 +299,8 @@ class ConanFile:
 
     @property
     def build_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'build_path' is deprecated, please use 'build_folder' instead",
+                            warn_tag="deprecated")
         assert self.build_folder is not None, "`build_folder` is `None`"
         return Path(self.build_folder)
 
@@ -321,13 +320,16 @@ class ConanFile:
 
     @property
     def package_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'package_path' is deprecated, please use 'package_folder' instead",
+                            warn_tag="deprecated")
+
         assert self.package_folder is not None, "`package_folder` is `None`"
         return Path(self.package_folder)
 
     @property
     def generators_path(self) -> Path:
-        self._deprecate_path_warning()
+        self.output.warning(f"Use of 'generators_path' is deprecated, please use "
+                            f"'generators_folder' instead", warn_tag="deprecated")
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
