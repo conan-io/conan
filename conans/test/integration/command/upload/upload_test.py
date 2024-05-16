@@ -334,7 +334,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
 
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
@@ -351,7 +351,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote set-user default lasote")
@@ -367,7 +367,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote login default admin -p password")
