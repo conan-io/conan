@@ -194,7 +194,7 @@ def test_osx_deployment_target(conanfile_apple):
 def conanfile_msvc():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
-                           "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
+                           "compiler": {"msvc": {"version": ["193", "194"], "cppstd": ["20"],
                                                  "update": [None, 8, 9]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
@@ -224,6 +224,14 @@ def test_toolset_update_version(conanfile_msvc):
     conanfile_msvc.settings.compiler.update = "8"
     toolchain = CMakeToolchain(conanfile_msvc)
     assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38" CACHE STRING "" FORCE)' in toolchain.content
+
+
+def test_toolset_update_version_overflow(conanfile_msvc):
+    # https://github.com/conan-io/conan/issues/15583
+    conanfile_msvc.settings.compiler.version = "194"
+    conanfile_msvc.settings.compiler.update = "8"
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.48" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_x64(conanfile_msvc):

@@ -118,7 +118,7 @@ def test_client_retries():
 
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesOne)
-    client.save({"global.conf": "core.download:retry_wait=1"}, path=client.cache.cache_folder)
+    client.save_home({"global.conf": "core.download:retry_wait=1"})
     client.run("install --requires=lib/1.0@lasote/stable")
     assert 1 == str(client.out).count("Waiting 1 seconds to retry...")
 
@@ -126,8 +126,8 @@ def test_client_retries():
         return DownloadFilesBrokenRequester(10, *args, **kwargs)
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesTen)
-    client.save({"global.conf": "core.download:retry_wait=0\n"
-                                "core.download:retry=11"}, path=client.cache.cache_folder)
+    client.save_home({"global.conf": "core.download:retry_wait=0\n"
+                                "core.download:retry=11"})
     client.run("install --requires=lib/1.0@lasote/stable")
     assert 10 == str(client.out).count("Waiting 0 seconds to retry...")
 

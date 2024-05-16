@@ -10,8 +10,7 @@ class InstallParallelTest(unittest.TestCase):
         threads = 4
         counter = 8
 
-        client.save({"global.conf": f"core.download:parallel={threads}"},
-                    path=client.cache.cache_folder)
+        client.save_home({"global.conf": f"core.download:parallel={threads}"})
         client.save({"conanfile.py": GenConanfile()})
 
         for i in range(counter):

@@ -6,8 +6,7 @@ def test_basic_parallel_download():
     threads = 2
     packages = 2
     per_package = 4
-    client.save({"global.conf": f"core.download:parallel={threads}"},
-                path=client.cache.cache_folder)
+    client.save_home({"global.conf": f"core.download:parallel={threads}"})
     client.save({"conanfile.py": GenConanfile().with_option("myoption", '["ANY"]')})
 
     package_ids = []

@@ -8,7 +8,7 @@ from conans.util.files import save
 
 def test_plugin_cmd_wrapper():
     c = TestClient()
-    plugins = os.path.join(c.cache.cache_folder, "extensions", "plugins")
+    plugins = os.path.join(c.cache_folder, "extensions", "plugins")
     wrapper = textwrap.dedent("""
         def cmd_wrapper(cmd, **kwargs):
             return 'echo "{}"'.format(cmd)
@@ -32,7 +32,7 @@ def test_plugin_cmd_wrapper_conanfile():
     we can get the name of the caller conanfile too
     """
     c = TestClient()
-    plugins = os.path.join(c.cache.cache_folder, "extensions", "plugins")
+    plugins = os.path.join(c.cache_folder, "extensions", "plugins")
     wrapper = textwrap.dedent("""
         def cmd_wrapper(cmd, conanfile, **kwargs):
             return 'echo "{}!:{}!"'.format(conanfile.ref, cmd)

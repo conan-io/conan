@@ -46,7 +46,8 @@ def export_pkg(conan_api, parser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
 
-    conanfile = conan_api.local.inspect(path, remotes, lockfile)
+    conanfile = conan_api.local.inspect(path, remotes, lockfile, name=args.name,
+                                        version=args.version, user=args.user, channel=args.channel)
     # The package_type is not fully processed at export
     if conanfile.package_type == "python-require":
         raise ConanException("export-pkg can only be used for binaries, not for 'python-require'")
