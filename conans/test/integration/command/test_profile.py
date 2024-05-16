@@ -43,7 +43,7 @@ def test_shorthand_syntax():
     tc.run(
         "profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf:cli=True -f=json")
 
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {'user.conf:cli': True, 'user:profile': True},
                              'options': {'both_options': 'True'},
@@ -93,7 +93,7 @@ def test_shorthand_syntax():
                             'tool_requires': {}}}
 
     tc.run("profile show -pr:a=pre -pr:h=post -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {},
@@ -112,7 +112,7 @@ def test_shorthand_syntax():
                             'tool_requires': {}}}
 
     tc.run("profile show -pr:a=pre -o:b foo=False -o:a foo=True -o:h foo=False -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {'foo': 'True'},
