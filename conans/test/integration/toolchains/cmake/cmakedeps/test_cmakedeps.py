@@ -708,6 +708,7 @@ def test_cmakedeps_set_property_overrides():
     other = c.load("app/other-release-data.cmake")
     assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
 
+
 def test_cmakedeps_set_legacy_variable_name():
     client = TestClient()
     base_conanfile = str(GenConanfile("dep", "1.0"))
@@ -742,3 +743,17 @@ def test_cmakedeps_set_legacy_variable_name():
         assert f"prefix_{variable}" in dep_config
     # Check that variables are not duplicated
     assert dep_config.count("PREFIX_VERSION") == 1
+
+
+def test_different_versions():
+    # https://github.com/conan-io/conan/issues/16274
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep")})
+    c.run("create dep --version 1.2")
+    c.run("create dep --version 2.3")
+    c.run("install --requires=dep/1.2 -g CMakeDeps")
+    config = c.load("dep-config.cmake")
+    assert 'set(dep_VERSION_STRING "1.2")' in config
+    c.run("install --requires=dep/2.3 -g CMakeDeps")
+    config = c.load("dep-config.cmake")
+    assert 'set(dep_VERSION_STRING "2.3")' in config

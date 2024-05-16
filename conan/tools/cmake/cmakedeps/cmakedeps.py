@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 import jinja2
@@ -131,10 +130,8 @@ class CMakeDeps(object):
         ret[targets.filename] = targets.render()
 
         config = ConfigTemplate(self, require, dep, find_module_mode)
-        # Check if the XXConfig.cmake exists to keep the first generated configuration
-        # to only include the build_modules from the first conan install. The rest of the
-        # file is common for the different configurations.
-        #if not os.path.exists(config.filename):
+        # Only the latest configuration BUILD_MODULES and additional_variables will be used
+        # in multi-config they will be overwritten by the latest install
         ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
