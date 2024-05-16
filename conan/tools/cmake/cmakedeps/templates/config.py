@@ -23,6 +23,12 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 return "{}Config.cmake".format(self.file_name)
 
     @property
+    def additional_variables_prefixes(self):
+        prefix_list = (
+            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile) or [])
+        return list(set([self.file_name] + prefix_list))
+
+    @property
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
