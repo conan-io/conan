@@ -17,8 +17,7 @@ def test_upload_parallel_error():
                 return super(FailOnReferencesUploader, self).put(*args, **kwargs)
 
     client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
-    client.save({"global.conf": f"core.upload:parallel=2\ncore.upload:retry_wait=0"},
-                path=client.cache.cache_folder)
+    client.save_home({"global.conf": f"core.upload:parallel=2\ncore.upload:retry_wait=0"})
     client.save({"conanfile.py": GenConanfile()})
     client.run('remote login default admin -p password')
     for index in range(4):
@@ -32,7 +31,7 @@ def test_upload_parallel_success():
     """Upload 2 packages in parallel with success"""
 
     client = TestClient(default_server_user=True)
-    client.save({"global.conf": f"core.upload:parallel=2"}, path=client.cache.cache_folder)
+    client.save_home({"global.conf": f"core.upload:parallel=2"})
     client.save({"conanfile.py": GenConanfile()})
     client.run('create . --name=lib0 --version=1.0 --user=user --channel=channel')
     client.run('create . --name=lib1 --version=1.0 --user=user --channel=channel')
@@ -49,8 +48,7 @@ def test_upload_parallel_success():
 def test_upload_parallel_fail_on_interaction():
     """Upload 2 packages in parallel and fail because non_interactive forced"""
     client = TestClient(default_server_user=True)
-    client.save({"global.conf": f"core.upload:parallel=2\ncore:non_interactive=True"},
-                path=client.cache.cache_folder)
+    client.save_home({"global.conf": f"core.upload:parallel=2\ncore:non_interactive=True"})
     client.save({"conanfile.py": GenConanfile()})
     num_references = 2
     for index in range(num_references):

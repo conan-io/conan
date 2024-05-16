@@ -150,7 +150,7 @@ class ConanLib(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers,  inputs=[])
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.run('remote login default admin -p', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
         self.assertNotIn("Please enter a password for \"admin\" account:", client.out)
