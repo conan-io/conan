@@ -25,11 +25,12 @@ class GraphBinariesAnalyzer(object):
 
     def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
+        self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        compat_folder = HomePaths(self._cache.cache_folder).compatibility_plugin_path
+        compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder)
 
     @staticmethod
@@ -335,7 +336,7 @@ class GraphBinariesAnalyzer(object):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
         if config_mode is None:
             return
-        config_version_file = HomePaths(self._cache.cache_folder).config_version_path
+        config_version_file = HomePaths(self._home_folder).config_version_path
         try:
             config_refs = json.loads(load(config_version_file))["config_version"]
             result = OrderedDict()
