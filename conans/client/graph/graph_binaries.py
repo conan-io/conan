@@ -351,7 +351,7 @@ class GraphBinariesAnalyzer(object):
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "
                                  f"'{os.path.basename(config_version_file)}'"
-                                 f" file in cache: {self._cache.cache_folder}: {e}")
+                                 f" file in cache: {self._home_folder}: {e}")
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):

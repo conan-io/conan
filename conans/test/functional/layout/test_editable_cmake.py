@@ -13,8 +13,7 @@ from conans.test.utils.tools import TestClient
 def editable_cmake(generator, build_folder=None):
     c = TestClient()
     if generator is not None:
-        c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
-               path=os.path.join(c.cache.cache_folder))
+        c.save_home({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)})
     c.save(pkg_cmake("dep", "0.1"), path=os.path.join(c.current_folder, "dep"))
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
@@ -102,8 +101,7 @@ def editable_cmake_exe(generator):
     # --install folder
     c = TestClient()
     if generator is not None:
-        c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
-               path=os.path.join(c.cache.cache_folder))
+        c.save_home({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)})
     c.save(pkg_cmake("dep", "0.1", exe=True), path=os.path.join(c.current_folder, "dep"))
 
     def build_dep():
