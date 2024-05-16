@@ -134,7 +134,7 @@ def test_overrides_diamond(override, force):
     overrides = json_graph['graph']["overrides"]
     assert len(overrides) == 2
     assert overrides['pkga/0.1'] == ['pkga/0.3']
-    assert overrides['pkga/0.2'] == ['pkga/0.3#e3afb975277bc245212d6e8de88f4f8f']
+    assert overrides['pkga/0.2'] == ['pkga/0.3']
 
     # apply the lockfile to pkgb, should it lock to pkga/0.3
     c.run("graph info pkgb --lockfile=pkgd/conan.lock --format=json")
