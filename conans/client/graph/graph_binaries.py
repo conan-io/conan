@@ -394,25 +394,26 @@ class GraphBinariesAnalyzer(object):
 
         levels = deps_graph.by_levels()
         config_version = self._config_version()
+        # This overshoots the number of threads when a level shares more than one pref
+        nodes_per_level_counts = max(len(level) for level in levels)
+        # Not using os.cpu_count() to support docker
+        evaluate_pool = ThreadPool(min(cpu_count() * 2, nodes_per_level_counts))
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)
-            # group by pref to paralelize, so evaluation is done only 1 per pref
+            # group by pref to parallelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
-
-            # TODO: This could be set by a conf
-            # Not using os.cpu_count() to support docker
-            parallel_downloads = min(cpu_count()*2, len(nodes))
-            evaluate_pool = ThreadPool(parallel_downloads)
+            # Evaluate the first node of each pref
             evaluate_pool.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
-            evaluate_pool.close()
-            evaluate_pool.join()
+
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
+        evaluate_pool.close()
+        evaluate_pool.join()
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1
