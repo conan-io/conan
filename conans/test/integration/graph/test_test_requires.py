@@ -106,7 +106,7 @@ class TestTestRequiresDiamond:
         c.run("create rapidcheck")
         c.run("install game")
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
-        c.assert_overrides({"gtest/1.1": ["gtest/1.0#08dd14dd79315dd95c94b85d13bd1388"]})
+        c.assert_overrides({"gtest/1.1": ["gtest/1.0"]})
 
 
 def test_require_options():

@@ -160,7 +160,7 @@ class _InstallRecipeReference:
             if dep.dst.binary != BINARY_SKIP:
                 if dep.dst.ref == node.ref:  # If the node is itself, then it is internal dep
                     install_pkg_ref.depends.append(dep.dst.pref.package_id)
-                else:
+                elif dep.dst.ref not in self.depends:
                     self.depends.append(dep.dst.ref)
 
     def _install_order(self):
