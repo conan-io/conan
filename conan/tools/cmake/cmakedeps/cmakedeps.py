@@ -134,8 +134,8 @@ class CMakeDeps(object):
         # Check if the XXConfig.cmake exists to keep the first generated configuration
         # to only include the build_modules from the first conan install. The rest of the
         # file is common for the different configurations.
-        if not os.path.exists(config.filename):
-            ret[config.filename] = config.render()
+        #if not os.path.exists(config.filename):
+        ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
         """
