@@ -507,7 +507,7 @@ class FindFiles(Block):
 
     @staticmethod
     def _multiconfig_generator(prop):
-        return ''.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in prop.items() for i in v)
+        return ' '.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in prop.items() for i in v)
 
     def _get_host_runtime_dirs_mc(self, host_req):
         settings = self._conanfile.settings
