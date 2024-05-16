@@ -19,6 +19,15 @@ def conan_expand_user(path):
         if home and (not os.path.exists(home) or
                      (os.getenv("MSYSTEM") and os.getenv("USERPROFILE"))):
             del os.environ["HOME"]
+        # Problematic cases of existing ORIGINAL_PATH variable
+        # - msys /etc/profile, for MSYS2_PATH_TYPE=inherit mode:
+        #   - If ORIGINAL_PATH is unset, then assign ORIGINAL_PATH=PATH
+        #   - Set PATH=some msys paths plus ORIGINAL_PATH
+        # - To ensure we keep PATH intact, we must ensure ORIGINAL_PATH is unset
+        # - A user running conan from an msys console typically has ORIGINAL_PATH already set
+        # - To ensure conan's build paths are correct, ORIGINAL_PATH must be unset
+        if os.getenv("ORIGINAL_PATH"):
+            del os.environ["ORIGINAL_PATH"]
         result = os.path.expanduser(path)
     finally:
         if home is not None:
