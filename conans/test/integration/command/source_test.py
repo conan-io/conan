@@ -294,3 +294,18 @@ def test_source_python_requires():
     c.run("source . ")
     assert "pytool/0.1: Not found in local cache, looking in remotes" in c.out
     assert "pytool/0.1: Downloaded recipe" in c.out
+
+
+@pytest.mark.parametrize("attribute", ["info", "settings", "options"])
+def test_source_method_forbidden_attributes(attribute):
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Package(ConanFile):
+        def source(self):
+            self.output.info(self.{attribute})
+    """)
+    client = TestClient(light=True)
+    client.save({"conanfile.py": conanfile})
+
+    client.run("source .", assert_error=True)
+    assert f"'self.{attribute}' access in 'source()' method is forbidden" in client.out
