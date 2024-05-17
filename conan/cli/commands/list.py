@@ -1,5 +1,4 @@
 import json
-import os
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
@@ -241,8 +240,6 @@ def list(conan_api: ConanAPI, parser, *args):
             raise ConanException("Cannot define lru when loading a graph json file")
         if args.filter_profile or args.filter_settings or args.filter_options:
             raise ConanException("Filtering binaries cannot be done when loading a graph json file")
-        if not os.path.isfile(args.graph):
-            raise ConanException(f"Graph file not found: {args.graph}")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
     if args.remote and args.lru:
