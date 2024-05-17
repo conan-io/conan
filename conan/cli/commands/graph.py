@@ -248,7 +248,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
                            help='Whether the provided reference is a build-require')
     subparser.add_argument('--missing', nargs="?",
                            help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                                "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                                "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                                 "If revision is not specified, it is assumed latest one.")
 
     args = parser.parse_args(*args)

@@ -510,7 +510,7 @@ class InstallGraph:
 
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'. You can try:
-               - List all available packages using 'conan list {ref}:* -r=remote'
+               - List all available packages using 'conan list "{ref}:*" -r=remote'
                - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
                - {build_msg}
 
