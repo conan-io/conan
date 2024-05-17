@@ -554,7 +554,7 @@ class TestDownloadCacheBackupSources:
                    download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
                             sha256="{sha256}")
            """)
-            {"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+        client.save_home({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                             f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
                             f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"})
 
