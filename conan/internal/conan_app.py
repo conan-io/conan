@@ -1,8 +1,8 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.cache.cache import ClientCache
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
@@ -44,7 +44,7 @@ class ConanApp:
         cache_folder = conan_api.home_folder
         self._configure(global_conf)
         self.cache_folder = cache_folder
-        self.cache = ClientCache(self.cache_folder, global_conf)
+        self.cache = PkgCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
         self.hook_manager = HookManager(home_paths.hooks_path)

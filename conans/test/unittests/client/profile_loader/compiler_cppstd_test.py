@@ -5,8 +5,8 @@ import unittest
 import yaml
 from jinja2 import Template
 
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.cache.cache import ClientCache
 from conans.client.conf import default_settings_yml
 from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
@@ -20,7 +20,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
     def setUp(self):
         self.cache_folder = temp_folder()
-        self.cache = ClientCache(self.cache_folder, ConfDefinition())
+        self.cache = PkgCache(self.cache_folder, ConfDefinition())
         self.home_paths = HomePaths(self.cache_folder)
         save(self.home_paths.profile_plugin_path, "")
 
