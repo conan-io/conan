@@ -449,11 +449,11 @@ class TestClient:
 
             @property
             def plugins_path(self):  # Temporary to not break tests
-                return os.path.join(self.cache_folder, "extensions", "plugins")
+                return os.path.join(self._home, "extensions", "plugins")
 
             @property
             def default_profile_path(self):
-                return os.path.join(self.cache_folder, "profiles", "default")
+                return os.path.join(self._home, "profiles", "default")
 
         return MyCache(self.cache_folder)
 

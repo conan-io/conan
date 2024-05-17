@@ -33,10 +33,6 @@ class DataCache:
         path = os.path.realpath(os.path.join(self._base_folder, relative_path))
         return path
 
-    @property
-    def base_folder(self):
-        return self._base_folder
-
     @staticmethod
     def _short_hash_path(h):
         """:param h: Unicode text to reduce"""

@@ -175,7 +175,7 @@ class UploadTest(unittest.TestCase):
         if retry_wait is not None:
             lines.append("core.upload:retry_wait={}".format(retry_wait))
 
-        client.save({"global.conf": "\n".join(lines)}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": "\n".join(lines)})
 
     def test_upload_error_with_config(self):
         """Cause an error in the transfer and see some message"""

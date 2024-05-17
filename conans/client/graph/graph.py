@@ -97,6 +97,11 @@ class Node(object):
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 return True
             require.aggregate(existing.require)
+            # An override can be overriden by a downstream force/override
+            if existing.require.override and existing.require.ref != require.ref:
+                # If it is an override, but other value, it has been overriden too
+                existing.require.overriden_ref = existing.require.ref
+                existing.require.override_ref = require.ref
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
@@ -118,6 +123,7 @@ class Node(object):
         if down_require is None:
             return
 
+        down_require.defining_require = require.defining_require
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
@@ -161,6 +167,7 @@ class Node(object):
             # print("    No need to check downstream more")
             return result
 
+        down_require.defining_require = require.defining_require
         source_node = dependant.src
         return source_node.check_downstream_exists(down_require) or result
 
@@ -275,9 +282,9 @@ class Overrides:
         overrides = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
-                if r.override:
+                if r.override and not r.overriden_ref:  # overrides are not real graph edges
                     continue
-                if r.overriden_ref and not r.force:
+                if r.overriden_ref:
                     overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)

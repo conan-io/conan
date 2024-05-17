@@ -10,7 +10,7 @@ class TestConflictDiamondTest:
         game -> engine/1.0 -> math/1.0
           |---> ai/1.0 -----> math/1.0.1 (conflict)
         """
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"math/conanfile.py": GenConanfile("math"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
                 "ai/conanfile.py": GenConanfile("ai", "1.0").with_requires("math/1.0.1"),
@@ -54,7 +54,7 @@ class TestConflictDiamondTest:
             c.save({"game/conanfile.py": _game_conanfile(v)})
             c.run("install game")
             c.assert_overrides({"math/1.0": [f"math/{v}"],
-                                "math/1.0.1": [f"math/{v}#8e1a7a5ce869d8c54ae3d33468fd657c"]})
+                                "math/1.0.1": [f"math/{v}"]})
             c.assert_listed_require({f"math/{v}": "Cache"})
 
         # Check that order of requirements doesn't affect
@@ -62,7 +62,7 @@ class TestConflictDiamondTest:
             c.save({"game/conanfile.py": _game_conanfile(v, reverse=True)})
             c.run("install game")
             c.assert_overrides({"math/1.0": [f"math/{v}"],
-                                "math/1.0.1": [f"math/{v}#8e1a7a5ce869d8c54ae3d33468fd657c"]})
+                                "math/1.0.1": [f"math/{v}"]})
             c.assert_listed_require({f"math/{v}": "Cache"})
 
         c.run("install --requires=engine/1.0  --requires=ai/1.0", assert_error=True)

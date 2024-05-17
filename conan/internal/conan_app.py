@@ -12,6 +12,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
+from conans.client.store.localdb import LocalDB
 
 
 class CmdWrapper:
@@ -29,11 +30,12 @@ class CmdWrapper:
 
 
 class ConanFileHelpers:
-    def __init__(self, requester, cmd_wrapper, global_conf, cache):
+    def __init__(self, requester, cmd_wrapper, global_conf, cache, home_folder):
         self.requester = requester
         self.cmd_wrapper = cmd_wrapper
         self.global_conf = global_conf
         self.cache = cache
+        self.home_folder = home_folder
 
 
 class ConanApp:
@@ -52,16 +54,19 @@ class ConanApp:
         # To handle remote connections
         rest_client_factory = RestApiClientFactory(self.requester, global_conf)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.cache, global_conf)
+        self.localdb = LocalDB(cache_folder)
+        auth_manager = ConanApiAuthManager(rest_client_factory, cache_folder, self.localdb,
+                                           global_conf)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager)
+        self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
 
         self.proxy = ConanProxy(self, conan_api.local.editable_packages)
         self.range_resolver = RangeResolver(self, global_conf, conan_api.local.editable_packages)
 
         self.pyreq_loader = PyRequireLoader(self, global_conf)
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)
-        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
+        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache,
+                                             self.cache_folder)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
 
     @staticmethod

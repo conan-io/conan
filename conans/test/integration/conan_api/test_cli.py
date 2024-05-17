@@ -21,3 +21,18 @@ def test_cli():
         cli.run(["list", "*"])
         cli2.run(["list", "*"])
         cli.run(["list", "*"])
+
+
+def test_basic_api():
+    api = ConanAPI(cache_folder=temp_folder())
+    result = api.remotes.list()
+    assert result[0].name == "conancenter"
+
+
+def test_api_command():
+    # The ``CommandAPI`` requires a bit more of setup
+    api = ConanAPI()
+    cli = Cli(api)
+    cli.add_commands()
+    result = api.command.run(["remote", "list"])
+    assert result[0].name == "conancenter"

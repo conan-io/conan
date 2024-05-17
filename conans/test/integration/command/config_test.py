@@ -24,7 +24,7 @@ class TestConfigHome:
     def test_config_home_default(self):
         client = TestClient()
         client.run("config home")
-        assert f"{client.cache.cache_folder}\n" == client.stdout
+        assert f"{client.cache_folder}\n" == client.stdout
 
         client.run("config home --format=text", assert_error=True)
         # It is not possible to use --format=text explicitly

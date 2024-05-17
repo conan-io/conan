@@ -48,7 +48,7 @@ class ClientCertsTest(unittest.TestCase):
         conan_conf = textwrap.dedent("""
                                     core.net.http:client_cert= ("{}", "{}")
                                 """.format(mycert_path, mykey_path))
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=foo --version=1.0")
         assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path) in client.out

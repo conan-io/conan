@@ -1416,6 +1416,30 @@ def test_toolchain_and_compilers_build_context():
     client.run("create consumer -pr:h host -pr:b build --build=missing")
 
 
+def test_toolchain_keep_absolute_paths():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, cmake_layout
+        class Pkg(ConanFile):
+            settings = "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.absolute_paths = True
+                tc.generate()
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": ""})
+    c.run('install . ')
+
+    user_presets = json.loads(c.load("CMakeUserPresets.json"))
+    assert os.path.isabs(user_presets["include"][0])
+    presets = json.loads(c.load(user_presets["include"][0]))
+    assert os.path.isabs(presets["configurePresets"][0]["toolchainFile"])
+
+
 def test_output_dirs_gnudirs_local_default():
     # https://github.com/conan-io/conan/issues/14733
     c = TestClient()
