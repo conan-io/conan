@@ -118,9 +118,9 @@ class CacheAPI:
                     rmdir(pref_layout.download_package())
 
     def save(self, package_list, tgz_path):
-        cache_folder = self.conan_api.cache_folder
         global_conf = self.conan_api.config.global_conf
-        cache = ClientCache(cache_folder, global_conf)
+        cache = ClientCache(self.conan_api.cache_folder, global_conf)
+        cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
@@ -160,19 +160,20 @@ class CacheAPI:
     def restore(self, path):
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
+
+        cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        cache_folder = cache.store  # Note, this is not the home, but the actual package cache
+
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
-            the_tar.extractall(path=self.conan_api.cache_folder)
+            the_tar.extractall(path=cache_folder)
             the_tar.close()
 
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        # FIXME: this might be broken for ``core.cache:storage_path``?
-        cache_folder = self.conan_api.cache_folder
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
