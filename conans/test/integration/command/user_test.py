@@ -5,6 +5,7 @@ import unittest
 from collections import OrderedDict
 from datetime import timedelta
 
+from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
 
@@ -55,7 +56,7 @@ class UserTest(unittest.TestCase):
         client.run('remote set-user default john')
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
-        localdb = client.cache.localdb
+        localdb = LocalDB(client.cache_folder)
         self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('remote set-user default will')
@@ -86,7 +87,7 @@ class UserTest(unittest.TestCase):
         client.run('remote logout default')
         self.assertIn("Changed user of remote 'default' from 'admin' (authenticated) "
                       "to 'None' (anonymous)", client.out)
-        localdb = client.cache.localdb
+        localdb = LocalDB(client.cache_folder)
         self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
         client.run('remote list-users')
         assert 'default:\n  No user' in client.out
@@ -335,10 +336,11 @@ def test_user_removed_remote_removed():
     c = TestClient(default_server_user=True)
     server_url = c.servers["default"].fake_url
     c.run("remote login default admin -p password")
-    login = c.cache.localdb.get_login(server_url)
+    localdb = LocalDB(c.cache_folder)
+    login = localdb.get_login(server_url)
     assert login[0] == "admin"
     c.run("remote remove default")
-    login = c.cache.localdb.get_login(server_url)
+    login = localdb.get_login(server_url)
     assert login == (None, None, None)
 
 

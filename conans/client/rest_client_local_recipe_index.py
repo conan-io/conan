@@ -54,9 +54,9 @@ class RestApiClientLocalRecipesIndex:
     a local folder assuming the conan-center-index repo layout
     """
 
-    def __init__(self, remote, cache):
+    def __init__(self, remote, home_folder):
         self._remote = remote
-        local_recipes_index_path = HomePaths(cache.cache_folder).local_recipes_index_path
+        local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
         local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
         local_recipes_index_path = os.path.join(local_recipes_index_path, ".conan")
         repo_folder = self._remote.url

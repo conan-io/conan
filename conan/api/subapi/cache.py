@@ -171,12 +171,14 @@ class CacheAPI:
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
         cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        # FIXME: this might be broken for ``core.cache:storage_path``?
+        cache_folder = self.conan_api.cache_folder
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
             recipe_layout = cache.get_or_create_ref_layout(ref)  # DB folder entry
             recipe_folder = ref_bundle["recipe_folder"]
-            rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
+            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
             rel_path = rel_path.replace("\\", "/")
             # In the case of recipes, they are always "in place", so just checking it
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
@@ -189,25 +191,25 @@ class CacheAPI:
                 out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
                 # If the DB folder entry is different to the disk unzipped one, we need to move it
                 # This happens for built (not downloaded) packages in the source "conan cache save"
-                db_pkg_folder = os.path.relpath(pkg_layout.package(), cache.cache_folder)
+                db_pkg_folder = os.path.relpath(pkg_layout.package(), cache_folder)
                 db_pkg_folder = db_pkg_folder.replace("\\", "/")
                 if db_pkg_folder != unzipped_pkg_folder:
                     # If a previous package exists, like a previous restore, then remove it
                     if os.path.exists(pkg_layout.package()):
                         shutil.rmtree(pkg_layout.package())
-                    shutil.move(os.path.join(cache.cache_folder, unzipped_pkg_folder),
+                    shutil.move(os.path.join(cache_folder, unzipped_pkg_folder),
                                 pkg_layout.package())
                     pref_bundle["package_folder"] = db_pkg_folder
                 unzipped_metadata_folder = pref_bundle.get("metadata_folder")
                 if unzipped_metadata_folder:
                     out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
-                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache.cache_folder)
+                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
                     db_metadata_folder = db_metadata_folder.replace("\\", "/")
                     if db_metadata_folder != unzipped_metadata_folder:
                         # We need to put the package in the final location in the cache
                         if os.path.exists(pkg_layout.metadata()):
                             shutil.rmtree(pkg_layout.metadata())
-                        shutil.move(os.path.join(cache.cache_folder, unzipped_metadata_folder),
+                        shutil.move(os.path.join(cache_folder, unzipped_metadata_folder),
                                     pkg_layout.metadata())
                         pref_bundle["metadata_folder"] = db_metadata_folder
 

@@ -34,7 +34,7 @@ def test_config_package_id(config_version, mode, result):
 
 def test_error_config_package_id():
     c = TestClient()
-    save(c.cache.global_conf_path, f"core.package_id:config_mode=minor_mode")
+    c.save_home({"global.conf": "core.package_id:config_mode=minor_mode"})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .", assert_error=True)
     assert "ERROR: core.package_id:config_mode defined, " \
