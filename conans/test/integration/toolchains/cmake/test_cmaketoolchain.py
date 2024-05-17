@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -350,6 +351,67 @@ def test_find_builddirs():
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
+
+
+@pytest.fixture
+def lib_dir_setup():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_generator("CMakeToolchain")})
+    client.run("create . --name=onelib --version=1.0")
+    client.run("create . --name=twolib --version=1.0")
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Conan(ConanFile):
+                requires = "onelib/1.0", "twolib/1.0"
+
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=dep --version=1.0")
+
+    conanfile = (GenConanfile().with_requires("dep/1.0").with_generator("CMakeToolchain")
+                 .with_settings("os", "arch", "compiler", "build_type"))
+
+    client.save({"conanfile.py": conanfile})
+    return client
+
+def test_runtime_lib_dirs_single_conf(lib_dir_setup):
+    client = lib_dir_setup
+    generator = ""
+    is_windows = platform.system() == "Windows"
+    if is_windows:
+        generator = '-c tools.cmake.cmaketoolchain:generator=Ninja'
+    
+    client.run(f'install . -s build_type=Release {generator}')
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
+    pattern_lib_dirs = r'set\(CONAN_RUNTIME_LIB_DIRS (.*) \)'
+
+    # On *nix platforms: the list in `CMAKE_LIBRARY_PATH` 
+    # is the same as `CONAN_RUNTIME_LIB_DIRS`
+    # On windows, it's the same but with `bin` instead of `lib`
+    cmake_library_path = re.search(pattern_lib_path, contents).group(1)
+    conan_runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+    lib_path = cmake_library_path.replace("/p/lib", "/p/bin") if is_windows else cmake_library_path
+
+    assert lib_path == conan_runtime_lib_dirs
+
+
+def test_runtime_lib_dirs_multiconf(lib_dir_setup):
+    client = lib_dir_setup
+    generator = ""
+    if platform.system() != "Windows":
+        generator = '-c tools.cmake.cmaketoolchain:generator="Ninja Multi-Config"'
+
+    client.run(f'install . -s build_type=Release {generator}')
+    client.run(f'install . -s build_type=Debug {generator}')
+
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+    runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+
+    assert "<CONFIG:Release>" in runtime_lib_dirs
+    assert "<CONFIG:Debug>" in runtime_lib_dirs
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

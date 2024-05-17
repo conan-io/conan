@@ -480,6 +480,9 @@ class FindFiles(Block):
         {% if cmake_include_path %}
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
+        {% if host_runtime_dirs %}
+        set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
+        {% endif %}
 
         {% if cross_building %}
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE OR CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
@@ -501,6 +504,40 @@ class FindFiles(Block):
         endif()
         {% endif %}
     """)
+
+    def _runtime_dirs_value(self, dirs):
+        if is_multi_configuration(self._toolchain.generator):
+            return ' '.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in dirs.items() for i in v)
+        else:
+            return ' '.join(f'"{item}"' for _, items in dirs.items() for item in items)
+
+    def _get_host_runtime_dirs(self, host_req):
+        settings = self._conanfile.settings
+        host_runtime_dirs = {}
+        is_win = self._conanfile.settings.get_safe("os") == "Windows"
+
+        # Get the previous configuration
+        if is_multi_configuration(self._toolchain.generator) and os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_toolchain = load(CONAN_TOOLCHAIN_FILENAME)
+            pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+            variable_match = re.search(pattern_lib_dirs, existing_toolchain)
+            if variable_match:
+                capture = variable_match.group(1)
+                matches = re.findall(r'"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>"', capture)
+                host_runtime_dirs = {}
+                for k, v in matches:
+                    host_runtime_dirs.setdefault(k, []).append(v)
+        
+        # Calculate the dirs for the current build_type
+        runtime_dirs = []
+        for req in host_req:
+            cppinfo = req.cpp_info.aggregated_components()
+            runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
+        
+        build_type = settings.get_safe("build_type")
+        host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in runtime_dirs]
+
+        return host_runtime_dirs
 
     @staticmethod
     def _join_paths(paths):
@@ -524,6 +561,7 @@ class FindFiles(Block):
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
         build_paths = []
         host_lib_paths = []
+        host_runtime_dirs = self._get_host_runtime_dirs(host_req)
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
@@ -552,6 +590,7 @@ class FindFiles(Block):
             "cmake_include_path": self._join_paths(host_include_paths),
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
+            "host_runtime_dirs": self._runtime_dirs_value(host_runtime_dirs)
         }
 
 
