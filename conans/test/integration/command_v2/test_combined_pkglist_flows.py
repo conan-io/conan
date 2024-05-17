@@ -77,6 +77,11 @@ class TestExportUpload:
 
 
 class TestCreateGraphToPkgList:
+    def test_graph_pkg_nonexistant(self):
+        c = TestClient(light=True)
+        c.run("list --graph=non-existent-file.json", assert_error=True)
+        assert "Graph file not found: non-existent-file.json" in c.out
+
     def test_graph_pkg_list_only_built(self):
         c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
