@@ -3,7 +3,10 @@ import os
 import shutil
 import tarfile
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
@@ -218,3 +221,25 @@ def test_error_restore_not_existing():
     c = TestClient()
     c.run("cache restore potato.tgz", assert_error=True)
     assert "ERROR: Restore archive doesn't exist in " in c.out
+
+
+@pytest.mark.parametrize("src_store", (False, True))
+@pytest.mark.parametrize("dst_store", (False, True))
+def test_cache_save_restore_custom_storage_path(src_store, dst_store):
+    c = TestClient()
+    if src_store:
+        tmp_folder = temp_folder()
+        c.save_home({"global.conf": f"core.cache:storage_path={tmp_folder}"})
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=pkg --version=1.0")
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    if dst_store:
+        tmp_folder = temp_folder()
+        c2.save_home({"global.conf": f"core.cache:storage_path={tmp_folder}"})
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore conan_cache_save.tgz")
+    c2.run("list *:*")
+    assert "pkg/1.0" in c2.out

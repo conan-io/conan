@@ -30,7 +30,7 @@ class OnlySourceTest(unittest.TestCase):
                       "--build=hello1/1.1@lasote/stable'",
                       client.out)
         # Only 1 reference!
-        assert "List all available packages using 'conan list hello0/0.0@lasote/stable:* -r=remote'" in client.out
+        assert "List all available packages using 'conan list \"hello0/0.0@lasote/stable:*\" -r=remote'" in client.out
 
         # We generate the package for hello0/0.0
         client.run("install --requires=hello0/0.0@lasote/stable --build hello0*")
