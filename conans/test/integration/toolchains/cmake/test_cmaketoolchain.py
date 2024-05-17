@@ -1438,3 +1438,78 @@ def test_toolchain_keep_absolute_paths():
     assert os.path.isabs(user_presets["include"][0])
     presets = json.loads(c.load(user_presets["include"][0]))
     assert os.path.isabs(presets["configurePresets"][0]["toolchainFile"])
+
+
+def test_output_dirs_gnudirs_local_default():
+    # https://github.com/conan-io/conan/issues/14733
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        from conan.tools.files import load
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            def build(self):
+                tc = load(self, "conan_toolchain.cmake")
+                self.output.info(tc)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    def _assert_install(out):
+        assert 'set(CMAKE_INSTALL_BINDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_SBINDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_LIBEXECDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_LIBDIR "lib")' in out
+        assert 'set(CMAKE_INSTALL_INCLUDEDIR "include")' in out
+
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" in c.out
+
+    c.run("build .")
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" not in c.out
+
+
+def test_output_dirs_gnudirs_local_custom():
+    # https://github.com/conan-io/conan/issues/14733
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        from conan.tools.files import load
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            def layout(self):
+                self.cpp.package.bindirs = ["mybindir"]
+                self.cpp.package.includedirs = ["myincludedir"]
+                self.cpp.package.libdirs = ["mylibdir"]
+
+            def build(self):
+                tc = load(self, "conan_toolchain.cmake")
+                self.output.info(tc)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    def _assert_install(out):
+        assert 'set(CMAKE_INSTALL_BINDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_SBINDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_LIBEXECDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_LIBDIR "mylibdir")' in out
+        assert 'set(CMAKE_INSTALL_INCLUDEDIR "myincludedir")' in out
+
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" in c.out
+
+    c.run("build .")
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" not in c.out
