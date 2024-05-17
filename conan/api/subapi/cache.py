@@ -6,10 +6,10 @@ from io import BytesIO
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
-from conans.client.cache.cache import ClientCache
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -119,7 +119,7 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path):
         global_conf = self.conan_api.config.global_conf
-        cache = ClientCache(self.conan_api.cache_folder, global_conf)
+        cache = PkgCache(self.conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
@@ -161,7 +161,7 @@ class CacheAPI:
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
-        cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
         with open(path, mode='rb') as file_handler:

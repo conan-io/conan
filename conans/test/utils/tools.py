@@ -25,13 +25,12 @@ from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
-from conan.internal.cache.cache import PackageLayout, RecipeLayout
+from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
-from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
 from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
@@ -442,9 +441,9 @@ class TestClient:
         api = ConanAPI(cache_folder=self.cache_folder)
         global_conf = api.config.global_conf
 
-        class MyCache(ClientCache, HomePaths):  # Temporary class to avoid breaking all tests
+        class MyCache(PkgCache, HomePaths):  # Temporary class to avoid breaking all tests
             def __init__(self, cache_folder):
-                ClientCache.__init__(self, cache_folder, global_conf)
+                PkgCache.__init__(self, cache_folder, global_conf)
                 HomePaths.__init__(self, cache_folder)
 
             @property
