@@ -81,7 +81,7 @@ class PkgCache:
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         """  This is a temporary layout while exporting a new recipe, because the revision is not
-        computed yet, until it is. The entry is not added to DB, just a temp folder is created
+        computed until later. The entry is not added to DB, just a temp folder is created
 
         This temporary export folder will be moved to permanent when revision is computed by the
         assign_rrev() method
