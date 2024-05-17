@@ -24,7 +24,6 @@ from conans.test.utils.tools import get_free_port
 from conans.util.files import md5, save
 
 
-@pytest.mark.slow
 @pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
@@ -46,15 +45,13 @@ class RestApiTest(unittest.TestCase):
                 client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)
                 localdb = LocalDBMock()
-                cache = Mock()
-                cache.localdb = localdb
 
                 mocked_user_input = UserInput(non_interactive=False)
                 mocked_user_input.get_username = Mock(return_value="private_user")
                 mocked_user_input.get_password = Mock(return_value="private_pass")
 
                 # FIXME: Missing mock
-                cls.auth_manager = ConanApiAuthManager(client_factory, cache, config)
+                cls.auth_manager = ConanApiAuthManager(client_factory, temp_folder(), localdb, config)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
                 cls.auth_manager._authenticate(cls.remote, user="private_user",

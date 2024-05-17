@@ -8,7 +8,7 @@ class TestVersionRangesUpdatingTest:
 
     def test_update_remote(self):
         # https://github.com/conan-io/conan/issues/5333
-        client = TestClient(default_server_user=True)
+        client = TestClient(light=True, default_server_user=True)
         client.save({"conanfile.py": GenConanfile("boost")})
         client.run("create . --version=1.69.0")
         client.run("create . --version=1.70.0")
@@ -29,7 +29,7 @@ class TestVersionRangesUpdatingTest:
         assert "boost/1.69" not in client.out
 
     def test_update(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(light=True, default_server_user=True)
 
         client.save({"pkg/conanfile.py": GenConanfile("pkg"),
                      "app/conanfile.py": GenConanfile().with_requirement("pkg/[~1]")})
@@ -73,7 +73,7 @@ class TestVersionRangesMultiRemote:
         servers = OrderedDict()
         servers["default"] = TestServer()
         servers["other"] = TestServer()
-        client = TestClient(servers=servers, inputs=2*["admin", "password"])
+        client = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
         client.save({"hello0/conanfile.py": GenConanfile("hello0"),
                      "hello1/conanfile.py": GenConanfile("hello1").with_requires("hello0/[*]")})
         client.run("export hello0 --version=0.1")

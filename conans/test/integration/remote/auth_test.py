@@ -5,6 +5,7 @@ import unittest
 
 from requests.models import Response
 
+from conans.client.store.localdb import LocalDB
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
@@ -206,7 +207,8 @@ def test_token_expired():
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
-    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    localdb = LocalDB(c.cache_folder)
+    user, token, _ = localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is not None
 
@@ -214,10 +216,10 @@ def test_token_expired():
     time.sleep(3)
     c.users = {}
     conan_conf = "core:non_interactive=True"
-    c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
+    c.save_home({"global.conf": conan_conf})
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")
-    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    user, token, _ = localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None
 

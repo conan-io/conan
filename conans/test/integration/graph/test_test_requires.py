@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 class TestTestRequiresDiamond:
     def test_test_requires_linear(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requires("zlib/1.0"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_test_requires("gtest/1.0")
@@ -18,7 +18,7 @@ class TestTestRequiresDiamond:
                                  "zlib/1.0": "Cache"}, test=True)
 
     def test_test_requires_half_diamond(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requires("zlib/1.0"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("zlib/1.0")
@@ -38,7 +38,7 @@ class TestTestRequiresDiamond:
                     self.test_requires("gtest/1.0")
                     self.requires("zlib/1.0")
             """)
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requires("zlib/1.0"),
                 "engine/conanfile.py": engine
@@ -50,7 +50,7 @@ class TestTestRequiresDiamond:
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
 
     def test_test_requires_diamond(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requires("zlib/1.0"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("zlib/1.0"),
@@ -66,7 +66,7 @@ class TestTestRequiresDiamond:
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
 
     def test_test_requires_diamond_change_order(self):
-        c = TestClient()
+        c = TestClient(light=True)
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
@@ -88,7 +88,7 @@ class TestTestRequiresDiamond:
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
 
     def test_test_requires_conflict_force(self):
-        c = TestClient()
+        c = TestClient(light=True)
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
@@ -106,11 +106,11 @@ class TestTestRequiresDiamond:
         c.run("create rapidcheck")
         c.run("install game")
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
-        c.assert_overrides({"gtest/1.1": ["gtest/1.0#08dd14dd79315dd95c94b85d13bd1388"]})
+        c.assert_overrides({"gtest/1.1": ["gtest/1.0"]})
 
 
 def test_require_options():
-    c = TestClient()
+    c = TestClient(light=True)
     gtest = textwrap.dedent("""
         from conan import ConanFile
         class Gtest(ConanFile):
@@ -146,7 +146,7 @@ def test_requires_components():
     no requires at all it doesn't fail.
     https://github.com/conan-io/conan/issues/13187
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
 
@@ -176,7 +176,7 @@ def test_requires_transitive_diamond_components():
      |-(test-requires)----/
     https://github.com/conan-io/conan/issues/13892
     """
-    c = TestClient()
+    c = TestClient(light=True)
     libc = textwrap.dedent("""
         from conan import ConanFile
         class LibC(ConanFile):
@@ -200,7 +200,7 @@ def test_requires_transitive_diamond_components():
 
 def test_test_requires_options():
     """ the default_options = {} values also propagate to ``test_requires()`` """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"test/conanfile.py": GenConanfile("test", "0.1").with_option("myoption", [1, 2, 3]),
             "consumer/conanfile.py": GenConanfile().with_test_requires("test/0.1")
                                                    .with_default_option("test/*:myoption", "2")})
@@ -215,7 +215,7 @@ def test_test_requires_options():
 
 def test_invisible_requires_options():
     """ the default_options = {} values also propagate to ``requires(visible=False)`` """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"test/conanfile.py": GenConanfile("test", "0.1").with_option("myoption", [1, 2, 3]),
             "consumer/conanfile.py": GenConanfile().with_requirement("test/0.1", visible=False)
                                                    .with_default_option("test/*:myoption", "2")})

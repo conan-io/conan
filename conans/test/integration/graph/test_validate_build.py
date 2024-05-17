@@ -54,7 +54,7 @@ def test_basic_validate_build_test():
 
 
 def test_with_options_validate_build_test():
-    t = TestClient()
+    t = TestClient(light=True)
     conanfile = textwrap.dedent("""
     from conan import ConanFile
     from conans.errors import ConanInvalidConfiguration

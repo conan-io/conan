@@ -707,3 +707,38 @@ def test_cmakedeps_set_property_overrides():
     assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
     other = c.load("app/other-release-data.cmake")
     assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
+
+def test_cmakedeps_set_legacy_variable_name():
+    client = TestClient()
+    base_conanfile = str(GenConanfile("dep", "1.0"))
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "CMakeFileName")
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name
+    dep_config = client.load("CMakeFileNameConfig.cmake")
+    cmake_variables = ["VERSION_STRING", "INCLUDE_DIRS", "INCLUDE_DIR", "LIBRARIES", "DEFINITIONS"]
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
+        self.cpp_info.set_property("cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name and both prefixes
+    dep_config = client.load("NewCMakeFileNameConfig.cmake")
+    for variable in cmake_variables:
+        assert f"NewCMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+    # Check that variables are not duplicated
+    assert dep_config.count("PREFIX_VERSION") == 1

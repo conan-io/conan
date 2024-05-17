@@ -2,26 +2,22 @@ import os
 from typing import List
 
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
-from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import mkdir
 
-LOCALDB = ".conan.db"
-
 
 # TODO: Rename this to ClientHome
-class ClientCache(object):
+class ClientCache:
     """ Class to represent/store/compute all the paths involved in the execution
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
     def __init__(self, cache_folder, global_conf):
-        self.cache_folder = cache_folder
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \
-                             os.path.join(self.cache_folder, "p")
+                             os.path.join(cache_folder, "p")
 
         try:
             mkdir(self._store_folder)
@@ -126,8 +122,3 @@ class ClientCache(object):
     @property
     def store(self):
         return self._store_folder
-
-    @property
-    def localdb(self):
-        localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB(localdb_filename)

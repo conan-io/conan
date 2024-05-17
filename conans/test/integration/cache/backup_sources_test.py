@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import textwrap
 from unittest import mock
 
@@ -194,10 +193,9 @@ class TestDownloadCacheBackupSources:
 
         # Ensure defaults backup folder works if it's not set in global.conf
         # (The rest is needed to exercise the rest of the code)
-        self.client.save(
+        self.client.save_home(
             {"global.conf": f"core.sources:download_urls=['{self.file_server.fake_url}/backups/', 'origin']\n"
-                            f"core.sources:exclude_urls=['{self.file_server.fake_url}/mycompanystorage/', '{self.file_server.fake_url}/mycompanystorage2/']"},
-            path=self.client.cache.cache_folder)
+                            f"core.sources:exclude_urls=['{self.file_server.fake_url}/mycompanystorage/', '{self.file_server.fake_url}/mycompanystorage2/']"})
         self.client.run("source .")
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
         assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
@@ -286,7 +284,6 @@ class TestDownloadCacheBackupSources:
             {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
                             f"core.sources:download_urls=['{self.file_server.fake_url}/internal_error/', "
                             f"'{self.file_server.fake_url}/unused/']\n"})
-
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create .", assert_error=True)
         assert "ConanException: Error 500 downloading file" in self.client.out
@@ -557,11 +554,10 @@ class TestDownloadCacheBackupSources:
                    download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
                             sha256="{sha256}")
            """)
-
-        client.save_home(
             {"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                             f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
                             f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"})
+
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")

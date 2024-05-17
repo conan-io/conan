@@ -141,7 +141,8 @@ def test_create_docker_runner_dockerfile_file_path():
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h host -pr:b build")
-    print(client.out)
+
+    assert "Container conan-runner-docker running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
@@ -249,7 +250,7 @@ def test_create_docker_runner_profile_abs_path():
     cache=copy
     remove=True
     """)
-    
+
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
@@ -272,6 +273,8 @@ def test_create_docker_runner_profile_abs_path_from_configfile():
         build:
             dockerfile: {dockerfile_path("Dockerfile_test")}
             build_context: {conan_base_path()}
+        run:
+            name: my-custom-conan-runner-container
         """)
     client.save({"configfile.yaml": configfile})
 
@@ -301,11 +304,12 @@ def test_create_docker_runner_profile_abs_path_from_configfile():
     cache=copy
     remove=True
     """)
-    
+
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
 
+    assert "Container my-custom-conan-runner-container running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
@@ -357,11 +361,11 @@ def test_create_docker_runner_profile_abs_path_from_configfile_with_args():
     cache=copy
     remove=True
     """)
-    
+
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
-    print(client.out)
+
     assert "test/integration/command/dockerfiles/Dockerfile_args" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
