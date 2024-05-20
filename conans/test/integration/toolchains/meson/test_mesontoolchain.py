@@ -521,8 +521,8 @@ def test_native_attribute_error():
 
 
 def test_compiler_path_with_spaces():
-    conanfile = (GenConanfile().with_name("lib").with_version("1.0").with_generator("MesonToolchain")
-                 .with_settings("compiler"))
+    conanfile = GenConanfile().with_name("lib").with_version("1.0").with_generator("MesonToolchain")
+                .with_settings("compiler")
     profile = textwrap.dedent("""
         include(default)
         [conf]
