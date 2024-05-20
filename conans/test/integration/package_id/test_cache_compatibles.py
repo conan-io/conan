@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -357,6 +358,45 @@ class TestDefaultCompat:
         c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
         c.run(f"create . {settings} -s compiler.cppstd=17")
         c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})
+
+    def test_unnecessary_builds(self):
+        # https://github.com/conan-io/conan/issues/15657
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1").with_tool_requires("tool/0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("dep/0.1")
+                                                              .with_tool_requires("tool/0.1"),})
+        c.run("create tool")
+        c.run("create dep ")
+        c.run("create app ")
+        c.run("remove tool:* -c")
+        c.run("install --requires=dep/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("graph info --requires=app/0.1 --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("install --requires=app/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+
+    def test_msvc_194_fallback(self):
+        c = TestClient()
+        save(c.cache.default_profile_path, "")
+        c.save({"conanfile.py": GenConanfile("mylib", "1.0").with_settings("os", "arch",
+                                                                           "compiler", "build_type"),
+                "profile_build": "[settings]\nos=Windows\narch=x86_64"})
+
+        c.run("create . -s os=Windows -s arch=x86_64 -s build_type=Release "
+              "-s compiler=msvc "
+              "-s compiler.version=193 -s compiler.cppstd=17 "
+              "-s compiler.runtime=dynamic -pr:b=profile_build")
+        package_id1 = c.created_package_id("mylib/1.0")
+
+        # Try to install with cppstd 14, it will find cppstd 17 as compatible
+        c.run("install --requires=mylib/1.0@ -s os=Windows -s arch=x86_64 -s build_type=Release "
+              "-s compiler=msvc "
+              "-s compiler.version=194 -s compiler.cppstd=14 "
+              "-s compiler.runtime=dynamic -pr:b=profile_build")
+        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
+               f"Using compatible package '{package_id1}'"
 
 
 class TestErrorsCompatibility:

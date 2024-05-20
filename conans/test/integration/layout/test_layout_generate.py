@@ -125,3 +125,33 @@ def test_generate_build_folder_test_package():
             "test_package/conanfile.py": conanfile})
     c.run("create .")
     assert f"build_folder in test_package: True" in c.out
+
+
+class TestCustomTestPackage:
+    def test_custom_test_package(self):
+        c = TestClient(light=True)
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute('test_package_folder="mytest"')
+        c.save({"conanfile.py": conanfile,
+                "mytest/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST!')"),
+                "mytest2/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST2!')")})
+        c.run("create .")
+        assert "MYTEST!" in c.out
+        c.run("create . -tf=mytest2")
+        assert "MYTEST2!" in c.out
+
+    def test_custom_test_package_subfolder(self):
+        c = TestClient(light=True)
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute('test_package_folder="my/test"')
+        c.save({"pkg/conanfile.py": conanfile,
+                "pkg/my/test/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST!')")})
+        c.run("create pkg")
+        assert "MYTEST!" in c.out
+
+    def test_custom_test_package_sibling(self):
+        c = TestClient(light=True)
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute(
+            'test_package_folder="../my/test"')
+        c.save({"pkg/conan/conanfile.py": conanfile,
+                "pkg/my/test/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST!')")})
+        c.run("create pkg/conan")
+        assert "MYTEST!" in c.out

@@ -108,15 +108,15 @@ def test_cpp_info_component_objects():
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say
-                     PROPERTY INTERFACE_LINK_LIBRARIES
+                     APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:Release>:${hello_hello_say_OBJECTS_RELEASE}>
                      $<$<CONFIG:Release>:${hello_hello_say_LIBRARIES_TARGETS}>
-                     APPEND)""" in content
+                     )""" in content
         # If there are componets, there is not a global cpp so this is not generated
         assert "hello_OBJECTS_RELEASE" not in content
         # But the global target is linked with the targets from the components
-        assert "set_property(TARGET hello::hello PROPERTY INTERFACE_LINK_LIBRARIES " \
-               "hello::say APPEND)" in content
+        assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES " \
+               "hello::say)" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
@@ -707,3 +707,38 @@ def test_cmakedeps_set_property_overrides():
     assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
     other = c.load("app/other-release-data.cmake")
     assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
+
+def test_cmakedeps_set_legacy_variable_name():
+    client = TestClient()
+    base_conanfile = str(GenConanfile("dep", "1.0"))
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "CMakeFileName")
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name
+    dep_config = client.load("CMakeFileNameConfig.cmake")
+    cmake_variables = ["VERSION_STRING", "INCLUDE_DIRS", "INCLUDE_DIR", "LIBRARIES", "DEFINITIONS"]
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+
+    conanfile = base_conanfile + """
+    def package_info(self):
+        self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
+        self.cpp_info.set_property("cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+    """
+    client.save({"dep/conanfile.py": conanfile})
+    client.run("create dep")
+    client.run("install --requires=dep/1.0 -g CMakeDeps")
+
+    # Check that all the CMake variables are generated with the file_name and both prefixes
+    dep_config = client.load("NewCMakeFileNameConfig.cmake")
+    for variable in cmake_variables:
+        assert f"NewCMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+    # Check that variables are not duplicated
+    assert dep_config.count("PREFIX_VERSION") == 1

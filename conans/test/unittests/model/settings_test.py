@@ -465,6 +465,17 @@ def test_rm_safe():
     assert "'settings.compiler.libcxx' doesn't exist for 'clang'" in str(e.value)
 
 
+def test_rm_safe_wildcard():
+    settings = Settings.loads(default_settings_yml)
+    settings.compiler = "gcc"
+    settings.compiler.version = "4.8"
+    settings.compiler.libcxx = "libstdc++"
+    settings.rm_safe("compiler.*")
+    assert settings.compiler == "gcc"
+    assert settings.get_safe("compiler.version") is None
+    assert settings.get_safe("compiler.libcxx") is None
+
+
 def test_settings_intel_cppstd_03():
     settings = Settings.loads(default_settings_yml)
     settings.compiler = "intel-cc"

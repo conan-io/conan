@@ -197,7 +197,7 @@ def test_dependents_new_buildenv():
 
 
 def test_tool_requires_conanfile_txt():
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile()})
 
     build_req = textwrap.dedent("""
@@ -219,7 +219,7 @@ def test_tool_requires_conanfile_txt():
 
 
 def test_profile_override_conflict():
-    client = TestClient()
+    client = TestClient(light=True)
 
     test = textwrap.dedent("""
         from conan import ConanFile
@@ -273,7 +273,7 @@ def test_both_context_options_error():
 def test_conditional_require_context():
     """ test that we can condition on the context to define a dependency
     """
-    c = TestClient()
+    c = TestClient(light=True)
     pkg = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -301,7 +301,7 @@ class TestBuildTrackHost:
         will put ``protoc`` from it in the PATH. Not a problem in majority of cases, but not the
         cleanest
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
@@ -329,7 +329,7 @@ class TestBuildTrackHost:
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
@@ -365,7 +365,7 @@ class TestBuildTrackHost:
         """
         same as above, but using version ranges instead of overrides
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
@@ -405,7 +405,7 @@ class TestBuildTrackHost:
         """
         if no host requirement is defined, it will be an error
         """
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanfile.py": GenConanfile().with_build_requirement("protobuf/<host_version>")})
         c.run("install .", assert_error=True)
         assert "ERROR:  require 'protobuf/<host_version>': " \
@@ -415,7 +415,7 @@ class TestBuildTrackHost:
         """
         It is not possible to make host_version visible too
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
@@ -432,7 +432,7 @@ class TestBuildTrackHost:
         """
         it can only be used by tool_requires, not regular requires
         """
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanfile.py": GenConanfile("pkg").with_requirement("protobuf/<host_version>")})
         c.run(f"install .", assert_error=True)
         assert " 'host_version' can only be used for non-visible tool_requires" in c.out
@@ -441,7 +441,7 @@ class TestBuildTrackHost:
         """
         https://github.com/conan-io/conan/issues/14704
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
                 from conan import ConanFile
                 class ProtoBuf(ConanFile):
@@ -484,7 +484,7 @@ class TestBuildTrackHost:
         Make the tool_requires follow the regular require with the expression "<host_version>"
         for a transitive_deps
         """
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requirement("protobuf/[>=1.0]"),
                 "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
@@ -537,7 +537,7 @@ class TestBuildTrackHost:
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent(f"""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
@@ -566,7 +566,7 @@ class TestBuildTrackHost:
 
 
 def test_build_missing_build_requires():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"tooldep/conanfile.py": GenConanfile("tooldep", "0.1"),
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_tool_requires("tooldep/0.1"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("tool/0.1"),
@@ -581,3 +581,17 @@ def test_build_missing_build_requires():
     c.run("install app --build=missing")
     assert "- Build" not in c.out
     assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+
+
+def test_requirement_in_wrong_method():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def configure(self):
+                self.requires("foo/1.0")
+        """)})
+    tc.run('create . -cc="core:warnings_as_errors=[\'*\']"', assert_error=True)
+    assert "ERROR: deprecated: Requirements should only be added in the requirements()/build_requirements() methods, not configure()/config_options(), which might raise errors in the future." in tc.out

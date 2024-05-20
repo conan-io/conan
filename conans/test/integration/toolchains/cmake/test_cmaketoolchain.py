@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -350,6 +351,67 @@ def test_find_builddirs():
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
+
+
+@pytest.fixture
+def lib_dir_setup():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_generator("CMakeToolchain")})
+    client.run("create . --name=onelib --version=1.0")
+    client.run("create . --name=twolib --version=1.0")
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Conan(ConanFile):
+                requires = "onelib/1.0", "twolib/1.0"
+
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=dep --version=1.0")
+
+    conanfile = (GenConanfile().with_requires("dep/1.0").with_generator("CMakeToolchain")
+                 .with_settings("os", "arch", "compiler", "build_type"))
+
+    client.save({"conanfile.py": conanfile})
+    return client
+
+def test_runtime_lib_dirs_single_conf(lib_dir_setup):
+    client = lib_dir_setup
+    generator = ""
+    is_windows = platform.system() == "Windows"
+    if is_windows:
+        generator = '-c tools.cmake.cmaketoolchain:generator=Ninja'
+    
+    client.run(f'install . -s build_type=Release {generator}')
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
+    pattern_lib_dirs = r'set\(CONAN_RUNTIME_LIB_DIRS (.*) \)'
+
+    # On *nix platforms: the list in `CMAKE_LIBRARY_PATH` 
+    # is the same as `CONAN_RUNTIME_LIB_DIRS`
+    # On windows, it's the same but with `bin` instead of `lib`
+    cmake_library_path = re.search(pattern_lib_path, contents).group(1)
+    conan_runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+    lib_path = cmake_library_path.replace("/p/lib", "/p/bin") if is_windows else cmake_library_path
+
+    assert lib_path == conan_runtime_lib_dirs
+
+
+def test_runtime_lib_dirs_multiconf(lib_dir_setup):
+    client = lib_dir_setup
+    generator = ""
+    if platform.system() != "Windows":
+        generator = '-c tools.cmake.cmaketoolchain:generator="Ninja Multi-Config"'
+
+    client.run(f'install . -s build_type=Release {generator}')
+    client.run(f'install . -s build_type=Debug {generator}')
+
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+    runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+
+    assert "<CONFIG:Release>" in runtime_lib_dirs
+    assert "<CONFIG:Debug>" in runtime_lib_dirs
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
@@ -1170,6 +1232,52 @@ def test_recipe_build_folders_vars():
     assert "conan-windows-shared-debug" in presets
 
 
+def test_build_folder_vars_self_name_version():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.build_folder_vars = ["settings.os", "self.name", "self.version"]
+                cmake_layout(self)
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s os=Windows -s build_type=Debug")
+    presets = client.load("build/windows-pkg-0.1/Debug/generators/CMakePresets.json")
+    assert "conan-windows-pkg-0.1-debug" in presets
+    client.run("install . -s os=Linux -s build_type=Release")
+    presets = client.load("build/linux-pkg-0.1/Release/generators/CMakePresets.json")
+    assert "linux-pkg-0.1-release" in presets
+
+    # CLI override has priority
+    client.run("install . -s os=Linux  -s build_type=Release "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"self.name\"]'")
+    presets = client.load("build/pkg/Release/generators/CMakePresets.json")
+    assert "conan-pkg-release" in presets
+
+    # Now we do the build in the cache, the recipe folders are still used
+    client.run("create . -s os=Windows -s build_type=Debug")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+    # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
+    client.run("create . -s os=Windows -s build_type=Debug "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+
 def test_extra_flags():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -1279,3 +1387,191 @@ def test_add_cmakeexe_to_presets():
 
     presets = json.loads(c.load(presets_path))
     assert presets["configurePresets"][0].get("cmakeExecutable") is None
+
+
+def test_toolchain_ends_newline():
+    # https://github.com/conan-io/conan/issues/15785
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert toolchain[-1] == "\n"
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how CMakeToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "clang")' in content
+            assert 'set(CMAKE_CXX_COMPILER "clang++")' in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "gcc")' in content
+            assert 'set(CMAKE_CXX_COMPILER "g++")' in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+def test_toolchain_keep_absolute_paths():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, cmake_layout
+        class Pkg(ConanFile):
+            settings = "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.absolute_paths = True
+                tc.generate()
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": ""})
+    c.run('install . ')
+
+    user_presets = json.loads(c.load("CMakeUserPresets.json"))
+    assert os.path.isabs(user_presets["include"][0])
+    presets = json.loads(c.load(user_presets["include"][0]))
+    assert os.path.isabs(presets["configurePresets"][0]["toolchainFile"])
+
+
+def test_output_dirs_gnudirs_local_default():
+    # https://github.com/conan-io/conan/issues/14733
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        from conan.tools.files import load
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            def build(self):
+                tc = load(self, "conan_toolchain.cmake")
+                self.output.info(tc)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    def _assert_install(out):
+        assert 'set(CMAKE_INSTALL_BINDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_SBINDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_LIBEXECDIR "bin")' in out
+        assert 'set(CMAKE_INSTALL_LIBDIR "lib")' in out
+        assert 'set(CMAKE_INSTALL_INCLUDEDIR "include")' in out
+
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" in c.out
+
+    c.run("build .")
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" not in c.out
+
+
+def test_output_dirs_gnudirs_local_custom():
+    # https://github.com/conan-io/conan/issues/14733
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        from conan.tools.files import load
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            def layout(self):
+                self.cpp.package.bindirs = ["mybindir"]
+                self.cpp.package.includedirs = ["myincludedir"]
+                self.cpp.package.libdirs = ["mylibdir"]
+
+            def build(self):
+                tc = load(self, "conan_toolchain.cmake")
+                self.output.info(tc)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    def _assert_install(out):
+        assert 'set(CMAKE_INSTALL_BINDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_SBINDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_LIBEXECDIR "mybindir")' in out
+        assert 'set(CMAKE_INSTALL_LIBDIR "mylibdir")' in out
+        assert 'set(CMAKE_INSTALL_INCLUDEDIR "myincludedir")' in out
+
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" in c.out
+
+    c.run("build .")
+    _assert_install(c.out)
+    assert "CMAKE_INSTALL_PREFIX" not in c.out

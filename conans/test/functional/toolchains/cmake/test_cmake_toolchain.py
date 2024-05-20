@@ -7,10 +7,11 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
 
@@ -39,10 +40,9 @@ def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
+    value = "v14{}".format(version[-1])
     if update is not None:  # Fullversion
-        value = "version=14.{}{}".format(version[-1], update)
-    else:
-        value = "v14{}".format(version[-1])
+        value += f",version=14.{version[-1]}{update}"
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
 
 
@@ -76,8 +76,7 @@ def test_cmake_toolchain_custom_toolchain():
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
-@pytest.mark.parametrize("schema2", [True, False])
-def test_cmake_user_presets_load(existing_user_presets, schema2):
+def test_cmake_user_presets_load(existing_user_presets):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
     syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
@@ -191,6 +190,59 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only on Windows with msvc")
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+    client.run("create . -s build_type=MinSizeRel")
+
+    client.run("install --require=pkg/1.0 -s build_type=Debug -g CMakeToolchain --format=json")
+    debug_graph = json.loads(client.stdout)
+    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    debug_bindir = debug_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain --format=json")
+    release_graph = json.loads(client.stdout)
+    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    release_bindir = release_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=MinSizeRel -g CMakeToolchain --format=json")
+    minsizerel_graph = json.loads(client.stdout)
+    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    minsizerel_bindir = minsizerel_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>" \
+                           f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+
+    cmake_generator = "" if platform.system() != "Windows" else "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
+
+
+
 @pytest.mark.tool("cmake")
 def test_cmake_toolchain_multiple_user_toolchain():
     """ A consumer consuming two packages that declare:
@@ -271,8 +323,8 @@ def test_cmaketoolchain_no_warnings():
     client.run("create dep")
     client.run("install .")
     build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake {}"
-                       "-Werror=dev --warn-uninitialized".format(build_type))
+    client.run_command("cmake -Werror=dev --warn-uninitialized . {}"
+                       " -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake".format(build_type))
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully
 
@@ -343,6 +395,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions.release["spaces_release"] = "release me you"
                 tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
                 tc.preprocessor_definitions.release["answer_release"] = 42
+                tc.preprocessor_definitions.release["NOVALUE_DEF_RELEASE"] = None
 
                 tc.preprocessor_definitions.debug["escape_debug"] = "debug partially \"escaped\""
                 tc.preprocessor_definitions.debug["spaces_debug"] = "debug me you"
@@ -386,6 +439,9 @@ def test_cmake_toolchain_definitions_complex_strings():
             #ifdef NOVALUE_DEF
             printf("NO VALUE!!!!");
             #endif
+            #ifdef NOVALUE_DEF_RELEASE
+            printf("NO VALUE RELEASE!!!!");
+            #endif
             return 0;
         }
         """)
@@ -416,6 +472,7 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
     assert "NO VALUE!!!!" in client.out
+    assert "NO VALUE RELEASE!!!!" in client.out
 
     client.run("install . -pr=./profile -s build_type=Debug")
     client.run("build . -pr=./profile -s build_type=Debug")
@@ -636,7 +693,7 @@ def test_cmake_presets_multiple_settings_single_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -653,7 +710,7 @@ def test_cmake_presets_multiple_settings_single_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -663,7 +720,7 @@ def test_cmake_presets_multiple_settings_single_config():
     assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
     assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
 
-    presets = json.loads(load(user_presets["include"][1]))
+    presets = json.loads(client.load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -684,7 +741,7 @@ def test_cmake_presets_multiple_settings_single_config():
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the apple-clang 12 the [1] is the apple-clang 13
     assert len(user_presets["include"]) == 3
-    presets = json.loads(load(user_presets["include"][2]))
+    presets = json.loads(client.load(user_presets["include"][2]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -830,7 +887,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -847,7 +904,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert len(presets["testPresets"]) == 2
@@ -871,7 +928,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the msvc dynamic/14 the [1] is the static/17
     assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][1]))
+    presets = json.loads(client.load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -901,6 +958,33 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("cmake --build --preset conan-static-17-release")
     client.run_command("ctest --preset conan-static-17-release")
     client.run_command("build\\static-17\\Release\\hello")
+    assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# Test both with a local folder and an absolute folder
+@pytest.mark.parametrize("build", ["mybuild", "temp"])
+def test_cmake_presets_build_folder(build):
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+
+    build = temp_folder() if build == "temp" else build
+    settings_layout = f' -c tools.cmake.cmake_layout:build_folder="{build}" '\
+                      '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
+               "-s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, build, "static-17", "generators"))
+
+    client.run_command("cmake . --preset conan-static-17")
+    client.run_command("cmake --build --preset conan-static-17-release")
+    client.run_command("ctest --preset conan-static-17-release")
+    client.run_command(f"{build}\\static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
 
@@ -1392,7 +1476,7 @@ def test_cmaketoolchain_conf_from_tool_require():
     assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain
 
 
-def test_inject_user_toolchain_profile():
+def test_inject_user_toolchain():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
@@ -1425,8 +1509,17 @@ def test_inject_user_toolchain_profile():
     save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
-    client.run("create . -pr=myprofile")
+    client.run("build . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+    # Now test with the global.conf
+    global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
+                  '["{{conan_home_folder}}/my.cmake"]'
+    save(client.cache.new_config_path, global_conf)
+    save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
+    client.run("build .")
+    # The toolchain is found and can be used
+    assert "IT WORKS!!!!" in client.out
 
 
 def test_no_build_type():
@@ -1740,7 +1833,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
     profile_release = textwrap.dedent(r"""
         include(default)
         [conf]
-        tools.build:defines=["answer=42"]
+        tools.build:defines=["conan_test_answer=42", "conan_test_other=24"]
         tools.build:cxxflags=["/Zc:__cplusplus"]
         """)
     profile_debug = textwrap.dedent(r"""
@@ -1748,7 +1841,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
         [settings]
         build_type=Debug
         [conf]
-        tools.build:defines=["answer=123"]
+        tools.build:defines=["conan_test_answer=123"]
         tools.build:cxxflags=["/W4"]
         """)
 
@@ -1775,10 +1868,13 @@ def test_cmake_toolchain_cxxflags_multi_config():
         #include <stdio.h>
 
         #define STR(x)   #x
-        #define SHOW_DEFINE(x) printf("%s=%s\n", #x, STR(x))
+        #define SHOW_DEFINE(x) printf("DEFINE %s=%s!\n", #x, STR(x))
 
         int main() {
-            SHOW_DEFINE(answer);
+            SHOW_DEFINE(conan_test_answer);
+            #ifdef conan_test_other
+            SHOW_DEFINE(conan_test_other);
+            #endif
             char a = 123L;  // to trigger warnings
 
             #if __cplusplus
@@ -1809,9 +1905,11 @@ def test_cmake_toolchain_cxxflags_multi_config():
         assert "warning C4189" in c.out
 
     c.run_command(r"build\Release\example.exe")
-    assert 'answer=42' in c.out
+    assert 'DEFINE conan_test_answer=42!' in c.out
+    assert 'DEFINE conan_test_other=24!' in c.out
     assert "CPLUSPLUS: __cplusplus20" in c.out
 
     c.run_command(r"build\Debug\example.exe")
-    assert 'answer=123' in c.out
+    assert 'DEFINE conan_test_answer=123' in c.out
+    assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out

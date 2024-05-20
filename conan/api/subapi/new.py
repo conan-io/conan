@@ -28,6 +28,7 @@ class NewAPI:
         from conan.internal.api.new.bazel_exe import bazel_exe_files
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
+        from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
@@ -39,7 +40,8 @@ class NewAPI:
                          "bazel_exe": bazel_exe_files,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
-                         "alias": alias_file}
+                         "alias": alias_file,
+                         "local_recipes_index": local_recipes_index_files}
         template_files = new_templates.get(template_name)
         return template_files
 

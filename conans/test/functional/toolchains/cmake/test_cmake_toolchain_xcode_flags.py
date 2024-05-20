@@ -52,7 +52,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 
     client.run("create . --profile:build=default --profile:host=host -tf=")
     # flags
-    assert "-- CONAN_C_FLAGS:  -fembed-bitcode -fobjc-arc" in client.out
+    assert "-- CONAN_C_FLAGS:  -fembed-bitcode -fvisibility=default -fobjc-arc" in client.out
     assert "-- CONAN_CXX_FLAGS:  -fembed-bitcode -fvisibility=default -fobjc-arc" in client.out
     assert "[100%] Built target hello" in client.out
 
@@ -135,7 +135,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
 
     client.run("create . --profile:build=default --profile:host=host -tf=\"\"")
     # flags
-    assert "-- CONAN_C_FLAGS:   -fno-objc-arc" in client.out
+    assert "-- CONAN_C_FLAGS:   -fvisibility=hidden -fvisibility-inlines-hidden -fno-objc-arc" in client.out
     assert "-- CONAN_CXX_FLAGS:   -fvisibility=hidden -fvisibility-inlines-hidden -fno-objc-arc" in client.out
     assert "[100%] Built target hello" in client.out
 

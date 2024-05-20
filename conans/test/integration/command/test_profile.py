@@ -43,7 +43,7 @@ def test_shorthand_syntax():
     tc.run(
         "profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf:cli=True -f=json")
 
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {'user.conf:cli': True, 'user:profile': True},
                              'options': {'both_options': 'True'},
@@ -74,7 +74,7 @@ def test_shorthand_syntax():
             """)})
 
     tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {},
@@ -93,7 +93,7 @@ def test_shorthand_syntax():
                             'tool_requires': {}}}
 
     tc.run("profile show -pr:a=pre -pr:h=post -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {},
@@ -112,7 +112,7 @@ def test_shorthand_syntax():
                             'tool_requires': {}}}
 
     tc.run("profile show -pr:a=pre -o:b foo=False -o:a foo=True -o:h foo=False -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {'foo': 'True'},
@@ -133,9 +133,13 @@ def test_shorthand_syntax():
 
 def test_profile_show_json():
     c = TestClient()
-    c.save({"myprofilewin": "[settings]\nos=Windows\n[tool_requires]\nmytool/*:mytool/1.0",
+    c.save({"myprofilewin": "[settings]\nos=Windows\n"
+                            "[tool_requires]\nmytool/*:mytool/1.0\n"
+                            "[conf]\nuser.conf:value=42\nlibiconv/*:tools.env.virtualenv:powershell=False\n"
+                            "[options]\n*:myoption=True",
             "myprofilelinux": "[settings]\nos=Linux"})
     c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
+
     profile = json.loads(c.stdout)
     assert profile["host"]["settings"] == {"os": "Linux"}
 

@@ -1,12 +1,14 @@
+import filecmp
 import fnmatch
 import os
 import shutil
 
+from conans.errors import ConanException
 from conans.util.files import mkdir
 
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
-         ignore_case=True):
+         ignore_case=True, overwrite_equal=False):
     """
     Copy the files matching the pattern (fnmatch) at the src folder to a dst folder.
 
@@ -24,10 +26,17 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     :param ignore_case: (Optional, defaulted to ``True``) If enabled, it will do a
            case-insensitive pattern matching. will do a case-insensitive pattern matching when
            ``True``
+    :param overwrite_equal: (Optional, default ``False``). If the file to be copied already exists
+           in the destination folder, only really copy it if it seems different (different size,
+           different modification time)
     :return: list of copied files
     """
-    assert src != dst
-    assert not pattern.startswith("..")
+    if src == dst:
+        raise ConanException("copy() 'src' and 'dst' arguments must have different values")
+    if pattern.startswith(".."):
+        raise ConanException("copy() it is not possible to use relative patterns starting with '..'")
+    if src is None:
+        raise ConanException("copy() received 'src=None' argument")
 
     # This is necessary to add the trailing / so it is not reported as symlink
     src = os.path.join(src, "")
@@ -35,7 +44,7 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     files_to_copy, files_symlinked_to_folders = _filter_files(src, pattern, excludes, ignore_case,
                                                               excluded_folder)
 
-    copied_files = _copy_files(files_to_copy, src, dst, keep_path)
+    copied_files = _copy_files(files_to_copy, src, dst, keep_path, overwrite_equal)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
     if conanfile:  # Some usages still pass None
         copied = '\n    '.join(files_to_copy)
@@ -103,7 +112,7 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     return files_to_copy, files_symlinked_to_folders
 
 
-def _copy_files(files, src, dst, keep_path):
+def _copy_files(files, src, dst, keep_path, overwrite_equal):
     """ executes a multiple file copy from [(src_file, dst_file), (..)]
     managing symlinks if necessary
     """
@@ -117,14 +126,17 @@ def _copy_files(files, src, dst, keep_path):
             os.makedirs(parent_folder, exist_ok=True)
 
         if os.path.islink(abs_src_name):
-            linkto = os.readlink(abs_src_name)  # @UndefinedVariable
+            linkto = os.readlink(abs_src_name)
             try:
                 os.remove(abs_dst_name)
             except OSError:
                 pass
-            os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
+            os.symlink(linkto, abs_dst_name)
         else:
-            shutil.copy2(abs_src_name, abs_dst_name)
+            # Avoid the copy if the file exists and has the exact same signature (size + mod time)
+            if overwrite_equal or not os.path.exists(abs_dst_name) \
+                    or not filecmp.cmp(abs_src_name, abs_dst_name):
+                shutil.copy2(abs_src_name, abs_dst_name)
         copied_files.append(abs_dst_name)
     return copied_files
 

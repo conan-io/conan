@@ -59,6 +59,13 @@ v = [("1", "2"),
      ("0.0.1-3-1", "0.0.1"),
      ("0.0.1-3-1", "0.0.1-4"),
      ("0.0.1-3", "0.0.1-3-1"),  # 3 is less than 3-1, pure alphanumeric ID "3-1"
+     # build + prerelease
+     ("1.1-pre.1", "1.1+b.1"),
+     ("1.1-pre.1", "1.1-pre.1+b.1"),
+     ("1.1-pre.1+b.1", "1.1-pre.1+b.2"),
+     ("1.1+b.1", "1.2-pre.1+b.2"),
+     ("1.0.0-+2", "1.0.0+2"),  # Note it is not the number, but the prerelease
+     ("1.0.0-+2", "1.0.0+1"),  # Even if the build metadata is lower the first one is pre-release
      # cci. schema used in CCI
      ("cci.20230101", "cci.20240101"),
      ]

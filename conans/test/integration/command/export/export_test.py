@@ -421,7 +421,7 @@ def test_allow_temp_uppercase():
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=Pkg --version=0.1", assert_error=True)
     assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
-    c.save({"global.conf": "core:allow_uppercase_pkg_names=True"}, path=c.cache.cache_folder)
+    c.save_home({"global.conf": "core:allow_uppercase_pkg_names=True"})
     c.run("export . --name=Pkg --version=0.1")
     assert "WARN: Package name 'Pkg/0.1' has uppercase, " \
            "and has been allowed by temporary config." in c.out
@@ -434,8 +434,8 @@ def test_warn_special_chars_refs():
     assert "WARN: Name containing special chars is discouraged 'pkg.name'" in c.out
     c.run("export . --name=name --version=0.1 --user=user+some")
     assert "WARN: User containing special chars is discouraged 'user+some'" in c.out
-    c.run("export . --name=pkg.name --version=0.1 --user=user --channel=channel-some")
-    assert "WARN: Channel containing special chars is discouraged 'channel-some'" in c.out
+    c.run("export . --name=pkg.name --version=0.1 --user=user --channel=channel+some")
+    assert "WARN: Channel containing special chars is discouraged 'channel+some'" in c.out
 
 
 def test_export_json():

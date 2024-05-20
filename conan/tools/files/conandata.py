@@ -41,7 +41,7 @@ def update_conandata(conanfile, data):
     save(path, new_content)
 
 
-def trim_conandata(conanfile):
+def trim_conandata(conanfile, raise_if_missing=True):
     """
     Tool to modify the ``conandata.yml`` once it is exported, to limit it to the current version
     only
@@ -50,7 +50,11 @@ def trim_conandata(conanfile):
         raise ConanException("The 'trim_conandata()' can only be used in the 'export()' method")
     path = os.path.join(conanfile.export_folder, "conandata.yml")
     if not os.path.exists(path):
-        raise ConanException("conandata.yml file doesn't exist")
+        if raise_if_missing:
+            raise ConanException("conandata.yml file doesn't exist")
+        else:
+            conanfile.output.warning("conandata.yml file doesn't exist")
+            return
 
     conandata = load(path)
     conandata = yaml.safe_load(conandata)

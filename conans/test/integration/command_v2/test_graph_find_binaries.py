@@ -454,3 +454,13 @@ class TestDistance:
         assert "a657a8fc96dd855e2a1c90a9fe80125f0c4635a0" not in tc.out
         # We expect the closer binary to show
         assert "a6923b987deb1469815dda84aab36ac34f370c48" in tc.out
+
+
+def test_no_binaries():
+    # https://github.com/conan-io/conan/issues/15819
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    c.run("graph explain --requires=pkg/0.1")
+    assert "ERROR: No package binaries exist" in c.out
+    # The json is not an issue, it won't have anything as contents

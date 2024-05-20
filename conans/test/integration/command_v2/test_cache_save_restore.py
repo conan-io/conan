@@ -3,7 +3,10 @@ import os
 import shutil
 import tarfile
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
@@ -14,7 +17,8 @@ def test_cache_save_restore():
     c.run("create . --name=pkg --version=1.0 -s os=Linux")
     c.run("create . --name=pkg --version=1.1 -s os=Linux")
     c.run("create . --name=other --version=2.0 -s os=Linux")
-    c.run("cache save pkg/*:* ")
+    # Force the compress level just to make sure it doesn't crash
+    c.run("cache save pkg/*:* -cc core.gzip:compresslevel=9")
     cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
     assert os.path.exists(cache_path)
     _validate_restore(cache_path)
@@ -28,6 +32,36 @@ def test_cache_save_restore():
 
     package_list = json.loads(pkglist)
     assert "\\" not in package_list
+
+
+def test_cache_save_restore_with_package_file():
+    """If we have some sources in the root (like the CMakeLists.txt)
+    we don't declare folders.source"""
+    conan_file = GenConanfile() \
+        .with_settings("os") \
+        .with_package_file("bin/file.txt", "content!!")
+
+    client = TestClient()
+    client.save({"conanfile.py": conan_file})
+    client.run("create . --name=pkg --version=1.0 -s os=Linux")
+    client.run("cache save pkg/*:* ")
+    cache_path = os.path.join(client.current_folder, "conan_cache_save.tgz")
+    assert os.path.exists(cache_path)
+
+    c2 = TestClient()
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore conan_cache_save.tgz")
+    c2.run("list *:*#*")
+    assert "pkg/1.0" in c2.out
+    tree = _get_directory_tree(c2.base_folder)
+
+    # Restore again, expect the tree to be unchanged
+    c2.run("cache restore conan_cache_save.tgz")
+    c2.run("list *:*#*")
+    assert "pkg/1.0" in c2.out
+    tree2 = _get_directory_tree(c2.base_folder)
+
+    assert tree2 == tree
 
 
 def test_cache_save_downloaded_restore():
@@ -49,6 +83,18 @@ def test_cache_save_downloaded_restore():
     _validate_restore(cache_path)
 
 
+def _get_directory_tree(base_folder):
+    tree = []
+    for d, _, fs in os.walk(base_folder):
+        rel_d = os.path.relpath(d, base_folder) if d != base_folder else ""
+        if rel_d:
+            tree.append(rel_d)
+        for f in fs:
+            tree.append(os.path.join(rel_d, f))
+    tree.sort()
+    return tree
+
+
 def _validate_restore(cache_path):
     c2 = TestClient()
     # Create a package in the cache to check put doesn't interact badly
@@ -61,6 +107,7 @@ def _validate_restore(cache_path):
     assert "pkg/1.0" in c2.out
     assert "pkg/1.1" in c2.out
     assert "other/2.0" not in c2.out
+    tree = _get_directory_tree(c2.base_folder)
 
     # Restore again, just in case
     c2.run("cache restore conan_cache_save.tgz")
@@ -69,6 +116,8 @@ def _validate_restore(cache_path):
     assert "pkg/1.0" in c2.out
     assert "pkg/1.1" in c2.out
     assert "other/2.0" not in c2.out
+    tree2 = _get_directory_tree(c2.base_folder)
+    assert tree2 == tree
 
 
 def test_cache_save_restore_metadata():
@@ -166,3 +215,31 @@ def test_cache_save_subfolder():
     c.run("export .")
     c.run("cache save * --file=subfolder/cache.tgz")
     assert os.path.exists(os.path.join(c.current_folder, "subfolder", "cache.tgz"))
+
+
+def test_error_restore_not_existing():
+    c = TestClient()
+    c.run("cache restore potato.tgz", assert_error=True)
+    assert "ERROR: Restore archive doesn't exist in " in c.out
+
+
+@pytest.mark.parametrize("src_store", (False, True))
+@pytest.mark.parametrize("dst_store", (False, True))
+def test_cache_save_restore_custom_storage_path(src_store, dst_store):
+    c = TestClient()
+    if src_store:
+        tmp_folder = temp_folder()
+        c.save_home({"global.conf": f"core.cache:storage_path={tmp_folder}"})
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=pkg --version=1.0")
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    if dst_store:
+        tmp_folder = temp_folder()
+        c2.save_home({"global.conf": f"core.cache:storage_path={tmp_folder}"})
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore conan_cache_save.tgz")
+    c2.run("list *:*")
+    assert "pkg/1.0" in c2.out

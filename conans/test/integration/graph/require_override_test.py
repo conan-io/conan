@@ -4,7 +4,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 class TestRequireOverride:
 
     def test_override_user_channel(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"dep/conanfile.py": GenConanfile(),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep1/0.1")
                                                               .with_requires("dep2/0.1@us/chan"),
@@ -25,7 +25,7 @@ class TestRequireOverride:
 
     def test_can_override_even_versions_with_build_metadata(self):
         # https://github.com/conan-io/conan/issues/5900
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanfile.py": GenConanfile("lib")})
         c.run("create . --version=1.0+abc")
         c.run("create . --version=1.0+xyz")

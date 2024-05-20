@@ -49,6 +49,7 @@ class FileDownloader:
                         time.sleep(retry_wait)
 
             self.check_checksum(file_path, md5, sha1, sha256)
+            self._output.debug(f"Downloaded {file_path} from {url}")
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -86,7 +87,7 @@ class FileDownloader:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
-                raise AuthenticationException()
+                raise AuthenticationException(response_to_str(response))
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         def get_total_length():

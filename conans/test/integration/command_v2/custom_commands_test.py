@@ -1,6 +1,10 @@
+import json
 import os
 import textwrap
 
+import pytest
+
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
@@ -286,3 +290,106 @@ class TestCustomCommands:
         # Without the variable it only loads the default custom commands location
         client.run("hello")
         assert "Hello world!" in client.out
+
+
+class TestCommandAPI:
+    @pytest.mark.parametrize("argument", ['["list", "pkg*", "-c"]',
+                                          '"list pkg* -c"'])
+    def test_command_reuse_interface(self, argument):
+        mycommand = textwrap.dedent(f"""
+            import json
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \""" mycommand help \"""
+                result = conan_api.command.run({argument})
+                cli_out_write(json.dumps(result["results"], indent=2))
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand})
+        c.run("mycommand", redirect_stdout="file.json")
+        assert json.loads(c.load("file.json")) == {"Local Cache": {}}
+
+    def test_command_reuse_other_custom(self):
+        cmd1 = textwrap.dedent(f"""
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycmd1(conan_api, parser, *args, **kwargs):
+                \"""mycommand help \"""
+                # result = conan_api.command.run("")
+                cli_out_write("MYCMD1!!!!!")
+                conan_api.command.run("mycmd2")
+            """)
+        cmd2 = textwrap.dedent(f"""
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycmd2(conan_api, parser, *args, **kwargs):
+                \"""mycommand help\"""
+                cli_out_write("MYCMD2!!!!!")
+            """)
+
+        c = TestClient()
+        cmds = os.path.join(c.cache_folder, 'extensions', 'commands')
+        c.save({os.path.join(cmds, "cmd_mycmd1.py"): cmd1,
+                os.path.join(cmds, "cmd_mycmd2.py"): cmd2})
+        c.run("mycmd1")
+        assert "MYCMD1!!!!!" in c.out
+        assert "MYCMD2!!!!!" in c.out
+
+    def test_command_reuse_interface_create(self):
+        mycommand = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.cli.formatters.graph import format_graph_json
+
+            @conan_command(group="custom commands", formatters={"json": format_graph_json})
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \""" mycommand help \"""
+                result = conan_api.command.run(["create", ".", "--version=1.0.0"])
+                return result
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand,
+                "conanfile.py": GenConanfile("mylib")})
+        c.run("mycommand --format=json", redirect_stdout="file.json")
+        create_output = json.loads(c.load("file.json"))
+        assert create_output['graph']['nodes']['1']['label'] == "mylib/1.0.0"
+
+    def test_subcommand_reuse_interface(self):
+        mycommand = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \""" mycommand help \"""
+                parser.add_argument("remote", help="remote")
+                parser.add_argument("url", help="url")
+                args = parser.parse_args(*args)
+                conan_api.command.run(["remote", "add", args.remote, args.url])
+                result = conan_api.command.run(["remote", "list"])
+                result = {r.name: r.url for r in result}
+                cli_out_write(json.dumps(result, indent=2))
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand})
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        c.run("mycommand myremote myurl")
+        assert json.loads(c.stdout) == {"myremote": "myurl"}

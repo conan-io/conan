@@ -23,6 +23,7 @@ class OptionsTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=2")
+        assert 'legacy: Unscoped option definition is ambiguous' in client.out
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
@@ -732,3 +733,37 @@ class TestImportantOptions:
 
         c.run("graph info app -o *:myoption!=4")
         assert "liba/0.1: MYOPTION: 4" in c.out
+
+    def test_wrong_option_syntax_no_trace(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
+        tc.run('create . -o="&:myoption"', assert_error=True)
+        assert "ValueError" not in tc.out
+        assert "Error while parsing option" in tc.out
+
+
+class TestConflictOptionsWarnings:
+
+    def test_options_warnings(self):
+        c = TestClient()
+        liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3], default=1)
+        libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
+        libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1", options={"myoption": 2})
+        app = GenConanfile().with_requires("libb/0.1", "libc/0.1")
+
+        c.save({"liba/conanfile.py": liba,
+                "libb/conanfile.py": libb,
+                "libc/conanfile.py": libc,
+                "app/conanfile.py": app})
+        c.run("export liba")
+        c.run("export libb")
+        c.run("export libc")
+
+        c.run("graph info app")
+        expected = textwrap.dedent("""\
+            Options conflicts
+                liba/0.1:myoption=1 (current value)
+                    libc/0.1->myoption=2
+                It is recommended to define options values in profiles, not in recipes
+            """)
+        assert expected in c.out

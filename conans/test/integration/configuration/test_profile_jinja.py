@@ -93,6 +93,18 @@ def test_profile_template_profile_dir():
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
 
 
+def test_profile_conf_backslash():
+    # https://github.com/conan-io/conan/issues/15726
+    c = TestClient()
+    profile = textwrap.dedent(r"""
+        [conf]
+        user.team:myconf = "hello\test"
+        """)
+    c.save({"profile": profile})
+    c.run("profile show -pr=profile")
+    assert r"hello\test" in c.out
+
+
 def test_profile_version():
     client = TestClient()
     tpl1 = textwrap.dedent("""
@@ -186,3 +198,10 @@ class TestProfileDetectAPI:
             os={the_os}
             """)
         assert expected in client.out
+
+
+def test_profile_jinja_error():
+    c = TestClient(light=True)
+    c.save({"profile1": "{% set kk = other() %}"})
+    c.run("profile show -pr=profile1", assert_error=True)
+    assert "ERROR: Error while rendering the profile template file" in c.out

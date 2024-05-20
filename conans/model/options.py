@@ -278,8 +278,12 @@ class Options:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, value = line.split("=", 1)
-            values[name] = value
+            try:
+                name, value = line.split("=", 1)
+                values[name] = value
+            except ValueError:
+                raise ConanException(f"Error while parsing option '{line}'. "
+                                     f"Options should be specified as 'pkg/*:option=value'")
         return Options(options_values=values)
 
     def serialize(self):

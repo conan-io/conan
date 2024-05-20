@@ -8,6 +8,7 @@ from collections import OrderedDict
 import pytest
 import requests
 from mock import patch
+from requests import Response
 
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -333,7 +334,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
 
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
@@ -350,7 +351,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote set-user default lasote")
@@ -366,7 +367,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
         conan_conf = "core:non_interactive=True"
-        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save_home({"global.conf": conan_conf})
         client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote login default admin -p password")
@@ -484,6 +485,21 @@ class UploadTest(unittest.TestCase):
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing -r default")
         assert "Uploading recipe 'hello0/1.2.1@user/testing" in client.out
+
+    def test_server_returns_200_ok(self):
+        # https://github.com/conan-io/conan/issues/16104
+        # If server returns 200 ok, without headers, it raises an error
+        class MyHttpRequester(TestRequester):
+            def get(self, _, **kwargs):
+                resp = Response()
+                resp.status_code = 200
+                return resp
+
+        client = TestClient(requester_class=MyHttpRequester, servers={"default": TestServer()})
+        client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
+        client.run("create . ")
+        client.run("upload * -c -r default", assert_error=True)
+        assert "doesn't seem like a valid Conan remote" in client.out
 
 
 def test_upload_only_without_user_channel():

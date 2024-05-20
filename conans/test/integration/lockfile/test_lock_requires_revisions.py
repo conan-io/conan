@@ -132,20 +132,20 @@ def test_conditional_os(requires):
     client.run("install consumer --lockfile=consumer.lock -s os=Windows -s:b os=Windows")
     assert "REV1!!!" in client.out
     assert "REV2!!!" not in client.out
-    assert "nix" not in client.out
+    assert "nix/0.1" not in client.out
     client.run("install consumer -s os=Windows -s:b os=Windows")
     assert "REV2!!!" in client.out
     assert "REV1!!!" not in client.out
-    assert "nix" not in client.out
+    assert "nix/0.1" not in client.out
 
     client.run("install consumer --lockfile=consumer.lock -s os=Linux -s:b os=Linux")
     assert "REV1!!!" in client.out
     assert "REV2!!!" not in client.out
-    assert "win" not in client.out
+    assert "win/0.1" not in client.out
     client.run("install consumer -s os=Linux -s:b os=Linux")
     assert "REV2!!!" in client.out
     assert "REV1!!!" not in client.out
-    assert "win" not in client.out
+    assert "win/0.1" not in client.out
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])

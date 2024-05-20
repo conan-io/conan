@@ -247,7 +247,7 @@ class RemoteModificationTest(unittest.TestCase):
         for remote in data["remotes"]:
             self.assertEqual(remote["disabled"], True)
 
-        data = json.loads(client.out)
+        data = json.loads(client.stdout)
         for remote in data:
             assert remote["enabled"] is False
 
@@ -344,6 +344,13 @@ def test_add_wrong_conancenter():
     assert "the correct remote API is https://center.conan.io" in c.out
 
 
+def test_wrong_remotes_json_file():
+    c = TestClient(light=True)
+    c.save_home({"remotes.json": ""})
+    c.run("remote list", assert_error=True)
+    assert "ERROR: Error loading JSON remotes file" in c.out
+
+
 def test_allowed_packages_remotes():
     tc = TestClient(light=True, default_server_user=True)
     tc.save({"conanfile.py": GenConanfile(),
@@ -397,3 +404,19 @@ def test_remote_allowed_packages_new():
     tc.run("remote add foo https://foo -ap='liba/*'")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
+
+
+def test_remote_allowed_negation():
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"conanfile.py": GenConanfile()})
+    tc.run("create . --name=config --version=1.0")
+    tc.run("create . --name=lib --version=1.0")
+    tc.run("upload * -c -r=default")
+    tc.run("remove * -c")
+
+    tc.run('remote update default --allowed-packages="!config/*"')
+    tc.run("install --requires=lib/1.0 -r=default")
+    assert "lib/1.0: Downloaded recipe revision" in tc.out
+
+    tc.run("install --requires=config/1.0 -r=default", assert_error=True)
+    assert "ERROR: Package 'config/1.0' not resolved: Unable to find 'config/1.0' in remotes" in tc.out

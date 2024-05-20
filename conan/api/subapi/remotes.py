@@ -3,11 +3,13 @@ import json
 import os
 from urllib.parse import urlparse
 
-from conan.api.model import Remote
+from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-
+from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
+    remove_local_recipes_index_remote
+from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -99,13 +101,16 @@ class RemotesAPI:
         """
         Add a new ``Remote`` object to the existing ones
 
+
         :param remote: a ``Remote`` object to be added
         :param force: do not fail if the remote already exist (but default it failes)
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
+        add_local_recipes_index_remote(self.conan_api, remote)
         remotes = _load(self._remotes_file)
-        _validate_url(remote.url)
+        if remote.remote_type != LOCAL_RECIPES_INDEX:
+            _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
         if current:  # same name remote existing!
             if not force:
@@ -137,9 +142,10 @@ class RemotesAPI:
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
         _save(self._remotes_file, remotes)
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         for remote in removed:
-            app.cache.localdb.clean(remote_url=remote.url)
+            remove_local_recipes_index_remote(self.conan_api, remote)
+            localdb.clean(remote_url=remote.url)
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
@@ -160,7 +166,8 @@ class RemotesAPI:
         except KeyError:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
         if url is not None:
-            _validate_url(url)
+            if remote.remote_type != LOCAL_RECIPES_INDEX:
+                _validate_url(url)
             _check_urls(remotes, url, force=False, current=remote)
             remote.url = url
         if secure is not None:
@@ -194,9 +201,9 @@ class RemotesAPI:
 
     def user_info(self, remote: Remote):
         # TODO: Review
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         user_info = {}
-        user, token, _ = app.cache.localdb.get_login(remote.url)
+        user, token, _ = localdb.get_login(remote.url)
         user_info["name"] = remote.name
         user_info["user_name"] = user
         user_info["authenticated"] = True if token else False
@@ -219,29 +226,29 @@ class RemotesAPI:
 
         :param remote: The ``Remote`` object to logout
         """
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         # The localdb only stores url + username + token, not remote name, so use URL as key
-        app.cache.localdb.clean(remote_url=remote.url)
+        localdb.clean(remote_url=remote.url)
 
     def user_set(self, remote: Remote, username):
         # TODO: Review
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         if username == "":
             username = None
-        app.cache.localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
+        localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
 
     def user_auth(self, remote: Remote, with_user=False):
         # TODO: Review
         app = ConanApp(self.conan_api)
         if with_user:
-            user, token, _ = app.cache.localdb.get_login(remote.url)
+            user, token, _ = app.localdb.get_login(remote.url)
             if not user:
                 var_name = f"CONAN_LOGIN_USERNAME_{remote.name.replace('-', '_').upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
         app.remote_manager.check_credentials(remote)
-        user, token, _ = app.cache.localdb.get_login(remote.url)
+        user, token, _ = app.localdb.get_login(remote.url)
         return user
 
 
@@ -251,11 +258,14 @@ def _load(remotes_file):
         _save(remotes_file, [remote])
         return [remote]
 
-    data = json.loads(load(remotes_file))
+    try:
+        data = json.loads(load(remotes_file))
+    except Exception as e:
+        raise ConanException(f"Error loading JSON remotes file '{remotes_file}': {e}")
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"))
+                        r.get("allowed_packages"), r.get("remote_type"))
         result.append(remote)
     return result
 
@@ -268,6 +278,8 @@ def _save(remotes_file, remotes):
             remote["disabled"] = True
         if r.allowed_packages:
             remote["allowed_packages"] = r.allowed_packages
+        if r.remote_type:
+            remote["remote_type"] = r.remote_type
         remote_list.append(remote)
     save(remotes_file, json.dumps({"remotes": remote_list}, indent=True))
 

@@ -289,6 +289,37 @@ class TestGitBasicClone:
         assert c.load("source/src/myfile.h") == "myheader!"
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
+    def test_clone_url_not_hidden(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.scm import Git
+            from conan.tools.files import load
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def layout(self):
+                    self.folders.source = "source"
+
+                def source(self):
+                    git = Git(self)
+                    git.clone(url="{url}", target=".", hide_url=False)
+            """)
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, _ = create_local_git_repo(files={"CMakeLists.txt": "mycmake"}, folder=folder)
+
+        c = TestClient(light=True)
+        c.save({"conanfile.py": conanfile.format(url=url)})
+        c.run("create . -v")
+        # Clone URL is explicitly printed
+        assert f'pkg/0.1: RUN: git clone "{url}"  "."' in c.out
+
+        # It also works in local flow
+        c.run("source .")
+        assert f'conanfile.py (pkg/0.1): RUN: git clone "{url}"  "."' in c.out
+
     def test_clone_target(self):
         # Clone to a different target folder
         # https://github.com/conan-io/conan/issues/14058
@@ -421,6 +452,37 @@ class TestGitShallowClone:
         assert "conanfile.py (pkg/0.1): MYFILE: myheader!" in c.out
         assert c.load("source/src/myfile.h") == "myheader!"
         assert c.load("source/CMakeLists.txt") == "mycmake"
+
+    def test_clone_url_not_hidden(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.scm import Git
+            from conan.tools.files import load
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def layout(self):
+                    self.folders.source = "source"
+
+                def source(self):
+                    git = Git(self)
+                    git.fetch_commit(url="{url}", commit="{commit}", hide_url=False)
+            """)
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"CMakeLists.txt": "mycmake"}, folder=folder)
+
+        c = TestClient(light=True)
+        c.save({"conanfile.py": conanfile.format(url=url, commit=commit)})
+        c.run("create . -v")
+        # Clone URL is explicitly printed
+        assert f'pkg/0.1: RUN: git remote add origin "{url}"' in c.out
+
+        # It also works in local flow
+        c.run("source .")
+        assert f'conanfile.py (pkg/0.1): RUN: git remote add origin "{url}"' in c.out
 
 
 class TestGitCloneWithArgs:
