@@ -527,9 +527,9 @@ def test_compiler_path_with_spaces():
         tools.build:compiler_executables={"c":"c compiler path with spaces", "cpp":"cpp compiler path with spaces"}
     """)
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")
-                .with_generator("MesonToolchain").with_settings("compiler"),
-                "meson-profile": profile})
+    client.save(
+        {"conanfile.py": GenConanfile().with_generator("MesonToolchain").with_settings("compiler"),
+         "meson-profile": profile})
     client.run("install . -pr:h=meson-profile")
     conan_meson_native = client.load("conan_meson_native.ini")
     assert "c = 'c compiler path with spaces'" in conan_meson_native
