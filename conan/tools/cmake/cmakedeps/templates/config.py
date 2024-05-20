@@ -1,3 +1,4 @@
+import fnmatch
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
@@ -32,6 +33,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
+        patterns = self.cmakedeps.cmake_checks_required or []
+        cmake_required = any(fnmatch.fnmatch(self.file_name, p) for p in patterns)
+        cmake_required_library = self.root_target_name if cmake_required else None
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name":  self.file_name,
@@ -39,7 +43,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
-                "targets_include_file": targets_include}
+                "targets_include_file": targets_include,
+                "cmake_required_library": cmake_required_library}
 
     @property
     def template(self):
@@ -82,6 +87,10 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         set({{ prefix }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
 
         {% endfor %}
+
+        {% if cmake_required_library %}
+        list(PREPEND CMAKE_REQUIRED_LIBRARIES {{ cmake_required_library }})
+        {% endif %}
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )

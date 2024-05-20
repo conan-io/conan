@@ -1913,3 +1913,101 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert 'DEFINE conan_test_answer=123' in c.out
     assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+class TestCMakeTry:
+
+    def test_check_c_source_compiles(self, matrix_client):
+        """
+        https://github.com/conan-io/conan/issues/12012
+        """
+        client = matrix_client  # it brings the "matrix" package dependency pre-built
+
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout, CMakeDeps
+            class PkgConan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                requires = "matrix/1.0"
+                generators = "CMakeToolchain"
+
+                def generate(self):
+                    tc = CMakeDeps(self)
+                    # tc.cmake_checks_required = ["*"] is default
+                    tc.generate()
+            """)
+
+        cmakelist = textwrap.dedent("""\
+            cmake_minimum_required(VERSION 3.15)
+            project(Hello LANGUAGES CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+            include(CheckCXXSourceCompiles)
+
+            set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
+            check_cxx_source_compiles("#include <matrix.h>
+                                      int main(void) { matrix();return 0; }" IT_COMPILES)
+            """)
+
+        client.save({"conanfile.py": consumer,
+                     "CMakeLists.txt": cmakelist}, clean_first=True)
+        client.run("install .")
+
+        preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+        client.run_command(f"cmake --preset {preset}")
+        assert "Performing Test IT_COMPILES - Success" in client.out
+
+    def test_cmake_check_cxx_compile_with_deps(self, matrix_client):
+        client = matrix_client
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt"
+                name = "foo"
+                version = "1.0"
+                requires = "matrix/1.0"
+                generators = "CMakeToolchain", "CMakeDeps"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(foo LANGUAGES CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+
+            set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
+
+            include(CheckCXXSourceCompiles)
+            check_cxx_source_compiles("
+            #if defined(_MSC_VER)
+            #include <intrin.h>
+            #else  // !defined(_MSC_VER)
+            #include <xmmintrin.h>
+            #endif  // defined(_MSC_VER)
+
+            int main() {
+              char data = 0;
+              const char* address = &data;
+              _mm_prefetch(address, _MM_HINT_NTA);
+              return 0;
+            }
+            "  HAVE_MY_FEATURE)
+
+            message(STATUS "MY_FEATURE ${HAVE_MY_FEATURE}!!!")
+            """)
+
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmake}, clean_first=True)
+        client.run("create . ")
+        assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
+        assert "-- MY_FEATURE 1!!!" in client.out
