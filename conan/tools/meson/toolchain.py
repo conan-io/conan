@@ -254,15 +254,15 @@ class MesonToolchain(object):
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.c = compilers_by_conf.get("c") or self._sanitize_format(build_env.get("CC")) or default_comp
+        self.c = compilers_by_conf.get("c") or self._sanitize_env_format(build_env.get("CC")) or default_comp
         #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.cpp = compilers_by_conf.get("cpp") or self._sanitize_format(build_env.get("CXX")) or default_comp_cpp
+        self.cpp = compilers_by_conf.get("cpp") or self._sanitize_env_format(build_env.get("CXX")) or default_comp_cpp
         #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.ld = self._sanitize_format(build_env.get("LD"))
+        self.ld = self._sanitize_env_format(build_env.get("LD"))
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
         # Issue related: https://github.com/mesonbuild/meson/issues/6442
         # PR related: https://github.com/mesonbuild/meson/pull/6457
@@ -421,7 +421,7 @@ class MesonToolchain(object):
         return list(filter(bool, v))
 
     @staticmethod
-    def _sanitize_env_format(value)
+    def _sanitize_env_format(value):
         if value is None or isinstance(value, list):
             return value
         ret = [x.strip() for x in value.split() if x]
