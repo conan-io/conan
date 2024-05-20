@@ -587,7 +587,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
         conf = load(client.cache.new_config_path)
-        dirs = os.listdir(client.cache.cache_folder)
+        dirs = os.listdir(client.cache_folder)
         assert ".git" not in dirs
 
 

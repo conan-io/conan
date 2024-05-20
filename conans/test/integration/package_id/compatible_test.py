@@ -71,14 +71,17 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
         self.assertIn("pkg/0.1@user/stable: Exported: "
                       "pkg/0.1@user/stable#d165eb4bcdd1c894a97d2a212956f5fe", client.out)
+        client.run("export . --name=lib --version=0.1 --user=user --channel=stable")
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
-        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/stable", "lib/0.1@user/stable")})
         # No fallback
-        client.run("install . -pr=myprofile --build=missing")
+        client.run("install . -pr=myprofile --build=missing -u=lib")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                      ("1ded27c9546219fbd04d4440e05b2298f8230047", "Build")})
+        assert "lib/0.1@user/stable: Compatible configurations not found in cache, checking servers" not in client.out
+        assert "pkg/0.1@user/stable: Compatible configurations not found in cache, checking servers" in client.out
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()

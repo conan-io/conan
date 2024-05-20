@@ -1,8 +1,11 @@
+import textwrap
+
 import pytest
 
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.model.version_range import VersionRange
+from conans.test.utils.tools import TestClient
 
 values = [
     ['=1.0.0',  [[['=', '1.0.0']]],                   ["1.0.0"],          ["0.1"]],
@@ -35,13 +38,14 @@ values = [
     ['>1- <2.0 || ^3.2 ',  [[['>', '1-'], ['<', '2.0-']], [['>=', '3.2-'], ['<', '4.0-']]],
                            ["1.0", "1.2", "3.3"],  ["1-pre.1", "1.5-a1", "3.3-a1"]],
     ['^1.1.2',  [[['>=', '1.1.2-'], ['<', '2.0.0-']]], ["1.2.3"],  ["1.2.0-alpha1", "2.0.0-alpha1"]],
+    ['^1.0.0, include_prerelease=True',  [[['>=', '1.0.0-'], ['<', '2.0.0-']]], ["1.2.3", "1.2.0-alpha1"],  ["2.0.0-alpha1"]],
     ['~1.1.2',  [[['>=', '1.1.2-'], ['<', '1.2.0-']]], ["1.1.3"],  ["1.1.3-alpha1", "1.2.0-alpha1"]],
     ['>=2.0-pre.0 <3', [[['>=', '2.0-pre.0'], ['<', '3-']]], ["2.1"], ["2.0-pre.1", "2.0-alpha.1"]],
     # Build metadata
     ['>=1.0.0+2', [[['>=', '1.0.0+2']]], ["1.0.0+2", "1.0.0+3"], ["1.0.0+1"]],
     ['>=1.0.0', [[['>=', '1.0.0-']]], ["1.0.0+2", "1.0.0+3"], []],
     # Build metadata and pre-releases
-    ['>=1.0.0-pre.1+2', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+3"]], # excluded 1+3 because is a pre-release!
+    ['>=1.0.0-pre.1+2', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+3"]],  # excluded 1+3 because is a pre-release!
     ['>=1.0.0-pre.1+2, include_prerelease=True', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2", "1.0.0-pre.1+3"], ["1.0.0-pre.1+1"]],
     ['<1.0.1-pre.1+2', [[['<', '1.0.1-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+2"]],
     ['<1.0.1-pre.1+2, include_prerelease=True', [[['<', '1.0.1-pre.1+2']]], ["1.0.0+1", "1.0.0+2", "1.0.1-pre.1+1"], ["1.0.1-pre.1+2"]],
@@ -128,3 +132,19 @@ def test_wrong_range_option_syntax(version_range):
     but for now this test ensures we don't change it without realizing"""
     vr = VersionRange(version_range)
     assert all(cs.prerelease for cs in vr.condition_sets)
+
+
+def test_version_range_error_ux():
+    # https://github.com/conan-io/conan/issues/16288
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "mydep/[>1.0 < 3]"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "Recipe 'conanfile' requires 'mydep/[>1.0 < 3]' version-range definition error" in c.out
+    c.run("export . --name=mypkg --version=0.1")
+    c.run("install --requires=mypkg/0.1", assert_error=True)
+    assert "Recipe 'mypkg/0.1' requires 'mydep/[>1.0 < 3]' version-range definition error" in c.out

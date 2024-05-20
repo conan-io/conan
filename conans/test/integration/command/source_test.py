@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 import unittest
 from collections import OrderedDict
@@ -34,7 +35,7 @@ class TestexportConan(ConanFile):
         python = os.path.join(self.recipe_folder, "mypython.py")
         self.output.info("PYTHON: %s" % load(self, python))
 """
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.py": conanfile,
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
@@ -52,7 +53,7 @@ class TestexportConan(ConanFile):
         # https://github.com/conan-io/conan/issues/2327
         # Test if a patch can be applied in source() both in create
         # and local flow
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = """from conan import ConanFile
 from conan.tools.files import load
 import os
@@ -77,13 +78,13 @@ class Pkg(ConanFile):
 class ConanLib(ConanFile):
     pass
 '''
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
         client.run("source .")
         self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
 
     def test_source_with_path_errors(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
@@ -106,7 +107,7 @@ class ConanLib(ConanFile):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
 '''
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
 
         client.run("install .")
@@ -127,7 +128,7 @@ class ConanLib(ConanFile):
         save("file1.txt", "Hello World")
 '''
         # First, failing source()
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
@@ -156,6 +157,9 @@ class ConanLib(ConanFile):
         client.run("create . --name=hello --version=0.1")
         rrev = client.exported_recipe_revision()
         client.run("upload hello/0.1 -r server0")
+        # Ensure we uploaded it
+        assert re.search(r"Uploading recipe 'hello/0.1#.*' \(.*\)", client.out)
+        assert re.search(r"Uploading package 'hello/0.1#.*' \(.*\)", client.out)
         client.run("remove * -c")
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
@@ -225,7 +229,7 @@ class ConanLib(ConanFile):
                     assert False
             ''')
 
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
 
         client.run("create . --name=lib --version=1.0", assert_error=True)
@@ -290,3 +294,18 @@ def test_source_python_requires():
     c.run("source . ")
     assert "pytool/0.1: Not found in local cache, looking in remotes" in c.out
     assert "pytool/0.1: Downloaded recipe" in c.out
+
+
+@pytest.mark.parametrize("attribute", ["info", "settings", "options"])
+def test_source_method_forbidden_attributes(attribute):
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Package(ConanFile):
+        def source(self):
+            self.output.info(self.{attribute})
+    """)
+    client = TestClient(light=True)
+    client.save({"conanfile.py": conanfile})
+
+    client.run("source .", assert_error=True)
+    assert f"'self.{attribute}' access in 'source()' method is forbidden" in client.out

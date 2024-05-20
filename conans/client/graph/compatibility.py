@@ -33,38 +33,48 @@ def cppstd_compat(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
     cppstd = conanfile.settings.get_safe("compiler.cppstd")
-    cstd = conanfile.settings.get_safe("compiler.cstd")
     if not compiler or not compiler_version:
         return []
     base = dict(conanfile.settings.values_list)
-    if cppstd is None or extension_properties.get("compatibility_cppstd") is False:
-        cppstd_possible_values = [None]
-    else:
+    factors = []  # List of list, each sublist is a potential combination
+    if cppstd is not None and extension_properties.get("compatibility_cppstd") is not False:
         cppstd_possible_values = supported_cppstd(conanfile)
         if cppstd_possible_values is None:
             conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
-            cppstd_possible_values = [None]
-    if cstd is None or extension_properties.get("compatibility_cstd") is False:
-        cstd_possible_values = [None]
-    else:
+        else:
+            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
+
+    cstd = conanfile.settings.get_safe("compiler.cstd")
+    if cstd is not None and extension_properties.get("compatibility_cstd") is not False:
         cstd_possible_values = supported_cstd(conanfile)
         if cstd_possible_values is None:
             conanfile.output.warning(f'No cstd compatibility defined for compiler "{compiler}"')
-            cstd_possible_values = [None]
+        else:
+            factors.append([{"compiler.cstd": v} for v in cstd_possible_values if v != cstd])
 
-    combinations = [(c1, c2) for c1 in cppstd_possible_values for c2 in cstd_possible_values]
+    if compiler == "msvc":
+        msvc_fallback = {"194": "193"}.get(compiler_version)
+        if msvc_fallback:
+            factors.append([{"compiler.version": msvc_fallback}])
+
+    combinations = []
+    for factor in factors:
+        if not combinations:
+            combinations = factor
+            continue
+        new_combinations = []
+        for comb in combinations:
+            for f in factor:
+                comb = comb.copy()
+                comb.update(f)
+                new_combinations.append(comb)
+        combinations = new_combinations
+
     ret = []
-    for _cppstd, _cstd in combinations:
-        conf_variation = {}
-        if _cppstd is not None and _cppstd != cppstd:
-            conf_variation["compiler.cppstd"] = _cppstd
-        if _cstd is not None and _cstd != cstd:
-            conf_variation["compiler.cstd"] = _cstd
-        if conf_variation:
-            configuration = base.copy()
-            configuration.update(conf_variation)
-            ret.append({"settings": [(k, v) for k, v in configuration.items()]})
-
+    for comb in combinations:
+        configuration = base.copy()
+        configuration.update(comb)
+        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
     return ret
 """
 

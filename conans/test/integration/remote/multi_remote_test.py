@@ -120,35 +120,37 @@ class MultiRemotesTest(unittest.TestCase):
         client = TestClient(servers=self.servers, inputs=2*["admin", "password"])
 
         self._create(client, "hello0", "0.0")
+        default_remote_rev = client.exported_recipe_revision()
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
+
         client.run("upload hello0/0.0@lasote/stable -r default")
         sleep(1)  # For timestamp and updates checks
         self._create(client, "hello0", "0.0", modifier=" ")
+        local_remote_rev = client.exported_recipe_revision()
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
+
         client.run("upload hello0/0.0@lasote/stable#latest -r local")
         client.run("remove '*' -c")
 
         client.run("install --requires=hello0/0.0@lasote/stable")
         # If we don't set a remote we find between all remotes and get the first match
-        self.assertIn("hello0/0.0@lasote/stable#20f1a1ed31481dfb59bdfd22f1aa1093 - Downloaded",
-                      client.out)
+        assert f"hello0/0.0@lasote/stable#{default_remote_rev} - Downloaded" in client.out
         client.run("install --requires=hello0/0.0@lasote/stable --update")
-        self.assertIn("hello0/0.0@lasote/stable#f49dd3f4009e57f521520364d8468757 - Updated",
-                      client.out)
+        assert f"hello0/0.0@lasote/stable#{local_remote_rev} - Updated" in client.out
 
         client.run("install --requires=hello0/0.0@lasote/stable --update -r default")
-        self.assertIn("hello0/0.0@lasote/stable#f49dd3f4009e57f521520364d8468757 - Newer",
+        self.assertIn(f"hello0/0.0@lasote/stable#{local_remote_rev} - Newer",
                       client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
         client_b = TestClient(servers=self.servers, inputs=3*["admin", "password"])
         self._create(client_b, "hello0", "0.0", modifier="  ")
+        new_local_remote_rev = client_b.exported_recipe_revision()
         client_b.run("install --requires=hello0/0.0@lasote/stable --build missing")
         client_b.run("upload hello0/0.0@lasote/stable -r local")
         client.run("install --requires=hello0/0.0@lasote/stable --update")
-        self.assertIn("hello0/0.0@lasote/stable#1169dcd60e44cc939d0b475693195bd4 - Updated",
-                      client.out)
+        assert f"hello0/0.0@lasote/stable#{new_local_remote_rev} - Updated" in client.out
 
 
 class MultiRemoteTest(unittest.TestCase):

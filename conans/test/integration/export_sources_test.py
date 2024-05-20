@@ -17,7 +17,7 @@ def test_exports():
             version = "0.1"
             exports = "*.h"
         """)
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": conanfile,
             "hello.h": "hello",
             "data.txt": "data"})
@@ -44,7 +44,7 @@ def test_exports_sources():
             version = "0.1"
             exports_sources = "*.h"
         """)
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": conanfile,
             "hello.h": "hello",
             "data.txt": "data"})
@@ -64,9 +64,24 @@ def test_test_package_copied():
     """The exclusion of the test_package folder have been removed so now we test that indeed is
     exported"""
 
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile = GenConanfile().with_exports("*").with_exports_sources("*")
     client.save({"conanfile.py": conanfile,
                  "test_package/foo.txt": "bar"})
     client.run("export . --name foo --version 1.0")
     assert "Copied 2 '.txt' file" in client.out
+
+
+def test_source_changes_generate_new_revisions():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("lib", "1.0").with_exports_sources("file.h"),
+             "file.h": "Hello World!"})
+
+    tc.run("export .")
+    exported_rev = tc.exported_recipe_revision()
+
+    tc.save({"file.h": "Bye World!"})
+    tc.run("export .")
+    exported_rev_new = tc.exported_recipe_revision()
+
+    assert exported_rev != exported_rev_new

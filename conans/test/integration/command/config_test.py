@@ -24,7 +24,7 @@ class TestConfigHome:
     def test_config_home_default(self):
         client = TestClient()
         client.run("config home")
-        assert f"{client.cache.cache_folder}\n" == client.stdout
+        assert f"{client.cache_folder}\n" == client.stdout
 
         client.run("config home --format=text", assert_error=True)
         # It is not possible to use --format=text explicitly
@@ -65,10 +65,12 @@ def test_config_install():
 def test_config_install_conanignore():
     tc = TestClient()
     conanignore = textwrap.dedent("""
-    a/*
+    a/*  # This is a tests
     b/c/*
     d/*
     tests/*
+    # Next line is commented out, so it should be ignored
+    # other_tests/*
     """)
     tc.save({
         'config_folder/.conanignore': conanignore,
