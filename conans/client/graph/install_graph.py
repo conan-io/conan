@@ -66,7 +66,7 @@ class _InstallPackageReference:
     def _build_args(self):
         if self.binary != BINARY_BUILD:
             return None
-        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
