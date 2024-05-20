@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from assets.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conan.tools.files import load
 from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
@@ -520,18 +520,11 @@ def test_native_attribute_error():
     assert "You can only pass native=True if you're cross-building" in client.out
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_compiler_path_with_spaces():
     conanfile = (GenConanfile().with_name("lib").with_version("1.0").with_generator("MesonToolchain")
                  .with_settings("compiler"))
     profile = textwrap.dedent("""
-        [settings]
-        arch=x86
-        os=Windows
-        compiler=msvc
-        compiler.version=193
-        compiler.runtime=static
-        build_type=Release
+        include(default)
         [conf]
         tools.build:compiler_executables={"c":"c compiler path with spaces", "cpp":"cpp compiler path with spaces"}
     """)
