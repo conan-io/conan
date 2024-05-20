@@ -31,7 +31,7 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=dep/0.1 --build=dep/0.1',
+                        'build_args': '--requires=dep/0.1 --build=dep/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -52,7 +52,7 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -96,7 +96,7 @@ def test_info_build_order_configuration():
                 'filenames': [],
                 "context": "host",
                 "binary": "Build",
-                'build_args': '--require=dep/0.1 --build=dep/0.1',
+                'build_args': '--requires=dep/0.1 --build=dep/0.1',
                 "options": [],
                 "overrides": {}
             }
@@ -113,7 +113,7 @@ def test_info_build_order_configuration():
                 'filenames': [],
                 "context": "host",
                 "binary": "Build",
-                'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                 "options": [],
                 "overrides": {}
 
@@ -165,7 +165,7 @@ def test_info_build_order_build_require():
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--tool-require=dep/0.1 --build=dep/0.1',
+                        'build_args': '--tool-requires=dep/0.1 --build=dep/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -186,7 +186,7 @@ def test_info_build_order_build_require():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -222,12 +222,12 @@ def test_info_build_order_options():
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
-                  'build_args': '--tool-require=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
-                  'build_args': '--tool-require=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
              ]]}
         ],
         [
@@ -237,7 +237,7 @@ def test_info_build_order_options():
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
                   'filenames': [], "overrides": {},
-                  'build_args': '--require=dep1/0.1 --build=dep1/0.1'}
+                  'build_args': '--requires=dep1/0.1 --build=dep1/0.1'}
              ]]},
             {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
              'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
@@ -245,7 +245,7 @@ def test_info_build_order_options():
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
                   'filenames': [], "overrides": {},
-                  'build_args': '--require=dep2/0.1 --build=dep2/0.1'}
+                  'build_args': '--requires=dep2/0.1 --build=dep2/0.1'}
              ]]}
         ]
     ]
@@ -281,7 +281,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=dep/0.1 --build=dep/0.1',
+                        'build_args': '--requires=dep/0.1 --build=dep/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -302,7 +302,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -321,7 +321,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.2 --build=pkg/0.2',
+                        'build_args': '--requires=pkg/0.2 --build=pkg/0.2',
                         "options": [],
                         "overrides": {}
                     }
@@ -367,7 +367,7 @@ def test_info_build_order_merge_multi_product_configurations():
                 ],
                 "depends": [],
                 "overrides": {},
-                "build_args": "--require=dep/0.1 --build=dep/0.1"
+                "build_args": "--requires=dep/0.1 --build=dep/0.1"
             }
         ],
         [
@@ -386,7 +386,7 @@ def test_info_build_order_merge_multi_product_configurations():
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
                 "overrides": {},
-                "build_args": "--require=pkg/0.1 --build=pkg/0.1"
+                "build_args": "--requires=pkg/0.1 --build=pkg/0.1"
             },
             {
                 "ref": "pkg/0.2#1ac8dd17c0f9f420935abd3b6a8fa032",
@@ -403,7 +403,7 @@ def test_info_build_order_merge_multi_product_configurations():
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
                 "overrides": {},
-                "build_args": "--require=pkg/0.2 --build=pkg/0.2"
+                "build_args": "--requires=pkg/0.2 --build=pkg/0.2"
             }
         ]
     ]
@@ -451,7 +451,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=depwin/0.1 --build=depwin/0.1',
+                        'build_args': '--requires=depwin/0.1 --build=depwin/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -468,7 +468,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=depnix/0.1 --build=depnix/0.1',
+                        'build_args': '--requires=depnix/0.1 --build=depnix/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -490,7 +490,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                         "options": [],
                         "overrides": {}
                     },
@@ -501,7 +501,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
                         "options": [],
                         "overrides": {}
                     }
