@@ -56,7 +56,7 @@ def test_update_binaries():
     client2.run("install --requires=pkg/0.1@lasote/testing")
     value2 = get_value_from_output(client2.out)
     client2.run("install --requires=pkg/0.1@lasote/testing --update -r default")
-    assert "Current package revision is newer than the remote one" in client2.out
+    assert "Current package revision is newer than the remote one" not in client2.out
     new_value = get_value_from_output(client2.out)
     assert value2 == new_value
 
