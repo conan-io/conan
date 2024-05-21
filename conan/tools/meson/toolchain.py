@@ -260,15 +260,15 @@ class MesonToolchain(object):
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
+        self.c = compilers_by_conf.get("c") or self._sanitize_env_format(build_env.get("CC")) or default_comp
         #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        self.cpp = compilers_by_conf.get("cpp") or self._sanitize_env_format(build_env.get("CXX")) or default_comp_cpp
         #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.ld = build_env.get("LD")
+        self.ld = self._sanitize_env_format(build_env.get("LD"))
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
         # Issue related: https://github.com/mesonbuild/meson/issues/6442
         # PR related: https://github.com/mesonbuild/meson/pull/6457
@@ -426,12 +426,14 @@ class MesonToolchain(object):
     def _filter_list_empty_fields(v):
         return list(filter(bool, v))
 
+    @staticmethod
+    def _sanitize_env_format(value):
+        if value is None or isinstance(value, list):
+            return value
+        ret = [x.strip() for x in value.split() if x]
+        return ret[0] if len(ret) == 1 else ret
+
     def _context(self):
-        def _sanitize_format(v):
-            if v is None or isinstance(v, list):
-                return v
-            ret = [x.strip() for x in v.split() if x]
-            return f"'{ret[0]}'" if len(ret) == 1 else ret
 
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
@@ -470,9 +472,9 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
-            "c": _sanitize_format(self.c),
-            "cpp": _sanitize_format(self.cpp),
-            "ld": _sanitize_format(self.ld),
+            "c": to_meson_value(self.c),
+            "cpp": to_meson_value(self.cpp),
+            "ld": to_meson_value(self.ld),
             "objc": self.objc,
             "objcpp": self.objcpp,
             "c_ld": self.c_ld,
