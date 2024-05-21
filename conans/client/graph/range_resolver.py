@@ -17,7 +17,12 @@ class RangeResolver:
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
-        version_range = require.version_range
+        try:
+            version_range = require.version_range
+        except Exception as e:
+            base = base_conanref or "conanfile"
+            raise ConanException(f"\n    Recipe '{base}' requires '{require.ref}' "
+                                 f"version-range definition error:\n    {e}")
         if version_range is None:
             return
         assert isinstance(version_range, VersionRange)
