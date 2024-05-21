@@ -22,14 +22,15 @@ from conans.util.files import mkdir, tar_extract
 
 class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
-    def __init__(self, cache, auth_manager):
+    def __init__(self, cache, auth_manager, home_folder):
         self._cache = cache
         self._auth_manager = auth_manager
-        self._signer = PkgSignaturesPlugin(cache)
+        self._signer = PkgSignaturesPlugin(cache, home_folder)
+        self._home_folder = home_folder
 
     def _local_folder_remote(self, remote):
         if remote.remote_type == LOCAL_RECIPES_INDEX:
-            return RestApiClientLocalRecipesIndex(remote, self._cache)
+            return RestApiClientLocalRecipesIndex(remote, self._home_folder)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")

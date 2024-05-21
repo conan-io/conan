@@ -17,13 +17,16 @@ class RemoteCredentials:
         creds_path = os.path.join(cache_folder, "credentials.json")
         if not os.path.exists(creds_path):
             return
-        template = Template(load(creds_path))
-        content = template.render({"platform": platform, "os": os})
-        content = json.loads(content)
+        try:
+            template = Template(load(creds_path))
+            content = template.render({"platform": platform, "os": os})
+            content = json.loads(content)
 
-        self._urls = {credentials["remote"]: {"user": credentials["user"],
-                                              "password": credentials["password"]}
-                      for credentials in content["credentials"]}
+            self._urls = {credentials["remote"]: {"user": credentials["user"],
+                                                  "password": credentials["password"]}
+                          for credentials in content["credentials"]}
+        except Exception as e:
+            raise ConanException(f"Error loading 'credentials.json' {creds_path}: {repr(e)}")
 
     def auth(self, remote, user=None, password=None):
         if user is not None and password is not None:
