@@ -1589,15 +1589,18 @@ def test_toolchain_extra_variables():
     client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
                  "windows": windows_profile})
 
-    # Test passing extra_variables from profile
+    # Test passing extra_variables from pro ile
     client.run("install . --profile:build=windows --profile:host=windows")
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
     assert 'set(FOO 42 CACHE)' in toolchain
 
     # Test input from command line passing dict between doble quotes
-
-    client.run("install . -c tools.cmake.cmaketoolchain:extra_variables=\"{'CMAKE_GENERATOR_INSTANCE': '\"\${GENERATOR_INSTANCE}/buildTools/\"', 'FOO': '42 CACHE'}\"")
+    client.run(textwrap.dedent(r"""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CMAKE_GENERATOR_INSTANCE': '\"${GENERATOR_INSTANCE}/buildTools/\"', 'FOO': '42 CACHE'}"
+    """)
+    )
     toolchain = client.load("conan_toolchain.cmake")
+    print(toolchain)
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
     assert 'set(FOO 42 CACHE)' in toolchain

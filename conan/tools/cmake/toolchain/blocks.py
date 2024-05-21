@@ -1022,7 +1022,7 @@ class ExtraVariablesBlock(Block):
     template = textwrap.dedent(r"""
         {% if extra_variables %}
         {% for key, value in extra_variables.items() %}
-        set({{ key }} "{{ value }}")
+        set({{ key }} {{ value }})
         {% endfor %}
         {% endif %}
     """)
