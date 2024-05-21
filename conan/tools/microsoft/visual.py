@@ -59,7 +59,8 @@ def msvc_version_to_vs_ide_version(version):
                 '190': '14',
                 '191': '15',
                 '192': '16',
-                '193': '17'}
+                '193': '17',
+                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
     return _visuals[str(version)]
 
 
@@ -75,7 +76,8 @@ def msvc_version_to_toolset_version(version):
                 '190': 'v140',
                 '191': 'v141',
                 '192': 'v142',
-                "193": 'v143'}
+                "193": 'v143',
+                "194": 'v143'}
     return toolsets.get(str(version))
 
 
@@ -140,6 +142,7 @@ class VCVars:
                 compiler_update = conanfile.settings.get_safe("compiler.update", "")
                 # The equivalent of compiler 19.26 is toolset 14.26
                 vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+
         vcvarsarch = _vcvars_arch(conanfile)
 
         winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
@@ -166,7 +169,7 @@ class VCVars:
 
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
-            content_ps1 = textwrap.dedent(f"""\
+            content_ps1 = textwrap.dedent(rf"""\
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
                 Push-Location "$PSScriptRoot"
                 cmd /c "conanvcvars.bat&set" |

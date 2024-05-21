@@ -9,7 +9,7 @@ from conans.errors import ConanException
 
 def from_timestamp_to_iso8601(timestamp):
     # Used exclusively by conan_server to return the date in iso format (same as artifactory)
-    return "%sZ" % datetime.datetime.utcfromtimestamp(timestamp).isoformat()
+    return "%s" % datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).isoformat()
 
 
 def _from_iso8601_to_datetime(iso_str):
@@ -34,7 +34,7 @@ def revision_timestamp_now():
 def timestamp_to_str(timestamp):
     # used by ref.repr_humantime() to print human readable time
     assert timestamp is not None
-    return datetime.datetime.utcfromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S UTC')
+    return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def timelimit(expression):

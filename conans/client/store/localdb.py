@@ -7,21 +7,22 @@ from conans.errors import ConanException
 from conans.util import encrypt
 
 REMOTES_USER_TABLE = "users_remotes"
+LOCALDB = ".conan.db"
 
 _localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
 
 class LocalDB:
 
-    def __init__(self, dbfile):
-        self.dbfile = dbfile
+    def __init__(self, dbfolder):
+        self.dbfile = os.path.join(dbfolder, LOCALDB)
         self.encryption_key = _localdb_encryption_key
 
         # Create the database file if it doesn't exist
-        if not os.path.exists(dbfile):
-            par = os.path.dirname(dbfile)
+        if not os.path.exists(self.dbfile):
+            par = os.path.dirname(self.dbfile)
             os.makedirs(par, exist_ok=True)
-            open(dbfile, 'w').close()
+            open(self.dbfile, 'w').close()
 
             with self._connect() as connection:
                 try:
@@ -30,7 +31,7 @@ class LocalDB:
                                    "(remote_url TEXT UNIQUE, user TEXT, "
                                    "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
                 except Exception as e:
-                    message = f"Could not initialize local sqlite database {dbfile}"
+                    message = f"Could not initialize local sqlite database {self.dbfile}"
                     raise ConanException(message, e)
 
     def _encode(self, value):
@@ -49,7 +50,7 @@ class LocalDB:
                 cursor = connection.cursor()
                 query = "DELETE FROM %s" % REMOTES_USER_TABLE
                 if remote_url:
-                    query += ' WHERE remote_url="{}"'.format(remote_url)
+                    query += " WHERE remote_url='{}'".format(remote_url)
                 cursor.execute(query)
                 try:
                     # https://github.com/ghaering/pysqlite/issues/109
@@ -74,7 +75,7 @@ class LocalDB:
         with self._connect() as connection:
             try:
                 statement = connection.cursor()
-                statement.execute('select user, token, refresh_token from %s where remote_url="%s"'
+                statement.execute("select user, token, refresh_token from %s where remote_url='%s'"
                                   % (REMOTES_USER_TABLE, remote_url))
                 rs = statement.fetchone()
                 if not rs:

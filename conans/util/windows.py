@@ -9,8 +9,7 @@ def conan_expand_user(path):
     if path[:1] != '~':
         return path
     # In win these variables should exist and point to user directory, which
-    # must exist. Using context to avoid permanent modification of os.environ
-    old_env = dict(os.environ)
+    # must exist.
     try:
         home = os.environ.get("HOME")
         # Problematic cases of wrong HOME variable
@@ -22,6 +21,6 @@ def conan_expand_user(path):
             del os.environ["HOME"]
         result = os.path.expanduser(path)
     finally:
-        os.environ.clear()
-        os.environ.update(old_env)
+        if home is not None:
+            os.environ["HOME"] = home
     return result

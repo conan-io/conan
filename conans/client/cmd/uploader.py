@@ -9,7 +9,8 @@ from conans.errors import ConanException, NotFoundException
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, mkdir)
+                               gzopen_without_timestamps, set_dirty_context_manager, mkdir,
+                               human_size)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -220,10 +221,11 @@ class UploadExecutor:
 
     def upload_recipe(self, ref, bundle, remote):
         output = ConanOutput(scope=str(ref))
-        output.info(f"Uploading recipe '{ref.repr_notime()}'")
-        t1 = time.time()
         cache_files = bundle["files"]
 
+        output.info(f"Uploading recipe '{ref.repr_notime()}' ({_total_size(cache_files)})")
+
+        t1 = time.time()
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
@@ -232,10 +234,11 @@ class UploadExecutor:
 
     def upload_package(self, pref, prev_bundle, remote):
         output = ConanOutput(scope=str(pref.ref))
-        output.info(f"Uploading package '{pref.repr_notime()}'")
         cache_files = prev_bundle["files"]
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
+
+        output.info(f"Uploading package '{pref.repr_notime()}' ({_total_size(cache_files)})")
 
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
@@ -259,3 +262,11 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
     duration = time.time() - t1
     ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path
+
+
+def _total_size(cache_files):
+    total_size = 0
+    for file in cache_files.values():
+        stat = os.stat(file)
+        total_size += stat.st_size
+    return human_size(total_size)

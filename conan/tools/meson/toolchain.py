@@ -1,13 +1,13 @@
 import os
 import textwrap
 
-from jinja2 import Template
+from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    apple_sdk_path, get_apple_sdk_fullname
+from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
+    resolve_apple_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -20,11 +20,10 @@ class MesonToolchain(object):
     """
     MesonToolchain generator
     """
-
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
 
-    _meson_file_template = textwrap.dedent("""
+    _meson_file_template = textwrap.dedent("""\
     [properties]
     {% for it, value in properties.items() -%}
     {{it}} = {{value}}
@@ -49,33 +48,76 @@ class MesonToolchain(object):
     {% endfor %}
 
     [binaries]
-    {% if c %}c = {{c}}{% endif %}
-    {% if cpp %}cpp = {{cpp}}{% endif %}
-    {% if ld %}ld = {{ld}}{% endif %}
-    {% if is_apple_system %}
-    {% if objc %}objc = '{{objc}}'{% endif %}
-    {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
+    {% if c %}
+    c = {{c}}
     {% endif %}
-    {% if c_ld %}c_ld = '{{c_ld}}'{% endif %}
-    {% if cpp_ld %}cpp_ld = '{{cpp_ld}}'{% endif %}
-    {% if ar %}ar = '{{ar}}'{% endif %}
-    {% if strip %}strip = '{{strip}}'{% endif %}
-    {% if as %}as = '{{as}}'{% endif %}
-    {% if windres %}windres = '{{windres}}'{% endif %}
-    {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
-    {% if pkgconfig %}pkg-config = '{{pkgconfig}}'{% endif %}
+    {% if cpp %}
+    cpp = {{cpp}}
+    {% endif %}
+    {% if ld %}
+    ld = {{ld}}
+    {% endif %}
+    {% if is_apple_system %}
+    {% if objc %}
+    objc = '{{objc}}'
+    {% endif %}
+    {% if objcpp %}
+    objcpp = '{{objcpp}}'
+    {% endif %}
+    {% endif %}
+    {% if c_ld %}
+    c_ld = '{{c_ld}}'
+    {% endif %}
+    {% if cpp_ld %}
+    cpp_ld = '{{cpp_ld}}'
+    {% endif %}
+    {% if ar %}
+    ar = '{{ar}}'
+    {% endif %}
+    {% if strip %}
+    strip = '{{strip}}'
+    {% endif %}
+    {% if as %}
+    as = '{{as}}'
+    {% endif %}
+    {% if windres %}
+    windres = '{{windres}}'
+    {% endif %}
+    {% if pkgconfig %}
+    pkgconfig = '{{pkgconfig}}'
+    {% endif %}
+    {% if pkgconfig %}
+    pkg-config = '{{pkgconfig}}'
+    {% endif %}
 
     [built-in options]
-    {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
-    {% if debug %}debug = {{debug}}{% endif %}
-    {% if default_library %}default_library = '{{default_library}}'{% endif %}
-    {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
-    {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
-    {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
-    {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
-    {% if backend %}backend = '{{backend}}' {% endif %}
-    {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
-    {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
+    {% if buildtype %}
+    buildtype = '{{buildtype}}'
+    {% endif %}
+    {% if default_library %}
+    default_library = '{{default_library}}'
+    {% endif %}
+    {% if b_vscrt %}
+    b_vscrt = '{{b_vscrt}}'
+    {% endif %}
+    {% if b_ndebug %}
+    b_ndebug = {{b_ndebug}}
+    {% endif %}
+    {% if b_staticpic %}
+    b_staticpic = {{b_staticpic}}
+    {% endif %}
+    {% if cpp_std %}
+    cpp_std = '{{cpp_std}}'
+    {% endif %}
+    {% if backend %}
+    backend = '{{backend}}'
+    {% endif %}
+    {% if pkg_config_path %}
+    pkg_config_path = '{{pkg_config_path}}'
+    {% endif %}
+    {% if build_pkg_config_path %}
+    build.pkg_config_path = '{{build_pkg_config_path}}'
+    {% endif %}
     # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
@@ -98,16 +140,24 @@ class MesonToolchain(object):
     {% endfor %}
     """)
 
-    def __init__(self, conanfile, backend=None):
+    def __init__(self, conanfile, backend=None, native=False):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
+        :param native: ``bool`` Indicates whether you want Conan to create the
+                       ``conan_meson_native.ini`` in a cross-building context. Notice that it only
+                       makes sense if your project's ``meson.build`` uses the ``native=true``
+                       (see also https://mesonbuild.com/Cross-compilation.html#mixing-host-and-build-targets).
         """
         raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
-        self._os = self._conanfile.settings.get_safe("os")
+        self._native = native
         self._is_apple_system = is_apple_os(self._conanfile)
-
+        is_cross_building = cross_building(conanfile, skip_x64_x86=True)
+        if not is_cross_building and native:
+            raise ConanException("You can only pass native=True if you're cross-building, "
+                                 "otherwise, it could cause unexpected results.")
+        self._conanfile_conf = self._conanfile.conf_build if native else self._conanfile.conf
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
@@ -163,12 +213,11 @@ class MesonToolchain(object):
         # Issue: https://github.com/conan-io/conan/issues/14935
         self.build_pkg_config_path = None
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
-
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if cross_building(conanfile, skip_x64_x86=True):
+        if native is False and is_cross_building:
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
@@ -197,22 +246,23 @@ class MesonToolchain(object):
             default_comp_cpp = "cl"
 
         # Read configuration for compilers
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
-        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        build_env = self._conanfile.buildenv_build.vars(self._conanfile) if native else (
+            VirtualBuildEnv(self._conanfile, auto_generate=True).vars())
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
+        self.c = compilers_by_conf.get("c") or self._sanitize_env_format(build_env.get("CC")) or default_comp
         #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        self.cpp = compilers_by_conf.get("cpp") or self._sanitize_env_format(build_env.get("CXX")) or default_comp_cpp
         #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.ld = build_env.get("LD")
+        self.ld = self._sanitize_env_format(build_env.get("LD"))
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
         # Issue related: https://github.com/mesonbuild/meson/issues/6442
         # PR related: https://github.com/mesonbuild/meson/pull/6457
@@ -232,7 +282,7 @@ class MesonToolchain(object):
         self.windres = build_env.get("WINDRES")
         #: Defines the Meson ``pkgconfig`` variable. Defaulted to ``PKG_CONFIG``
         #: build environment value
-        self.pkgconfig = (self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str) or
+        self.pkgconfig = (self._conanfile_conf.get("tools.gnu:pkg_config", check_type=str) or
                           build_env.get("PKG_CONFIG"))
         #: Defines the Meson ``c_args`` variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
@@ -266,7 +316,8 @@ class MesonToolchain(object):
         self.objcpp_link_args = []
 
         self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
-        self._resolve_android_cross_compilation()
+        if native is False:
+            self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
         """
@@ -307,21 +358,12 @@ class MesonToolchain(object):
     def _resolve_apple_flags_and_variables(self, build_env, compilers_by_conf):
         if not self._is_apple_system:
             return
-        # SDK path is mandatory for cross-building
-        sdk_path = apple_sdk_path(self._conanfile)
-        if not sdk_path and self.cross_build:
-            raise ConanException(
-                "Apple SDK path not found. For cross-compilation, you must "
-                "provide a valid SDK path in 'tools.apple:sdk_path' config."
-            )
         # Calculating the main Apple flags
-        os_sdk = get_apple_sdk_fullname(self._conanfile)
-        arch = to_apple_arch(self._conanfile)
-        self.apple_arch_flag = ["-arch", arch] if arch else []
-        self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
-        os_version = self._conanfile.settings.get_safe("os.version")
-        subsystem = self._conanfile.settings.get_safe("os.subsystem")
-        self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
+        min_flag, arch_flag, isysroot_flag = (
+            resolve_apple_flags(self._conanfile, is_cross_building=self.cross_build))
+        self.apple_arch_flag = arch_flag.split() if arch_flag else []
+        self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
+        self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
@@ -334,7 +376,7 @@ class MesonToolchain(object):
         if not self.cross_build or not self.cross_build["host"]["system"] == "android":
             return
 
-        ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
+        ndk_path = self._conanfile_conf.get("tools.android:ndk_path")
         if not ndk_path:
             raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
                                  "configuration field.")
@@ -355,16 +397,18 @@ class MesonToolchain(object):
 
     def _get_extra_flags(self):
         # Now, it's time to get all the flags defined by the user
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        cxxflags = self._conanfile_conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conanfile_conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile_conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        defines = [f"-D{d}" for d in self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)]
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags,
+            "defines": defines
         }
 
     @staticmethod
@@ -376,23 +420,25 @@ class MesonToolchain(object):
     def _filter_list_empty_fields(v):
         return list(filter(bool, v))
 
+    @staticmethod
+    def _sanitize_env_format(value):
+        if value is None or isinstance(value, list):
+            return value
+        ret = [x.strip() for x in value.split() if x]
+        return ret[0] if len(ret) == 1 else ret
+
     def _context(self):
-        def _sanitize_format(v):
-            if v is None or isinstance(v, list):
-                return v
-            ret = [x.strip() for x in v.split() if x]
-            return f"'{ret[0]}'" if len(ret) == 1 else ret
 
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
 
-        self.c_args.extend(apple_flags + extra_flags["cflags"])
-        self.cpp_args.extend(apple_flags + extra_flags["cxxflags"])
+        self.c_args.extend(apple_flags + extra_flags["cflags"] + extra_flags["defines"])
+        self.cpp_args.extend(apple_flags + extra_flags["cxxflags"] + extra_flags["defines"])
         self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
         # Objective C/C++
-        self.objc_args.extend(self.c_args)
-        self.objcpp_args.extend(self.cpp_args)
+        self.objc_args.extend(self.c_args + extra_flags["defines"])
+        self.objcpp_args.extend(self.cpp_args + extra_flags["defines"])
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
         self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
@@ -428,9 +474,9 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
-            "c": _sanitize_format(self.c),
-            "cpp": _sanitize_format(self.cpp),
-            "ld": _sanitize_format(self.ld),
+            "c": to_meson_value(self.c),
+            "cpp": to_meson_value(self.cpp),
+            "ld": to_meson_value(self.ld),
             "objc": self.objc,
             "objcpp": self.objcpp,
             "c_ld": self.c_ld,
@@ -466,6 +512,15 @@ class MesonToolchain(object):
         }
 
     @property
+    def _filename(self):
+        if self.cross_build and self._native:
+            return self.native_filename
+        elif self.cross_build:
+            return self.cross_filename
+        else:
+            return self.native_filename
+
+    @property
     def _content(self):
         """
         Gets content of the file to be used by Meson as its context.
@@ -473,7 +528,8 @@ class MesonToolchain(object):
         :return: ``str`` whole Meson context content.
         """
         context = self._context()
-        content = Template(self._meson_file_template).render(context)
+        content = Template(self._meson_file_template, trim_blocks=True, lstrip_blocks=True,
+                           undefined=StrictUndefined).render(context)
         return content
 
     def generate(self):
@@ -483,7 +539,6 @@ class MesonToolchain(object):
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
         check_duplicated_generator(self, self._conanfile)
-        filename = self.native_filename if not self.cross_build else self.cross_filename
-        save(filename, self._content)
+        save(self._filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()
