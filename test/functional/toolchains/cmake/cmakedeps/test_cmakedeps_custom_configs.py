@@ -6,9 +6,9 @@ import unittest
 import pytest
 
 from conans.client.conf import get_default_settings_yml
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.sources import gen_function_cpp
+from conan.test.utils.tools import TestClient
 
 from conans.util.files import save
 

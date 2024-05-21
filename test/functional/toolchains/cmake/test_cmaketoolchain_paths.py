@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, TurboTestClient
+from conan.test.utils.tools import TestClient, TurboTestClient
 
 ios10_armv8_settings = "-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8"
 

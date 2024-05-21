@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("meson")

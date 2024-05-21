@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 def test_transitive_editables_half_diamond():

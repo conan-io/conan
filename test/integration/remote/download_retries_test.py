@@ -1,8 +1,8 @@
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer, TestRequester
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, TestServer, TestRequester
 
 
 class DownloadRetriesTest(unittest.TestCase):

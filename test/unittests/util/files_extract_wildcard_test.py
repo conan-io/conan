@@ -4,8 +4,8 @@ import zipfile
 from unittest import TestCase
 
 from conan.tools.files import unzip
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save_files
 
 

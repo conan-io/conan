@@ -1,7 +1,7 @@
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 
 
 def test_require_different_versions():

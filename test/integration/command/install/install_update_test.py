@@ -3,7 +3,7 @@ import textwrap
 from time import sleep
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
 

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 class ChangeOptionsInRequirementsTest(unittest.TestCase):

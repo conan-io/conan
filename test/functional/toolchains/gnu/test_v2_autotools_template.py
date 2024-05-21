@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")

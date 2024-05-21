@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
     is_apple_os
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from conan.test.utils.mocks import MockSettings, ConanFileMock
 
 
 class FakeSettings(object):

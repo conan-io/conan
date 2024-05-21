@@ -5,7 +5,7 @@ import pytest
 from conans.model.info import load_binary_info
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE_TXT, CONANINFO
-from conans.test.utils.tools import TestClient,  GenConanfile
+from conan.test.utils.tools import TestClient,  GenConanfile
 from conans.util.files import save, load
 
 

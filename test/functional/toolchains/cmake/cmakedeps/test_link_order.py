@@ -7,7 +7,7 @@ import pytest
 from jinja2 import Template
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 """
 Check that the link order of libraries is preserved when using CMake generators

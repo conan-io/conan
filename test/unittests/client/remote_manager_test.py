@@ -3,7 +3,7 @@ import unittest
 
 from conans.client.cmd.uploader import compress_files
 from conans.paths import PACKAGE_TGZ_NAME
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 

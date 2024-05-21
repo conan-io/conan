@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
 

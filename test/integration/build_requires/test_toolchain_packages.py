@@ -2,7 +2,7 @@ import json
 import textwrap
 
 from conans.model.package_ref import PkgReference
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_android_ndk():

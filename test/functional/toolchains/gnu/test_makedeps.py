@@ -3,9 +3,9 @@ import textwrap
 import platform
 import pytest
 
-from conans.test.assets.autotools import gen_makefile
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
+from conan.test.assets.autotools import gen_makefile
+from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 

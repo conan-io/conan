@@ -8,9 +8,9 @@ import pytest
 
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
-from conans.test.assets.genconanfile import GenConanfile
+from conan.test.assets.genconanfile import GenConanfile
 from conans.util.files import save
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 class TestValidate(unittest.TestCase):

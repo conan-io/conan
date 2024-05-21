@@ -3,8 +3,8 @@ import json
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 
 
 def test_graph_build_order_override_error():

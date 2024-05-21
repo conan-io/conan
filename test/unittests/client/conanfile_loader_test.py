@@ -8,7 +8,7 @@ from parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
 from conans.errors import ConanException
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, chdir
 
 

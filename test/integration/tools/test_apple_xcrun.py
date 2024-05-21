@@ -4,7 +4,7 @@ import platform
 import pytest
 
 from conan.tools.apple.apple import XCRun
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conans.util.runners import conan_run
 
 

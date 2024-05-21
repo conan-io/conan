@@ -5,8 +5,8 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_cpp
+from conan.test.assets.cmake import gen_cmakelists
+from conan.test.assets.sources import gen_function_cpp
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")

@@ -6,8 +6,8 @@ from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphConflictError, GraphLoopError, GraphRuntimeError
 from conans.model.recipe_ref import RecipeReference
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
+from test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conan.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 def _check_transitive(node, transitive_deps):

@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 class ConanAliasTest(unittest.TestCase):

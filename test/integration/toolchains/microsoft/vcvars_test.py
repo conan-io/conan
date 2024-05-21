@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")

@@ -5,8 +5,8 @@ import pytest
 
 from conan.tools.files import patch, apply_conandata_patches
 from conans.errors import ConanException
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
-from conans.test.utils.tools import redirect_output
+from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from conan.test.utils.tools import redirect_output
 
 
 class MockPatchset:

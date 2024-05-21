@@ -7,8 +7,8 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import LocalDBMock
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import LocalDBMock
+from conan.test.utils.test_files import temp_folder
 
 common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
                   "Content-Type": "application/json"}

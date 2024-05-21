@@ -9,9 +9,9 @@ import pytest
 from conan.tools.files import replace_in_file, collect_libs
 from conans.model.build_info import CppInfo
 from conans.model.layout import Infos
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output
+from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import redirect_output
 from conans.util.env import get_env, environment_update
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner

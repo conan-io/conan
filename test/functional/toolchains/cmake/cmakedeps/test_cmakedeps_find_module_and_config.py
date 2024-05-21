@@ -2,10 +2,10 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
+from conan.test.assets.cmake import gen_cmakelists
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.tools import TestClient
 
 
 @pytest.fixture(scope="module")

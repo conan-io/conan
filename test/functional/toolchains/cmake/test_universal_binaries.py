@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 

@@ -1,7 +1,7 @@
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 

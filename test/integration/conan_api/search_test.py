@@ -1,7 +1,7 @@
 from conan.api.conan_api import ConanAPI
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TurboTestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TurboTestClient
 
 
 def test_search_recipes():

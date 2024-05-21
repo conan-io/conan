@@ -2,7 +2,7 @@ import platform
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def _get_filename(configuration, architecture, sdk_version):

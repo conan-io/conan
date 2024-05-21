@@ -4,7 +4,7 @@ import textwrap
 
 from conan.cli.exit_codes import ERROR_GENERAL
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
+from conan.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
 class TestBasicCliOutput:

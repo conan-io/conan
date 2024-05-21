@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.utils.tools import GenConanfile, TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 class InstallParallelTest(unittest.TestCase):

@@ -5,8 +5,8 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TurboTestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load
 
 

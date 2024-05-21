@@ -4,10 +4,10 @@ import platform
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
+from conan.test.assets.sources import gen_function_cpp
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 
 
 def editable_cmake(generator, build_folder=None):

@@ -6,12 +6,12 @@ import unittest
 import pytest
 from parameterized import parameterized_class
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.pkg_cmake import pkg_cmake
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.assets.visual_project_files import get_vs_project_files
-from conans.test.conftest import tools_locations
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.pkg_cmake import pkg_cmake
+from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.assets.visual_project_files import get_vs_project_files
+from test.conftest import tools_locations
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00

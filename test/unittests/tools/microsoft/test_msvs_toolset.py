@@ -1,7 +1,7 @@
 import pytest
 from conan.tools.microsoft import msvs_toolset
 from conan.errors import ConanException
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
 def test_invalid_compiler():

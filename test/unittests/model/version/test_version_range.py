@@ -5,7 +5,7 @@ import pytest
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.model.version_range import VersionRange
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 values = [
     ['=1.0.0',  [[['=', '1.0.0']]],                   ["1.0.0"],          ["0.1"]],

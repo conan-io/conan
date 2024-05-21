@@ -6,7 +6,7 @@ from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
 @pytest.fixture()

@@ -2,7 +2,7 @@ import os
 import shutil
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 class TestEditableImport:

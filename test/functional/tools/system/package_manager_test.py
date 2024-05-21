@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from conan.tools.system.package_manager import _SystemPackageManagerTool
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("apt_get")

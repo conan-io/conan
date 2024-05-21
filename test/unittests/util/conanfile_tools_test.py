@@ -3,10 +3,10 @@ import stat
 import unittest
 
 from conan.tools.files import replace_in_file, unzip
-from conans.test.utils.mocks import ConanFileMock
+from conan.test.utils.mocks import ConanFileMock
 
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 

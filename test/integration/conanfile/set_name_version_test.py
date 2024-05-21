@@ -4,8 +4,8 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import mkdir
 
 

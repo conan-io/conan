@@ -9,7 +9,7 @@ from conan.tools.system.package_manager import Apt, Apk, Dnf, Yum, Brew, Pkg, Pk
     Zypper, PacMan, _SystemPackageManagerTool
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
 @pytest.mark.parametrize("platform, tool", [

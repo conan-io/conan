@@ -1,8 +1,8 @@
 import textwrap
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_h, gen_function_cpp
+from conan.test.assets.cmake import gen_cmakelists
+from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 
 def pkg_cmake(name, version, requires=None, exe=False):

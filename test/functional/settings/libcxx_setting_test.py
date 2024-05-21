@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.xfail(reason="Move this test to CMakeToolchain")

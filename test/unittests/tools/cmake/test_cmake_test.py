@@ -5,8 +5,8 @@ from conan.tools.cmake.presets import write_cmake_presets
 from conans.client.conf import get_default_settings_yml
 from conans.model.conf import Conf
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 
 
 @pytest.mark.parametrize("generator,target", [

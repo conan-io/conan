@@ -1,6 +1,6 @@
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 test_conanfile = """from conan import ConanFile
 

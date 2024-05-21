@@ -1,6 +1,6 @@
 import pytest
 
-from conans.test.utils.tools import GenConanfile, TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 from conans.util.files import save
 
 

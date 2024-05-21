@@ -7,9 +7,9 @@ import pytest
 from bottle import static_file, HTTPError, request
 
 from conans.errors import NotFoundException, ConanException
-from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conan.test.utils.file_server import TestFileServer
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import save, load, rmdir, mkdir, remove
 
 

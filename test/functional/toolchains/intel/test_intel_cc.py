@@ -2,8 +2,8 @@ import pytest
 import platform
 import textwrap
 
-from conans.test.assets.pkg_cmake import pkg_cmake
-from conans.test.utils.tools import TestClient
+from conan.test.assets.pkg_cmake import pkg_cmake
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")

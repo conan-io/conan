@@ -5,8 +5,8 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
-from conans.test.utils.tools import TestClient
+from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
+from conan.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 

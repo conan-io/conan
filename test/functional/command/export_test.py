@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.scm import git_add_changes_commit
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.scm import git_add_changes_commit
+from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 

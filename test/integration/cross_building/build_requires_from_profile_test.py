@@ -1,7 +1,7 @@
 import unittest
 import textwrap
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 class BuildRequiresFromProfileTest(unittest.TestCase):

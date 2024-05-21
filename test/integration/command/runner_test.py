@@ -2,9 +2,9 @@ import textwrap
 import os
 import pytest
 import docker
-from conans.test.utils.tools import TestClient
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_h, gen_function_cpp
+from conan.test.utils.tools import TestClient
+from conan.test.assets.cmake import gen_cmakelists
+from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 
 def docker_skip(test_image=None):

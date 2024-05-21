@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.env import environment_update
 
 

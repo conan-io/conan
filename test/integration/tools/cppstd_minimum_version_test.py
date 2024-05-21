@@ -2,7 +2,7 @@ import unittest
 from parameterized import parameterized
 from textwrap import dedent
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 class CppStdMinimumVersionTests(unittest.TestCase):

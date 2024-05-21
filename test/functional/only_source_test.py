@@ -2,8 +2,8 @@ import os
 import unittest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 
 
 class OnlySourceTest(unittest.TestCase):

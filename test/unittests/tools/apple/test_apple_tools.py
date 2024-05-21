@@ -4,8 +4,8 @@ import textwrap
 
 from conan.internal.internal_tools import is_universal_arch
 from conans.errors import ConanException
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
+from conan.test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
 from conan.tools.apple.apple import _get_dylib_install_name
 

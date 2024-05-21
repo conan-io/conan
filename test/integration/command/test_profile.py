@@ -2,7 +2,7 @@ import json
 import os
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_profile_path():

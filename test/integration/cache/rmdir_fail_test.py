@@ -3,7 +3,7 @@ import platform
 
 import pytest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="needs windows")

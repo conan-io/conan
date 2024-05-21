@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
-from conans.test.utils.tools import TestClient, TestServer, GenConanfile
+from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID
+from conan.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import mkdir, save
 
 

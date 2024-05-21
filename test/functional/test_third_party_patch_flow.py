@@ -1,9 +1,9 @@
 import os
 import textwrap
 
-from conans.test.utils.scm import create_local_git_repo
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.utils.scm import create_local_git_repo
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
 

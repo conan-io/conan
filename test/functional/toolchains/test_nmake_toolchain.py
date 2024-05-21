@@ -3,9 +3,9 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_exe_run
-from conans.test.utils.tools import TestClient
+from conan.test.assets.sources import gen_function_cpp
+from test.functional.utils import check_exe_run
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize(

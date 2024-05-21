@@ -2,8 +2,8 @@ import os
 import shutil
 import textwrap
 
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
+from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.tools import TestClient
 
 
 def test_editable_cmake_components():

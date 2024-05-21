@@ -3,11 +3,11 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.conftest import tools_locations
-from conans.test.functional.utils import check_exe_run
-from conans.test.utils.tools import TestClient
+from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac
+from conan.test.assets.sources import gen_function_cpp
+from test.conftest import tools_locations
+from test.functional.utils import check_exe_run
+from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 

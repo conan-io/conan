@@ -4,7 +4,7 @@ import unittest
 from requests import ConnectionError
 
 from conans.paths import CONAN_MANIFEST
-from conans.test.utils.tools import (TestClient, TestRequester, TestServer,
+from conan.test.utils.tools import (TestClient, TestRequester, TestServer,
                                      GenConanfile)
 from conans.util.env import environment_update
 

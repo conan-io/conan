@@ -10,7 +10,7 @@ from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManag
 from conans.server.migrate import migrate_and_get_server_config
 from conans.server.rest.server import ConanServer
 from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.test_files import temp_folder
 
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"

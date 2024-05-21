@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.test.conftest import tools_locations
-from conans.test.utils.tools import TestClient
+from test.conftest import tools_locations
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19

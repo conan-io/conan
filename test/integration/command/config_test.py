@@ -4,8 +4,8 @@ import textwrap
 
 from conan.api.conan_api import ConanAPI
 from conans.model.conf import BUILT_IN_CONFS
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 

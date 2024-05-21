@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 class LoopDetectionTest(unittest.TestCase):

@@ -6,8 +6,8 @@ from mock import patch
 
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestUpdateFlows:

@@ -3,7 +3,7 @@ from mock import MagicMock
 
 from conan.tools.apple.apple import is_apple_os
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
 @pytest.mark.parametrize("os_", ["Macos", "Windows", "Linux"])

@@ -7,8 +7,8 @@ import unittest
 import pytest
 
 from conans.client.conf.detect import detect_defaults_settings
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import TestClient, redirect_output
+from conan.test.utils.mocks import RedirectedTestOutput
+from conan.test.utils.tools import TestClient, redirect_output
 from conans.util.env import environment_update
 from conans.util.files import save
 from conans.util.runners import check_output_runner

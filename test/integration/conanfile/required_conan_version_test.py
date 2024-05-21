@@ -3,7 +3,7 @@ import textwrap
 import mock
 
 from conans import __version__
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_required_conan_version():

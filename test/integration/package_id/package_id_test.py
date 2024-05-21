@@ -1,7 +1,7 @@
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import save
 
 

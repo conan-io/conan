@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 conanfile = textwrap.dedent("""
     from conan import ConanFile

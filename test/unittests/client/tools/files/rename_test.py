@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conan.tools.files import rename
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 from conans.util.files import chdir
 
 

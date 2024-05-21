@@ -8,8 +8,8 @@ import pytest
 from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 from conans.util.files import rmdir, load
 
 
@@ -381,13 +381,13 @@ def test_runtime_lib_dirs_single_conf(lib_dir_setup):
     is_windows = platform.system() == "Windows"
     if is_windows:
         generator = '-c tools.cmake.cmaketoolchain:generator=Ninja'
-    
+
     client.run(f'install . -s build_type=Release {generator}')
     contents = client.load("conan_toolchain.cmake")
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
     pattern_lib_dirs = r'set\(CONAN_RUNTIME_LIB_DIRS (.*) \)'
 
-    # On *nix platforms: the list in `CMAKE_LIBRARY_PATH` 
+    # On *nix platforms: the list in `CMAKE_LIBRARY_PATH`
     # is the same as `CONAN_RUNTIME_LIB_DIRS`
     # On windows, it's the same but with `bin` instead of `lib`
     cmake_library_path = re.search(pattern_lib_path, contents).group(1)

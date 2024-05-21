@@ -1,7 +1,7 @@
 import os
 
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient, GenConanfile
 
 
 def test_storage_path():

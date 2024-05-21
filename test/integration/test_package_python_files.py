@@ -3,7 +3,7 @@ import textwrap
 
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 def test_package_python_files():

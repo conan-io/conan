@@ -4,7 +4,7 @@ from collections import OrderedDict
 from unittest import mock
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load
 
 

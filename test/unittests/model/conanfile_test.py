@@ -2,7 +2,7 @@ import textwrap
 import unittest
 
 from conans.model.conan_file import ConanFile
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 class ConanFileTest(unittest.TestCase):

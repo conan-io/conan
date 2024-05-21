@@ -6,8 +6,8 @@ import pytest
 
 from conans.errors import ConanConnectionError, ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, TestServer
 
 
 # FIXME: we could remove this whenever @conan_alias_command will be implemented

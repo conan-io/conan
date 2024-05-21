@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="symlink need admin privileges")

@@ -38,20 +38,50 @@ from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.test.assets import copy_assets
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.conftest import default_profiles
-from conans.test.utils.artifactory import ArtifactoryServer
-from conans.test.utils.mocks import RedirectedInputStream
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo
-from conans.test.utils.server_launcher import (TestServerLauncher)
-from conans.test.utils.test_files import temp_folder
+from conan.test.assets import copy_assets
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.artifactory import ArtifactoryServer
+from conan.test.utils.mocks import RedirectedInputStream
+from conan.test.utils.mocks import RedirectedTestOutput
+from conan.test.utils.scm import create_local_git_repo
+from conan.test.utils.server_launcher import (TestServerLauncher)
+from conan.test.utils.test_files import temp_folder
 from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save, load
 
 NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
+arch = platform.machine()
+arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
+default_profiles = {
+    "Windows": textwrap.dedent("""\
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
+        build_type=Release
+        """),
+    "Linux": textwrap.dedent(f"""\
+        [settings]
+        os=Linux
+        arch={arch_setting}
+        compiler=gcc
+        compiler.version=8
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """),
+    "Darwin": textwrap.dedent(f"""\
+        [settings]
+        os=Macos
+        arch={arch_setting}
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+}
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = RecipeReference.loads(reference)
@@ -548,7 +578,7 @@ class TestClient:
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        from conans.test.utils.mocks import RedirectedTestOutput
+        from conan.test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.user_inputs = RedirectedInputStream(inputs or self.inputs)
             self.stdout = RedirectedTestOutput()  # Initialize each command
@@ -579,7 +609,7 @@ class TestClient:
                         save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
-        from conans.test.utils.mocks import RedirectedTestOutput
+        from conan.test.utils.mocks import RedirectedTestOutput
         self.stdout = RedirectedTestOutput()  # Initialize each command
         self.stderr = RedirectedTestOutput()
         try:

@@ -1,6 +1,6 @@
 from requests import Response
 
-from conans.test.utils.tools import TestClient, TestRequester
+from conan.test.utils.tools import TestClient, TestRequester
 
 
 conanfile = """

@@ -6,7 +6,7 @@ from collections import OrderedDict
 from datetime import timedelta
 
 from conans.client.store.localdb import LocalDB
-from conans.test.utils.tools import TestClient, TestServer
+from conan.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
 
 

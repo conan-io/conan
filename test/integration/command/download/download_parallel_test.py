@@ -1,4 +1,4 @@
-from conans.test.utils.tools import GenConanfile, TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_basic_parallel_download():

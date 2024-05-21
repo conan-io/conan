@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient, TestServer
 
 
 class TestVersionRangesUpdatingTest:

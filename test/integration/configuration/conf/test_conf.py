@@ -7,10 +7,10 @@ from mock import patch
 
 from conan import conan_version
 from conan.internal.api import detect_api
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, load
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.fixture

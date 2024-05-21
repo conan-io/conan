@@ -5,7 +5,7 @@ import pytest
 
 from conans.errors import ConanMigrationError
 from conans.migrations import Migrator
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.test_files import temp_folder
 
 
 class FakeMigrator(Migrator):

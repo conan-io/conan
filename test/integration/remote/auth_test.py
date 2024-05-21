@@ -9,11 +9,11 @@ from conans.client.store.localdb import LocalDB
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
-from conans.test.utils.tools import TestRequester
-from conans.test.utils.tools import TestServer
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestRequester
+from conan.test.utils.tools import TestServer
 from conans.util.env import environment_update
 from conans.util.files import save
 

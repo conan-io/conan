@@ -4,8 +4,8 @@ import textwrap
 import pytest
 
 from conans import __version__ as client_version
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 

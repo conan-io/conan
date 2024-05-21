@@ -2,9 +2,9 @@ import os
 import platform
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.pkg_cmake import pkg_cmake
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.pkg_cmake import pkg_cmake
+from conan.test.utils.tools import TestClient
 
 
 def test_local_static_generators_folder():

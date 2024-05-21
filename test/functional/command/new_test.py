@@ -1,6 +1,6 @@
 import pytest as pytest
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 # TODO: Remove this test once this feature is used elsewhere to test other things

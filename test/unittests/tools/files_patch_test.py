@@ -5,8 +5,8 @@ from textwrap import dedent
 from parameterized.parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient
 from conans.util.files import save, load
 
 base_conanfile = '''

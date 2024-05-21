@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_msbuildtoolchain_props_with_extra_flags():

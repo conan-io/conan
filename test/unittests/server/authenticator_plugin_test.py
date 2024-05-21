@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.server.plugin_loader import load_authentication_plugin
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 

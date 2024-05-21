@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.functional.toolchains.meson._base import TestMesonBase
+from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from test.functional.toolchains.meson._base import TestMesonBase
 
 
 class MesonInstall(TestMesonBase):

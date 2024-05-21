@@ -8,7 +8,7 @@ from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
 @pytest.mark.parametrize("os_,arch,expected", [

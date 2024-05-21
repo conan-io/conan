@@ -5,10 +5,10 @@ import pytest
 
 from conan.tools.files import ftp_download, download, get
 from conans.errors import ConanException, AuthenticationException
-from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output, TestRequester
+from conan.test.utils.file_server import TestFileServer
+from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import redirect_output, TestRequester
 from conans.util.files import save, load, chdir, mkdir
 
 

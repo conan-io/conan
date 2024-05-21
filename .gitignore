@@ -107,5 +107,5 @@ Session.vim
 # add excluded
 !conans/client/build
 !conan/tools/build
-!conans/test/unittests/client/build
-!conans/test/unittests/tools/build
+!test/unittests/client/build
+!test/unittests/tools/build

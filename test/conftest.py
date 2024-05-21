@@ -1,7 +1,6 @@
 import os
 import pathlib
 import platform
-import textwrap
 import uuid
 from shutil import which
 
@@ -188,40 +187,10 @@ tools_locations = {
 
 
 # TODO: Make this match the default tools (compilers) above automatically
-arch = platform.machine()
-arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
-default_profiles = {
-    "Windows": textwrap.dedent("""\
-        [settings]
-        os=Windows
-        arch=x86_64
-        compiler=msvc
-        compiler.version=191
-        compiler.runtime=dynamic
-        build_type=Release
-        """),
-    "Linux": textwrap.dedent(f"""\
-        [settings]
-        os=Linux
-        arch={arch_setting}
-        compiler=gcc
-        compiler.version=8
-        compiler.libcxx=libstdc++11
-        build_type=Release
-        """),
-    "Darwin": textwrap.dedent(f"""\
-        [settings]
-        os=Macos
-        arch={arch_setting}
-        compiler=apple-clang
-        compiler.version=13
-        compiler.libcxx=libc++
-        build_type=Release
-        """)
-}
+
 
 try:
-    from conans.test.conftest_user import tools_locations as user_tool_locations
+    from test.conftest_user import tools_locations as user_tool_locations
 
     def update(d, u):
         for k, v in u.items():
@@ -234,13 +203,6 @@ try:
     update(tools_locations, user_tool_locations)
 except ImportError as e:
     user_tool_locations = None
-
-
-try:
-    from conans.test.conftest_user import default_profiles as user_default_profiles
-    default_profiles.update(user_default_profiles)
-except ImportError as e:
-    user_default_profiles = None
 
 
 tools_environments = {

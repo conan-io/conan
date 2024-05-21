@@ -2,8 +2,8 @@ import os
 import textwrap
 
 from conans.model.manifest import FileTreeManifest
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 

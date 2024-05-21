@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
+from conan.test.assets.sources import gen_function_cpp
+from conan.test.utils.tools import TestClient
 
 test = textwrap.dedent("""
     import os

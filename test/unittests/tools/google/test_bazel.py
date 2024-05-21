@@ -8,8 +8,8 @@ from conan.tools.files import save
 from conan.tools.google import Bazel
 from conan.tools.google.bazeldeps import _relativize_path, _get_libs
 from conans.model.options import Options
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")

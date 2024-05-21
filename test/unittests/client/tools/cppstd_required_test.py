@@ -3,7 +3,7 @@ from mock import mock
 from parameterized import parameterized
 
 from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from conan.test.utils.mocks import MockSettings, ConanFileMock
 from conans.errors import ConanInvalidConfiguration, ConanException
 
 

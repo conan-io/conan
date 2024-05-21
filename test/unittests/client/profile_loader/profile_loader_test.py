@@ -6,8 +6,8 @@ import pytest
 from conans.client.profile_loader import _ProfileParser, ProfileLoader
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import ConanFileMock, MockSettings
-from conans.test.utils.test_files import temp_folder
+from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 

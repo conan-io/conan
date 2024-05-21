@@ -2,7 +2,7 @@ import os
 import platform
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_basic_layout_subproject():
