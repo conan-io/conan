@@ -207,7 +207,7 @@ def list(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "

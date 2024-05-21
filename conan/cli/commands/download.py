@@ -21,7 +21,7 @@ def download(conan_api: ConanAPI, parser, *args):
 
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument("--only-recipe", action='store_true', default=False,
                         help='Download only the recipe/s, not the binary packages.')

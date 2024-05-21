@@ -29,6 +29,9 @@ class Requirement:
         self._direct = direct
         self.options = options
         # Meta and auxiliary information
+        # The "defining_require" is the require that defines the current value. If this require is
+        # overriden/forced, this attribute will point to the overriding/forcing requirement.
+        self.defining_require = self  # if not overriden, it points to itself
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
@@ -517,16 +520,6 @@ class Requirements:
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
-
-    def override(self, ref):
-        req = Requirement(ref)
-        old_requirement = self._requires.get(req)
-        if old_requirement is not None:
-            req.force = True
-            self._requires[req] = req
-        else:
-            req.override = True
-            self._requires[req] = req
 
     def test_require(self, ref, run=None, options=None, force=None):
         """
