@@ -6,7 +6,7 @@ from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.search.search import get_cache_packages_binary_info, filter_packages
 from conans.util.dates import timelimit
 
@@ -87,7 +87,35 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    def select(self, pattern, package_query=None, remote=None, lru=None):
+    @staticmethod
+    def filter_packages_profile(packages, profile, ref):
+        result = {}
+        profile_settings = profile.processed_settings.serialize()
+        # Options are those for dependencies, like *:shared=True
+        profile_options = profile.options._deps_package_options
+        for pref, data in packages.items():
+            settings = data.get("settings", {})
+            settings_match = options_match = True
+            for k, v in settings.items():  # Only the defined settings that don't match
+                value = profile_settings.get(k)
+                if value is not None and value != v:
+                    settings_match = False
+                    break
+            options = data.get("options", {})
+            for k, v in options.items():
+                for pattern, pattern_options in profile_options.items():
+                    if ref_matches(ref, pattern, None):
+                        value = pattern_options.get_safe(k)
+                        if value is not None and value != v:
+                            options_match = False
+                            break
+
+            if settings_match and options_match:
+                result[pref] = data
+
+        return result
+
+    def select(self, pattern, package_query=None, remote=None, lru=None, profile=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
@@ -150,6 +178,8 @@ class ListAPI:
                     packages = self.packages_configurations(rrev, remote)
                     if package_query is not None:
                         packages = self.filter_packages_configurations(packages, package_query)
+                    if profile is not None:
+                        packages = self.filter_packages_profile(packages, profile, rrev)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
@@ -193,7 +223,6 @@ class ListAPI:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
                 pkg_configurations = self.packages_configurations(ref, remote=remote)
             except Exception as e:
-                pass
                 ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
             else:
                 candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
@@ -202,8 +231,7 @@ class ListAPI:
         candidates.sort()
         pkglist = PackagesList()
         pkglist.add_refs([ref])
-        # If there are exact matches, only return the matches
-        # else, limit to the number specified
+        # Return the closest matches, stop adding when distance is increased
         candidate_distance = None
         for candidate in candidates:
             if candidate_distance and candidate.distance != candidate_distance:

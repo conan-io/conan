@@ -17,12 +17,13 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
+        configs.add([node: "Linux", pyvers: ["PY312"]])
+    }
     if (branchName =~ /(^PR-.*)/) {
         configs.add([node: "Linux", pyvers: ["PY36"]])
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "M2Macos", pyvers: ["PY36"]])
-        }
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
@@ -30,18 +31,18 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36"]])
+        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     return configs
 }
 
 String getDockerImage(String moduleName) {
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional"){
+    else if (moduleName=="test/functional"){
         return "conanio/ci-functional"
     }
     return ""
@@ -49,7 +50,7 @@ String getDockerImage(String moduleName) {
 
 boolean shouldTestServer(String moduleName) {
     // run conan_server --help after running functional tests
-    if (moduleName=="conans/test/functional") {
+    if (moduleName=="test/functional") {
         return true
     }
     return false
@@ -91,6 +92,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 if (nodeName=="Linux") {
                     try {
                         def dockerImage = getDockerImage(module)
+                        docker.image(dockerImage).pull()
                         docker.image(dockerImage).inside("--entrypoint=") {
 
                             // we only test scons in Linux
@@ -165,7 +167,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["test/unittests", "test/integration", "test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
@@ -173,8 +175,7 @@ void deployToPypiTest() {
             def scmVars = checkout scm
             checkout scm
             stage("Deploy conan to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
-                                 string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'PYPITEST_CONAN_CREDENTIALS', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
                     def deployConan = "python -m pip install twine && " \
                                     + "python .ci/bump_dev_version.py && " \
                                     + "rm -rf dist/ && python setup.py sdist && " \
@@ -183,8 +184,7 @@ void deployToPypiTest() {
                 }
             }
             stage("Deploy conan-server to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
-                                 string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'PYPITEST_CONAN_SERVER_CREDENTIALS', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
                     def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
                                      + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
                     sh(script: deployServer)
@@ -198,7 +198,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
- 
+
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }

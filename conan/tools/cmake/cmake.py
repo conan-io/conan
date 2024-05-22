@@ -51,6 +51,10 @@ class CMake(object):
 
         self._cmake_program = conanfile.conf.get("tools.cmake:cmake_program", default="cmake")
 
+    @property
+    def is_multi_configuration(self):
+        return is_multi_configuration(self._generator)
+
     def configure(self, variables=None, build_script_folder=None, cli_args=None,
                   stdout=None, stderr=None):
         """
@@ -81,21 +85,17 @@ class CMake(object):
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
+        cmakelist_folder = cmakelist_folder.replace("\\", "/")
 
         build_folder = self._conanfile.build_folder
-        generator_folder = self._conanfile.generators_folder
-
         mkdir(self._conanfile, build_folder)
 
         arg_list = [self._cmake_program]
         if self._generator:
             arg_list.append('-G "{}"'.format(self._generator))
         if self._toolchain_file:
-            if os.path.isabs(self._toolchain_file):
-                toolpath = self._toolchain_file
-            else:
-                toolpath = os.path.join(generator_folder, self._toolchain_file)
-            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath.replace("\\", "/")))
+            toolpath = self._toolchain_file.replace("\\", "/")
+            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
         if self._conanfile.package_folder:
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
@@ -117,18 +117,28 @@ class CMake(object):
         with chdir(self, build_folder):
             self._conanfile.run(command, stdout=stdout, stderr=stderr)
 
-    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="",
-               stdout=None, stderr=None):
-        bf = self._conanfile.build_folder
+    def _config_arg(self, build_type):
+        """ computes the '--config Release' arg when necessary, or warn or error if wrong
+        """
         is_multi = is_multi_configuration(self._generator)
         if build_type and not is_multi:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "
                                          "single-config build systems")
+        if not build_type:
+            try:
+                build_type = self._conanfile.settings.build_type  # declared, but can be None
+                if not build_type:
+                    raise ConanException("CMake: build_type setting should be defined.")
+            except ConanException:
+                if is_multi:
+                    raise ConanException("CMake: build_type setting should be defined.")
+        build_config = "--config {}".format(build_type) if build_type and is_multi else ""
+        return build_config
 
-        bt = build_type or self._conanfile.settings.get_safe("build_type")
-        if not bt:
-            raise ConanException("build_type setting should be defined.")
-        build_config = "--config {}".format(bt) if bt and is_multi else ""
+    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="",
+               stdout=None, stderr=None):
+        bf = self._conanfile.build_folder
+        build_config = self._config_arg(build_type)
 
         args = []
         if target is not None:
@@ -191,11 +201,7 @@ class CMake(object):
         self._conanfile.output.info("Running CMake.install()")
         mkdir(self._conanfile, self._conanfile.package_folder)
 
-        bt = build_type or self._conanfile.settings.get_safe("build_type")
-        if not bt:
-            raise ConanException("build_type setting should be defined.")
-        is_multi = is_multi_configuration(self._generator)
-        build_config = "--config {}".format(bt) if bt and is_multi else ""
+        build_config = self._config_arg(build_type)
 
         pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
         build_folder = '"{}"'.format(self._conanfile.build_folder)

@@ -6,12 +6,13 @@ from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, Pyth
 from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
-def compute_package_id(node, new_config):
+def compute_package_id(node, new_config, config_version):
     """
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
 
+    # TODO: Extract
     unknown_mode = new_config.get("core.package_id:default_unknown_mode", default="semver_mode")
     non_embed_mode = new_config.get("core.package_id:default_non_embed_mode", default="minor_mode")
     # recipe_revision_mode already takes into account the package_id
@@ -50,16 +51,18 @@ def compute_package_id(node, new_config):
                                reqs_info=reqs_info,
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,
-                               conf=conanfile.conf.copy_conaninfo_conf())
+                               conf=conanfile.conf.copy_conaninfo_conf(),
+                               config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
 
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
-            try:
-                conanfile.validate_build()
-            except ConanInvalidConfiguration as e:
-                # This 'cant_build' will be ignored if we don't have to build the node.
-                node.cant_build = str(e)
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
 
     run_validate_package_id(conanfile)
 

@@ -153,8 +153,13 @@ class _EnvValue:
             else:
                 if self._path:
                     v = subsystem_path(subsystem, v)
-                    if root_path is not None and v.startswith(root_path):
-                        v = v.replace(root_path, script_path, 1)
+                    if root_path is not None:
+                        if v.startswith(root_path):  # relativize
+                            v = v.replace(root_path, script_path, 1)
+                        elif os.sep == "\\":  # Just in case user specified C:/path/to/somewhere
+                            r = root_path.replace("\\", "/")
+                            if v.startswith(r):
+                                v = v.replace(r, script_path.replace("\\", "/"))
                 values.append(v)
         if self._path:
             return pathsep.join(values)

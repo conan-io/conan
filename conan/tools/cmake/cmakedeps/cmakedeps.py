@@ -17,6 +17,7 @@ from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
 from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 
 
 class CMakeDeps(object):
@@ -220,3 +221,7 @@ class CMakeDeps(object):
                             undefined=jinja2.StrictUndefined)
         conandeps = template.render({"configs": configs})
         save(self._conanfile, "conandeps_legacy.cmake", conandeps)
+
+    def get_transitive_requires(self, conanfile):
+        # Prepared to filter transitive tool-requires with visible=True
+        return get_transitive_requires(self._conanfile, conanfile)

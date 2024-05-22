@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput
+from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -17,7 +17,12 @@ class RangeResolver:
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
-        version_range = require.version_range
+        try:
+            version_range = require.version_range
+        except Exception as e:
+            base = base_conanref or "conanfile"
+            raise ConanException(f"\n    Recipe '{base}' requires '{require.ref}' "
+                                 f"version-range definition error:\n    {e}")
         if version_range is None:
             return
         assert isinstance(version_range, VersionRange)
@@ -32,7 +37,7 @@ class RangeResolver:
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if resolved_ref is None or update:
+        if resolved_ref is None or should_update_reference(search_ref, update):
             remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
@@ -85,7 +90,7 @@ class RangeResolver:
             resolved_version = self._resolve_version(version_range, remote_results,
                                                      self._resolve_prereleases)
             if resolved_version:
-                if not update:
+                if not should_update_reference(search_ref, update):
                     return resolved_version  # Return first valid occurrence in first remote
                 else:
                     update_candidates.append(resolved_version)
