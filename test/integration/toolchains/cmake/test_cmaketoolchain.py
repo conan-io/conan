@@ -1585,19 +1585,19 @@ def test_toolchain_extra_variables():
         tools.cmake.cmaketoolchain:extra_variables={'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': '42' }
         """)
 
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
                  "windows": windows_profile})
 
     # Test passing extra_variables from pro ile
-    client.run("install . --profile:build=windows --profile:host=windows")
+    client.run("install . --profile:host=windows")
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
     assert 'set(FOO "42")' in toolchain
 
     # Test input from command line passing dict between doble quotes
     client.run(textwrap.dedent(r"""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': 42.2, 'DICT': {'value': 1}, 'CACHE_VAR': {'value': 'hello world', 'cache': 'true', 'type': 'BOOL', 'docstring': 'test variable'}}"
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': 42.2, 'DICT': {'value': 1}, 'CACHE_VAR': {'value': 'hello world', 'cache': True, 'type': 'BOOL', 'docstring': 'test variable'}}"
     """)
     )
 
@@ -1608,19 +1608,25 @@ def test_toolchain_extra_variables():
     assert 'set(CACHE_VAR "hello world" CACHE BOOL "test variable")' in toolchain
 
 
-    # Test invalid cache variable
     client.run(textwrap.dedent("""
         install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': 'true'}}"
     """) , assert_error=True)
-    assert 'CMakeToolchain needs type defined for cache variable "invalid"' in client.out
+    assert 'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)' in client.out
+
+    # Test invalid cache variable
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "invalid"' in client.out
 
     client.run(textwrap.dedent("""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': 'true', 'type': 'INVALID_TYPE'}}"
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True, 'type': 'INVALID_TYPE'}}"
     """) , assert_error=True)
-    assert 'CMakeToolchain invalid type "INVALID_TYPE" for cache variable "invalid". Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
+    assert 'tools.cmake.cmaketoolchain:extra_variables invalid type "INVALID_TYPE" for cache variable "invalid". Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
 
     client.run(textwrap.dedent("""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': 'true', 'type': 'PATH'}}"
-    """) , assert_error=True)
-    assert 'CMakeToolchain needs docstring defined for cache variable "invalid"' in client.out
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CACHE_VAR_DEFAULT_DOC': {'value': 'hello world', 'cache': True, 'type': 'PATH'}}"
+    """))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in toolchain
 

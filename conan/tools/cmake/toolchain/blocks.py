@@ -1030,22 +1030,23 @@ class ExtraVariablesBlock(Block):
     CMAKE_CACHE_TYPES = ["BOOL","FILEPATH", "PATH", "STRING", "INTERNAL"]
 
     def get_exact_type(self, key, value):
-        if type(value) == str:
+        if isinstance(value, str):
             return f"\"{value}\""
-        elif type(value) == int or type(value) == float:
+        elif isinstance(value, (int, float)):
             return value
-        elif type(value) == dict:
+        elif isinstance(value, dict):
             var_value = self.get_exact_type(key, value.get("value"))
             is_cache = value.get("cache")
-            if is_cache == True or str(is_cache).lower() == 'true':
+            if is_cache:
+                if not isinstance(is_cache, bool):
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)')
                 var_type = value.get("type")
                 if not var_type:
-                    raise ConanException(f'CMakeToolchain needs type defined for cache variable "{key}"')
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "{key}"')
                 if var_type not in self.CMAKE_CACHE_TYPES:
-                    raise ConanException(f'CMakeToolchain invalid type "{var_type}" for cache variable "{key}". Possible types: {', '.join(self.CMAKE_CACHE_TYPES)}')
-                docstring = value.get("docstring")
-                if not docstring:
-                    raise ConanException(f'CMakeToolchain needs docstring defined for cache variable "{key}"')
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables invalid type "{var_type}" for cache variable "{key}". Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
+                # Set docstring as variable name if not defined
+                docstring = value.get("docstring") or key
                 return f"{var_value} CACHE {var_type} \"{docstring}\""
             else:
                 return var_value
