@@ -1027,12 +1027,36 @@ class ExtraVariablesBlock(Block):
         {% endif %}
     """)
 
+    CMAKE_CACHE_TYPES = ["BOOL","FILEPATH", "PATH", "STRING", "INTERNAL"]
+
+    def get_exact_type(self, key, value):
+        if type(value) == str:
+            return f"\"{value}\""
+        elif type(value) == int or type(value) == float:
+            return value
+        elif type(value) == dict:
+            var_value = self.get_exact_type(key, value.get("value"))
+            is_cache = value.get("cache")
+            if is_cache == True or str(is_cache).lower() == 'true':
+                var_type = value.get("type")
+                if not var_type:
+                    raise ConanException(f'CMakeToolchain needs type defined for cache variable "{key}"')
+                if var_type not in self.CMAKE_CACHE_TYPES:
+                    raise ConanException(f'CMakeToolchain invalid type "{var_type}" for cache variable "{key}". Possible types: {', '.join(self.CMAKE_CACHE_TYPES)}')
+                docstring = value.get("docstring")
+                if not docstring:
+                    raise ConanException(f'CMakeToolchain needs docstring defined for cache variable "{key}"')
+                return f"{var_value} CACHE {var_type} \"{docstring}\""
+            else:
+                return var_value
+
     def context(self):
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={}, check_type=dict)
-
-        # Map the possible languages
-        return {"extra_variables": extra_variables}
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = self.get_exact_type(key, value)
+        return {"extra_variables": parsed_extra_variables}
 
 class OutputDirsBlock(Block):
 
