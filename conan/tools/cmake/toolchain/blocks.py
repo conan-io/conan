@@ -147,8 +147,9 @@ class VSDebuggerEnvironment(Block):
         bin_dirs = [p for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
         test_bindirs = [p for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
         bin_dirs.extend(test_bindirs)
+        bin_dirs = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                    for p in bin_dirs]
         bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
-
         bin_dirs = ";".join(bin_dirs) if bin_dirs else None
         if bin_dirs:
             config_dict[build_type] = bin_dirs
@@ -546,11 +547,10 @@ class FindFiles(Block):
 
         return host_runtime_dirs
 
-    @staticmethod
-    def _join_paths(paths):
-        return " ".join(['"{}"'.format(p.replace('\\', '/')
-                                        .replace('$', '\\$')
-                                        .replace('"', '\\"')) for p in paths])
+    def _join_paths(self, paths):
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
+        paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+        return " ".join([f'"{p}"' for p in paths])
 
     def context(self):
         # To find the generated cmake_find_package finders
@@ -637,8 +637,9 @@ class UserToolchain(Block):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
                                                   default=[], check_type=list)
-        paths = [relativize_path(p.replace("\\", "/"), self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                  for p in user_toolchain]
+        paths = [p.replace("\\", "/") for p in paths]
         return {"paths": paths}
 
 
