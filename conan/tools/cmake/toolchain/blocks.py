@@ -534,13 +534,13 @@ class FindFiles(Block):
                 host_runtime_dirs = {}
                 for k, v in matches:
                     host_runtime_dirs.setdefault(k, []).append(v)
-        
+
         # Calculate the dirs for the current build_type
         runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
-        
+
         build_type = settings.get_safe("build_type")
         host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in runtime_dirs]
 
@@ -845,7 +845,8 @@ class GenericSystemBlock(Block):
         {% endif %}
         """)
 
-    def get_toolset(self, generator, conanfile):
+    @staticmethod
+    def get_toolset(generator, conanfile):
         toolset = None
         if generator is None or ("Visual" not in generator and "Xcode" not in generator):
             return None
@@ -875,8 +876,7 @@ class GenericSystemBlock(Block):
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         toolset_cuda = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_cuda")
         if toolset_cuda is not None:
-            toolset_cuda = relativize_path(toolset_cuda, self._conanfile,
-                                           "${CMAKE_CURRENT_LIST_DIR}")
+            toolset_cuda = relativize_path(toolset_cuda, conanfile, "${CMAKE_CURRENT_LIST_DIR}")
             toolset_cuda = f"cuda={toolset_cuda}"
             toolset = toolset_cuda if toolset is None else f"{toolset},{toolset_cuda}"
         return toolset
