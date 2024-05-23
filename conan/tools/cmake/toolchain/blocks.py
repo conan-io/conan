@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.internal.api.detect_api import detect_msvc_update
 from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
@@ -815,6 +816,10 @@ class GenericSystemBlock(Block):
                 if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
                     toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
+                elif compiler_version == "193":
+                    update = detect_msvc_update("193")  # In the range 0-9
+                    if update:
+                        toolset += f",version=14.3{update}"
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
