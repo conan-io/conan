@@ -402,7 +402,8 @@ def detect_default_compiler():
         ide_version = _detect_vs_ide_version()
         version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
         if ide_version == "17":
-            update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
+            from conans.client.conf.detect_vs import vs_detect_update
+            update = vs_detect_update(version)  # FIXME weird passing here the 193 compiler version
             if update and int(update) >= 10:
                 version = "194"
         if version:
