@@ -395,11 +395,10 @@ class GraphBinariesAnalyzer(object):
 
         levels = deps_graph.by_levels()
         config_version = self._config_version()
-        # This overshoots the number of threads when a level shares more than one pref
-        thread_count = self._global_conf.get("core.parallel:threads", default=cpu_count(), check_type=int)
-        max_level_len = max(len(level) for level in levels)
-        # Not using os.cpu_count() to support docker
-        evaluate_pool = ThreadPool(min(thread_count, max_level_len))
+        # TODO: Find a better way to define this number, we ended up with 8 because
+        # it seemed a goof fit from local testing - But this could be improved
+        # max node count in every level/user conf?
+        evaluate_pool = ThreadPool(8)
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)
