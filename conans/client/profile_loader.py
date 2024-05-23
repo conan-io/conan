@@ -202,7 +202,7 @@ def process_line(line: str) -> str:
         string, comment = match.groups()
         return string if string else ""
     # Match either a string or a comment
-    pattern = re.compile(r'(\".*?\"|\'.*?\')|(\#.*)')
+    pattern = re.compile(r'(\".*?\"|\'.*?\')|(\s+\#.*)')
     # Replace comments with empty strings
     line = pattern.sub(replacer, line)
     return line.rstrip()
