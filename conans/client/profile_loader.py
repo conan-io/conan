@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
@@ -16,6 +17,7 @@ from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.util.config_parser import ConfigParser
 from conans.util.files import mkdir, load_user_encoded
+from typing import Iterable
 
 
 def _unquote(text):
@@ -190,9 +192,42 @@ class ProfileLoader:
         return profile_path
 
 
+# TODO: maybe move this logic to an utils class/file/folder
+def process_line(line: str) -> str:
+    """
+    Process a single line to handle backslashes and comments
+    """
+    # Remove comments outside of strings
+    def replacer(match):
+        string, comment = match.groups()
+        return string if string else ""
+    # Match either a string or a comment
+    pattern = re.compile(r'(\".*?\"|\'.*?\')|(\#.*)')
+    # Replace comments with empty strings
+    line = pattern.sub(replacer, line)
+    return line.rstrip()
+
+def process_lines(lines: Iterable[str]) -> str:
+    """
+    Process lines to handle backslashes for line continuation and remove comments
+    """
+    processed_lines = []
+    current_line = ""
+    for line in lines:
+        line = process_line(line)
+        # Detect multiline delimiter: line ends with '\' and it is separated at least one blank space
+        # from the end of the text
+        if line.endswith("\\") and line[-2].isspace():
+            current_line += line[:-1]
+        else:
+            current_line += line
+            processed_lines.append(current_line)
+            current_line = ""
+    return "\n".join(processed_lines)
+
+
 # TODO: This class can be removed/simplified now to a function, it reduced to just __init__
 class _ProfileParser:
-
     def __init__(self, text):
         """ divides the text in 3 items:
         - self.includes: List of other profiles to include
@@ -206,7 +241,7 @@ class _ProfileParser:
             if not line or line.startswith("#"):
                 continue
             if line.startswith("["):
-                self.profile_text = "\n".join(text.splitlines()[counter:])
+                self.profile_text = process_lines(text.splitlines()[counter:])
                 break
             elif line.startswith("include("):
                 include = line.split("include(", 1)[1]
