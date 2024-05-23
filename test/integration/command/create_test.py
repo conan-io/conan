@@ -356,6 +356,28 @@ def test_create_no_user_channel():
                             "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
 
 
+def test_create_build_missing_negation():
+    tc = TestClient(light=True)
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+             "lib/conanfile.py": GenConanfile("lib", "1.0").with_requires("dep/1.0"),
+             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("lib/1.0")})
+
+    tc.run("export dep")
+    tc.run("export lib")
+    tc.run("create pkg --build=missing:~dep/*", assert_error=True)
+
+    tc.assert_listed_binary({"pkg/1.0": ("a72376edfbbdaf97c8608b5fda53cadebac46a20", "Build"),
+                             "lib/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Build"),
+                             "dep/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing")})
+
+    tc.run("create pkg --build=missing:~dep/* --build=missing:~lib/*",
+           assert_error=True)
+
+    tc.assert_listed_binary({"pkg/1.0": ("a72376edfbbdaf97c8608b5fda53cadebac46a20", "Build"),
+                             "lib/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Missing"),
+                             "dep/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing")})
+
+
 def test_create_format_json():
     """
     Tests the ``conan create . -f json`` result
