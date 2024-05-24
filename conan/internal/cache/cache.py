@@ -117,6 +117,14 @@ class PkgCache:
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
 
+    def exists_rrev(self, ref):
+        assert ref.revision
+        try:
+            self._db.get_recipe(ref)
+            return True
+        except ConanReferenceDoesNotExistInDB:
+            return False
+
     def get_latest_recipe_reference(self, ref: RecipeReference):
         assert ref.revision is None
         ref_data = self._db.get_latest_recipe(ref)
@@ -138,17 +146,16 @@ class PkgCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
-    def get_or_create_ref_layout(self, ref: RecipeReference):
-        """ called by RemoteManager.get_recipe()
+    def create_ref_layout(self, ref: RecipeReference):
+        """ called exclusively by:
+        - RemoteManager.get_recipe()
+        - cache restore
         """
-        try:
-            return self.recipe_layout(ref)
-        except ConanReferenceDoesNotExistInDB:
-            assert ref.revision, "Recipe revision must be known to create the package layout"
-            reference_path = self._get_path(ref)
-            self._db.create_recipe(reference_path, ref)
-            self._create_path(reference_path, remove_contents=False)
-            return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
+        assert ref.revision, "Recipe revision must be known to create the package layout"
+        reference_path = self._get_path(ref)
+        self._db.create_recipe(reference_path, ref)
+        self._create_path(reference_path, remove_contents=False)
+        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
     def get_or_create_pkg_layout(self, pref: PkgReference):
         """ called by RemoteManager.get_package() and  BinaryInstaller

@@ -177,13 +177,14 @@ class CacheAPI:
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
-            recipe_layout = cache.get_or_create_ref_layout(ref)  # DB folder entry
-            recipe_folder = ref_bundle["recipe_folder"]
-            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
-            rel_path = rel_path.replace("\\", "/")
-            # In the case of recipes, they are always "in place", so just checking it
-            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
-            out.info(f"Restore: {ref} in {recipe_folder}")
+            if not cache.exists_rrev(ref):
+                recipe_layout = cache.create_ref_layout(ref)  # DB folder entry
+                recipe_folder = ref_bundle["recipe_folder"]
+                rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
+                rel_path = rel_path.replace("\\", "/")
+                # In the case of recipes, they are always "in place", so just checking it
+                assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
+                out.info(f"Restore: {ref} in {recipe_folder}")
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle["timestamp"] = pref.timestamp
