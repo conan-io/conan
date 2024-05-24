@@ -177,20 +177,22 @@ class CacheAPI:
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
-            if not cache.exists_rrev(ref):
-                recipe_layout = cache.create_ref_layout(ref)  # DB folder entry
-                recipe_folder = ref_bundle["recipe_folder"]
-                rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
-                rel_path = rel_path.replace("\\", "/")
-                # In the case of recipes, they are always "in place", so just checking it
-                assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
-                out.info(f"Restore: {ref} in {recipe_folder}")
+            try:
+                recipe_layout = cache.recipe_layout(ref)
+            except ConanException:
+                recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
+            recipe_folder = ref_bundle["recipe_folder"]
+            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
+            rel_path = rel_path.replace("\\", "/")
+            # In the case of recipes, they are always "in place", so just checking it
+            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
+            out.info(f"Restore: {ref} in {recipe_folder}")
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle["timestamp"] = pref.timestamp
-                if cache.exists_prev(pref):
+                try:
                     pkg_layout = cache.pkg_layout(pref)
-                else:
+                except ConanException:
                     pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
                 # FIXME: This is not taking into account the existence of previous package
                 unzipped_pkg_folder = pref_bundle["package_folder"]

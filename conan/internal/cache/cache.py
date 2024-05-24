@@ -117,14 +117,6 @@ class PkgCache:
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
 
-    def exists_rrev(self, ref):
-        assert ref.revision
-        try:
-            self._db.get_recipe(ref)
-            return True
-        except ConanReferenceDoesNotExistInDB:
-            return False
-
     def get_latest_recipe_reference(self, ref: RecipeReference):
         assert ref.revision is None
         ref_data = self._db.get_latest_recipe(ref)
