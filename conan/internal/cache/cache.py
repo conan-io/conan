@@ -157,19 +157,18 @@ class PkgCache:
         self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
-    def get_or_create_pkg_layout(self, pref: PkgReference):
-        """ called by RemoteManager.get_package() and  BinaryInstaller
+    def create_pkg_layout(self, pref: PkgReference):
+        """ called by:
+         - RemoteManager.get_package()
+         - cacje restpre
         """
-        try:
-            return self.pkg_layout(pref)
-        except ConanReferenceDoesNotExistInDB:
-            assert pref.ref.revision, "Recipe revision must be known to create the package layout"
-            assert pref.package_id, "Package id must be known to create the package layout"
-            assert pref.revision, "Package revision should be known to create the package layout"
-            package_path = self._get_path_pref(pref)
-            self._db.create_package(package_path, pref, None)
-            self._create_path(package_path, remove_contents=False)
-            return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
+        assert pref.package_id, "Package id must be known to create the package layout"
+        assert pref.revision, "Package revision should be known to create the package layout"
+        package_path = self._get_path_pref(pref)
+        self._db.create_package(package_path, pref, None)
+        self._create_path(package_path, remove_contents=False)
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server

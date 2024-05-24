@@ -188,7 +188,11 @@ class CacheAPI:
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle["timestamp"] = pref.timestamp
-                pkg_layout = cache.get_or_create_pkg_layout(pref)  # DB Folder entry
+                if cache.exists_prev(pref):
+                    pkg_layout = cache.pkg_layout(pref)
+                else:
+                    pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
+                # FIXME: This is not taking into account the existence of previous package
                 unzipped_pkg_folder = pref_bundle["package_folder"]
                 out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
                 # If the DB folder entry is different to the disk unzipped one, we need to move it
@@ -204,6 +208,7 @@ class CacheAPI:
                     pref_bundle["package_folder"] = db_pkg_folder
                 unzipped_metadata_folder = pref_bundle.get("metadata_folder")
                 if unzipped_metadata_folder:
+                    # FIXME: Restore metadata is not incremental, but destructive
                     out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
                     db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
                     db_metadata_folder = db_metadata_folder.replace("\\", "/")

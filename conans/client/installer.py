@@ -304,30 +304,29 @@ class BinaryInstaller:
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
 
-        if pref.revision is None:
-            assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_build_pkg_layout(pref)
-        else:
-            package_layout = self._cache.get_or_create_pkg_layout(pref)
-
         if package.binary == BINARY_BUILD:
+            assert pref.revision is None
             ConanOutput()\
                 .subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
             ConanOutput(scope=str(pref.ref))\
                 .highlight("Building from source")\
                 .info(f"Package {pref}")
+            package_layout = self._cache.create_build_pkg_layout(pref)
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
             package.prev = package.nodes[0].pref.revision
             package.binary = package.nodes[0].binary
             pref = PkgReference(install_reference.ref, package.package_id, package.prev)
-        elif package.binary == BINARY_CACHE:
-            node = package.nodes[0]
-            pref = node.pref
-            self._cache.update_package_lru(pref)
-            assert node.prev, "PREV for %s is None" % str(pref)
-            node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
+        else:
+            assert pref.revision is not None
+            package_layout = self._cache.pkg_layout(pref)
+            if package.binary == BINARY_CACHE:
+                node = package.nodes[0]
+                pref = node.pref
+                self._cache.update_package_lru(pref)
+                assert node.prev, "PREV for %s is None" % str(pref)
+                node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()

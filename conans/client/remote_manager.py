@@ -131,8 +131,7 @@ class RemoteManager:
 
         assert pref.revision is not None
 
-        pkg_layout = self._cache.get_or_create_pkg_layout(pref)
-        pkg_layout.package_remove()  # Remove first the destination folder
+        pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
