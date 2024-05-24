@@ -85,7 +85,7 @@ def test_cross_build_linux_to_macos():
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 13.1)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
 
 

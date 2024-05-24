@@ -920,63 +920,64 @@ class GenericSystemBlock(Block):
         return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
                 os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
-    def _get_darwin_version(self, system_name):
-        sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
-        macos_minor_darwin_versions = {
-            "10.13": "17",
-            "10.14": "18",
-            "10.15": "19"
+    def _get_darwin_version(self, system_name, os_version):
+        darwin_versions = {
+            "macos_old": {
+                "10.13": "17",
+                "10.14": "18",
+                "10.15": "19"
+            },
+            "macos_new": {
+                "11": "20",
+                "12": "21",
+                "13": "22",
+                "14": "23",
+            },
+            "iOS": {
+                "11": "17",
+                "12": "18",
+                "13": "19",
+                "14": "20",
+                "15": "21",
+                "16": "22",
+                "17": "23"
+            },
+            "watchOS": {
+                "4": "17",
+                "5": "18",
+                "6": "19",
+                "7": "20",
+                "8": "21",
+                "9": "22",
+                "10": "23"
+            },
+            "tvOS": {
+                "11": "17",
+                "12": "18",
+                "13": "19",
+                "14": "20",
+                "15": "21",
+                "16": "22",
+                "17": "23"
+            },
+            "visionOS": {
+                "1": "23"
+            }
         }
-        macos_major_darwin_versions = {
-            "11": "20",
-            "12": "21",
-            "13": "22",
-            "14": "23",
-        }
-        ios_darwin_versions = {
-            "11": "17",
-            "12": "18",
-            "13": "19",
-            "14": "20",
-            "15": "21",
-            "16": "22",
-            "17": "23"
-        }
-        watchos_darwin_versions = {
-            "4": "17",
-            "5": "18",
-            "6": "19",
-            "7": "20",
-            "8": "21",
-            "9": "22",
-            "10": "23"
-        }
-        tvos_darwin_versions = {
-            "11": "17",
-            "12": "18",
-            "13": "19",
-            "14": "20",
-            "15": "21",
-            "16": "22",
-            "17": "23"
-        }
+        if os_version is None:
+            return None
+        major_os_version = str(Version(os_version).major)
         if system_name == "Darwin":
-            if Version(sdk_version) < 11:
-                if sdk_version in macos_minor_darwin_versions:
-                    return macos_minor_darwin_versions.get(sdk_version)
-            elif sdk_version in macos_major_darwin_versions:
-                return macos_major_darwin_versions.get(sdk_version)
-        elif system_name == "iOS":
-            if sdk_version in ios_darwin_versions:
-                return ios_darwin_versions.get(sdk_version)
-        elif system_name == "watchOS":
-            if sdk_version in watchos_darwin_versions:
-                return watchos_darwin_versions.get(sdk_version)
-        elif system_name == "tvOS":
-            if sdk_version in tvos_darwin_versions:
-                return tvos_darwin_versions.get(sdk_version)
-        raise ConanException("Unsupported macOS version: %s" % sdk_version)
-
+            if Version(os_version) < 11:
+                if os_version in darwin_versions.get("macos_old"):
+                    return darwin_versions.get("macos_old").get(os_version)
+            else:
+                if major_os_version in darwin_versions.get("macos_new"):
+                    return darwin_versions.get("macos_new").get(major_os_version)
+        elif system_name in darwin_versions:
+            if major_os_version in darwin_versions.get(system_name):
+                return darwin_versions.get(system_name).get(major_os_version)
+        raise ConanException("Unsupported macOS version: %s" % os_version)
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
@@ -1000,8 +1001,14 @@ class GenericSystemBlock(Block):
                     # cross-build in Macos also for M1
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-                    _system_version = self._get_darwin_version(system_name)
+                    sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
+                    _system_version = self._get_darwin_version(system_name, sdk_version)
                     _system_processor = to_apple_arch(self._conanfile)
+                elif os_host in ('Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS'):
+                    system_name = self._get_generic_system_name()
+                    os_version = self._conanfile.settings.get_safe("os.version")
+                    _system_version = self._get_darwin_version(system_name, os_version)
+                    _system_processor = arch_host
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")
