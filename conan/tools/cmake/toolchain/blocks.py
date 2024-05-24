@@ -527,13 +527,13 @@ class FindFiles(Block):
                 host_runtime_dirs = {}
                 for k, v in matches:
                     host_runtime_dirs.setdefault(k, []).append(v)
-        
+
         # Calculate the dirs for the current build_type
         runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
-        
+
         build_type = settings.get_safe("build_type")
         host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in runtime_dirs]
 
@@ -899,6 +899,11 @@ class GenericSystemBlock(Block):
                                  "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
+            # os_host would be 'baremetal' for tricore, but it's ideal to use the Generic-ELF
+            # system name instead of just "Generic" because it matches how Aurix Dev Studio
+            # generated makefiles behave by generating binaries with the '.elf' extension.
+            if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                return "Generic-ELF"
             return cmake_system_name_map.get(os_host, os_host)
         elif arch_host is not None and arch_host != arch_build:
             if not ((arch_build == "x86_64") and (arch_host == "x86") or
@@ -946,7 +951,10 @@ class GenericSystemBlock(Block):
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")
-                    _system_processor = arch_host
+                    if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                        _system_processor = "tricore"
+                    else:
+                        _system_processor = arch_host
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version
