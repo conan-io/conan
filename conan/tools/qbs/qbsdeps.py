@@ -4,6 +4,10 @@ from conan.tools.env import VirtualBuildEnv
 from conans.model.dependencies import get_transitive_requires
 import json
 import os
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class _QbsDepsModuleFile():
@@ -17,20 +21,38 @@ class _QbsDepsModuleFile():
         env_vars = VirtualBuildEnv(self._qbsdeps._conanfile, auto_generate=True).vars()
         self._build_env = {k: v for k, v in env_vars.items()}
 
+        def _get_component_version(dep, component):
+            return (component.get_property("component_version") or
+                    component.get_property("system_package_version") or
+                    dep.ref.version)
+        self._version = _get_component_version(self._dep, self._component)
+
     @property
     def filename(self):
         return self._module_name + '.json'
+
+    @property
+    def version(self):
+        return self._version
 
     def get_content(self):
         return {
             'build_env': self._build_env,
             'package_name': self._dep.ref.name,
-            'version': str(self._dep.ref.version),
+            'package_dir': self._get_package_dir(),
+            'version': str(self._version),
             'cpp_info': self._component.serialize(),
             'dependencies': [{'name': n, "version": str(v)} for n, v in self._deps],
             'settings': {k: v for k, v in self._dep.settings.items()},
             'options': {k: v for k, v in self._dep.options.items()}
         }
+
+    def _get_package_dir(self):
+        # If editable, package_folder can be None
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
+        return root_folder.replace("\\", "/")
+
 
     def render(self):
         return json.dumps(self.get_content(), indent=4)
@@ -122,10 +144,9 @@ class _QbsDepGenerator:
             full_requires = []
             for module_name, component in get_components(self._dep).items():
                 requires = get_cpp_info_requires_names(self._dep, component)
-                qbs_files.append(
-                    _QbsDepsModuleFile(self, self._dep, component, requires, module_name)
-                )
-                full_requires.append((module_name, self._dep.ref.version))
+                file = _QbsDepsModuleFile(self, self._dep, component, requires, module_name)
+                qbs_files.append(file)
+                full_requires.append((module_name, file.version))
             module_name = _get_package_name(self._dep)
             file = _QbsDepsModuleFile(
                 self, self._dep, self._dep.cpp_info._package, full_requires, module_name)
