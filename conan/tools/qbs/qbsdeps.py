@@ -61,7 +61,7 @@ class _QbsDepGenerator:
 
     @property
     def content(self):
-        qbs_files = []
+        qbs_files = {}
         transitive_reqs = get_transitive_requires(self._conanfile, self._dep)
 
         def _get_package_name(dep):
@@ -134,20 +134,24 @@ class _QbsDepGenerator:
             file = _QbsDepsModuleFile(
                 self, self._dep, self._dep.cpp_info._package, requires, module_name
             )
-            qbs_files.append(file)
+            qbs_files[file.filename] = file
         else:
             full_requires = []
             for module_name, component in get_components(self._dep).items():
                 requires = get_cpp_info_requires_names(self._dep, component)
                 file = _QbsDepsModuleFile(self, self._dep, component, requires, module_name)
-                qbs_files.append(file)
+                qbs_files[file.filename] = file
                 full_requires.append((module_name, file.version))
             module_name = _get_package_name(self._dep)
             file = _QbsDepsModuleFile(
                 self, self._dep, self._dep.cpp_info._package, full_requires, module_name)
-            qbs_files.append(file)
+            # We create the root package's module file ONLY
+            # if it does not already exist in components
+            # An example is a grpc package where they have a "grpc" component
+            if file.filename not in qbs_files:
+                qbs_files[file.filename] = file
 
-        return {file.filename: file for file in qbs_files}
+        return qbs_files
 
 
 class QbsDeps:

@@ -373,3 +373,36 @@ def test_cpp_info_requires():
         {'name': 'second', 'version': '0.2'},
         {'name': 'other', 'version': '0.1'}
     ]
+
+
+# see https://github.com/conan-io/conan/issues/10341
+def test_components_conflict():
+    ''' If component has the same name as the root package, skip root package '''
+    conanfile = textwrap.dedent('''
+    from conan import ConanFile
+
+    class Recipe(ConanFile):
+
+        name = 'mylib'
+        version = '0.1'
+        def package_info(self):
+            self.cpp_info.set_property("pkg_config_name", "mycoollib")
+            self.cpp_info.components["_mycoollib"].defines = ["MAGIC_DEFINE"]
+            self.cpp_info.components["_mycoollib"].set_property("pkg_config_name",
+                                                               "mycoollib")
+    ''')
+
+    client = TestClient()
+    client.save({'conanfile.py': conanfile})
+    client.run('create .')
+    client.run('install --requires=mylib/0.1@ -g QbsDeps')
+
+    module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mycoollib.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'mylib'
+    assert module_content.get('version') == '0.1'
+    assert 'cpp_info' in module_content
+    cpp_info = module_content['cpp_info']
+    assert cpp_info.get('defines', []) == ["MAGIC_DEFINE"]
