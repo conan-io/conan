@@ -49,7 +49,6 @@ class _QbsDepsModuleFile():
             else self._dep.package_folder
         return root_folder.replace("\\", "/")
 
-
     def render(self):
         return json.dumps(self.get_content(), indent=4)
 

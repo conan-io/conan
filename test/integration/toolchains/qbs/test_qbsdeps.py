@@ -3,6 +3,7 @@ import os
 import pytest
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -36,12 +37,12 @@ def test_empty_package():
     assert cpp_info.get('includedirs', []) == [os.path.join(package_dir, 'include')]
     assert cpp_info.get('libdirs', []) == [os.path.join(package_dir, 'lib')]
     assert cpp_info.get('bindirs', []) == [os.path.join(package_dir, 'bin')]
-    assert cpp_info.get('libs', []) == None
-    assert cpp_info.get('frameworkdirs', []) == None
-    assert cpp_info.get('frameworks', []) == None
-    assert cpp_info.get('defines', []) == None
-    assert cpp_info.get('cflags', []) == None
-    assert cpp_info.get('cxxflags', []) == None
+    assert cpp_info.get('libs', []) is None
+    assert cpp_info.get('frameworkdirs', []) is None
+    assert cpp_info.get('frameworks', []) is None
+    assert cpp_info.get('defines', []) is None
+    assert cpp_info.get('cflags', []) is None
+    assert cpp_info.get('cxxflags', []) is None
 
     assert module_content.get('settings') == {}
     assert module_content.get('options') == {}
@@ -82,10 +83,10 @@ def test_empty_dirs():
     assert cpp_info.get('bindirs') == []
     assert cpp_info.get('libs') == []
     assert cpp_info.get('frameworkdirs') == []
-    assert cpp_info.get('frameworks') == None
-    assert cpp_info.get('defines', []) == None
-    assert cpp_info.get('cflags', []) == None
-    assert cpp_info.get('cxxflags', []) == None
+    assert cpp_info.get('frameworks') is None
+    assert cpp_info.get('defines', []) is None
+    assert cpp_info.get('cflags', []) is None
+    assert cpp_info.get('cxxflags', []) is None
 
     assert module_content.get('settings') == {}
     assert module_content.get('options') == {}
@@ -224,4 +225,151 @@ def test_components():
     assert main_module_content.get('dependencies') == [
         {"name": "mycomponent", "version": "0.1"},  # name overriden, version default
         {"name": "mycomponent2", "version": "19.8.199"}  # name default, version overriden
+    ]
+
+
+def test_cpp_info_requires():
+    """
+    Testing a complex structure like:
+
+    * first/0.1
+        - Global pkg_config_name == "myfirstlib"
+        - Components: "cmp1"
+    * other/0.1
+    * second/0.2
+        - Requires: "first/0.1"
+        - Components: "mycomponent", "myfirstcomp"
+            + "mycomponent" requires "first::cmp1"
+            + "myfirstcomp" requires "mycomponent"
+    * third/0.4
+        - Requires: "second/0.2", "other/0.1"
+
+    Expected file structure after running QbsDeps as generator:
+        - other.json
+        - myfirstlib-cmp1.json
+        - myfirstlib.json
+        - second-mycomponent.json
+        - second-myfirstcomp.json
+        - second.json
+        - third.json
+    """
+
+    client = TestClient()
+    # first
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            name = "first"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "myfirstlib")
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+    ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    # other
+    client.save({"conanfile.py": GenConanfile("other", "0.1")}, clean_first=True)
+    client.run("create .")
+
+    # second
+    conanfile = textwrap.dedent('''
+    from conan import ConanFile
+
+    class PkgConfigConan(ConanFile):
+        name = "second"
+        version = "0.2"
+        requires = "first/0.1"
+
+        def package_info(self):
+            self.cpp_info.components["mycomponent"].requires.append("first::cmp1")
+            self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+    ''')
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create .")
+
+    # third
+    client.save({"conanfile.py": GenConanfile("third", "0.3").with_require("second/0.2")
+                                                             .with_require("other/0.1")},
+                clean_first=True)
+    client.run("create .")
+
+    client2 = TestClient(cache_folder=client.cache_folder)
+    conanfile = textwrap.dedent("""
+        [requires]
+        third/0.3
+        other/0.1
+
+        [generators]
+        QbsDeps
+    """)
+    client2.save({"conanfile.txt": conanfile})
+    client2.run("install .")
+
+    # first
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'cmp1.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'first'
+    assert module_content.get('version') == '0.1'
+    assert module_content.get('dependencies') == []
+
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'myfirstlib.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'first'
+    assert module_content.get('version') == '0.1'
+    assert module_content.get('dependencies') == [{'name': 'cmp1', 'version': '0.1'}]
+
+    # other
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'other.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'other'
+    assert module_content.get('version') == '0.1'
+    assert module_content.get('dependencies') == []
+
+    # second.mycomponent
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'mycomponent.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'second'
+    assert module_content.get('version') == '0.2'
+    assert module_content.get('dependencies') == [{'name': 'cmp1', 'version': '0.1'}]
+
+    # second.myfirstcomp
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'myfirstcomp.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'second'
+    assert module_content.get('version') == '0.2'
+    assert module_content.get('dependencies') == [{'name': 'mycomponent', 'version': '0.2'}]
+
+    # second
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'second.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'second'
+    assert module_content.get('version') == '0.2'
+    assert module_content.get('dependencies') == [
+        {'name': 'mycomponent', 'version': '0.2'},
+        {'name': 'myfirstcomp', 'version': '0.2'}
+    ]
+
+    # third
+    module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'third.json')
+    assert os.path.exists(module_path) is True
+    module_content = json.loads(load(module_path))
+
+    assert module_content.get('package_name') == 'third'
+    assert module_content.get('version') == '0.3'
+    assert module_content.get('dependencies') == [
+        {'name': 'second', 'version': '0.2'},
+        {'name': 'other', 'version': '0.1'}
     ]
