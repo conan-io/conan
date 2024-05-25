@@ -4,10 +4,6 @@ from conan.tools.env import VirtualBuildEnv
 from conans.model.dependencies import get_transitive_requires
 import json
 import os
-import logging
-
-
-logger = logging.getLogger(__name__)
 
 
 class _QbsDepsModuleFile():
