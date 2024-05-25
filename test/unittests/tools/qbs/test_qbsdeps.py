@@ -49,12 +49,9 @@ def test_content_qbsdeps():
     qbsdeps = QbsDeps(conanfile)
     files = qbsdeps.content
 
-    assert 'common.json' in files
-    assert 'modules/OriginalDepName.json' in files
-    common_content = files['common.json'].get_content()
-    assert 'MyValue' == common_content.get('build_env').get('MyVar')
-    assert 1 == common_content.get('format_version')
-    module_content = files['modules/OriginalDepName.json'].get_content()
+    assert 'OriginalDepName.json' in files
+    module_content = files['OriginalDepName.json'].get_content()
+    assert 'MyValue' == module_content.get('build_env').get('MyVar')
 
     assert 'OriginalDepName' == module_content.get('package_name')
     assert '1.0' == module_content.get('version')
@@ -80,6 +77,11 @@ def test_cpp_info_name_qbsdeps():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.settings.os = "Windows"
+    conanfile.settings_build = conanfile.settings
+    conanfile.conf = ConfDefinition()
+    from conan.tools.env import Environment
+    conanfile._conan_buildenv = Environment()
 
     cpp_info = CppInfo(set_defaults=True)
     cpp_info.set_property("pkg_config_name", "MySuperPkg1")
@@ -101,5 +103,4 @@ def test_cpp_info_name_qbsdeps():
     qbsdeps = QbsDeps(conanfile)
     files = qbsdeps.content
 
-    assert 'common.json' in files
-    assert 'modules/MySuperPkg1.json' in files
+    assert 'MySuperPkg1.json' in files
