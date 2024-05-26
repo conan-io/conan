@@ -291,23 +291,8 @@ def default_msvc_runtime(compiler):
 
 
 def detect_msvc_update(version):
-    ide_version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
-    from conans.client.conf.detect_vs import _vs_installation_path
-    vspath, full_version = _vs_installation_path(ide_version)
-    components = full_version.split(".")
-    update = None
-    if len(components) > 1:
-        update = components[1]
-    if ide_version == "17" and version == "193" and update and int(update) >= 10:
-        # need to find the latest v143 193 update
-        toolsset_paths = os.path.join(vspath, "VC", "Tools", "MSVC")
-        try:
-            versions = [d[4] for d in os.listdir(toolsset_paths) if d.startswith("14.3")]
-            update = max(versions)
-        except Exception as e:
-            ConanOutput().warning(f"Missing update for compiler.version=193 and VS>=17.10: {e}")
-            update = None
-    return update
+    from conans.client.conf.detect_vs import vs_detect_update
+    return vs_detect_update(version)
 
 
 def default_cppstd(compiler, compiler_version):
@@ -402,8 +387,7 @@ def detect_default_compiler():
         ide_version = _detect_vs_ide_version()
         version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
         if ide_version == "17":
-            from conans.client.conf.detect_vs import vs_detect_update
-            update = vs_detect_update(version)  # FIXME weird passing here the 193 compiler version
+            update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
             if update and int(update) >= 10:
                 version = "194"
         if version:
