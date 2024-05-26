@@ -270,6 +270,30 @@ class TestInstall:
         assert "zlib/0.1: Copied 1 file: patch1" in client.out
         assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
 
+    def test_export_user_channel(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+            versions:
+              "0.1":
+                folder: all
+            """)
+        zlib = GenConanfile("zlib").with_class_attribute("user='myuser'")\
+                                   .with_class_attribute("channel='mychannel'")
+        conandata_yml = textwrap.dedent("""\
+            versions:
+              "0.1":
+            """)
+        save_files(recipes_folder, {"zlib/config.yml": zlib_config,
+                                    "zlib/all/conanfile.py": str(zlib),
+                                    "zlib/all/conandata.yml": conandata_yml})
+        client = TestClient()
+        client.run(f"remote add local '{folder}'")
+        client.run("install --requires=zlib/0.1@myuser/mychannel --build=missing")
+        assert "zlib/0.1@myuser/mychannel:" in client.out
+        client.run("list * -r=local")
+        assert "zlib/0.1@myuser/mychannel" in client.out
+
 
 class TestRestrictedOperations:
     def test_upload(self):
