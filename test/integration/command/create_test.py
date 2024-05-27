@@ -318,6 +318,12 @@ def test_create_build_missing():
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
 
+    # The & placeholder also works
+    c.run("create pkg -s os=Linux --build=missing:&", assert_error=True)
+    c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
+    c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
+    assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
 
 def test_create_no_user_channel():
     """ test the --build=pattern and --build=missing:pattern syntax to build missing packages
@@ -711,22 +717,22 @@ def test_defaults_in_components():
 
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
-    assert re.search(r"BINDIRS: \['.+bin'\]", str(client.out))
-    assert re.search(r"LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search(r"INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"BINDIRS: \['.+bin']", client.out)
+    assert re.search(r"LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: RES DIRS: []"
-    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: FOO RESDIRS: []" in client.out
 
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
-    assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
-    assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"BINDIRS: \['.+bin']", client.out)
+    assert re.search(r"LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: RES DIRS: []"
-    assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out)))
-    assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out)))
+    assert bool(re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out))
+    assert bool(re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out))
     assert "WARN: FOO RESDIRS: []" in client.out
 
 
