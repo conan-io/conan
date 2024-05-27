@@ -414,7 +414,6 @@ class GraphBinariesAnalyzer(object):
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
         evaluate_pool.close()
-        evaluate_pool.join()
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1
