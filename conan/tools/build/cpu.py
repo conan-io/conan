@@ -1,3 +1,10 @@
+import math
+import multiprocessing
+import os
+
+from conans.util.files import load
+
+
 def build_jobs(conanfile):
     """
     Returns the number of CPUs available for parallel builds.
