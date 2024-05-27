@@ -16,11 +16,12 @@ from conans.util.files import save, load
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
-                        cmake_executable=None):
+                        cmake_executable=None, absolute_paths=None):
     preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
                                                       cache_variables, preset_prefix, buildenv, runenv,
-                                                      cmake_executable)
-    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data)
+                                                      cmake_executable, absolute_paths)
+    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+                               absolute_paths)
 
 
 class _CMakePresets:
@@ -28,12 +29,13 @@ class _CMakePresets:
     """
     @staticmethod
     def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv,
-                 cmake_executable):
+                 cmake_executable, absolute_paths):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
-        try:  # Make it relative to the build dir if possible
-            toolchain_file = os.path.relpath(toolchain_file, conanfile.build_folder)
-        except ValueError:
-            pass
+        if not absolute_paths:
+            try:  # Make it relative to the build dir if possible
+                toolchain_file = os.path.relpath(toolchain_file, conanfile.build_folder)
+            except ValueError:
+                pass
         cache_variables = cache_variables or {}
         if platform.system() == "Windows" and generator == "MinGW Makefiles":
             if "CMAKE_SH" not in cache_variables:
@@ -249,7 +251,8 @@ class _IncludingPresets:
     """
 
     @staticmethod
-    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data):
+    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+                 absolute_paths):
         if not user_presets_path:
             return
 
@@ -288,10 +291,11 @@ class _IncludingPresets:
         if inherited_user:
             _IncludingPresets._clean_user_inherits(data, preset_data)
 
-        try:  # Make it relative to the CMakeUserPresets.json if possible
-            preset_path = os.path.relpath(preset_path, output_dir)
-        except ValueError:
-            pass
+        if not absolute_paths:
+            try:  # Make it relative to the CMakeUserPresets.json if possible
+                preset_path = os.path.relpath(preset_path, output_dir)
+            except ValueError:
+                pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
 
         data = json.dumps(data, indent=4)

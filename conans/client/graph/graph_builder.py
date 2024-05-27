@@ -81,9 +81,13 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                require.overriden_ref = require.ref  # Store that the require has been overriden
-                require.override_ref = prev_ref
-                require.ref = prev_ref
+                if prev_require.defining_require is not require:
+                    require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
+                    # require.override_ref can be !=None if lockfile-overrides defined
+                    require.override_ref = (require.override_ref or prev_require.override_ref
+                                            or prev_require.ref.copy())  # New one
+                    require.defining_require = prev_require.defining_require  # The overrider
+                require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous, self._resolve_prereleases)
@@ -195,6 +199,8 @@ class DepsGraphBuilder(object):
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
+            if graph_lock:
+                graph_lock.resolve_overrides(require)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -231,6 +237,7 @@ class DepsGraphBuilder(object):
             graph.aliased[alias] = pointed_ref  # Caching the alias
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
+            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for compatibility and upgrade from Conan 1, but it is an undocumented and legacy feature. Please update to use standard versioning mechanisms", warn_tag="legacy")
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
