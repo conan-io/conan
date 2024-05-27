@@ -87,5 +87,5 @@ class BuildMode:
 
     def should_build_missing(self, conanfile):
         for pattern in self.build_missing_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=False):
+            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 return True
