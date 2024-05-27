@@ -20,7 +20,6 @@ from conans.model.info import RequirementInfo, RequirementsInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
-from conans.util.thread import cpu_count
 
 
 class GraphBinariesAnalyzer(object):
