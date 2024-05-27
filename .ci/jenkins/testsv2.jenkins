@@ -17,7 +17,7 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         configs.add([node: "Linux", pyvers: ["PY312"]])
     }
     if (branchName =~ /(^PR-.*)/) {
@@ -39,10 +39,10 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
 }
 
 String getDockerImage(String moduleName) {
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional"){
+    else if (moduleName=="test/functional"){
         return "conanio/ci-functional"
     }
     return ""
@@ -50,7 +50,7 @@ String getDockerImage(String moduleName) {
 
 boolean shouldTestServer(String moduleName) {
     // run conan_server --help after running functional tests
-    if (moduleName=="conans/test/functional") {
+    if (moduleName=="test/functional") {
         return true
     }
     return false
@@ -167,7 +167,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["test/unittests", "test/integration", "test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
@@ -198,7 +198,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
- 
+
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }

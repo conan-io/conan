@@ -26,6 +26,11 @@ class RecipeReference:
         self.revision = revision
         self.timestamp = timestamp
 
+    def copy(self):
+        # Used for creating copy in lockfile-overrides mechanism
+        return RecipeReference(self.name, self.version, self.user, self.channel, self.revision,
+                               self.timestamp)
+
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.repr_notime()

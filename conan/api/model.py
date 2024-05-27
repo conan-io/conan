@@ -1,5 +1,6 @@
 import fnmatch
 import json
+import os
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
@@ -90,6 +91,8 @@ class MultiPackagesList:
 
     @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
+        if not os.path.isfile(graphfile):
+            raise ConanException(f"Graph file not found: {graphfile}")
         graph = json.loads(load(graphfile))
         return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
 
