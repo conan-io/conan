@@ -36,7 +36,8 @@ class InstallAPI:
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes):
-        """ Install sources for dependency graph
+        """ Install sources for dependency graph of packages to BUILD or packages that match
+        tools.build:download_source conf
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
