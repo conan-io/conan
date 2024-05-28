@@ -33,7 +33,8 @@ def check_min_vs(conanfile, version, raise_invalid=True):
                             "11": "170"}.get(compiler_version)
     elif compiler == "msvc":
         compiler_version = conanfile.settings.get_safe("compiler.version")
-        compiler_update = conanfile.settings.get_safe("compiler.update")
+        msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
+        compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
         if compiler_version and compiler_update is not None:
             compiler_version += ".{}".format(compiler_update)
 
