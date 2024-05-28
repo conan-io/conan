@@ -167,6 +167,7 @@ class ConanFile:
         result["label"] = self.display_name
         if self.info is not None:
             result["info"] = self.info.serialize()
+        result["repackage"] = self.repackage
         return result
 
     @property
