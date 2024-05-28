@@ -20,8 +20,10 @@ def test_basic_inspect():
                      'options_definitions:',
                      "    shared: ['True', 'False']",
                      'package_type: None',
+                     'repackage: False',
                      'requires: []',
-                     'revision_mode: hash']
+                     'revision_mode: hash',
+                     ]
 
 
 def test_options_description():
@@ -88,6 +90,7 @@ def test_normal_inspect():
                                    'options:',
                                    'options_definitions:',
                                    'package_type: None',
+                                   'repackage: False',
                                    'requires: []',
                                    'revision_mode: hash',
                                    'version: 1.0']
@@ -130,6 +133,7 @@ def test_requiremens_inspect():
             'options:',
             'options_definitions:',
             'package_type: None',
+            'repackage: False',
             "requires: [{'ref': 'zlib/1.2.13', 'run': False, 'libs': True, 'skip': "
             "False, 'test': False, 'force': False, 'direct': True, 'build': "
             "False, 'transitive_headers': None, 'transitive_libs': None, 'headers': "
