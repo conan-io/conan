@@ -201,7 +201,7 @@ def conanfile_msvc():
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "msvc"
-    c.settings.compiler.version = "193"
+    c.settings.compiler.version = "194"
     c.settings.compiler.cppstd = "20"
     c.settings.os = "Windows"
     c.settings_build = c.settings
@@ -221,9 +221,25 @@ def test_toolset(conanfile_msvc):
 
 
 def test_toolset_update_version(conanfile_msvc):
+    conanfile_msvc.settings.compiler.version = "193"
     conanfile_msvc.settings.compiler.update = "8"
     toolchain = CMakeToolchain(conanfile_msvc)
     assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38" CACHE STRING "" FORCE)' in toolchain.content
+
+
+def test_toolset_update_version_conf(conanfile_msvc):
+    conanfile_msvc.settings.compiler.version = "193"
+    conanfile_msvc.conf.define("tools.microsoft:msvc_update", "7")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.37" CACHE STRING "" FORCE)' in toolchain.content
+
+
+def test_toolset_update_version_forced_conf(conanfile_msvc):
+    conanfile_msvc.settings.compiler.version = "193"
+    conanfile_msvc.settings.compiler.update = "8"
+    conanfile_msvc.conf.define("tools.microsoft:msvc_update", "7")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.37" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_update_version_overflow(conanfile_msvc):

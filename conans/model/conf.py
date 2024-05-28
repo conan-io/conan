@@ -93,6 +93,7 @@ BUILT_IN_CONFS = {
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
+    "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
