@@ -1,4 +1,5 @@
 import os
+import pytest
 
 # Check it is importable from tools
 from conan.tools.files import rm, chdir
@@ -63,3 +64,34 @@ def test_remove_files_by_mask_non_recursively():
 
     assert os.path.exists(os.path.join(tmpdir, "1.txt"))
     assert os.path.exists(os.path.join(tmpdir, "subdir", "2.txt"))
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+def test_rm_exclude_from_pattern(recursive):
+    """ conan.tools.files.rm should not remove files that match the pattern but are excluded
+        by the excludes parameter
+    """
+    temporary_folder = temp_folder()
+    with chdir(None, temporary_folder):
+        os.makedirs("subdir")
+
+    save_files(temporary_folder, {
+        "1.txt": "",
+        "1.pdb": "",
+        "1.pdb1": "",
+        "foo.dll": "",
+        "foo.dll.lib": "",
+        os.path.join("subdir", "2.txt"): "",
+        os.path.join("subdir", "2.pdb"): "",
+        os.path.join("subdir", "bar.dll"): "",
+        os.path.join("subdir", "bar.dll.lib"): "",
+        os.path.join("subdir", "2.pdb1"): ""})
+
+    rm(None, "*", temporary_folder, excludes="*.dll", recursive=recursive)
+
+    assert os.path.exists(os.path.join(temporary_folder, "foo.dll"))
+    assert not os.path.exists(os.path.join(temporary_folder, "foo.dll.lib"))
+
+    assert os.path.exists(os.path.join(temporary_folder, "subdir", "bar.dll"))
+    condition = (lambda x: not x) if recursive else (lambda x: x)
+    condition(os.path.exists(os.path.join(temporary_folder, "subdir", "bar.dll.lib")))
