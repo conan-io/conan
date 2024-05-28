@@ -74,11 +74,16 @@ def rm(conanfile, pattern, folder, recursive=False, excludes=None):
     :param pattern: Pattern that the files to be removed have to match (fnmatch).
     :param folder: Folder to search/remove the files.
     :param recursive: If ``recursive`` is specified it will search in the subfolders.
-    :param excludes: Pattern to not be removed when matched with the pattern.
+    :param excludes: A tuple/list of fnmatch patterns or even a single one to be excluded from the remove.
     """
+    if excludes and not isinstance(excludes, (tuple, list)):
+        excludes = (excludes,)
+    elif not excludes:
+        excludes = []
+
     for root, _, filenames in os.walk(folder):
         for filename in filenames:
-            if fnmatch(filename, pattern) and not (excludes and fnmatch(filename, excludes)):
+            if fnmatch(filename, pattern) and not any(fnmatch(filename, it) for it in excludes):
                 fullname = os.path.join(root, filename)
                 os.unlink(fullname)
         if not recursive:
