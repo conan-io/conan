@@ -67,9 +67,11 @@ def test_remove_files_by_mask_non_recursively():
 
 
 @pytest.mark.parametrize("recursive", [False, True])
-def test_rm_exclude_from_pattern(recursive):
+def test_exclude_pattern_from_remove_list(recursive):
     """ conan.tools.files.rm should not remove files that match the pattern but are excluded
-        by the excludes parameter
+        by the excludes parameter.
+        It should obey the recursive parameter, only excluding the files in the root folder in case
+        it is False.
     """
     temporary_folder = temp_folder()
     with chdir(None, temporary_folder):
