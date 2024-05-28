@@ -581,3 +581,9 @@ def default_compiler_version(compiler, version):
     elif compiler == "intel-cc":
         return major
     return version
+
+
+def detect_sdk_version(sdk):
+    cmd = f'xcrun -sdk {sdk} --show-sdk-version'
+    result = check_output_runner(cmd)
+    return result
