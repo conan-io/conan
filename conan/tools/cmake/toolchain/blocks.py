@@ -16,6 +16,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conans.client.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conans.util.files import load
@@ -146,8 +147,9 @@ class VSDebuggerEnvironment(Block):
         bin_dirs = [p for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
         test_bindirs = [p for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
         bin_dirs.extend(test_bindirs)
+        bin_dirs = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                    for p in bin_dirs]
         bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
-
         bin_dirs = ";".join(bin_dirs) if bin_dirs else None
         if bin_dirs:
             config_dict[build_type] = bin_dirs
@@ -238,6 +240,8 @@ class LinkerScriptsBlock(Block):
         if not linker_scripts:
             return
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
+        linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                          for p in linker_scripts]
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
@@ -324,6 +328,8 @@ class AndroidSystemBlock(Block):
         if not android_ndk_path:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
+        android_ndk_path = relativize_path(android_ndk_path, self._conanfile,
+                                           "${CMAKE_CURRENT_LIST_DIR}")
 
         use_cmake_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain",
                                                               check_type=bool)
@@ -430,6 +436,8 @@ class AppleSystemBlock(Block):
             "enable_visibility": enable_visibility
         }
         if host_sdk_name:
+            host_sdk_name = relativize_path(host_sdk_name, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
             ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
         if host_architecture:
@@ -527,23 +535,22 @@ class FindFiles(Block):
                 host_runtime_dirs = {}
                 for k, v in matches:
                     host_runtime_dirs.setdefault(k, []).append(v)
-        
+
         # Calculate the dirs for the current build_type
         runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
-        
+
         build_type = settings.get_safe("build_type")
         host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in runtime_dirs]
 
         return host_runtime_dirs
 
-    @staticmethod
-    def _join_paths(paths):
-        return " ".join(['"{}"'.format(p.replace('\\', '/')
-                                        .replace('$', '\\$')
-                                        .replace('"', '\\"')) for p in paths])
+    def _join_paths(self, paths):
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
+        paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+        return " ".join([f'"{p}"' for p in paths])
 
     def context(self):
         # To find the generated cmake_find_package finders
@@ -630,7 +637,10 @@ class UserToolchain(Block):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
                                                   default=[], check_type=list)
-        return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                 for p in user_toolchain]
+        paths = [p.replace("\\", "/") for p in paths]
+        return {"paths": paths}
 
 
 class ExtraFlagsBlock(Block):
@@ -868,6 +878,7 @@ class GenericSystemBlock(Block):
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         toolset_cuda = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_cuda")
         if toolset_cuda is not None:
+            toolset_cuda = relativize_path(toolset_cuda, conanfile, "${CMAKE_CURRENT_LIST_DIR}")
             toolset_cuda = f"cuda={toolset_cuda}"
             toolset = toolset_cuda if toolset is None else f"{toolset},{toolset_cuda}"
         return toolset
@@ -991,6 +1002,9 @@ class GenericSystemBlock(Block):
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+        if cmake_sysroot is not None:
+            cmake_sysroot = relativize_path(cmake_sysroot, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
 
         result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
