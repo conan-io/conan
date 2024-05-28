@@ -239,6 +239,7 @@ class DepsGraphBuilder(object):
             graph.aliased[alias] = pointed_ref  # Caching the alias
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
+            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for compatibility and upgrade from Conan 1, but it is an undocumented and legacy feature. Please update to use standard versioning mechanisms", warn_tag="legacy")
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
