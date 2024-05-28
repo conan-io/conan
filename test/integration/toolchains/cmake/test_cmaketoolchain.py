@@ -68,7 +68,7 @@ def test_cross_build_linux_to_macos():
     macos_profile = textwrap.dedent("""
         [settings]
         os=Macos
-        os.sdk_version=13.1
+        os.version=13.1
         arch=x86_64
         compiler=apple-clang
         compiler.version=13

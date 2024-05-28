@@ -923,12 +923,13 @@ class GenericSystemBlock(Block):
     def _get_darwin_version(self, os_name, os_version):
         version_mapping = {
             "Macos": {
-                "10.13": "17", "10.14": "18", "10.15": "19", "11": "20",
-                "12": "21", "13": "22", "14": "23",
+                "10.6": "10", "10.7": "11", "10.8": "12", "10.9": "13", "10.10": "14", "10.11": "15",
+                "10.12": "16", "10.13": "17", "10.14": "18", "10.15": "19", "11": "20", "12": "21",
+                "13": "22", "14": "23",
             },
             "iOS": {
-                "11": "17", "12": "18", "13": "19", "14": "20",
-                "15": "21", "16": "22", "17": "23"
+                "7": "14", "8": "14", "9": "15", "10": "16", "11": "17", "12": "18", "13": "19",
+                "14": "20", "15": "21", "16": "22", "17": "23"
             },
             "watchOS": {
                 "4": "17", "5": "18", "6": "19", "7": "20",
@@ -968,9 +969,9 @@ class GenericSystemBlock(Block):
                 if self._is_apple_cross_building():
                     # cross-build in Macos also for M1
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
-                    #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-                    sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    _system_version = self._get_darwin_version(os_host, sdk_version)
+                    #  CMAKE_SYSTEM_VERSION for Apple sets the Darwin version, not the os version
+                    _system_version = self._get_darwin_version(os_host,
+                                                    self._conanfile.settings.get_safe("os.version"))
                     _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
