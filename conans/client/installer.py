@@ -176,10 +176,12 @@ class BinaryInstaller:
         self._hook_manager = app.hook_manager
         self._global_conf = global_conf
 
-    def _install_source(self, node, remotes):
+    def _install_source(self, node, remotes, need_conf=False):
         conanfile = node.conanfile
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
+        if not download_source and need_conf:
+            return
         if not download_source and node.binary != BINARY_BUILD:
             return
 
@@ -235,7 +237,7 @@ class BinaryInstaller:
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
-                    self._install_source(package.nodes[0], remotes)
+                    self._install_source(package.nodes[0], remotes, need_conf=True)
 
     def install(self, deps_graph, remotes, install_order=None):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
