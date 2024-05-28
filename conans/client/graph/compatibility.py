@@ -41,8 +41,8 @@ def cppstd_compat(conanfile):
         cppstd_possible_values = supported_cppstd(conanfile)
         if cppstd_possible_values is None:
             conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
-        else:
-            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
+        else: # The current cppst must be included in case there is other factor
+            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values])
 
     if compiler == "msvc":
         msvc_fallback = {"194": "193"}.get(compiler_version)
