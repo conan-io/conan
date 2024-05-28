@@ -186,6 +186,14 @@ class GraphBinariesAnalyzer(object):
             # BINARY_BUILD IS NOT A VIABLE fallback for invalid
             node.binary = BINARY_INVALID
 
+        if node.binary == BINARY_BUILD:
+            conanfile = node.conanfile
+            if conanfile.repackage and not conanfile.conf.get("tools.graph:repackage", check_type=bool):
+                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is repackaging and building but it "\
+                          "didn't enable 'tools.graph:repackage' to compute its dependencies"
+
+                node.binary = BINARY_INVALID
+
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node):

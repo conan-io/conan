@@ -462,13 +462,6 @@ class InstallGraph:
                     missing.append(package)
                 elif package.binary == BINARY_INVALID:
                     invalid.append(package)
-                elif package.binary == BINARY_BUILD:
-                    conanfile = package.nodes[0].conanfile
-                    if conanfile.repackage and not conanfile.conf.get("tools.graph:repackage",
-                                                                      check_type=bool):
-                        msg = f"The package '{ref}' is repackaging and building but it "\
-                              "didn't enable 'tools.graph:repackage' to compute its dependencies"
-                        raise ConanException(msg)
 
         if invalid:
             msg = ["There are invalid packages:"]
