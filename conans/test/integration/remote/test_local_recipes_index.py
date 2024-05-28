@@ -59,12 +59,15 @@ def c3i_folder():
             """))
     save(os.path.join(recipes_folder, "libcurl", "all", "conanfile.py"),
          str(GenConanfile().with_require("openssl/2.0")))
+
+    save(os.path.join(recipes_folder, ".DS_Store", "foo"), "")
+
     return folder
 
 
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run(f"remote add local '{c3i_folder}' --type=local-recipes-index")  # Keep --type test
         assert "WARN" not in client.out  # Make sure it does not complain about url
         client.run("search *")
@@ -82,7 +85,7 @@ class TestSearchList:
             """) in client.out
 
     def test_list_refs(self, c3i_folder):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list *#* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -100,7 +103,7 @@ class TestSearchList:
         assert len(revs) == 1 and "6f5c31bb1219e9393743d1fbf2ee1b52" in revs
 
     def test_list_rrevs(self, c3i_folder):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0#* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -108,7 +111,7 @@ class TestSearchList:
         assert len(revs) == 1 and "e468388f0e4e098d5b62ad68979aebd5" in revs
 
     def test_list_binaries(self, c3i_folder):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0:* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -118,7 +121,7 @@ class TestSearchList:
 
 class TestInstall:
     def test_install(self, c3i_folder):
-        c = TestClient()
+        c = TestClient(light=True)
         c.run(f"remote add local '{c3i_folder}'")
         c.run("install --requires=libcurl/1.0 --build missing")
         assert "zlib/1.2.11: CONANDATA: {}" in c.out
@@ -178,7 +181,7 @@ class TestInstall:
                    {"boost/config.yml": boost_config,
                     "boost/all/conanfile.py": boost,
                     "boost/all/dependencies/myfile.json": deps_json})
-        c = TestClient()
+        c = TestClient(light=True)
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=boost/[*] --build missing")
         assert 'boost/1.0: {"potato": 42}' in c.out
@@ -204,7 +207,7 @@ class TestInstall:
                    {"pkg/config.yml": config,
                     "pkg/all/conanfile.py": str(GenConanfile("pkg")),
                     "pkg/all/conandata.yml": conandata})
-        c = TestClient()
+        c = TestClient(light=True)
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
@@ -264,7 +267,7 @@ class TestInstall:
                     "zlib/all/conandata.yml": conandata_yml,
                     "zlib/all/patches/patch1": patch,
                     "zlib/all/main.cpp": "\n"})
-        client = TestClient()
+        client = TestClient(light=True)
         client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
         assert "zlib/0.1: Copied 1 file: patch1" in client.out
@@ -276,7 +279,7 @@ class TestRestrictedOperations:
         folder = temp_folder()
         c3i_folder = os.path.join(folder, "recipes")
         mkdir(c3i_folder)
-        c = TestClient()
+        c = TestClient(light=True)
         c.run(f"remote add local '{c3i_folder}'")
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
@@ -300,7 +303,7 @@ class TestErrorsUx:
         save_files(recipes_folder,
                    {"zlib/config.yml": zlib_config,
                     "zlib/all/conanfile.py": zlib})
-        c = TestClient()
+        c = TestClient(light=True)
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
