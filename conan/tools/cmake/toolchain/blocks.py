@@ -920,57 +920,32 @@ class GenericSystemBlock(Block):
         return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
                 os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
-    def _get_darwin_version(self, system_name, os_version):
-        darwin_versions = {
-            "Darwin": {
-                "10.13": "17",
-                "10.14": "18",
-                "10.15": "19",
-                "11": "20",
-                "12": "21",
-                "13": "22",
-                "14": "23",
+    def _get_darwin_version(self, os_name, os_version):
+        version_mapping = {
+            "Macos": {
+                "10.13": "17", "10.14": "18", "10.15": "19", "11": "20",
+                "12": "21", "13": "22", "14": "23",
             },
             "iOS": {
-                "11": "17",
-                "12": "18",
-                "13": "19",
-                "14": "20",
-                "15": "21",
-                "16": "22",
-                "17": "23"
+                "11": "17", "12": "18", "13": "19", "14": "20",
+                "15": "21", "16": "22", "17": "23"
             },
             "watchOS": {
-                "4": "17",
-                "5": "18",
-                "6": "19",
-                "7": "20",
-                "8": "21",
-                "9": "22",
-                "10": "23"
+                "4": "17", "5": "18", "6": "19", "7": "20",
+                "8": "21", "9": "22", "10": "23"
             },
             "tvOS": {
-                "11": "17",
-                "12": "18",
-                "13": "19",
-                "14": "20",
-                "15": "21",
-                "16": "22",
-                "17": "23"
+                "11": "17", "12": "18", "13": "19", "14": "20",
+                "15": "21", "16": "22", "17": "23"
             },
             "visionOS": {
                 "1": "23"
             }
         }
-        if os_version is None:
-            return None
-        major_os_version = str(Version(os_version).major)
-        if system_name == "Darwin" and Version(os_version) < 11:
-            if os_version in darwin_versions.get("Darwin"):
-                return darwin_versions.get("Darwin").get(os_version)
-        elif system_name in darwin_versions:
-            if major_os_version in darwin_versions.get(system_name):
-                return darwin_versions.get(system_name).get(major_os_version)
+        os_version = str(Version(os_version).major) \
+            if os_name != "Macos" or (os_name == "Macos" and Version(os_version) >= Version("11")) \
+            else str(os_version)
+        return version_mapping.get(os_name, {}).get(os_version)
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
@@ -995,13 +970,8 @@ class GenericSystemBlock(Block):
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
                     sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    _system_version = self._get_darwin_version(system_name, sdk_version)
+                    _system_version = self._get_darwin_version(os_host, sdk_version)
                     _system_processor = to_apple_arch(self._conanfile)
-                elif os_host in ('Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS'):
-                    system_name = self._get_generic_system_name()
-                    os_version = self._conanfile.settings.get_safe("os.version")
-                    _system_version = self._get_darwin_version(system_name, os_version)
-                    _system_processor = arch_host
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")
