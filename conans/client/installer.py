@@ -180,9 +180,7 @@ class BinaryInstaller:
         conanfile = node.conanfile
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
-        if not download_source and need_conf:
-            return
-        if not download_source and node.binary != BINARY_BUILD:
+        if not download_source and (need_conf or node.binary != BINARY_BUILD):
             return
 
         conanfile = node.conanfile
