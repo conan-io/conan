@@ -437,7 +437,7 @@ def test_cmaketoolchain_cmake_system_processor_cross_apple():
     client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
     toolchain = client.load("conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 21)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 

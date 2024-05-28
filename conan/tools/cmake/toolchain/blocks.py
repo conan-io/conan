@@ -922,12 +922,10 @@ class GenericSystemBlock(Block):
 
     def _get_darwin_version(self, system_name, os_version):
         darwin_versions = {
-            "macos_old": {
+            "Darwin": {
                 "10.13": "17",
                 "10.14": "18",
-                "10.15": "19"
-            },
-            "macos_new": {
+                "10.15": "19",
                 "11": "20",
                 "12": "21",
                 "13": "22",
@@ -967,17 +965,12 @@ class GenericSystemBlock(Block):
         if os_version is None:
             return None
         major_os_version = str(Version(os_version).major)
-        if system_name == "Darwin":
-            if Version(os_version) < 11:
-                if os_version in darwin_versions.get("macos_old"):
-                    return darwin_versions.get("macos_old").get(os_version)
-            else:
-                if major_os_version in darwin_versions.get("macos_new"):
-                    return darwin_versions.get("macos_new").get(major_os_version)
+        if system_name == "Darwin" and Version(os_version) < 11:
+            if os_version in darwin_versions.get("Darwin"):
+                return darwin_versions.get("Darwin").get(os_version)
         elif system_name in darwin_versions:
             if major_os_version in darwin_versions.get(system_name):
                 return darwin_versions.get(system_name).get(major_os_version)
-        raise ConanException("Unsupported macOS version: %s" % os_version)
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
