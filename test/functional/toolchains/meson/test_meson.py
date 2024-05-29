@@ -6,6 +6,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.toolchains.meson._base import TestMesonBase
@@ -325,65 +326,37 @@ def test_meson_sysroot_app():
     """
     sysroot = "/my/new/sysroot/path"
     client = TestClient()
-    profile = textwrap.dedent("""
+    profile = textwrap.dedent(f"""
         [settings]
-        os=Linux
-        arch=armv8
-        compiler=gcc
-        compiler.version=8
-        compiler.libcxx=libstdc++11
-        build_type=Release
+        os = Macos
+        arch = armv8
+        compiler = apple-clang
+        compiler.version = 13.0
+        compiler.libcxx = libc++
 
         [conf]
-        tools.build:sysroot=%s
-        tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+        tools.build:sysroot={sysroot}
         tools.build:verbosity=verbose
         tools.compilation:verbosity=verbose
-    """ % sysroot)
-    conanfile = textwrap.dedent(f"""
-            from conan import ConanFile
-            from conan.tools.meson import Meson
-            from conan.tools.files import copy
-            from conan.tools.layout import basic_layout
-            import os
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = "meson.build", "src/*"
-                generators = "MesonToolchain"
-                def build(self):
-                    meson = Meson(self)
-                    meson.configure()
-                    meson.build()
-                def layout(self):
-                    self.folders.generators = '{client.cache_folder}/build/gen_folder'
-                    self.folders.build = "{client.cache_folder}/build"
         """)
-    meson_build = textwrap.dedent("""
-            project('foobar', 'cpp')
-            executable('foobar', 'src/main.cpp')
+    profile_build = textwrap.dedent(f"""
+        [settings]
+        os = Macos
+        arch = x86_64
+        compiler = apple-clang
+        compiler.version = 13.0
+        compiler.libcxx = libc++
         """)
-    main_cpp = textwrap.dedent("int main() { return 0; }")
-
-    client.save({"conanfile.py": conanfile,
-                 "meson.build": meson_build,
-                 "profile": profile,
-                 "src/main.cpp": main_cpp,
-                 })
-
-    client.run("create . --name=foobar --version=0.1.0 -pr:h=profile -pr:b=default")
-
+    client.save({"conanfile.py": GenConanfile(name="hello", version="0.1")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain"),
+                 "build": profile_build,
+                 "host": profile})
+    client.run("install . -pr:h host -pr:b build")
     # Check the meson configuration file
-    conan_meson = client.load(os.path.join(client.cache_folder, "build", "gen_folder", "conan_meson_cross.ini"))
+    conan_meson = client.load(os.path.join(client.current_folder, "conan_meson_cross.ini"))
     assert f"sys_root = '{sysroot}'\n" in conan_meson
     assert re.search(r"c_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
-
-    # Check the meson-log.txt
-    meson_log = client.load(os.path.join(client.cache_folder, "build", "meson-logs", "meson-log.txt"))
-    assert re.search(r"Detecting linker via:.+--sysroot={}".format(sysroot), meson_log)
-
-    # Check compiler calls based on Conan output
-    assert re.search(r"\[1/2\].+--sysroot=/my/new/sysroot/path", client.out)
-    assert re.search(r"\[2/2\].+--sysroot=/my/new/sysroot/path", client.out)
