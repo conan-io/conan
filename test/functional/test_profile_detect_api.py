@@ -89,4 +89,4 @@ class TestProfileDetectAPI:
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1")
         sdk_version = detect_api.detect_sdk_version(sdk="macosx")
-        assert f"os.sdk_version = {sdk_version}" in client.out
+        assert f"os.sdk_version={sdk_version}" in client.out
