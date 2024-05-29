@@ -32,7 +32,7 @@ def base_profile():
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", version="6.3.2")
+@pytest.mark.tool("bazel", "6.3.2")
 def test_basic_exe(bazelrc, build_type, base_profile):
     client = TestClient(path_with_spaces=False)
     client.run("new bazel_exe -d name=myapp -d version=1.0")
@@ -50,7 +50,7 @@ def test_basic_exe(bazelrc, build_type, base_profile):
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", version="7.1.2")
+@pytest.mark.tool("bazel", "7.1.2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only Darwin at the moment")
 def test_basic_exe(bazelrc, build_type, base_profile):
     client = TestClient(path_with_spaces=False)
@@ -69,7 +69,7 @@ def test_basic_exe(bazelrc, build_type, base_profile):
 
 
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", version="6.3.2")
+@pytest.mark.tool("bazel", "6.3.2")
 def test_transitive_libs_consuming(shared):
     """
     Testing the next dependencies structure for shared/static libs
@@ -199,7 +199,7 @@ def test_transitive_libs_consuming(shared):
 
 
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", version="7.1.2")
+@pytest.mark.tool("bazel", "7.1.2")
 def test_transitive_libs_consuming(shared):
     """
     Testing the next dependencies structure for shared/static libs
