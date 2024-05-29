@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Darwin")
-@pytest.mark.tool("bazel")
+@pytest.mark.tool("bazel", version="6.3.2")  # not working for Bazel 7.x
 def test_bazel_simple_cross_compilation():
     profile = textwrap.dedent("""
     [settings]

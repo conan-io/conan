@@ -53,6 +53,8 @@ class Bazel(object):
         # See more info in https://bazel.build/run/bazelrc
         bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
                                                       check_type=list))
+        # Note: In case of error like this: ... https://bcr.bazel.build/: PKIX path building failed
+        # Check this comment: https://github.com/bazelbuild/bazel/issues/3915#issuecomment-1120894057
         command = "bazel"
         for rc in bazelrc_paths:
             rc = rc.replace("\\", "/")
