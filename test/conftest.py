@@ -156,9 +156,10 @@ tools_locations = {
     },
     'bazel': {
         "default": "6.3.2",
-        "6.3.2": {"path": {'Windows': 'C:/bazel/bin',
+        "6.3.2": {"path": {'Windows': 'C:/bazel-6.3.2/bin',
                            'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
-        "7.1.2": {"path": {'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
+        "7.1.2": {"path": {'Windows': 'C:/bazel-7.1.2/bin',
+                           'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
         "exe": "premake5",
