@@ -226,21 +226,22 @@ class DockerRunner:
         shutil.rmtree(self.abs_runner_home_path, ignore_errors=True)
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
         environment = {'CONAN_RUNNER_ENVIRONMENT': '1'}
+
+        # Copy all profiles to docker workspace
+        os.mkdir(self.abs_runner_home_path)
+        os.mkdir(os.path.join(self.abs_runner_home_path, 'profiles'))
+        for current_path, new_path in self.profiles:
+            shutil.copy(current_path, new_path)
+
         if self.cache == 'shared':
             volumes[ConfigAPI(self.conan_api).home()] = {'bind': '/root/.conan2', 'mode': 'rw'}
-        if self.cache in ['clean', 'copy']:
-            os.mkdir(self.abs_runner_home_path)
-            os.mkdir(os.path.join(self.abs_runner_home_path, 'profiles'))
 
+        if self.cache in ['clean', 'copy']:
             # Copy all conan config files to docker workspace
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 src_file = os.path.join(ConfigAPI(self.conan_api).home(), file_name)
                 if os.path.exists(src_file):
                     shutil.copy(src_file, os.path.join(self.abs_runner_home_path, file_name))
-
-            # Copy all profiles to docker workspace
-            for current_path, new_path in self.profiles:
-                shutil.copy(current_path, new_path)
 
             if self.cache == 'copy':
                 tgz_path = os.path.join(self.abs_runner_home_path, 'local_cache_save.tgz')
