@@ -48,10 +48,15 @@ class _VersionItem:
 @total_ordering
 class Version:
     """
-    This is NOT an implementation of semver, as users may use any pattern in their versions.
-    It is just a helper to parse "." or "-" and compare taking into account integers when possible
+    It exposes all the version components as properties and offers total ordering through compare operators.
+
+    NOTE: This is **NOT** an implementation of semver, as users may use any pattern in their versions.
     """
     def __init__(self, value, qualifier=False):
+        """"
+        :param value: The version string
+        :param qualifier: True if this is a pre-release or build version
+        """
         value = str(value)
         self._value = value
         self._build = None
@@ -114,18 +119,26 @@ class Version:
 
     @property
     def pre(self):
+        """Get the pre-release digit.
+        """
         return self._pre
 
     @property
     def build(self):
+        """Get the build digit.
+        """
         return self._build
 
     @property
     def main(self):
+        """Get all the main digits.
+        """
         return self._items
 
     @property
     def major(self):
+        """Get the major digit.
+        """
         try:
             return self.main[0]
         except IndexError:
@@ -133,6 +146,8 @@ class Version:
 
     @property
     def minor(self):
+        """Get the minor digit.
+        """
         try:
             return self.main[1]
         except IndexError:
@@ -140,6 +155,8 @@ class Version:
 
     @property
     def patch(self):
+        """Get the patch digit.
+        """
         try:
             return self.main[2]
         except IndexError:
@@ -147,6 +164,8 @@ class Version:
 
     @property
     def micro(self):
+        """Get the micro digit.
+        """
         try:
             return self.main[3]
         except IndexError:
