@@ -1,13 +1,14 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 from conan.tools.files import load
 from conan.tools.meson import MesonToolchain
-from conan.test.utils.tools import TestClient
 
 
 def test_apple_meson_keep_user_custom_flags():
@@ -534,3 +535,50 @@ def test_compiler_path_with_spaces():
     conan_meson_native = client.load("conan_meson_native.ini")
     assert "c = 'c compiler path with spaces'" in conan_meson_native
     assert "cpp = 'cpp compiler path with spaces'" in conan_meson_native
+
+
+def test_meson_sysroot_app():
+    """Testing when users pass tools.build:sysroot on the profile with Meson
+
+    The generated conan_meson_cross.ini needs to contain both sys_root property to fill the
+    PKG_CONFIG_PATH and the compiler flags with --sysroot.
+
+    When cross-building, Meson needs both compiler_executables in the config, otherwise it will fail
+    when running setup.
+    """
+    sysroot = "/my/new/sysroot/path"
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+    [settings]
+    os = Macos
+    arch = armv8
+    compiler = apple-clang
+    compiler.version = 13.0
+    compiler.libcxx = libc++
+
+    [conf]
+    tools.build:sysroot={sysroot}
+    tools.build:verbosity=verbose
+    tools.compilation:verbosity=verbose
+    """)
+    profile_build = textwrap.dedent(f"""
+    [settings]
+    os = Macos
+    arch = x86_64
+    compiler = apple-clang
+    compiler.version = 13.0
+    compiler.libcxx = libc++
+    """)
+    client.save({"conanfile.py": GenConanfile(name="hello", version="0.1")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain"),
+                 "build": profile_build,
+                 "host": profile})
+    client.run("install . -pr:h host -pr:b build")
+    # Check the meson configuration file
+    conan_meson = client.load(os.path.join(client.current_folder, "conan_meson_cross.ini"))
+    assert f"sys_root = '{sysroot}'\n" in conan_meson
+    assert re.search(r"c_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"cpp_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
