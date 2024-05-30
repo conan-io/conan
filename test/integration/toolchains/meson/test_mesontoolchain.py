@@ -560,6 +560,7 @@ def test_meson_sysroot_app():
     tools.build:sysroot={sysroot}
     tools.build:verbosity=verbose
     tools.compilation:verbosity=verbose
+    tools.apple:sdk_path=/my/sdk/path
     """)
     profile_build = textwrap.dedent(f"""
     [settings]
