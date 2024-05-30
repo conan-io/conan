@@ -66,6 +66,8 @@ class DetectTest(unittest.TestCase):
     ["g++ (Conan-Build-gcc--binutils-2.42) 14.1.0", "14.1.0"],
     ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
+    ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
+    ["cc.exe (Rev3, Built by MSYS2 project) 14", "14"],
 ])
 @patch("conan.internal.api.detect_api.detect_runner")
 def test_detect_cc_versionings(detect_runner_mock, version_return, expected_version):
