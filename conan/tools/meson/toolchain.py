@@ -245,6 +245,11 @@ class MesonToolchain(object):
             default_comp = "cl"
             default_comp_cpp = "cl"
 
+        # Read configuration for sys_root property (honoring existing conf)
+        self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
+        if self._sys_root:
+            self.properties["sys_root"] = self._sys_root
+
         # Read configuration for compilers
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
@@ -404,10 +409,11 @@ class MesonToolchain(object):
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         defines = [f"-D{d}" for d in self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)]
+        sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         return {
-            "cxxflags": cxxflags,
-            "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags,
+            "cxxflags": cxxflags + sys_root,
+            "cflags": cflags + sys_root,
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags + sys_root,
             "defines": defines
         }
 
