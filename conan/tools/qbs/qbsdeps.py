@@ -1,6 +1,5 @@
 from conan.tools.files import save
 from conan.errors import ConanException
-from conan.tools.env import VirtualBuildEnv
 from conans.model.dependencies import get_transitive_requires
 import json
 import os
@@ -13,9 +12,7 @@ class _QbsDepsModuleFile():
         self._component = component
         self._deps = deps
         self._module_name = module_name
-
-        env_vars = VirtualBuildEnv(self._qbsdeps._conanfile, auto_generate=True).vars()
-        self._build_env = {k: v for k, v in env_vars.items()}
+        self._build_bindirs = qbsdeps._build_bindirs
 
         def _get_component_version(dep, component):
             return (component.get_property("component_version") or
@@ -33,11 +30,11 @@ class _QbsDepsModuleFile():
 
     def get_content(self):
         return {
-            'build_env': self._build_env,
             'package_name': self._dep.ref.name,
             'package_dir': self._get_package_dir(),
             'version': str(self._version),
             'cpp_info': self._component.serialize(),
+            'build_bindirs': self._build_bindirs,
             'dependencies': [{'name': n, "version": str(v)} for n, v in self._deps],
             'settings': {k: v for k, v in self._dep.settings.items()},
             'options': {k: v for k, v in self._dep.options.items()}
@@ -55,9 +52,10 @@ class _QbsDepsModuleFile():
 
 class _QbsDepGenerator:
     ''' Handles a single package, can create multiple modules in case of several components '''
-    def __init__(self, conanfile, dep):
+    def __init__(self, conanfile, dep, build_bindirs):
         self._conanfile = conanfile
         self._dep = dep
+        self._build_bindirs = build_bindirs
 
     @property
     def content(self):
@@ -163,13 +161,18 @@ class QbsDeps:
     def content(self):
         qbs_files = {}
 
+        build_bindirs = {
+            dep.ref.name: dep.cpp_info.bindirs
+            for _, dep in self._conanfile.dependencies.build.items()}
+
         for require, dep in self._conanfile.dependencies.items():
 
             # skip build deps for now
             if require.build:
                 continue
 
-            qbs_files.update(_QbsDepGenerator(self._conanfile, dep).content)
+            dep_build_bindirs = build_bindirs.get(dep.ref.name, [])
+            qbs_files.update(_QbsDepGenerator(self._conanfile, dep, dep_build_bindirs).content)
         return qbs_files
 
     def generate(self):
