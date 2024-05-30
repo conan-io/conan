@@ -189,7 +189,7 @@ class GraphBinariesAnalyzer(object):
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
             if conanfile.repackage and not conanfile.conf.get("tools.graph:repackage", check_type=bool):
-                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is repackaging and building but it "\
+                node.conanfile.info.invalid = f"The package is repackaging and building but it "\
                           "didn't enable 'tools.graph:repackage' to compute its dependencies"
 
                 node.binary = BINARY_INVALID

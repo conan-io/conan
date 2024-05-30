@@ -71,8 +71,9 @@ def test_repackage():
     c.run("install --requires=app/0.1", assert_error=True)
     assert "Missing binary" in c.out
     c.run("install --requires=app/0.1 --build=missing", assert_error=True)
-    assert "ERROR: The package 'app/0.1' is repackaging and building but it didn't " \
-           "enable 'tools.graph:repackage'" in c.out
+    assert "app/0.1: Invalid: The package is repackaging and building but it didn't "\
+           "enable 'tools.graph:repackage' to compute its dependencies" in c.out
+
     c.run("install --requires=app/0.1 --build=missing  -c tools.graph:repackage=True")
     assert "pkga" in c.out  # it works
 
