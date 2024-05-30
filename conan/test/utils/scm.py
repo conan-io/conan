@@ -24,8 +24,8 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
 
     def _run(cmd, p):
         with chdir(p):
-            _, out = detect_runner("git {}".format(cmd)).strip()
-            return out
+            _, out = detect_runner("git {}".format(cmd))
+            return out.strip()
 
     _run("init .", tmp)
     _run('config user.name "Your Name"', tmp)
@@ -60,7 +60,7 @@ def git_add_changes_commit(folder, msg="fix"):
         detect_runner('git config user.name "Your Name"')
         detect_runner('git config user.email "you@example.com"')
         detect_runner('git add . && git commit -m "{}"'.format(msg))
-        _, out = detect_runner("git rev-parse HEAD").strip()
-        return out
+        _, out = detect_runner("git rev-parse HEAD")
+        return out.strip()
     finally:
         os.chdir(cwd)
