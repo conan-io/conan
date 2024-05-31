@@ -38,7 +38,7 @@ def compute_package_id(node, new_config, config_version):
             else:
                 data[require] = req_info
 
-    if conanfile.repackage:  # Make the package_id fully independent of dependencies versions
+    if conanfile.bundle:  # Make the package_id fully independent of dependencies versions
         data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
 
     reqs_info = RequirementsInfo(data)

@@ -426,25 +426,26 @@ def test_graph_info_user():
     c.run("graph info . --channel=channel")
     assert "pkg/0.1@user/channel" in c.out
 
-def test_graph_info_repackage():
+
+def test_graph_info_bundle():
     c = TestClient(light=True)
     c.save({"subfolder/conanfile.py": GenConanfile("liba", "1.0")})
     c.run("create ./subfolder")
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class RepackageRecipe(ConanFile):
-            name = "repackage-lib"
+            name = "lib"
             version = "1.0"
             def requirements(self):
                 self.requires("liba/1.0")
-            repackage = True
+            bundle = True
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    c.save({"conanfile.py": GenConanfile("consumer", "1.0").with_requires("repackage-lib/1.0")})
+    c.save({"conanfile.py": GenConanfile("consumer", "1.0").with_requires("lib/1.0")})
 
-    c.run("graph info . --build='repackage-lib*'")
-    c.assert_listed_binary({"repackage-lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Invalid")})
+    c.run("graph info . --build='lib*'")
+    c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Invalid")})
 
-    c.run("graph info . -c tools.graph:repackage=True --build='repackage-lib*'")
-    c.assert_listed_binary({"repackage-lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
+    c.run("graph info . -c tools.graph:bundle=True --build='lib*'")
+    c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
