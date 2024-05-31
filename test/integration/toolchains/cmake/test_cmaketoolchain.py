@@ -68,7 +68,7 @@ def test_cross_build_linux_to_macos():
     macos_profile = textwrap.dedent("""
         [settings]
         os=Macos
-        os.sdk_version=13.1
+        os.version=13.1
         arch=x86_64
         compiler=apple-clang
         compiler.version=13
@@ -85,7 +85,7 @@ def test_cross_build_linux_to_macos():
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 13.1)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
 
 
@@ -437,7 +437,7 @@ def test_cmaketoolchain_cmake_system_processor_cross_apple():
     client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
     toolchain = client.load("conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 21)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 
