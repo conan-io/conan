@@ -7,7 +7,7 @@ import pytest
 from conan.tools.build import cmd_args_to_string
 from conan.test.utils.tools import TestClient
 from conans.util.files import chdir
-from conans.util.runners import check_output_runner
+from conans.util.runners import detect_runner
 
 
 @pytest.fixture(scope="module")
@@ -66,7 +66,7 @@ def test_unix_cases(application_folder, _input, output):
 
     # Check calling the exe that the arguments are the same we tried to input
     with chdir(application_folder):
-        cmd_parsed_output = check_output_runner("./{}".format(output))
+        _, cmd_parsed_output = detect_runner("./{}".format(output))
         interpreted_args = cmd_parsed_output.splitlines()
         real_args = _input[1:]
         assert real_args == interpreted_args
@@ -90,7 +90,7 @@ def test_windows_cases(application_folder, _input, output):
 
     # Check calling the exe that the arguments are the same we tried to input
     with chdir(application_folder):
-        cmd_parsed_output = check_output_runner(output)
+        _, cmd_parsed_output = detect_runner(output)
         interpreted_args = cmd_parsed_output.splitlines()
         real_args = _input[1:]
         assert real_args == interpreted_args

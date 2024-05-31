@@ -33,7 +33,8 @@ def check_min_vs(conanfile, version, raise_invalid=True):
                             "11": "170"}.get(compiler_version)
     elif compiler == "msvc":
         compiler_version = conanfile.settings.get_safe("compiler.version")
-        compiler_update = conanfile.settings.get_safe("compiler.update")
+        msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
+        compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
         if compiler_version and compiler_update is not None:
             compiler_version += ".{}".format(compiler_update)
 
@@ -169,7 +170,7 @@ class VCVars:
 
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
-            content_ps1 = textwrap.dedent(rf"""\
+            content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
                 Push-Location "$PSScriptRoot"
                 cmd /c "conanvcvars.bat&set" |
@@ -180,7 +181,7 @@ class VCVars:
                 }}
                 Pop-Location
                 write-host conanvcvars.ps1: Activated environment}}
-            """)
+            """).strip()
             conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
             create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
             _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)

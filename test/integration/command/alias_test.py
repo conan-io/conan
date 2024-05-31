@@ -9,13 +9,13 @@ from conan.test.utils.tools import TestClient, GenConanfile
 class ConanAliasTest(unittest.TestCase):
 
     def test_repeated_alias(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
         client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
         client.alias("hello/0.x@lasote/channel",  "hello/0.3@lasote/channel")
 
     def test_basic(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(light=True, default_server_user=True)
         for i in (1, 2):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . --user=lasote --channel=channel")
@@ -33,6 +33,7 @@ class ConanAliasTest(unittest.TestCase):
         client.save({"conanfile.txt": "[requires]\nchat/1.0@lasote/channel"}, clean_first=True)
 
         client.run("install . --build=missing")
+        assert "chat/1.0@lasote/channel: WARN: legacy: Requirement 'alias' is provided in Conan 2" in client.out
 
         client.assert_listed_require({"hello/0.1@lasote/channel": "Cache"})
         assert "hello/0.x@lasote/channel: hello/0.1@lasote/channel" in client.out
@@ -64,7 +65,7 @@ class ConanAliasTest(unittest.TestCase):
             If we create an alias with the same name as an existing package, it will
             override the package without any warning.
         """
-        t = TestClient()
+        t = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):

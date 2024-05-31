@@ -66,7 +66,7 @@ def rmdir(conanfile, path):
     _internal_rmdir(path)
 
 
-def rm(conanfile, pattern, folder, recursive=False):
+def rm(conanfile, pattern, folder, recursive=False, excludes=None):
     """
     Utility functions to remove files matching a ``pattern`` in a ``folder``.
 
@@ -74,10 +74,17 @@ def rm(conanfile, pattern, folder, recursive=False):
     :param pattern: Pattern that the files to be removed have to match (fnmatch).
     :param folder: Folder to search/remove the files.
     :param recursive: If ``recursive`` is specified it will search in the subfolders.
+    :param excludes: (Optional, defaulted to None) A tuple/list of fnmatch patterns or even a
+                     single one to be excluded from the remove pattern.
     """
+    if excludes and not isinstance(excludes, (tuple, list)):
+        excludes = (excludes,)
+    elif not excludes:
+        excludes = []
+
     for root, _, filenames in os.walk(folder):
         for filename in filenames:
-            if fnmatch(filename, pattern):
+            if fnmatch(filename, pattern) and not any(fnmatch(filename, it) for it in excludes):
                 fullname = os.path.join(root, filename)
                 os.unlink(fullname)
         if not recursive:
