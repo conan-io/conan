@@ -261,7 +261,7 @@ class _BazelDependenciesBZLGenerator:
                 reproducible = True,
             )
 
-        load_dependencies = module_extension(
+        conan_extension = module_extension(
             implementation = _load_dependenies_impl,
             os_dependent = True,
             arch_dependent = True,
@@ -650,7 +650,7 @@ class BazelDeps:
         .. code-block:: python
                 load_conan_dependencies = use_extension(
                     "//build:conan_deps_module_extension.bzl",
-                    "load_dependencies"
+                    "conan_extension"
                 )
                 use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
         """

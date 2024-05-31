@@ -117,7 +117,7 @@ cc_shared_library(
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
 _test_bazel_module_bazel = """\
-load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "load_dependencies")
+load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
 use_repo(load_conan_dependencies, "{{name}}")
 """
 
