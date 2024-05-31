@@ -413,8 +413,6 @@ class _BazelBUILDGenerator:
     )
     {% endif %}
     {% endmacro %}
-    load("@@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
     # Components precompiled libs
     {% for component in components %}
     {{ cc_import_macro(component["libs"]) }}

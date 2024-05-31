@@ -53,7 +53,6 @@ def test_bazel_simple_cross_compilation():
             bazel.build()
     """)
     BUILD = textwrap.dedent("""
-    load("@rules_cc//cc:defs.bzl", "cc_library")
     cc_library(
         name = "myapp",
         srcs = ["myapp.cpp"],

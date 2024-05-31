@@ -51,8 +51,6 @@ class {{package_name}}Test(ConanFile):
 """
 
 _bazel_build_exe = """\
-load("@@rules_cc//cc:defs.bzl", "cc_binary")
-
 cc_binary(
     name = "{{name}}",
     srcs = ["main.cpp", "{{name}}.cpp", "{{name}}.h"]

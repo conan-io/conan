@@ -125,8 +125,6 @@ def test_transitive_libs_consuming_6x(shared):
         load_conan_dependencies()
         """)
         bazel_build_linux = textwrap.dedent("""\
-        load("@rules_cc//cc:defs.bzl", "cc_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
@@ -135,8 +133,6 @@ def test_transitive_libs_consuming_6x(shared):
         )
         """)
         bazel_build = textwrap.dedent("""\
-        load("@rules_cc//cc:defs.bzl", "cc_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
@@ -255,8 +251,6 @@ def test_transitive_libs_consuming(shared):
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
         bazel_build_linux = textwrap.dedent("""\
-        load("@@rules_cc//cc:defs.bzl", "cc_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
@@ -265,8 +259,6 @@ def test_transitive_libs_consuming(shared):
         )
         """)
         bazel_build = textwrap.dedent("""\
-        load("@@rules_cc//cc:defs.bzl", "cc_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
