@@ -83,7 +83,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         {% endfor %}
 
-        # Only the first installed configuration is included to avoid the collision
+        # Only the last installed configuration BUILD_MODULES are included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})

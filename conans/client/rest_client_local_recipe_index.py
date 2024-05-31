@@ -194,6 +194,9 @@ class _LocalRecipesIndexLayout:
 
         loader = ConanFileLoader(None)
         for r in recipes:
+            if r.startswith("."):
+                # Skip hidden folders, no recipes should start with a dot
+                continue
             if not fnmatch(r, name_pattern):
                 continue
             folder = self._get_base_folder(r)

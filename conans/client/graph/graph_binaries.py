@@ -181,19 +181,6 @@ class GraphBinariesAnalyzer(object):
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
-        if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_INVALID):
-            # BINARY_BUILD IS NOT A VIABLE fallback for invalid
-            node.binary = BINARY_INVALID
-
-        if node.binary == BINARY_BUILD:
-            conanfile = node.conanfile
-            if conanfile.repackage and not conanfile.conf.get("tools.graph:repackage", check_type=bool):
-                node.conanfile.info.invalid = f"The package is repackaging and building but it "\
-                          "didn't enable 'tools.graph:repackage' to compute its dependencies"
-
-                node.binary = BINARY_INVALID
-
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node):
@@ -241,12 +228,6 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_download(node, remotes, update)
         else:  # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
-
-        # The INVALID should only prevail if a compatible package, due to removal of
-        # settings in package_id() was not found
-        if node.binary in (BINARY_MISSING, BINARY_BUILD):
-            if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
-                node.binary = BINARY_INVALID
 
     def _process_compatible_node(self, node, remotes, update):
         """ simplified checking of compatible_packages, that should be found existing, but
