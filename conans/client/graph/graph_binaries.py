@@ -181,6 +181,15 @@ class GraphBinariesAnalyzer(object):
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
+        if node.binary == BINARY_BUILD:
+            conanfile = node.conanfile
+            if conanfile.bundle and not conanfile.conf.get("tools.graph:bundle", check_type=bool):
+                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a package bundle, " \
+                                              f"needs to be built from source, but it " \
+                                              "didn't enable 'tools.graph:bundle' to compute its " \
+                                              "dependencies"
+                node.binary = BINARY_INVALID
+
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node):
