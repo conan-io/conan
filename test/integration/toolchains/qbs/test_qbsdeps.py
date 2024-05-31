@@ -23,7 +23,7 @@ def test_empty_package():
     client.run('install --requires=mylib/0.1@ -g QbsDeps')
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mylib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'mylib'
@@ -70,7 +70,7 @@ def test_empty_dirs():
     client.run('install --requires=mylib/0.1@ -g QbsDeps')
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mylib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'mylib'
@@ -109,7 +109,7 @@ def test_pkg_config_name():
     client.run('install --requires=mylib/0.1@ -g QbsDeps')
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'myfirstlib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
 
 
 @pytest.mark.parametrize('host_os, arch, build_type', [
@@ -138,7 +138,7 @@ def test_settings(host_os, arch, build_type):
     client.run('install --requires=mylib/0.1@ -g QbsDeps ' + common_cmd)
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mylib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert 'settings' in module_content
@@ -169,7 +169,7 @@ def test_options(shared):
     client.run('install --requires=mylib/0.1@ -g QbsDeps ' + common_cmd)
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mylib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert 'options' in module_content
@@ -201,7 +201,7 @@ def test_components():
     client.run('install --requires=mylib/0.1@ -g QbsDeps')
 
     module1_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mycomponent.json')
-    assert os.path.exists(module1_path) is True
+    assert os.path.exists(module1_path)
     module1_content = json.loads(load(module1_path))
 
     assert module1_content.get('package_name') == 'mylib'
@@ -209,7 +209,7 @@ def test_components():
     assert module1_content.get('dependencies') == []
 
     module2_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mycomponent2.json')
-    assert os.path.exists(module2_path) is True
+    assert os.path.exists(module2_path)
     module2_content = json.loads(load(module2_path))
 
     assert module2_content.get('package_name') == 'mylib'
@@ -217,7 +217,7 @@ def test_components():
     assert module2_content.get('dependencies') == []
 
     main_module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mylib.json')
-    assert os.path.exists(main_module_path) is True
+    assert os.path.exists(main_module_path)
     main_module_content = json.loads(load(main_module_path))
 
     assert main_module_content.get('package_name') == 'mylib'
@@ -308,7 +308,7 @@ def test_cpp_info_requires():
 
     # first
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'cmp1.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'first'
@@ -316,7 +316,7 @@ def test_cpp_info_requires():
     assert module_content.get('dependencies') == []
 
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'myfirstlib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'first'
@@ -325,7 +325,7 @@ def test_cpp_info_requires():
 
     # other
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'other.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'other'
@@ -334,7 +334,7 @@ def test_cpp_info_requires():
 
     # second.mycomponent
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'mycomponent.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'second'
@@ -343,7 +343,7 @@ def test_cpp_info_requires():
 
     # second.myfirstcomp
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'myfirstcomp.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'second'
@@ -352,7 +352,7 @@ def test_cpp_info_requires():
 
     # second
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'second.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'second'
@@ -364,7 +364,7 @@ def test_cpp_info_requires():
 
     # third
     module_path = os.path.join(client2.current_folder, 'conan-qbs-deps', 'third.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'third'
@@ -398,7 +398,7 @@ def test_components_conflict():
     client.run('install --requires=mylib/0.1@ -g QbsDeps')
 
     module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'mycoollib.json')
-    assert os.path.exists(module_path) is True
+    assert os.path.exists(module_path)
     module_content = json.loads(load(module_path))
 
     assert module_content.get('package_name') == 'mylib'

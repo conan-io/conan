@@ -25,6 +25,7 @@ def gen_qbs_application(**context):
     return t.render(**context)
 
 
+@pytest.mark.tool("qbs")
 def test_qbsdeps_with_test_requires_header_only():
     client = TestClient()
     with client.chdir("lib"):
@@ -70,8 +71,11 @@ def test_qbsdeps_with_test_requires_header_only():
 
 
 # @pytest.mark.tool("cmake")
+@pytest.mark.tool("qbs")
 def test_qbsdeps_with_test_requires_lib():
     client = TestClient()
+    # we use CMake here to avoid the chicken-egg problem where Qbs toolchain depends on QbsDeps
+    # and vice versa
     with client.chdir("lib"):
         client.run("new cmake_lib -d name=hello -d version=1.0")
         client.run("create . -tf=\"\"")
