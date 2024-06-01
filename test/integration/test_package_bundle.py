@@ -71,8 +71,8 @@ def test_package_bundle():
     c.run("install --requires=app/0.1", assert_error=True)
     assert "Missing binary" in c.out
     c.run("install --requires=app/0.1 --build=missing", assert_error=True)
-    assert "app/0.1: Invalid: The package is repackaging and building but it didn't "\
-           "enable 'tools.graph:bundle' to compute its dependencies" in c.out
+    assert "app/0.1: Invalid: The package 'app/0.1' is a package bundle, needs to be built " \
+           "from source, but it didn't enable 'tools.graph:bundle'" in c.out
 
     c.run("install --requires=app/0.1 --build=missing  -c tools.graph:bundle=True")
     assert "pkga" in c.out  # it works
