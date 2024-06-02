@@ -181,6 +181,7 @@ tools_locations = {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
         }
     },
+    "qbs": {"disabled": True},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
