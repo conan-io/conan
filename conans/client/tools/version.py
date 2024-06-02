@@ -2,7 +2,7 @@
 
 from functools import total_ordering
 
-from semver import SemVer
+from nodesemver import SemVer
 
 from conans.errors import ConanException
 

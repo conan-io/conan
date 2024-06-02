@@ -1,7 +1,7 @@
 import six
 
 from conans.client.cache.cache import ClientCache
-from semver import satisfies
+from nodesemver import satisfies
 from conans import __version__ as client_version
 from conans.errors import ConanException
 

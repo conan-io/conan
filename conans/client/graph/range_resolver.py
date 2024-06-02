@@ -56,7 +56,7 @@ def satisfying(list_versions, versionexpr, result):
     if some version cannot be converted to loose SemVer, it is discarded with a msg
     This provides some workaround for failing comparisons like "2.1" not matching "<=2.1"
     """
-    from semver import SemVer, Range, max_satisfying
+    from nodesemver import SemVer, Range, max_satisfying
     version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, result)
 
     # Check version range expression
