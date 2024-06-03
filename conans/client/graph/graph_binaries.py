@@ -1,7 +1,6 @@
 import json
 import os
 from collections import OrderedDict
-from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -144,8 +143,8 @@ class GraphBinariesAnalyzer(object):
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):
-                conanfile.output.verbose(f"'{package_id}': "
-                                         f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.info(f"'{package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
             self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
@@ -155,8 +154,8 @@ class GraphBinariesAnalyzer(object):
         if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             for package_id, compatible_package in compatibles.items():
-                conanfile.output.verbose(f"'{package_id}': "
-                                         f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.info(f"'{package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 self._evaluate_download(node, remotes, update)
@@ -384,24 +383,21 @@ class GraphBinariesAnalyzer(object):
 
         levels = deps_graph.by_levels()
         config_version = self._config_version()
-        # This overcounts when there are multiple identical tool requires
-        max_level_length = max(len(level) for level in levels)
-        evaluate_pool = ThreadPool(min(16, max_level_length))
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)
-            # group by pref to parallelize, so evaluation is done only 1 per pref
+            # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
-            # Evaluate the first node of each pref
-            evaluate_pool.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
-
+            # PARALLEL, this is the slow part that can query servers for packages, and compatibility
+            for pref, pref_nodes in nodes.items():
+                _evaluate_single(pref_nodes[0])
+            # END OF PARALLEL
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
-        evaluate_pool.close()
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1
