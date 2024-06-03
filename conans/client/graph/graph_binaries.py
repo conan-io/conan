@@ -1,6 +1,7 @@
 import json
 import os
 from collections import OrderedDict
+from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -143,8 +144,8 @@ class GraphBinariesAnalyzer(object):
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):
-                conanfile.output.info(f"'{package_id}': "
-                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.verbose(f"'{package_id}': "
+                                         f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
             self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
@@ -154,8 +155,8 @@ class GraphBinariesAnalyzer(object):
         if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             for package_id, compatible_package in compatibles.items():
-                conanfile.output.info(f"'{package_id}': "
-                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                conanfile.output.verbose(f"'{package_id}': "
+                                         f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 self._evaluate_download(node, remotes, update)
@@ -180,11 +181,6 @@ class GraphBinariesAnalyzer(object):
             node.should_build = True
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
-
-        if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_INVALID):
-            # BINARY_BUILD IS NOT A VIABLE fallback for invalid
-            node.binary = BINARY_INVALID
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
@@ -233,12 +229,6 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_download(node, remotes, update)
         else:  # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
-
-        # The INVALID should only prevail if a compatible package, due to removal of
-        # settings in package_id() was not found
-        if node.binary in (BINARY_MISSING, BINARY_BUILD):
-            if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
-                node.binary = BINARY_INVALID
 
     def _process_compatible_node(self, node, remotes, update):
         """ simplified checking of compatible_packages, that should be found existing, but
@@ -323,8 +313,9 @@ class GraphBinariesAnalyzer(object):
                     # The final data is the cache one, not the server one
                     node.binary_remote = None
                     node.prev = cache_latest_prev.revision
+                    if cache_time > node.pref_timestamp:
+                        output.info("Current package revision is newer than the remote one")
                     node.pref_timestamp = cache_time
-                    output.info("Current package revision is newer than the remote one")
         if not node.binary:
             node.binary = BINARY_CACHE
             node.binary_remote = None
@@ -393,21 +384,24 @@ class GraphBinariesAnalyzer(object):
 
         levels = deps_graph.by_levels()
         config_version = self._config_version()
+        # This overcounts when there are multiple identical tool requires
+        max_level_length = max(len(level) for level in levels)
+        evaluate_pool = ThreadPool(min(16, max_level_length))
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)
-            # group by pref to paralelize, so evaluation is done only 1 per pref
+            # group by pref to parallelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
-            # PARALLEL, this is the slow part that can query servers for packages, and compatibility
-            for pref, pref_nodes in nodes.items():
-                _evaluate_single(pref_nodes[0])
-            # END OF PARALLEL
+            # Evaluate the first node of each pref
+            evaluate_pool.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
+
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
+        evaluate_pool.close()
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1

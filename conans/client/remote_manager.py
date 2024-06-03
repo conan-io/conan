@@ -49,8 +49,7 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        layout = self._cache.get_or_create_ref_layout(ref)
-        layout.export_remove()
+        layout = self._cache.create_ref_layout(ref)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
@@ -132,8 +131,7 @@ class RemoteManager:
 
         assert pref.revision is not None
 
-        pkg_layout = self._cache.get_or_create_pkg_layout(pref)
-        pkg_layout.package_remove()  # Remove first the destination folder
+        pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, output, metadata)
 

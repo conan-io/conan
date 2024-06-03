@@ -1,13 +1,14 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.tools import TestClient
 from conan.tools.files import load
 from conan.tools.meson import MesonToolchain
-from conan.test.utils.tools import TestClient
 
 
 def test_apple_meson_keep_user_custom_flags():
@@ -96,6 +97,46 @@ def test_extra_flags_via_conf():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
+    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4', '-Ddefine1=0']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+
+
+def test_extra_flags_via_toolchain():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+
+        [buildenv]
+        CFLAGS=-flag0 -other=val
+        CXXFLAGS=-flag0 -other=val
+        LDFLAGS=-flag0 -other=val
+   """)
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.extra_cxxflags = ["-flag1", "-flag2"]
+            tc.extra_cflags = ["-flag3", "-flag4"]
+            tc.extra_ldflags = ["-flag5", "-flag6"]
+            tc.extra_defines = ["define1=0"]
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile,
+            "profile": profile})
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
@@ -557,3 +598,51 @@ def test_compiler_path_with_spaces():
     conan_meson_native = client.load("conan_meson_native.ini")
     assert "c = 'c compiler path with spaces'" in conan_meson_native
     assert "cpp = 'cpp compiler path with spaces'" in conan_meson_native
+
+
+def test_meson_sysroot_app():
+    """Testing when users pass tools.build:sysroot on the profile with Meson
+
+    The generated conan_meson_cross.ini needs to contain both sys_root property to fill the
+    PKG_CONFIG_PATH and the compiler flags with --sysroot.
+
+    When cross-building, Meson needs both compiler_executables in the config, otherwise it will fail
+    when running setup.
+    """
+    sysroot = "/my/new/sysroot/path"
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+    [settings]
+    os = Macos
+    arch = armv8
+    compiler = apple-clang
+    compiler.version = 13.0
+    compiler.libcxx = libc++
+
+    [conf]
+    tools.build:sysroot={sysroot}
+    tools.build:verbosity=verbose
+    tools.compilation:verbosity=verbose
+    tools.apple:sdk_path=/my/sdk/path
+    """)
+    profile_build = textwrap.dedent(f"""
+    [settings]
+    os = Macos
+    arch = x86_64
+    compiler = apple-clang
+    compiler.version = 13.0
+    compiler.libcxx = libc++
+    """)
+    client.save({"conanfile.py": GenConanfile(name="hello", version="0.1")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain"),
+                 "build": profile_build,
+                 "host": profile})
+    client.run("install . -pr:h host -pr:b build")
+    # Check the meson configuration file
+    conan_meson = client.load(os.path.join(client.current_folder, "conan_meson_cross.ini"))
+    assert f"sys_root = '{sysroot}'\n" in conan_meson
+    assert re.search(r"c_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+    assert re.search(r"cpp_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)

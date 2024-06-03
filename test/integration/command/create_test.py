@@ -318,6 +318,12 @@ def test_create_build_missing():
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
 
+    # The & placeholder also works
+    c.run("create pkg -s os=Linux --build=missing:&", assert_error=True)
+    c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
+    c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
+    assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
 
 def test_create_no_user_channel():
     """ test the --build=pattern and --build=missing:pattern syntax to build missing packages
@@ -354,6 +360,28 @@ def test_create_no_user_channel():
     c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache"),
                             "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
                             "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
+def test_create_build_missing_negation():
+    tc = TestClient(light=True)
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+             "lib/conanfile.py": GenConanfile("lib", "1.0").with_requires("dep/1.0"),
+             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("lib/1.0")})
+
+    tc.run("export dep")
+    tc.run("export lib")
+    tc.run("create pkg --build=missing:~dep/*", assert_error=True)
+
+    tc.assert_listed_binary({"pkg/1.0": ("a72376edfbbdaf97c8608b5fda53cadebac46a20", "Build"),
+                             "lib/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Build"),
+                             "dep/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing")})
+
+    tc.run("create pkg --build=missing:~dep/* --build=missing:~lib/*",
+           assert_error=True)
+
+    tc.assert_listed_binary({"pkg/1.0": ("a72376edfbbdaf97c8608b5fda53cadebac46a20", "Build"),
+                             "lib/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Missing"),
+                             "dep/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing")})
 
 
 def test_create_format_json():
@@ -711,22 +739,22 @@ def test_defaults_in_components():
 
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
-    assert re.search(r"BINDIRS: \['.+bin'\]", str(client.out))
-    assert re.search(r"LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search(r"INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"BINDIRS: \['.+bin']", client.out)
+    assert re.search(r"LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: RES DIRS: []"
-    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: FOO RESDIRS: []" in client.out
 
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
-    assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
-    assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"BINDIRS: \['.+bin']", client.out)
+    assert re.search(r"LIBDIRS: \['.+lib']", client.out)
+    assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: RES DIRS: []"
-    assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out)))
-    assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out)))
+    assert bool(re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out))
+    assert bool(re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out))
     assert "WARN: FOO RESDIRS: []" in client.out
 
 

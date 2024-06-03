@@ -41,8 +41,8 @@ def cppstd_compat(conanfile):
         cppstd_possible_values = supported_cppstd(conanfile)
         if cppstd_possible_values is None:
             conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
-        else:
-            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
+        else: # The current cppst must be included in case there is other factor
+            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values])
 
     cstd = conanfile.settings.get_safe("compiler.cstd")
     if cstd is not None and extension_properties.get("compatibility_cstd") is not False:
