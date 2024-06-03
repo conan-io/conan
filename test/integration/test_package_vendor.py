@@ -5,7 +5,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_package_bundle():
+def test_package_vendor():
     c = TestClient()
     app = textwrap.dedent("""
         import os
@@ -78,7 +78,7 @@ def test_package_bundle():
     assert "pkga" in c.out  # it works
 
 
-def test_package_bundle_editable():
+def test_package_vendor_editable():
     c = TestClient()
     pkgb = textwrap.dedent("""
         import os
@@ -117,3 +117,24 @@ def test_package_bundle_editable():
     # But the environment file needed to build "pkgb" has visibility over the "pkga" paths
     envfile_pkgb = c.load("pkgb/conanrunenv.sh")
     assert "pkga" in envfile_pkgb
+
+
+def test_vendor_dont_propagate_options():
+    c = TestClient()
+    app = GenConanfile("app", "0.1").with_requires("pkga/0.1").with_class_attribute("vendor=True")
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_shared_option(False),
+            "app/conanfile.py": app,
+            "consumer/conanfile.txt": "[requires]\napp/0.1",
+            "consumer_shared/conanfile.txt": "[requires]\napp/0.1\n[options]\n*:shared=True"
+            })
+    c.run("create pkga")
+    c.assert_listed_binary({"pkga/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Build")})
+    c.run("create app")
+    c.assert_listed_binary({"pkga/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Cache"),
+                            "app/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+    c.run("install consumer --build=app/* -c tools.graph:vendor=build")
+    c.assert_listed_binary({"pkga/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Cache"),
+                            "app/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+    c.run("install consumer_shared --build=app/* -c tools.graph:vendor=build")
+    c.assert_listed_binary({"pkga/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Cache"),
+                            "app/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
