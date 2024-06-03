@@ -105,6 +105,46 @@ def test_extra_flags_via_conf():
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
 
 
+def test_extra_flags_via_toolchain():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+
+        [buildenv]
+        CFLAGS=-flag0 -other=val
+        CXXFLAGS=-flag0 -other=val
+        LDFLAGS=-flag0 -other=val
+   """)
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.extra_cxxflags = ["-flag1", "-flag2"]
+            tc.extra_cflags = ["-flag3", "-flag4"]
+            tc.extra_ldflags = ["-flag5", "-flag6"]
+            tc.extra_defines = ["define1=0"]
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile,
+            "profile": profile})
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
+    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4', '-Ddefine1=0']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+
+
 def test_linker_scripts_via_conf():
     profile = textwrap.dedent("""
         [settings]
