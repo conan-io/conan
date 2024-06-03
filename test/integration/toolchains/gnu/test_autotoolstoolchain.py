@@ -266,6 +266,8 @@ def test_toolchain_and_compilers_build_context():
             assert 'export CC="gcc"' in content
             assert 'export CXX="g++"' in content
             assert 'export RC="windres"' in content
+            # Issue: https://github.com/conan-io/conan/issues/15486
+            assert 'export CC_FOR_BUILD="clang"' in content
     """)
     client = TestClient()
     client.save({
