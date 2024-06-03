@@ -101,6 +101,10 @@ class ConanFileInterface:
         return self._conanfile.package_type
 
     @property
+    def languages(self):
+        return self._conanfile.languages
+
+    @property
     def info(self):
         return self._conanfile.info
 

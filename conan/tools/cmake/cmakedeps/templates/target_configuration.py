@@ -29,6 +29,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
                                                 self.conanfile)
+        link_languages = [lang if lang != "C++" else "CXX" for lang in self.conanfile.languages]
+        link_languages = ";".join(link_languages)
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
@@ -36,7 +38,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
-                "set_interface_link_directories": auto_link and is_win}
+                "set_interface_link_directories": auto_link and is_win,
+                "link_languages": link_languages}
 
     @property
     def template(self):
@@ -128,6 +131,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                          $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'LIB_DIRS', config_suffix) }}>)
             {%- endif %}
 
+            {% if link_languages %}
+            set_target_properties({{root_target_name}} PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "{{link_languages}}")
+            {%- endif %}
 
         {%- else %}
 
