@@ -151,7 +151,12 @@ def _apple_clang_supported_cstd(version):
 
 
 def _gcc_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "4.7":
+        return ["99", "gnu99"]
+    if version < "8":
+        return ["99", "gnu99", "11", "gnu11"]
+    if version < "14":
+        return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]
 
 
