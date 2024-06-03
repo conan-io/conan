@@ -166,5 +166,10 @@ def _msvc_supported_cstd(version):
 
 
 def _clang_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "3":
+        return ["99", "gnu99"]
+    if version < "6":
+        return ["99", "gnu99", "11", "gnu11"]
+    if version < "18":
+        return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]
