@@ -184,11 +184,11 @@ class GraphBinariesAnalyzer(object):
 
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
-            if conanfile.bundle and not conanfile.conf.get("tools.graph:build_bundle", check_type=bool):
-                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a package bundle, " \
+            if conanfile.vendor and not conanfile.conf.get("tools.graph:vendor", choices=("build",)):
+                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a vendoring one, " \
                                               f"needs to be built from source, but it " \
-                                              "didn't enable 'tools.graph:build_bundle' to compute its " \
-                                              "dependencies"
+                                              "didn't enable 'tools.graph:vendor=build' to compute " \
+                                              "its dependencies"
                 node.binary = BINARY_INVALID
 
     def _process_node(self, node, build_mode, remotes, update):

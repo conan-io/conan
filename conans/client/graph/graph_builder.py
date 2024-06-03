@@ -52,9 +52,10 @@ class DepsGraphBuilder(object):
                     continue
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
-                if new_node and (not new_node.conanfile.bundle
+                if new_node and (not new_node.conanfile.vendor
                                  or new_node.recipe == RECIPE_EDITABLE or
-                                 new_node.conanfile.conf.get("tools.graph:build_bundle", check_type=bool)):
+                                 new_node.conanfile.conf.get("tools.graph:vendor",
+                                                             choices=("build",))):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
                     open_requires.extendleft((r, new_node)

@@ -144,7 +144,7 @@ graph_info_html = r"""
                     if (node.recipe == "Platform") {
                         font.background = "Violet";
                     }
-                    if (node.bundle) {
+                    if (node.vendor) {
                         borderColor = "Red";
                         shapeProperties = {borderDashes: [3,5]};
                         borderWidth = 2;
@@ -233,7 +233,7 @@ graph_info_html = r"""
                 counter++;
 
                 legend_nodes.push({x: x + counter*step, y: y, shape: "box",
-                    label: "bundle", font: {size: 35},
+                    label: "vendor", font: {size: 35},
                     color: {border: "Red"},
                     shapeProperties: {borderDashes: [3,5]},
                     borderWidth: 2

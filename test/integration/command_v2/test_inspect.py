@@ -10,8 +10,7 @@ def test_basic_inspect():
     t.save({"foo/conanfile.py": GenConanfile().with_name("foo").with_shared_option()})
     t.run("inspect foo/conanfile.py")
     lines = t.out.splitlines()
-    assert lines == ['bundle: False',
-                     'default_options:',
+    assert lines == ['default_options:',
                      '    shared: False',
                      'generators: []',
                      'label: ',
@@ -23,6 +22,7 @@ def test_basic_inspect():
                      'package_type: None',
                      'requires: []',
                      'revision_mode: hash',
+                     'vendor: False'
                      ]
 
 
@@ -81,8 +81,7 @@ def test_normal_inspect():
     tc = TestClient()
     tc.run("new basic -d name=pkg -d version=1.0")
     tc.run("inspect .")
-    assert tc.out.splitlines() == ['bundle: False',
-                                   'description: A basic recipe',
+    assert tc.out.splitlines() == ['description: A basic recipe',
                                    'generators: []',
                                    'homepage: <Your project homepage goes here>',
                                    'label: ',
@@ -93,6 +92,7 @@ def test_normal_inspect():
                                    'package_type: None',
                                    'requires: []',
                                    'revision_mode: hash',
+                                   'vendor: False',
                                    'version: 1.0']
 
 
@@ -127,8 +127,7 @@ def test_requiremens_inspect():
     """)
     tc.save({"conanfile.py": conanfile})
     tc.run("inspect .")
-    assert ['bundle: False',
-            'generators: []',
+    assert ['generators: []',
             'label: ',
             "license: ['MIT', 'Apache']",
             'options:',
@@ -138,7 +137,8 @@ def test_requiremens_inspect():
             "False, 'test': False, 'force': False, 'direct': True, 'build': "
             "False, 'transitive_headers': None, 'transitive_libs': None, 'headers': "
             "True, 'package_id_mode': None, 'visible': True}]",
-            'revision_mode: hash'] == tc.out.splitlines()
+            'revision_mode: hash',
+            'vendor: False'] == tc.out.splitlines()
 
 
 def test_pythonrequires_remote():

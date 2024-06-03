@@ -438,7 +438,7 @@ def test_graph_info_bundle():
             version = "1.0"
             def requirements(self):
                 self.requires("liba/1.0")
-            bundle = True
+            vendor = True
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
@@ -447,5 +447,5 @@ def test_graph_info_bundle():
     c.run("graph info . --build='lib*'")
     c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Invalid")})
 
-    c.run("graph info . -c tools.graph:build_bundle=True --build='lib*'")
+    c.run("graph info . -c tools.graph:vendor=build --build='lib*'")
     c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
