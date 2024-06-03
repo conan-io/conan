@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.build import build_jobs
+from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.errors import ConanException
 
 
@@ -59,7 +59,7 @@ class Qbs(object):
             config = self._configuration[name]
             args.extend(_configuration_dict_to_commandlist(name, config))
 
-        cmd = 'qbs build %s' % (' '.join(args))
+        cmd = 'qbs build %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
 
     def build_all(self):
@@ -79,7 +79,7 @@ class Qbs(object):
             config = self._configuration[name]
             args.extend(_configuration_dict_to_commandlist(name, config))
 
-        cmd = 'qbs build %s' % (' '.join(args))
+        cmd = 'qbs build %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
 
     def install(self):
@@ -92,5 +92,5 @@ class Qbs(object):
         for name in self._configuration:
             args.append('config:%s' % name)
 
-        cmd = 'qbs install %s' % (' '.join(args))
+        cmd = 'qbs install %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
