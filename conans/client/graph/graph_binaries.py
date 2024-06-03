@@ -394,10 +394,9 @@ class GraphBinariesAnalyzer(object):
 
         levels = deps_graph.by_levels()
         config_version = self._config_version()
-        # TODO: Find a better way to define this number, we ended up with 8 because
-        # it seemed a goof fit from local testing - But this could be improved
-        # max node count in every level/user conf?
-        evaluate_pool = ThreadPool(8)
+        # This overcounts when there are multiple identical tool requires
+        max_level_length = max(len(level) for level in levels)
+        evaluate_pool = ThreadPool(min(16, max_level_length))
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)
