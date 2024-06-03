@@ -161,7 +161,8 @@ def _gcc_supported_cstd(version):
 
 
 def _msvc_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "192":
+        return []
     return ["11", "17"]
 
 
