@@ -183,6 +183,8 @@ class AutotoolsToolchain:
             )
             if "c" in compilers_build_mapping:
                 env.define("CC_FOR_BUILD", compilers_build_mapping["c"])
+            if "cpp" in compilers_build_mapping:
+                env.define("CXX_FOR_BUILD", compilers_build_mapping["cpp"])
         return env
 
     def vars(self):
