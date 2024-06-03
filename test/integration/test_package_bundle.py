@@ -29,7 +29,7 @@ def test_package_bundle():
             "app/conanfile.py": app
             })
     c.run("create pkga")
-    c.run("create app")  # -c tools.graph:bundle=True will be automatic
+    c.run("create app")  # -c tools.graph:build_bundle=True will be automatic
     assert "app/0.1: package(): Packaged 1 '.dll' file: pkga.dll" in c.out
 
     # we can safely remove pkga
@@ -52,14 +52,14 @@ def test_package_bundle():
     assert c.load("full_deploy/host/app/0.1/pkga.dll") == "dll"
 
     # but we can force the expansion, still not the rebuild
-    c.run("install --requires=app/0.1 --deployer=full_deploy -c tools.graph:bundle=True")
+    c.run("install --requires=app/0.1 --deployer=full_deploy -c tools.graph:build_bundle=True")
     assert "pkga" in c.out
     assert c.load("full_deploy/host/app/0.1/app.exe") == "app"
     assert c.load("full_deploy/host/app/0.1/pkga.dll") == "dll"
 
     # and finally we can force the expansion and the rebuild
     c.run("install --requires=app/0.1 --build=app* --deployer=full_deploy "
-          "-c tools.graph:bundle=True")
+          "-c tools.graph:build_bundle=True")
     assert "pkga" in c.out
     assert c.load("full_deploy/host/app/0.1/app.exe") == "app"
     assert c.load("full_deploy/host/app/0.1/pkga.dll") == "newdll"
@@ -72,9 +72,9 @@ def test_package_bundle():
     assert "Missing binary" in c.out
     c.run("install --requires=app/0.1 --build=missing", assert_error=True)
     assert "app/0.1: Invalid: The package 'app/0.1' is a package bundle, needs to be built " \
-           "from source, but it didn't enable 'tools.graph:bundle'" in c.out
+           "from source, but it didn't enable 'tools.graph:build_bundle'" in c.out
 
-    c.run("install --requires=app/0.1 --build=missing  -c tools.graph:bundle=True")
+    c.run("install --requires=app/0.1 --build=missing  -c tools.graph:build_bundle=True")
     assert "pkga" in c.out  # it works
 
 

@@ -97,7 +97,7 @@ def create(conan_api, parser, *args):
         tool_requires = [ref] if is_build else None
         if conanfile.bundle:  # Automatically allow repackaging for conan create
             pr = profile_build if is_build else profile_host
-            pr.conf.update("&:tools.graph:bundle", True)
+            pr.conf.update("&:tools.graph:build_bundle", True)
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
