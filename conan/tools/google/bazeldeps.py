@@ -250,8 +250,13 @@ class _BazelDependenciesBZLGenerator:
         {% endfor %}
 
             return mctx.extension_metadata(
-                root_module_direct_deps = None,
-                root_module_direct_dev_deps = None,
+                # It will only warn you if any direct
+                # dependency is not imported by the 'use_repo' or even it is imported
+                # but not created. Notice that root_module_direct_dev_deps can not be None as we
+                # are giving 'all' value to root_module_direct_deps.
+                # Fix the 'use_repo' calls by running 'bazel mod tidy'
+                root_module_direct_deps = 'all',
+                root_module_direct_dev_deps = [],
 
                 # Prevent writing function content to lockfiles:
                 # - https://bazel.build/rules/lib/builtins/module_ctx#extension_metadata
