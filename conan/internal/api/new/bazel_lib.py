@@ -28,16 +28,14 @@ class {{package_name}}Recipe(ConanFile):
         if self.options.shared:
             self.options.rm_safe("fPIC")
 
-    def validate(self):
-        from conan.api.output import ConanOutput
-        ConanOutput().warning("This is the template for Bazel 6.x version, "
-                              "but it will be overridden by the 'bazel_7_lib' template "
-                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
-
     def layout(self):
         bazel_layout(self)
 
     def build(self):
+        from conan.api.output import ConanOutput
+        ConanOutput().warning("This is the template for Bazel 6.x version, "
+                              "but it will be overridden by the 'bazel_7_lib' template "
+                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
         bazel = Bazel(self)
         # On Linux platforms, Bazel creates both shared and static libraries by default, and
         # it is getting naming conflicts if we use the cc_shared_library rule
