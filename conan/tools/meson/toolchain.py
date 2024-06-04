@@ -195,17 +195,16 @@ class MesonToolchain(object):
                 self._b_vscrt = str(vscrt).lower()
 
         # Extra flags
-        #: List of extra CXX flags. Added to cpp_args
+        #: List of extra ``CXX`` flags. Added to ``cpp_args``
         self.extra_cxxflags = []
-        #: List of extra C flags. Added to c_args
+        #: List of extra ``C`` flags. Added to ``c_args``
         self.extra_cflags = []
-        #: List of extra linker flags. Added to c_link_args and cpp_link_args
+        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
         self.extra_ldflags = []
-        #: List of extra preprocessor definitions. Added to c_args and cpp_args with the
-        #: format -DFLAG1
+        #: List of extra preprocessor definitions. Added to ``c_args`` and ``cpp_args`` with the
+        #: format ``-D[FLAG_N]``.
         self.extra_defines = []
-
-        #: Dict-like object that defines Meson``properties`` with ``key=value`` format
+        #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
