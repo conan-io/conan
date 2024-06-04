@@ -7,7 +7,7 @@ from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 
 
-class Profile(object):
+class Profile:
     """A profile contains a set of setting (with values), environment variables
     """
 
@@ -42,6 +42,10 @@ class Profile(object):
             "package_settings": self.package_settings,
             "options": self.options.serialize(),
             "tool_requires": _serialize_tool_requires(),
+            "replace_requires": {str(pattern): str(replace) for pattern, replace in self.replace_requires.items()},
+            "replace_tool_requires": {str(pattern): str(replace) for pattern, replace in self.replace_tool_requires.items()},
+            "platform_tool_requires": [str(t) for t in self.platform_tool_requires],
+            "platform_requires": [str(t) for t in self.platform_requires],
             "conf": self.conf.serialize(),
             # FIXME: Perform a serialize method for ProfileEnvironment
             "build_env": self.buildenv.dumps()
@@ -85,6 +89,16 @@ class Profile(object):
         if self.platform_requires:
             result.append("[platform_requires]")
             result.extend(str(t) for t in self.platform_requires)
+
+        if self.replace_requires:
+            result.append("[replace_requires]")
+            for pattern, ref in self.replace_requires.items():
+                result.append(f"{pattern}: {ref}")
+
+        if self.replace_tool_requires:
+            result.append("[replace_tool_requires]")
+            for pattern, ref in self.replace_tool_requires.items():
+                result.append(f"{pattern}: {ref}")
 
         if self.conf:
             result.append("[conf]")

@@ -136,7 +136,9 @@ def test_profile_show_json():
     c.save({"myprofilewin": "[settings]\nos=Windows\n"
                             "[tool_requires]\nmytool/*:mytool/1.0\n"
                             "[conf]\nuser.conf:value=42\nlibiconv/*:tools.env.virtualenv:powershell=False\n"
-                            "[options]\n*:myoption=True",
+                            "[options]\n*:myoption=True\n"
+                            "[replace_requires]\ncmake/*: cmake/3.29.0\n"
+                            "[platform_requires]\ncmake/3.29.0\n",
             "myprofilelinux": "[settings]\nos=Linux"})
     c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
 
