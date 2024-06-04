@@ -184,7 +184,7 @@ tools_locations = {
     'fish': {
         "default": "3.6",
         "3.6": {"path": {"Darwin": f"{homebrew_root}/bin"}}
-    }
+    },
     "qbs": {"disabled": True},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
