@@ -156,10 +156,10 @@ class Node(object):
         # Check if need to propagate downstream
         # Then propagate downstream
 
-        # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
-        # at any given time
         if self.conanfile.vendor:
             return result
+        # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
+        # at any given time
         if not self.dependants:
             return result
         assert len(self.dependants) == 1
