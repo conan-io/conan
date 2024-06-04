@@ -98,6 +98,9 @@ class BaseConanCommand:
 
         formatter(info)
 
+    def _raise_errors(self, info):
+        if info and "conan_error" in info and isinstance(info["conan_error"], Exception):
+            raise info["conan_error"]
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
@@ -179,6 +182,7 @@ class ConanCommand(BaseConanCommand):
             else:
                 sub.set_parser(subcommand_parser, conan_api)
                 sub.run(conan_api, parser, *args)
+        self._raise_errors(info)
 
     @property
     def group(self):
@@ -198,6 +202,7 @@ class ConanSubCommand(BaseConanCommand):
         info = self._method(conan_api, parent_parser, self._parser, *args)
         # It is necessary to do it after calling the "method" otherwise parser not complete
         self._format(parent_parser, info, *args)
+        self._raise_errors(info)
 
     def set_name(self, parent_name):
         self._name = self._subcommand_name.replace(f'{parent_name}-', '', 1)

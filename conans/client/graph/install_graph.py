@@ -476,6 +476,13 @@ class InstallGraph:
         if missing:
             self._raise_missing(missing)
 
+    def get_errors(self):
+        try:
+            self.raise_errors()
+        except ConanException as e:
+            return e
+        return None
+
     def _raise_missing(self, missing):
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
