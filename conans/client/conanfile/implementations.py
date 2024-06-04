@@ -17,3 +17,14 @@ def auto_shared_fpic_configure(conanfile):
 def auto_header_only_package_id(conanfile):
     if conanfile.options.get_safe("header_only") or conanfile.package_type is PackageType.HEADER:
         conanfile.info.clear()
+
+
+def auto_language(conanfile):
+    if not conanfile.languages:
+        conanfile.settings.rm_safe("compiler.cstd")
+        return
+    if "C" not in conanfile.languages:
+        conanfile.settings.rm_safe("compiler.cstd")
+    if "C++" not in conanfile.languages:
+        conanfile.settings.rm_safe("compiler.cppstd")
+        conanfile.settings.rm_safe("compiler.libcxx")

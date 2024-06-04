@@ -109,6 +109,9 @@ class MesonToolchain(object):
     {% if cpp_std %}
     cpp_std = '{{cpp_std}}'
     {% endif %}
+    {% if c_std %}
+    c_std = '{{c_std}}'
+    {% endif %}
     {% if backend %}
     backend = '{{backend}}'
     {% endif %}
@@ -188,6 +191,9 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
+        cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        self._c_std = to_cstd_flag(cstd)
+
         self._b_vscrt = None
         if compiler in ("msvc", "clang"):
             vscrt = msvc_runtime_flag(self._conanfile)
@@ -195,17 +201,16 @@ class MesonToolchain(object):
                 self._b_vscrt = str(vscrt).lower()
 
         # Extra flags
-        #: List of extra CXX flags. Added to cpp_args
+        #: List of extra ``CXX`` flags. Added to ``cpp_args``
         self.extra_cxxflags = []
-        #: List of extra C flags. Added to c_args
+        #: List of extra ``C`` flags. Added to ``c_args``
         self.extra_cflags = []
-        #: List of extra linker flags. Added to c_link_args and cpp_link_args
+        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
         self.extra_ldflags = []
-        #: List of extra preprocessor definitions. Added to c_args and cpp_args with the
-        #: format -DFLAG1
+        #: List of extra preprocessor definitions. Added to ``c_args`` and ``cpp_args`` with the
+        #: format ``-D[FLAG_N]``.
         self.extra_defines = []
-
-        #: Dict-like object that defines Meson``properties`` with ``key=value`` format
+        #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
@@ -506,6 +511,7 @@ class MesonToolchain(object):
             "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self._cpp_std,
+            "c_std": self._c_std,
             "c_args": to_meson_value(self._filter_list_empty_fields(self.c_args)),
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),

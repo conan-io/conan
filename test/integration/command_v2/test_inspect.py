@@ -14,6 +14,7 @@ def test_basic_inspect():
                      '    shared: False',
                      'generators: []',
                      'label: ',
+                     'languages: []',
                      'name: foo',
                      'options:',
                      '    shared: False',
@@ -85,6 +86,7 @@ def test_normal_inspect():
                                    'generators: []',
                                    'homepage: <Your project homepage goes here>',
                                    'label: ',
+                                   'languages: []',
                                    'license: <Your project license goes here>',
                                    'name: pkg',
                                    'options:',
@@ -129,6 +131,7 @@ def test_requiremens_inspect():
     tc.run("inspect .")
     assert ['generators: []',
             'label: ',
+            'languages: []',
             "license: ['MIT', 'Apache']",
             'options:',
             'options_definitions:',

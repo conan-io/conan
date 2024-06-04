@@ -1,7 +1,8 @@
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conans.client.conanfile.implementations import auto_shared_fpic_config_options, auto_shared_fpic_configure
+from conans.client.conanfile.implementations import auto_shared_fpic_config_options, \
+    auto_shared_fpic_configure, auto_language
 
 
 def run_configure_method(conanfile, down_options, profile_options, ref):
@@ -14,6 +15,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
             conanfile.config_options()
     elif "auto_shared_fpic" in conanfile.implements:
         auto_shared_fpic_config_options(conanfile)
+
+    auto_language(conanfile)  # default implementation removes `compiler.cstd`
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer

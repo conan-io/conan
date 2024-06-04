@@ -100,6 +100,7 @@ compiler:
         threads: [null, posix, win32]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
     msvc:
         version: [170, 180, 190, 191, 192, 193, 194]
         update: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -107,6 +108,7 @@ compiler:
         runtime_type: [Debug, Release]
         cppstd: [null, 14, 17, 20, 23]
         toolset: [null, v110_xp, v120_xp, v140_xp, v141_xp]
+        cstd: [null, 11, 17]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
@@ -115,12 +117,14 @@ compiler:
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
-        runtime_version: [null, v140, v141, v142, v143]
+        runtime_version: [null, v140, v141, v142, v143, v144]
+        cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1",
                   "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0", "15", "15.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
     intel-cc:
         version: ["2021.1", "2021.2", "2021.3", "2021.4", "2022.1", "2022.2",
                   "2022.3", "2023.0", "2023.1", "2023.2", "2024.0",]
