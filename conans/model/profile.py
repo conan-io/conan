@@ -37,19 +37,29 @@ class Profile:
         def _serialize_tool_requires():
             return {pattern: [repr(ref) for ref in refs]
                     for pattern, refs in self.tool_requires.items()}
-        return {
+        result = {
             "settings": self.settings,
             "package_settings": self.package_settings,
             "options": self.options.serialize(),
             "tool_requires": _serialize_tool_requires(),
-            "replace_requires": {str(pattern): str(replace) for pattern, replace in self.replace_requires.items()},
-            "replace_tool_requires": {str(pattern): str(replace) for pattern, replace in self.replace_tool_requires.items()},
-            "platform_tool_requires": [str(t) for t in self.platform_tool_requires],
-            "platform_requires": [str(t) for t in self.platform_requires],
             "conf": self.conf.serialize(),
             # FIXME: Perform a serialize method for ProfileEnvironment
             "build_env": self.buildenv.dumps()
         }
+
+        if self.replace_requires:
+            result["replace_requires"] = {str(pattern): str(replace) for pattern, replace in
+                                          self.replace_requires.items()}
+        if self.replace_tool_requires:
+            result["replace_tool_requires"] = {str(pattern): str(replace) for pattern, replace in
+                                               self.replace_tool_requires.items()}
+        if self.platform_tool_requires:
+            result["platform_tool_requires"] = [str(t) for t in self.platform_tool_requires]
+
+        if self.platform_requires:
+            result["platform_requires"] = [str(t) for t in self.platform_requires]
+
+        return result
 
     @property
     def package_settings_values(self):
