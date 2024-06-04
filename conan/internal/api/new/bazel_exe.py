@@ -21,6 +21,12 @@ class {{package_name}}Recipe(ConanFile):
 
     generators = "BazelToolchain"
 
+    def validate(self):
+        from conan.api.output import ConanOutput
+        ConanOutput().warning("DEPRECATED: This is the template for Bazel 6.x version, "
+                              "but it will be overridden by the 'bazel_7_exe' template "
+                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
+
     def layout(self):
         bazel_layout(self)
 

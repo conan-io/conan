@@ -26,8 +26,8 @@ class NewAPI:
         from conan.internal.api.new.msbuild_exe import msbuild_exe_files
         from conan.internal.api.new.bazel_lib import bazel_lib_files
         from conan.internal.api.new.bazel_exe import bazel_exe_files
-        from conan.internal.api.new.bazel_lib_7 import bazel_lib_files_7
-        from conan.internal.api.new.bazel_exe_7 import bazel_exe_files_7
+        from conan.internal.api.new.bazel_7_lib import bazel_lib_files_7
+        from conan.internal.api.new.bazel_7_exe import bazel_exe_files_7
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
@@ -41,8 +41,8 @@ class NewAPI:
                          # TODO: Rename xxx_7 to xxx when dropped Bazel 6.x compatibility
                          "bazel_lib": bazel_lib_files,
                          "bazel_exe": bazel_exe_files,
-                         "bazel_lib_7": bazel_lib_files_7,
-                         "bazel_exe_7": bazel_exe_files_7,
+                         "bazel_7_lib": bazel_lib_files_7,
+                         "bazel_7_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
                          "alias": alias_file,

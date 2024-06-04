@@ -53,7 +53,7 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile):
 @pytest.mark.tool("bazel", "7.1.2")
 def test_basic_exe(bazelrc, build_type, base_profile):
     client = TestClient(path_with_spaces=False)
-    client.run("new bazel_exe_7 -d name=myapp -d version=1.0")
+    client.run("new bazel_7_exe -d name=myapp -d version=1.0")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -224,7 +224,7 @@ def test_transitive_libs_consuming(shared):
     client = TestClient(path_with_spaces=False)
     # A regular library made with Bazel
     with client.chdir("myfirstlib"):
-        client.run("new bazel_lib_7 -d name=myfirstlib -d version=1.2.11")
+        client.run("new bazel_7_lib -d name=myfirstlib -d version=1.2.11")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -241,7 +241,7 @@ def test_transitive_libs_consuming(shared):
         # We prepare a consumer with Bazel (library mysecondlib using myfirstlib)
         # and a test_package with an example executable
         os_ = platform.system()
-        client.run("new bazel_lib_7 -d name=mysecondlib -d version=1.0")
+        client.run("new bazel_7_lib -d name=mysecondlib -d version=1.0")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
