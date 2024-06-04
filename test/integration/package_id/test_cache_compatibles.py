@@ -398,6 +398,13 @@ class TestDefaultCompat:
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
 
+        c.run("install --requires=mylib/1.0@ -s os=Windows -s arch=x86_64 -s build_type=Release "
+              "-s compiler=msvc "
+              "-s compiler.version=194 -s compiler.cppstd=17 "
+              "-s compiler.runtime=dynamic -pr:b=profile_build")
+        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing." \
+               f"Using compatible package '{package_id1}'"
+
 
 class TestErrorsCompatibility:
     """ when the plugin fails, we want a clear message and a helpful trace

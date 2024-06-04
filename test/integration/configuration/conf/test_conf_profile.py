@@ -1,4 +1,3 @@
-import platform
 import textwrap
 
 import pytest
@@ -156,9 +155,9 @@ def test_msbuild_config():
     assert "/verbosity:Quiet" in client.out
 
 
-@pytest.mark.tool("visual_studio")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msbuild_compile_options():
+    # This works in all platforms because MSBuildToolchain works even in Linux, it will
+    # just skip generating the conanvcvars.bat
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile

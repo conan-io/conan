@@ -16,8 +16,10 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conans.client.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
+from conans.model.version import Version
 from conans.util.files import load
 
 
@@ -146,8 +148,9 @@ class VSDebuggerEnvironment(Block):
         bin_dirs = [p for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
         test_bindirs = [p for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
         bin_dirs.extend(test_bindirs)
+        bin_dirs = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                    for p in bin_dirs]
         bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
-
         bin_dirs = ";".join(bin_dirs) if bin_dirs else None
         if bin_dirs:
             config_dict[build_type] = bin_dirs
@@ -238,6 +241,8 @@ class LinkerScriptsBlock(Block):
         if not linker_scripts:
             return
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
+        linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                          for p in linker_scripts]
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
@@ -324,6 +329,8 @@ class AndroidSystemBlock(Block):
         if not android_ndk_path:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
+        android_ndk_path = relativize_path(android_ndk_path, self._conanfile,
+                                           "${CMAKE_CURRENT_LIST_DIR}")
 
         use_cmake_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain",
                                                               check_type=bool)
@@ -430,6 +437,8 @@ class AppleSystemBlock(Block):
             "enable_visibility": enable_visibility
         }
         if host_sdk_name:
+            host_sdk_name = relativize_path(host_sdk_name, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
             ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
         if host_architecture:
@@ -527,23 +536,22 @@ class FindFiles(Block):
                 host_runtime_dirs = {}
                 for k, v in matches:
                     host_runtime_dirs.setdefault(k, []).append(v)
-        
+
         # Calculate the dirs for the current build_type
         runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
-        
+
         build_type = settings.get_safe("build_type")
         host_runtime_dirs[build_type] = [s.replace("\\", "/") for s in runtime_dirs]
 
         return host_runtime_dirs
 
-    @staticmethod
-    def _join_paths(paths):
-        return " ".join(['"{}"'.format(p.replace('\\', '/')
-                                        .replace('$', '\\$')
-                                        .replace('"', '\\"')) for p in paths])
+    def _join_paths(self, paths):
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
+        paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+        return " ".join([f'"{p}"' for p in paths])
 
     def context(self):
         # To find the generated cmake_find_package finders
@@ -630,7 +638,10 @@ class UserToolchain(Block):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
                                                   default=[], check_type=list)
-        return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                 for p in user_toolchain]
+        paths = [p.replace("\\", "/") for p in paths]
+        return {"paths": paths}
 
 
 class ExtraFlagsBlock(Block):
@@ -849,9 +860,10 @@ class GenericSystemBlock(Block):
             toolset = settings.get_safe("compiler.toolset")
             if toolset is None:
                 compiler_version = str(settings.compiler.version)
-                compiler_update = str(settings.compiler.update)
+                msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
+                compiler_update = msvc_update or settings.get_safe("compiler.update")
                 toolset = msvc_version_to_toolset_version(compiler_version)
-                if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
+                if compiler_update is not None:  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
                     toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
@@ -867,6 +879,7 @@ class GenericSystemBlock(Block):
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         toolset_cuda = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_cuda")
         if toolset_cuda is not None:
+            toolset_cuda = relativize_path(toolset_cuda, conanfile, "${CMAKE_CURRENT_LIST_DIR}")
             toolset_cuda = f"cuda={toolset_cuda}"
             toolset = toolset_cuda if toolset is None else f"{toolset},{toolset_cuda}"
         return toolset
@@ -919,6 +932,34 @@ class GenericSystemBlock(Block):
         return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
                 os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
+    def _get_darwin_version(self, os_name, os_version):
+        # version mapping from https://en.wikipedia.org/wiki/Darwin_(operating_system)
+        version_mapping = {
+            "Macos": {
+                "10.6": "10", "10.7": "11", "10.8": "12", "10.9": "13", "10.10": "14", "10.11": "15",
+                "10.12": "16", "10.13": "17", "10.14": "18", "10.15": "19", "11": "20", "12": "21",
+                "13": "22", "14": "23",
+            },
+            "iOS": {
+                "7": "14", "8": "14", "9": "15", "10": "16", "11": "17", "12": "18", "13": "19",
+                "14": "20", "15": "21", "16": "22", "17": "23"
+            },
+            "watchOS": {
+                "4": "17", "5": "18", "6": "19", "7": "20",
+                "8": "21", "9": "22", "10": "23"
+            },
+            "tvOS": {
+                "11": "17", "12": "18", "13": "19", "14": "20",
+                "15": "21", "16": "22", "17": "23"
+            },
+            "visionOS": {
+                "1": "23"
+            }
+        }
+        os_version = Version(os_version).major if os_name != "Macos" or (os_name == "Macos" and Version(
+            os_version) >= Version("11")) else os_version
+        return version_mapping.get(os_name, {}).get(str(os_version))
+
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
 
@@ -930,6 +971,7 @@ class GenericSystemBlock(Block):
         if not user_toolchain and not is_universal_arch(self._conanfile.settings.get_safe("arch"),
                                                         self._conanfile.settings.possible_values().get("arch")):
             os_host = self._conanfile.settings.get_safe("os")
+            os_host_version = self._conanfile.settings.get_safe("os.version")
             arch_host = self._conanfile.settings.get_safe("arch")
             if arch_host == "armv8":
                 arch_host = {"Windows": "ARM64", "Macos": "arm64"}.get(os_host, "aarch64")
@@ -940,12 +982,12 @@ class GenericSystemBlock(Block):
                 if self._is_apple_cross_building():
                     # cross-build in Macos also for M1
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
-                    #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-                    _system_version = self._conanfile.settings.get_safe("os.sdk_version")
+                    #  CMAKE_SYSTEM_VERSION for Apple sets the Darwin version, not the os version
+                    _system_version = self._get_darwin_version(os_host, os_host_version)
                     _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
-                    _system_version = self._conanfile.settings.get_safe("os.version")
+                    _system_version = os_host_version
                     _system_processor = arch_host
 
                 if system_name is not None and system_version is None:
@@ -990,6 +1032,9 @@ class GenericSystemBlock(Block):
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+        if cmake_sysroot is not None:
+            cmake_sysroot = relativize_path(cmake_sysroot, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
 
         result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
@@ -1003,6 +1048,46 @@ class GenericSystemBlock(Block):
                 "winsdk_version": winsdk_version,
                 "gen_platform_sdk_version": gen_platform_sdk_version}
 
+class ExtraVariablesBlock(Block):
+    template = textwrap.dedent(r"""
+        {% if extra_variables %}
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
+        {% endfor %}
+        {% endif %}
+    """)
+
+    CMAKE_CACHE_TYPES = ["BOOL","FILEPATH", "PATH", "STRING", "INTERNAL"]
+
+    def get_exact_type(self, key, value):
+        if isinstance(value, str):
+            return f"\"{value}\""
+        elif isinstance(value, (int, float)):
+            return value
+        elif isinstance(value, dict):
+            var_value = self.get_exact_type(key, value.get("value"))
+            is_cache = value.get("cache")
+            if is_cache:
+                if not isinstance(is_cache, bool):
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)')
+                var_type = value.get("type")
+                if not var_type:
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "{key}"')
+                if var_type not in self.CMAKE_CACHE_TYPES:
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables invalid type "{var_type}" for cache variable "{key}". Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
+                # Set docstring as variable name if not defined
+                docstring = value.get("docstring") or key
+                return f"{var_value} CACHE {var_type} \"{docstring}\""
+            else:
+                return var_value
+
+    def context(self):
+        # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
+        extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={}, check_type=dict)
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = self.get_exact_type(key, value)
+        return {"extra_variables": parsed_extra_variables}
 
 class OutputDirsBlock(Block):
 

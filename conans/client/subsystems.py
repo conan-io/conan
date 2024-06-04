@@ -82,6 +82,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         # - CHERE_INVOKING is necessary to keep the CWD and not change automatically to the user home
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        msys2_mode_env.unset("ORIGINAL_PATH")
         # So --login do not change automatically to the user home
         msys2_mode_env.define("CHERE_INVOKING", "1")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")

@@ -9,7 +9,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
+from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
@@ -19,7 +19,6 @@ from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
@@ -166,6 +165,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("extra_flags", ExtraFlagsBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("extra_variables", ExtraVariablesBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
                                        ("pkg_config", PkgConfigBlock),
@@ -202,7 +202,6 @@ class CMakeToolchain(object):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                            keep_trailing_newline=True).render(**context)
-        content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
 
     @property

@@ -81,14 +81,6 @@ class RecipeLayout(LayoutBase):
         src_folder = self.source()
         rmdir(src_folder)
 
-    def export_remove(self):
-        export_folder = self.export()
-        rmdir(export_folder)
-        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
-        rmdir(export_src_folder)
-        download_export = self.download_export()
-        rmdir(download_export)
-
 
 class PackageLayout(LayoutBase):
 

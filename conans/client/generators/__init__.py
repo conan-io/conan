@@ -219,15 +219,6 @@ def _generate_aggregated_env(conanfile):
         conanfile.output.info(f"Generated aggregated env files: {generated}")
 
 
-def relativize_generated_file(content, conanfile, placeholder):
-    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
-    if abs_base_path is None:
-        return content
-    content = content.replace(abs_base_path, new_path)
-    content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
-    return content
-
-
 def relativize_paths(conanfile, placeholder):
     abs_base_path = conanfile.folders._base_generators
     if not abs_base_path or not os.path.isabs(abs_base_path):
@@ -241,3 +232,17 @@ def relativize_paths(conanfile, placeholder):
     new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
     new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
     return abs_base_path, new_path
+
+
+def relativize_path(path, conanfile, placeholder):
+    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
+    if abs_base_path is None:
+        return path
+    if path.startswith(abs_base_path):
+        path = path.replace(abs_base_path, new_path, 1)
+    else:
+        abs_base_path = abs_base_path.replace("\\", "/")
+        new_path = new_path.replace("\\", "/")
+        if path.startswith(abs_base_path):
+            path = path.replace(abs_base_path, new_path, 1)
+    return path

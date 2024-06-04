@@ -1,8 +1,11 @@
 import unittest
 
 import mock
+from unittest.mock import patch
+import pytest
 from parameterized import parameterized
 
+from conan.internal.api.detect_api import _cc_compiler
 from conans.client.conf.detect import detect_defaults_settings
 from conans.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -56,3 +59,18 @@ class DetectTest(unittest.TestCase):
             with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
                 detect_defaults_settings()
                 self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
+
+
+@pytest.mark.parametrize("version_return,expected_version", [
+    ["cc.exe (Rev3, Built by MSYS2 project) 14.1.0", "14.1.0"],
+    ["g++ (Conan-Build-gcc--binutils-2.42) 14.1.0", "14.1.0"],
+    ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
+    ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
+    ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
+    ["cc.exe (Rev3, Built by MSYS2 project) 14", "14"],
+])
+@patch("conan.internal.api.detect_api.detect_runner")
+def test_detect_cc_versionings(detect_runner_mock, version_return, expected_version):
+    detect_runner_mock.return_value = 0, version_return
+    compiler, installed_version, compiler_exe = _cc_compiler()
+    assert installed_version == Version(expected_version)

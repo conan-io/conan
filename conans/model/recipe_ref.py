@@ -154,7 +154,7 @@ class RecipeReference:
         if self.channel and validation_pattern.match(self.channel) is None:
             raise ConanException(f"Invalid package channel '{self.channel}'")
 
-         # Warn if they use .+ in the name/user/channel, as it can be problematic for generators
+        # Warn if they use .+ in the name/user/channel, as it can be problematic for generators
         pattern = re.compile(r'[.+]')
         if pattern.search(self.name):
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
@@ -179,8 +179,8 @@ class RecipeReference:
             no_user_channel = True
 
         condition = ((pattern == "&" and is_consumer) or
-                      fnmatch.fnmatchcase(str(self), pattern) or
-                      fnmatch.fnmatchcase(self.repr_notime(), pattern))
+                     fnmatch.fnmatchcase(str(self), pattern) or
+                     fnmatch.fnmatchcase(self.repr_notime(), pattern))
         if no_user_channel:
             condition = condition and not self.user and not self.channel
         if negate:

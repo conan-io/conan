@@ -6,10 +6,10 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
-from test.functional.toolchains.meson._base import TestMesonBase
 from conan.test.utils.tools import TestClient
+from conans.model.recipe_ref import RecipeReference
+from test.functional.toolchains.meson._base import TestMesonBase
 
 
 class MesonToolchainTest(TestMesonBase):
