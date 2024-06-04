@@ -641,7 +641,7 @@ class BazelDeps:
         conan_deps_repo_rules.bzl and a conan_deps_module_extension.bzl file (for bazel>=7.1) one in the
         build folder.
 
-        In case of bazel < 7, it's important to highlight that the dependencies.bzl file should
+        In case of bazel < 7, it's important to highlight that the ``dependencies.bzl`` file should
         be loaded by your WORKSPACE Bazel file:
 
         .. code-block:: python
@@ -649,15 +649,16 @@ class BazelDeps:
             load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
             load_conan_dependencies()
 
-        In case of bazel >= 7.1, the conan_deps_module_extension.bzl file should be loaded by your
+        In case of bazel >= 7.1, the ``conan_deps_module_extension.bzl`` file should be loaded by your
         Module.bazel file, e.g. like this:
 
         .. code-block:: python
-                load_conan_dependencies = use_extension(
-                    "//build:conan_deps_module_extension.bzl",
-                    "conan_extension"
-                )
-                use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
+
+            load_conan_dependencies = use_extension(
+                "//build:conan_deps_module_extension.bzl",
+                "conan_extension"
+            )
+            use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
         """
         check_duplicated_generator(self, self._conanfile)
         requirements = _get_requirements(self._conanfile, self.build_context_activated)
