@@ -4,9 +4,9 @@ import platform
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, load
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient, load
 from conans.util.files import save
 
 # INFO: Fish only supports Cygwin and WSL https://github.com/fish-shell/fish-shell?tab=readme-ov-file#windows
