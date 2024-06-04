@@ -117,7 +117,7 @@ compiler:
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
-        runtime_version: [null, v140, v141, v142, v143]
+        runtime_version: [null, v140, v141, v142, v143, v144]
         cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1",
