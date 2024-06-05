@@ -194,3 +194,25 @@ def test_skip_visible_build():
     c.run("create libc")
     c.run("install app --format=json")
     assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+
+
+def test_skip_intermediate_static():
+    # https://github.com/conan-io/conan/issues/16402
+    # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
+    #  \------------------------------------------------/
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("static-library"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("shared-library"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_package_type("application")
+                                                          .with_requires("libc/0.1", "liba/0.1")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("remove libb:* -c")
+    c.run("install app --format=json", assert_error=True)
+    print(c.out)
+    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+

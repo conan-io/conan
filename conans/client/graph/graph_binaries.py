@@ -424,24 +424,27 @@ class GraphBinariesAnalyzer(object):
                 if not node.build_allowed:  # Only those that are forced to build, not only "missing"
                     required_nodes.add(node)
 
+        print("REQUIRED NODES", required_nodes)
         root_nodes = required_nodes.copy()
         while root_nodes:
             new_root_nodes = set()
             for node in root_nodes:
+                print("  chECKING NODE", node)
                 # The nodes that are directly required by this one to build correctly
                 is_consumer = not (node.recipe != RECIPE_CONSUMER and
                                    node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
                                                        BINARY_EDITABLE))
                 deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
                                     or (d.require.direct and is_consumer))
-
+                print("    DEPS_REQUIRED ", deps_required)
                 # second pass, transitive affected. Packages that have some dependency that is required
                 # cannot be skipped either. In theory the binary could be skipped, but build system
                 # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
-                indirect = (d.node for d in node.transitive_deps.values()
-                            if any(t.node in deps_required for t in d.node.transitive_deps.values()))
-                deps_required.update(indirect)
+                #indirect = (d.node for d in node.transitive_deps.values()
+                #            if any(t.node in deps_required for t in d.node.transitive_deps.values()))
+                #deps_required.update(indirect)
 
+                print("    DEPS_REQUIRED 2", deps_required)
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():
                     dep.require.skip = dep.node not in deps_required
