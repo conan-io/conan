@@ -47,8 +47,8 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
+    vendor = False
     languages = []
-
     implements = []
 
     provides = None
@@ -170,6 +170,7 @@ class ConanFile:
         result["label"] = self.display_name
         if self.info is not None:
             result["info"] = self.info.serialize()
+        result["vendor"] = self.vendor
         return result
 
     @property

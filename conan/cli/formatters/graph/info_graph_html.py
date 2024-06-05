@@ -144,6 +144,11 @@ graph_info_html = r"""
                     if (node.recipe == "Platform") {
                         font.background = "Violet";
                     }
+                    if (node.vendor) {
+                        borderColor = "Red";
+                        shapeProperties = {borderDashes: [3,5]};
+                        borderWidth = 2;
+                    }
                     nodes.push({
                         id: node_id,
                         font: font,
@@ -224,6 +229,14 @@ graph_info_html = r"""
                     label: "conflict",
                     font: {size: 35, color: "white"},
                     color: {border: "SkyBlue", background: "Black"}
+                });
+                counter++;
+
+                legend_nodes.push({x: x + counter*step, y: y, shape: "box",
+                    label: "vendor", font: {size: 35},
+                    color: {border: "Red"},
+                    shapeProperties: {borderDashes: [3,5]},
+                    borderWidth: 2
                 });
                 return {nodes: new vis.DataSet(legend_nodes)};
             }
