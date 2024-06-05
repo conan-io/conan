@@ -211,8 +211,8 @@ def test_skip_intermediate_static():
     c.run("create liba")
     c.run("create libb")
     c.run("create libc")
-    c.run("remove libb:* -c")
-    c.run("install app --format=json", assert_error=True)
-    print(c.out)
-    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
-
+    # c.run("remove libb:* -c")  # Removing this will make it fail. libb is intermediate and can
+    # not be skipped
+    c.run("install app")
+    assert "Skipped binaries" not in c.out
+    assert "libb/0.1: Already installed!" in c.out
