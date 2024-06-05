@@ -51,7 +51,10 @@ class TestReplaceRequires:
         channel = f"--channel={ref.channel}" if ref.channel else ""
         c.run(f"create dep --name={ref.name} --version={ref.version} {user} {channel}")
         rrev = c.exported_recipe_revision()
+        c.run("profile show -pr=profile")
+        assert profile_tag in c.out
         c.run("install pkg -pr=profile")
+        assert profile_tag in c.out
         c.assert_listed_require({f"{pkg}#{rrev}": "Cache"}, build=tool_require)
 
         # Check lockfile

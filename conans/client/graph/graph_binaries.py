@@ -181,6 +181,15 @@ class GraphBinariesAnalyzer(object):
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
+        if node.binary == BINARY_BUILD:
+            conanfile = node.conanfile
+            if conanfile.vendor and not conanfile.conf.get("tools.graph:vendor", choices=("build",)):
+                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a vendoring one, " \
+                                              f"needs to be built from source, but it " \
+                                              "didn't enable 'tools.graph:vendor=build' to compute " \
+                                              "its dependencies"
+                node.binary = BINARY_INVALID
+
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node):
