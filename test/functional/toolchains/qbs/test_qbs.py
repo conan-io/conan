@@ -37,20 +37,18 @@ def test_qbs_all_products():
     conanfile = textwrap.dedent('''
     import os
 
-    from conan import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.qbs import Qbs
-    from conan.tools.files import copy, collect_libs
 
     class Recipe(ConanFile):
         name = "hello"
         version = "1.0"
 
         exports_sources = "*.cpp", "*.h", "*.qbs"
-        settings = "os", "compiler", "arch"
+        settings = "os", "compiler", "arch", "build_type"
 
         def build(self):
             qbs = Qbs(self)
-            qbs.profile = ""
             qbs.build_all()
         ''')
 
@@ -78,20 +76,18 @@ def test_qbs_specific_products():
     conanfile = textwrap.dedent('''
     import os
 
-    from conan import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.qbs import Qbs
-    from conan.tools.files import copy, collect_libs
 
     class Recipe(ConanFile):
         name = "hello"
         version = "1.0"
 
         exports_sources = "*.cpp", "*.h", "*.qbs"
-        settings = "os", "compiler", "arch"
+        settings = "os", "compiler", "arch", "build_type"
 
         def build(self):
             qbs = Qbs(self)
-            qbs.profile = ""
             qbs.build(products=["hello", "hello"])
         ''')
 
