@@ -143,8 +143,10 @@ class RestApiClientLocalRecipesIndex:
         sys.stderr = StringIO()
         try:
             global_conf = ConfDefinition()
+            remotes = [self._remote]
             new_ref, _ = cmd_export(self._app, global_conf, conanfile_path,
-                                    ref.name, str(ref.version), None, None)
+                                    ref.name, str(ref.version), None, None,
+                                    remotes=remotes)
         except Exception as e:
             raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
                                  f"{str(e)}")
