@@ -20,8 +20,7 @@ def _configuration_dict_to_commandlist(name, config_dict):
 
 class Qbs(object):
     def __init__(self, conanfile, project_file=None):
-        # hardcoded name, see qbs toolchain
-        self.profile = 'conan_toolchain_profile'
+        self.profile = None
         self._conanfile = conanfile
         self._set_project_file(project_file)
         self.jobs = build_jobs(conanfile)
