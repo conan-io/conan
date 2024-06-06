@@ -56,7 +56,8 @@ class ClientMigrator(Migrator):
         if old_version and old_version < "2.0.14-":
             _migrate_pkg_db_lru(self.cache_folder, old_version)
 
-        if old_version and old_version < "2.4":
+        print("old_version-->", old_version)
+        if old_version is None or old_version < "2.4":
             _migrate_default_compatibility(self.cache_folder)
 
 
