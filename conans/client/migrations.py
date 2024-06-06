@@ -56,7 +56,8 @@ class ClientMigrator(Migrator):
         if old_version and old_version < "2.0.14-":
             _migrate_pkg_db_lru(self.cache_folder, old_version)
 
-        print("old_version-->", old_version)
+        # let the back migration files be stored
+        # if there was not a previous install (old_version==None)
         if old_version is None or old_version < "2.4":
             _migrate_default_compatibility(self.cache_folder)
 
@@ -78,6 +79,7 @@ def _migrate_pkg_db_lru(cache_folder, old_version):
     config = ConfigAPI.load_config(cache_folder)
     storage = config.get("core.cache:storage_path") or os.path.join(cache_folder, "p")
     db_filename = os.path.join(storage, 'cache.sqlite3')
+    # do not run the migration if the version.txt d
     if not os.path.exists(db_filename):
         return
     ConanOutput().warning(f"Upgrade cache from Conan version '{old_version}'")
