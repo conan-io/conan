@@ -26,11 +26,16 @@ class _QbsDepsModuleFile:
         return self._version
 
     def get_content(self):
+        cpp_info_attrs = [
+            'includedirs', 'srcdirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs',
+            'frameworkdirs', 'system_libs', 'frameworks', 'libs', 'defines', 'cflags', 'cxxflags',
+            'sharedlinkflags', 'exelinkflags', 'objects', 'sysroot'
+        ]
         return {
             'package_name': self._dep.ref.name,
             'package_dir': self._get_package_dir(),
             'version': str(self._version),
-            'cpp_info': self._component.serialize(),
+            'cpp_info': {k : getattr(self._component, k) for k in cpp_info_attrs},
             'build_bindirs': self._build_bindirs,
             'dependencies': [{'name': n, "version": str(v)} for n, v in self._deps],
             'settings': {k: v for k, v in self._dep.settings.items()},
@@ -121,14 +126,14 @@ class _QbsDepGenerator:
 
         if not self._dep.cpp_info.has_components:
             module_name = _get_package_name(self._dep)
-            requires = get_cpp_info_requires_names(self._dep, self._dep.cpp_info._package)
+            requires = get_cpp_info_requires_names(self._dep, self._dep.cpp_info)
             if not requires:
                 # If no requires were found, let's try to get all the direct visible
                 # dependencies, e.g., requires = "other_pkg/1.0"
                 for deprequire, _ in self._dep.dependencies.direct_host.items():
                     requires.append((deprequire.ref.name, deprequire.ref.version))
             file = _QbsDepsModuleFile(
-                self, self._dep, self._dep.cpp_info._package, requires, module_name
+                self, self._dep, self._dep.cpp_info, requires, module_name
             )
             qbs_files[file.filename] = file
         else:
@@ -140,7 +145,7 @@ class _QbsDepGenerator:
                 full_requires.append((module_name, file.version))
             module_name = _get_package_name(self._dep)
             file = _QbsDepsModuleFile(
-                self, self._dep, self._dep.cpp_info._package, full_requires, module_name)
+                self, self._dep, self._dep.cpp_info, full_requires, module_name)
             # We create the root package's module file ONLY
             # if it does not already exist in components
             # An example is a grpc package where they have a "grpc" component

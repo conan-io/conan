@@ -29,12 +29,12 @@ def test_empty_package():
     assert cpp_info.get('includedirs') == [os.path.join(package_dir, 'include')]
     assert cpp_info.get('libdirs') == [os.path.join(package_dir, 'lib')]
     assert cpp_info.get('bindirs') == [os.path.join(package_dir, 'bin')]
-    assert cpp_info.get('libs') is None
-    assert cpp_info.get('frameworkdirs') is None
-    assert cpp_info.get('frameworks') is None
-    assert cpp_info.get('defines') is None
-    assert cpp_info.get('cflags') is None
-    assert cpp_info.get('cxxflags') is None
+    assert cpp_info.get('libs') == []
+    assert cpp_info.get('frameworkdirs') == []
+    assert cpp_info.get('frameworks') == []
+    assert cpp_info.get('defines') == []
+    assert cpp_info.get('cflags') == []
+    assert cpp_info.get('cxxflags') == []
 
     assert module_content.get('settings') == {}
     assert module_content.get('options') == {}
@@ -75,10 +75,10 @@ def test_empty_dirs():
     assert cpp_info.get('bindirs') == []
     assert cpp_info.get('libs') == []
     assert cpp_info.get('frameworkdirs') == []
-    assert cpp_info.get('frameworks') is None
-    assert cpp_info.get('defines') is None
-    assert cpp_info.get('cflags') is None
-    assert cpp_info.get('cxxflags') is None
+    assert cpp_info.get('frameworks') == []
+    assert cpp_info.get('defines') == []
+    assert cpp_info.get('cflags') == []
+    assert cpp_info.get('cxxflags') == []
 
     assert module_content.get('settings') == {}
     assert module_content.get('options') == {}
