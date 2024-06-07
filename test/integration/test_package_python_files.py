@@ -65,3 +65,33 @@ def test_package_python_files():
     assert "myfile.pyc" in manifest
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
+
+
+def test_package_empty_folders():
+    c = TestClient(default_server_user=True)
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package(self):
+                os.mkdir(os.path.join(self.package_folder, "empty_folder"))
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create . --name=pkg --version=0.1")
+    pkg_folder = c.created_layout().package()
+    assert os.path.isdir(os.path.join(pkg_folder, "empty_folder"))
+    manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+    assert "empty_folder" not in manifest
+
+    c.run("upload * -r=default --confirm")
+    c.run("remove * -c")
+    c.run("download pkg/0.1#*:* -r default")
+
+    # The download will be in a different pkg folder now.
+    ref = RecipeReference.loads("pkg/0.1")
+    pref = c.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
+    pkg_folder = c.get_latest_pkg_layout(pref).package()
+    assert os.path.isdir(os.path.join(pkg_folder, "empty_folder"))
+    manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+    assert "empty_folder" not in manifest
