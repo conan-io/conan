@@ -109,6 +109,9 @@ class MesonToolchain(object):
     {% if cpp_std %}
     cpp_std = '{{cpp_std}}'
     {% endif %}
+    {% if c_std %}
+    c_std = '{{c_std}}'
+    {% endif %}
     {% if backend %}
     backend = '{{backend}}'
     {% endif %}
@@ -188,13 +191,26 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
+        cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        self._c_std = to_cstd_flag(cstd)
+
         self._b_vscrt = None
         if compiler in ("msvc", "clang"):
             vscrt = msvc_runtime_flag(self._conanfile)
             if vscrt:
                 self._b_vscrt = str(vscrt).lower()
 
-        #: Dict-like object that defines Meson``properties`` with ``key=value`` format
+        # Extra flags
+        #: List of extra ``CXX`` flags. Added to ``cpp_args``
+        self.extra_cxxflags = []
+        #: List of extra ``C`` flags. Added to ``c_args``
+        self.extra_cflags = []
+        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
+        self.extra_ldflags = []
+        #: List of extra preprocessor definitions. Added to ``c_args`` and ``cpp_args`` with the
+        #: format ``-D[FLAG_N]``.
+        self.extra_defines = []
+        #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
@@ -408,13 +424,14 @@ class MesonToolchain(object):
         exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[], check_type=list)
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
-        defines = [f"-D{d}" for d in self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)]
+        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         return {
-            "cxxflags": cxxflags + sys_root,
-            "cflags": cflags + sys_root,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags + sys_root,
-            "defines": defines
+            "cxxflags": cxxflags + sys_root + self.extra_cxxflags,
+            "cflags": cflags + sys_root + self.extra_cflags,
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
+                       + sys_root + self.extra_ldflags,
+            "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }
 
     @staticmethod
@@ -494,6 +511,7 @@ class MesonToolchain(object):
             "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self._cpp_std,
+            "c_std": self._c_std,
             "c_args": to_meson_value(self._filter_list_empty_fields(self.c_args)),
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),

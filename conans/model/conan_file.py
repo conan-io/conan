@@ -47,7 +47,8 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
-
+    vendor = False
+    languages = []
     implements = []
 
     provides = None
@@ -91,6 +92,8 @@ class ConanFile:
 
         if isinstance(self.generators, str):
             self.generators = [self.generators]
+        if isinstance(self.languages, str):
+            self.languages = [self.languages]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
@@ -134,6 +137,7 @@ class ConanFile:
         result["version"] = str(self.version) if self.version is not None else None
         result["topics"] = list(self.topics) if self.topics is not None else None
         result["package_type"] = str(self.package_type)
+        result["languages"] = self.languages
 
         settings = self.settings
         if settings is not None:
@@ -166,6 +170,7 @@ class ConanFile:
         result["label"] = self.display_name
         if self.info is not None:
             result["info"] = self.info.serialize()
+        result["vendor"] = self.vendor
         return result
 
     @property

@@ -20,8 +20,7 @@ def _configuration_dict_to_commandlist(name, config_dict):
 
 class Qbs(object):
     def __init__(self, conanfile, project_file=None):
-        # hardcoded name, see qbs toolchain
-        self.profile = 'conan_toolchain_profile'
+        self.profile = None
         self._conanfile = conanfile
         self._set_project_file(project_file)
         self.jobs = build_jobs(conanfile)
@@ -39,16 +38,20 @@ class Qbs(object):
     def add_configuration(self, name, values):
         self._configuration[name] = values
 
-    def build(self, products=None):
-        products = products or []
-        args = [
-            '--no-install',
+    def _get_common_arguments(self):
+        return [
             '--build-directory', self._conanfile.build_folder,
             '--file', self._project_file,
         ]
 
-        if products:
-            args.extend(['--products', ','.join(products)])
+    def _build(self, products, all_products):
+        args = self._get_common_arguments()
+        args.append('--no-install')
+
+        if all_products:
+            args.append('--all-products')
+        elif products:
+            args.extend(['--products', ','.join(products or [])])
 
         args.extend(['--jobs', '%s' % self.jobs])
 
@@ -61,33 +64,16 @@ class Qbs(object):
 
         cmd = 'qbs build %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
+
+    def build(self, products=None):
+        return self._build(products=products, all_products=False)
 
     def build_all(self):
-        args = [
-            '--no-install',
-            '--build-directory', self._conanfile.build_folder,
-            '--file', self._project_file,
-            '--all-products'
-        ]
-
-        args.extend(['--jobs', '%s' % self.jobs])
-
-        if self.profile:
-            args.append('profile:%s' % self.profile)
-
-        for name in self._configuration:
-            config = self._configuration[name]
-            args.extend(_configuration_dict_to_commandlist(name, config))
-
-        cmd = 'qbs build %s' % cmd_args_to_string(args)
-        self._conanfile.run(cmd)
+        return self._build(products=None, all_products=True)
 
     def install(self):
-        args = [
-            '--no-build',
-            '--install-root', self._conanfile.package_folder,
-            '--file', self._project_file
-        ]
+        args = self._get_common_arguments()
+        args.append('--no-build')
 
         for name in self._configuration:
             args.append('config:%s' % name)

@@ -131,3 +131,14 @@ def test_profile_serialize():
         "tool_requires": {"*": ["'zlib/1.2.8'"]}, "conf": {"user.myfield:value": "MyVal"},
         "build_env": "VAR1=1\nVAR2=2\n"}
     assert expected_json == profile.serialize()
+
+    profile.replace_requires.update({"cmake/*": "cmake/3.29.0"})
+    profile.platform_tool_requires = ["cmake/3.29.0"]
+    expected_json = {
+        "settings": {"arch": "x86_64", "compiler": "Visual Studio", "compiler.version": "12"},
+        "package_settings": {"MyPackage": {"os": "Windows"}}, "options": {},
+        "replace_requires": {"cmake/*": "cmake/3.29.0"},
+        "platform_tool_requires": ["cmake/3.29.0"],
+        "tool_requires": {"*": ["'zlib/1.2.8'"]}, "conf": {"user.myfield:value": "MyVal"},
+        "build_env": "VAR1=1\nVAR2=2\n"}
+    assert expected_json == profile.serialize()
