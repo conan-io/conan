@@ -5,7 +5,7 @@ import json
 import os
 
 
-class _QbsDepsModuleFile():
+class _QbsDepsModuleFile:
     def __init__(self, qbsdeps, dep, component, deps, module_name):
         self._qbsdeps = qbsdeps
         self._dep = dep
@@ -13,12 +13,9 @@ class _QbsDepsModuleFile():
         self._deps = deps
         self._module_name = module_name
         self._build_bindirs = qbsdeps._build_bindirs
-
-        def _get_component_version(dep, component):
-            return (component.get_property("component_version") or
-                    component.get_property("system_package_version") or
-                    dep.ref.version)
-        self._version = _get_component_version(self._dep, self._component)
+        self._version = (component.get_property("component_version") or
+                         component.get_property("system_package_version") or
+                         dep.ref.version)
 
     @property
     def filename(self):
@@ -51,7 +48,8 @@ class _QbsDepsModuleFile():
 
 
 class _QbsDepGenerator:
-    ''' Handles a single package, can create multiple modules in case of several components '''
+    """ Handles a single package, can create multiple modules in case of several components
+    """
     def __init__(self, conanfile, dep, build_bindirs):
         self._conanfile = conanfile
         self._dep = dep
@@ -153,7 +151,9 @@ class _QbsDepGenerator:
 
 
 class QbsDeps:
-    ''' Handles multiple packages '''
+    """ Main Qbs Dependencies generator, will generate a file for each dependency
+    inside the "conan-qbs-deps" folder
+    """
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
