@@ -1501,6 +1501,7 @@ def test_toolchain_keep_absolute_paths():
     presets = json.loads(c.load(user_presets["include"][0]))
     assert os.path.isabs(presets["configurePresets"][0]["toolchainFile"])
 
+
 def test_output_dirs_gnudirs_local_default():
     # https://github.com/conan-io/conan/issues/14733
     c = TestClient()
@@ -1630,3 +1631,18 @@ def test_toolchain_extra_variables():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in toolchain
 
+
+def test_variables_wrong_scaping():
+    # https://github.com/conan-io/conan/issues/16432
+    c = TestClient()
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "pkg/conanfile.txt": "[tool_requires]\ntool/0.1\n[generators]\nCMakeToolchain"})
+    c.run("create tool")
+    c.run("install pkg")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f'list(PREPEND CMAKE_PROGRAM_PATH "{cache_folder}' in toolchain
+
+    c.run("install pkg --deployer=full_deploy")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain
