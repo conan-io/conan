@@ -244,6 +244,7 @@ class TestRequester:
             kwargs["expect_errors"] = True
             kwargs.pop("stream", None)
             kwargs.pop("verify", None)
+            kwargs.pop("source_credentials", None)
             auth = kwargs.pop("auth", None)
             if auth and isinstance(auth, tuple):
                 app.set_authorization(("Basic", auth))
