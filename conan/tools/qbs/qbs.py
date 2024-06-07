@@ -25,6 +25,7 @@ class Qbs(object):
         self._set_project_file(project_file)
         self.jobs = build_jobs(conanfile)
         self._configuration = dict()
+        self._resolved = False
 
     def _set_project_file(self, project_file):
         if not project_file:
@@ -44,7 +45,31 @@ class Qbs(object):
             '--file', self._project_file,
         ]
 
+    def resolve(self, parallel=True):
+        args = self._get_common_arguments()
+
+        if parallel:
+            args.extend(['--jobs', '%s' % self.jobs])
+        else:
+            args.extend(['--jobs', '1'])
+
+        if self.profile:
+            args.append('profile:%s' % self.profile)
+
+        for name in self._configuration:
+            config = self._configuration[name]
+            args.extend(_configuration_dict_to_commandlist(name, config))
+
+        cmd = 'qbs resolve %s' % cmd_args_to_string(args)
+        self._conanfile.run(cmd)
+
+        self._resolved = True
+
     def _build(self, products, all_products):
+        # for backward compatibility when there was only build()
+        if not self._resolved:
+            self.resolve()
+
         args = self._get_common_arguments()
         args.append('--no-install')
 
@@ -55,12 +80,8 @@ class Qbs(object):
 
         args.extend(['--jobs', '%s' % self.jobs])
 
-        if self.profile:
-            args.append('profile:%s' % self.profile)
-
         for name in self._configuration:
-            config = self._configuration[name]
-            args.extend(_configuration_dict_to_commandlist(name, config))
+            args.append('config:%s' % name)
 
         cmd = 'qbs build %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
