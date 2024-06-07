@@ -73,7 +73,7 @@ class Qbs(object):
 
     def install(self):
         args = self._get_common_arguments()
-        args.append('--no-build')
+        args.extend(['--no-build', '--install-root', self._conanfile.package_folder])
 
         for name in self._configuration:
             args.append('config:%s' % name)
