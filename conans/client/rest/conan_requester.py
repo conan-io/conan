@@ -123,6 +123,7 @@ class ConanRequester(object):
     def _add_kwargs(self, url, kwargs):
         # verify is the kwargs that comes from caller, RestAPI, it is defined in
         # Conan remote "verify_ssl"
+        source_credentials = kwargs.pop("source_credentials", None)
         if kwargs.get("verify", None) is not False:  # False means de-activate
             if self._cacert_path is not None:
                 kwargs["verify"] = self._cacert_path
@@ -135,7 +136,8 @@ class ConanRequester(object):
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
 
-        self._url_creds.add_auth(url, kwargs)
+        if source_credentials:
+            self._url_creds.add_auth(url, kwargs)
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):

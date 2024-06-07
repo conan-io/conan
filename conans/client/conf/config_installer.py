@@ -138,7 +138,7 @@ def _process_download(config, cache_folder, requester):
         filename = os.path.basename(path)
         zippath = os.path.join(tmp_folder, filename)
         try:
-            downloader = FileDownloader(requester=requester)
+            downloader = FileDownloader(requester=requester, source_credentials=True)
             downloader.download(url=config.uri, file_path=zippath, verify_ssl=config.verify_ssl,
                                 retry=1)
             _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=True)
