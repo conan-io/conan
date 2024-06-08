@@ -1,4 +1,5 @@
 import json
+import textwrap
 
 import pytest
 
@@ -147,3 +148,36 @@ def test_replace_requires_json_format():
     assert "pkg/0.1: pkg/0.2" in c.out  # The replacement happens
     graph = json.loads(c.stdout)
     assert graph["graph"]["replaced_requires"] == {"pkg/0.1": "pkg/0.2"}
+
+
+def test_replace_requires_consumer_references():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            requires = "zlib/0.1"
+            def generate(self):
+                assert self.dependencies["zlib"] is self.dependencies["zlib-ng"]
+                self.output.info(f"DEP ZLIB generate: {self.dependencies['zlib'].ref.name}!")
+            def build(self):
+                assert self.dependencies["zlib"] is self.dependencies["zlib-ng"]
+                self.output.info(f"DEP ZLIB build: {self.dependencies['zlib'].ref.name}!")
+            def package_info(self):
+                assert self.dependencies["zlib"] is self.dependencies["zlib-ng"]
+                # self.cpp_info.requires = ["zlib::zlib"]
+        """)
+    c.save({"zlibng/conanfile.py": GenConanfile("zlib-ng", "0.1"),
+            "app/conanfile.py": conanfile,
+            "profile": "[replace_requires]\nzlib/0.1: zlib-ng/0.1"})
+    c.run("create zlibng")
+    c.run("build app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
+    c.run("create app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
+    # FIXME: The self.cpp_info.requires is still broken
