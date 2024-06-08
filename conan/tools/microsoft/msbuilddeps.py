@@ -8,9 +8,9 @@ from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
+from conans.client.generators import relativize_path
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
-from conans.client.generators import relativize_path
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
