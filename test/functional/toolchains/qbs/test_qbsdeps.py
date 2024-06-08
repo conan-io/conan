@@ -92,3 +92,41 @@ def test_qbsdeps_with_test_requires_lib():
     }, clean_first=True)
     client.run("install .")
     client.run_command("qbs build moduleProviders.conan.installDirectory:.")
+
+
+@pytest.mark.tool("qbs")
+def test_qbsdeps_with_qbs_toolchain():
+    client = TestClient()
+    with client.chdir("lib"):
+        client.run("new qbs_lib -d name=hello -d version=1.0")
+        client.run("create . -tf=\"\"")
+
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+        from conan.tools.qbs import Qbs
+
+        class Recipe(ConanFile):
+            name = "app"
+            version = "1.2"
+            exports_sources = "*.cpp", "*.h", "*.qbs"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "QbsDeps"
+
+            def requirements(self):
+                self.requires("hello/1.0")
+
+            def build(self):
+                qbs = Qbs(self)
+                qbs.resolve()
+                qbs.build()
+
+            def install(self):
+                qbs = Qbs(self)
+                qbs.install()
+        ''')
+    client.save({
+        "conanfile.py": conanfile,
+        "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
+        "app.qbs": gen_qbs_application(files=["main.cpp"], deps=["hello"]),
+    }, clean_first=True)
+    client.run("create .")

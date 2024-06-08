@@ -55,6 +55,9 @@ class Qbs(object):
         if self.profile:
             args.append('profile:%s' % self.profile)
 
+        if os.path.exists(os.path.join(self._conanfile.source_folder, 'conan-qbs-deps')):
+            args.append('moduleProviders.conan.installDirectory:' + self._conanfile.source_folder)
+
         for name in self._configuration:
             config = self._configuration[name]
             args.extend(_configuration_dict_to_commandlist(name, config))
