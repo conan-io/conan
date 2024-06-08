@@ -124,7 +124,7 @@ def test_qbs_multiple_configurations():
         version = "1.0"
 
         exports_sources = "*.cpp", "*.h", "*.qbs"
-        settings = "os", "compiler", "arch", "build_type"
+        settings = "os", "compiler", "arch"
 
         def build(self):
             qbs = Qbs(self)
