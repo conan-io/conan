@@ -14,7 +14,7 @@ from os import path
 
 # The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
-excluded_test_packages = ["test"]
+excluded_test_packages = ["test*"]
 
 
 def get_requires(filename):
