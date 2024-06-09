@@ -324,7 +324,7 @@ class _Component:
 
     @property
     def required_component_names(self):
-        """ Names of the required components of the same package (not scoped with ::)"""
+        """ Names of the required INTERNAL components of the same package (not scoped with ::)"""
         if self.requires is None:
             return []
         return [r for r in self.requires if "::" not in r]
@@ -514,7 +514,9 @@ class CppInfo:
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
 
     def aggregated_components(self):
-        """Aggregates all the components as global values, returning a new CppInfo"""
+        """Aggregates all the components as global values, returning a new CppInfo
+        Used by many generators to obtain a unified, aggregated view of all components
+        """
         # This method had caching before, but after a ``--deployer``, the package changes
         # location, and this caching was invalid, still pointing to the Conan cache instead of
         # the deployed
@@ -535,7 +537,7 @@ class CppInfo:
         return aggregated
 
     def check_component_requires(self, conanfile):
-        """ quality check for component requires:
+        """ quality check for component requires, called by BinaryInstaller after package_info()
         - Check that all recipe ``requires`` are used if consumer recipe explicit opt-in to use
           component requires
         - Check that component external dep::comp dependency "dep" is a recipe "requires"
