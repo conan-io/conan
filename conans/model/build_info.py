@@ -477,21 +477,6 @@ class CppInfo:
         for component in self.components.values():
             component.deploy_base_folder(package_folder, deploy_folder)
 
-    def _raise_circle_components_requires_error(self):
-        """
-        Raise an exception because of a requirements loop detection in components.
-        The exception message gives some information about the involved components.
-        """
-        deps_set = set()
-        for comp_name, comp in self.components.items():
-            for dep_name, dep in self.components.items():
-                for require in dep.required_component_names:
-                    if require == comp_name:
-                        deps_set.add("   {} requires {}".format(dep_name, comp_name))
-        dep_mesg = "\n".join(deps_set)
-        raise ConanException(f"There is a dependency loop in "
-                             f"'self.cpp_info.components' requires:\n{dep_mesg}")
-
     def get_sorted_components(self):
         """
         Order the components taking into account if they depend on another component in the
@@ -499,19 +484,23 @@ class CppInfo:
 
         :return: ``OrderedDict`` {component_name: component}
         """
-        processed = []  # Names of the components ordered
-        # TODO: Cache the sort
-        while len(self.components) > len(processed):
-            cached_processed = processed[:]
-            for name, c in self.components.items():
-                req_processed = [n for n in c.required_component_names if n not in processed]
-                if not req_processed and name not in processed:
-                    processed.append(name)
-            # If cached_processed did not change then detected cycle components requirements!
-            if cached_processed == processed:
-                self._raise_circle_components_requires_error()
-
-        return OrderedDict([(cname, self.components[cname]) for cname in processed])
+        result = OrderedDict()
+        opened = self.components.copy()
+        while opened:
+            new_open = OrderedDict()
+            for name, c in opened.items():
+                if not any(n in opened for n in c.required_component_names):
+                    result[name] = c
+                else:
+                    new_open[name] = c
+            if len(opened) == len(new_open):
+                msg = ["There is a dependency loop in 'self.cpp_info.components' requires:"]
+                for name, c in opened.items():
+                    loop_reqs = ", ".join(n for n in c.required_component_names if n in opened)
+                    msg.append(f"   {name} requires {loop_reqs}")
+                raise ConanException("\n".join(msg))
+            opened = new_open
+        return result
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new CppInfo
