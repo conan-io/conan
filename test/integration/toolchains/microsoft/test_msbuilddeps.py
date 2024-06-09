@@ -1,3 +1,4 @@
+import glob
 import os
 import platform
 import textwrap
@@ -122,3 +123,53 @@ class TestMSBuildDepsSkips:
         assert "conan_liba" not in libb
         libb = c.load("app/conan_libb_mycomp_vars_release_x64.props")
         assert "conan_liba" not in libb
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="MSBuildDeps broken with POSIX paths")
+@pytest.mark.parametrize("withdepl", [False, True])
+def test_msbuilddeps_relocatable(withdepl):
+    c = TestClient()
+    c.save({
+        "libh/conanfile.py": GenConanfile("libh", "0.1")
+            .with_package_type("header-library"),
+        "libs/conanfile.py": GenConanfile("libs", "0.2")
+            .with_package_type("static-library")
+            .with_requires("libh/0.1"),
+        "libd/conanfile.py": GenConanfile("libd", "0.3")
+            .with_package_type("shared-library"),
+        "app/conanfile.py": GenConanfile()
+            .with_requires("libh/0.1")
+            .with_requires("libs/0.2")
+            .with_requires("libd/0.3")
+            .with_settings("arch", "build_type"),
+    })
+
+    c.run("create libh")
+    c.run("create libs")
+    c.run("create libd")
+    c.run("install app -g MSBuildDeps" + (" -d full_deploy" if withdepl else ""))
+
+    for dep in ["libh", "libs", "libd"]:
+        text = c.load(f"app/conan_{dep}_vars_release_x64.props")
+        marker = f"Conan{dep}RootFolder"
+        value = text.split(f"<{marker}>")[1].split(f"</{marker}>")[0]
+        if withdepl:
+            # path should be relative, since artifacts are moved along with project
+            prefix = '$(MSBuildThisFileDirectory)/'
+            assert value.startswith(prefix)
+            tail = value[len(prefix):]
+            assert not os.path.isabs(tail)
+        else:
+            # path should be absolute, since conan cache does not move with project
+            assert os.path.isabs(value)
+            assert '$(' not in value
+
+    if withdepl:
+        # extra checks: no absolute paths allowed anywhere in props
+        propsfiles = glob.glob(os.path.join(c.current_folder, "app/*.props"))
+        assert len(propsfiles) > 0
+        for fn in propsfiles:
+            text = c.load(fn)
+            text = text.replace('\\', '/')
+            dir = c.current_folder.replace('\\', '/')
+            assert dir not in text
