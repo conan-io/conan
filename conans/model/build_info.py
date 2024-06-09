@@ -536,16 +536,11 @@ class CppInfo:
         if not self.has_components and not self._package.requires:
             return
         # Accumulate all external requires
-        external = set(r.split("::")[0] for r in self._package.requires if "::" in r)
-        internal = set(r for r in self._package.requires if "::" not in r)
-        # TODO: Cache this, this is computed in different places
-        for key, comp in self.components.items():
-            external.update(r.split("::")[0] for r in comp.requires if "::" in r)
-            internal.update(r for r in comp.requires if "::" not in r)
-
-        missing_internal = list(internal.difference(self.components))
+        comps = self.required_components
+        missing_internal = [c[1] for c in comps if c[0] is None and c[1] not in self.components]
         if missing_internal:
             raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
+        external = [c[0] for c in comps if c[0] is not None]
         if not external:
             return
         # Only direct host (not test) dependencies can define required components
