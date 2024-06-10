@@ -564,8 +564,8 @@ class FindFiles(Block):
         return host_runtime_dirs
 
     def _join_paths(self, paths):
-        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
         paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
         return " ".join([f'"{p}"' for p in paths])
 
     def context(self):
