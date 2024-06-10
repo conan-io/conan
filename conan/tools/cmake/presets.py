@@ -54,6 +54,17 @@ class _CMakePresets:
             if conanfile.conf.get("tools.build:skip_test", check_type=bool):
                 cache_variables["BUILD_TESTING"] = "OFF"
 
+        # In case user is injecting its own toolchain file, still need to locate generated CMakeDeps
+        toolchain_file = conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
+        if toolchain_file:
+            build_paths = [conanfile.generators_folder]
+            for req in conanfile.dependencies.values():
+                cppinfo = req.cpp_info.aggregated_components()
+                build_paths.extend(cppinfo.builddirs)
+            build_paths = ";".join(p.replace("\\", "/") for p in build_paths)
+            cache_variables["CMAKE_MODULE_PATH"] = build_paths
+            cache_variables["CMAKE_PREFIX_PATH"] = build_paths
+
         preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
         multiconfig = is_multi_configuration(generator)
         if os.path.exists(preset_path):

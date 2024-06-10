@@ -1,8 +1,10 @@
+import os
 import platform
 import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conans.model.recipe_ref import RecipeReference
 from conan.test.utils.tools import TestClient, TurboTestClient
 
@@ -491,3 +493,54 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     assert "Found hello prog" in client.out
     assert host_folder_hash not in client.out
     assert build_folder_hash in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_toolchain_file():
+    c = TestClient()
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello)
+        find_package(dep1 CONFIG REQUIRED)
+        find_package(dep2 CONFIG REQUIRED)
+        """)
+
+    dep2 = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "dep2"
+            version = "0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            def package(self):
+                save(self, os.path.join(self.package_folder, "dep2-config.cmake"),
+                     'message(STATUS "Hello world from dep2!!!!")')
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "none")
+                self.cpp_info.builddirs = ["."]
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Pkg(ConanFile):
+            requires = "dep1/0.1", "dep2/0.1"
+            generators = "CMakeToolchain", "CMakeDeps"
+            settings = "os", "compiler", "arch", "build_type"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+            """)
+    c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.1"),
+            "dep2/conanfile.py": dep2,
+            "pkg/conanfile.py": pkg,
+            "pkg/CMakeLists.txt": cmake,
+            "mytoolchain.cmake": ""})
+    c.run("create dep1")
+    c.run("create dep2")
+    path = os.path.join(c.current_folder, "mytoolchain.cmake")
+    c.run(f'build pkg -c tools.cmake.cmaketoolchain:toolchain_file="{path}"')
+    assert "Conan: Target declared 'dep1::dep1'" in c.out
+    assert "Hello world from dep2!!!!" in c.out
