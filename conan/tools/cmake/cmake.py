@@ -85,10 +85,9 @@ class CMake(object):
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
+        cmakelist_folder = cmakelist_folder.replace("\\", "/")
 
         build_folder = self._conanfile.build_folder
-        generator_folder = self._conanfile.generators_folder
-
         mkdir(self._conanfile, build_folder)
 
         arg_list = [self._cmake_program]

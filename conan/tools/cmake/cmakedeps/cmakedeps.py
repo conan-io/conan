@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 import jinja2
@@ -15,7 +14,6 @@ from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetCon
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
@@ -120,8 +118,7 @@ class CMakeDeps(object):
             ret[config_version.filename] = config_version.render()
 
         data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
-        data_content = relativize_generated_file(data_target.render(), self._conanfile,
-                                                 "${CMAKE_CURRENT_LIST_DIR}")
+        data_content = data_target.render()
         ret[data_target.filename] = data_content
 
         target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
@@ -131,11 +128,9 @@ class CMakeDeps(object):
         ret[targets.filename] = targets.render()
 
         config = ConfigTemplate(self, require, dep, find_module_mode)
-        # Check if the XXConfig.cmake exists to keep the first generated configuration
-        # to only include the build_modules from the first conan install. The rest of the
-        # file is common for the different configurations.
-        if not os.path.exists(config.filename):
-            ret[config.filename] = config.render()
+        # Only the latest configuration BUILD_MODULES and additional_variables will be used
+        # in multi-config they will be overwritten by the latest install
+        ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
         """
