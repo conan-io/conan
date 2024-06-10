@@ -121,16 +121,17 @@ class UploadAPI:
             basename = os.path.basename(file)
             full_url = url + basename
             is_summary = file.endswith(".json")
+            file_kind = "summary" if is_summary else "file"
             try:
                 if is_summary or not uploader.exists(full_url, auth=None):
-                    output.info(f"Uploading file '{basename}' to backup sources server")
+                    output.info(f"Uploading {file_kind} '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
                     output.info(f"File '{basename}' already in backup sources server, "
                                 "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
                 if is_summary:
-                    output.warning("Could not update summary '{basename}' in backup sources server. "
+                    output.warning(f"Could not update summary '{basename}' in backup sources server. "
                                    "Skipping updating file but continuing with upload. "
                                    f"Missing permissions?: {e}")s
                 else:
