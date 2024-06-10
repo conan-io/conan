@@ -120,27 +120,22 @@ class UploadAPI:
         for file in files:
             basename = os.path.basename(file)
             full_url = url + basename
+            is_summary = file.endswith(".json")
             try:
-                if file.endswith(".json"):
-                    # Try to update the summary, but don't fail if it is not possible
-                    # (e.g. because the file needs overwriting, and we have no delete permissions)
-                    output.info(f"Updating summary '{basename}' in backup sources server")
-                    try:
-                        uploader.upload(full_url, file, dedup=False, auth=None)
-                    except (AuthenticationException, ForbiddenException) as e:
-                        output.warning(f"Could not update summary '{basename}' "
-                                       f"in backup sources server. Missing permissions?: {e}")
-                elif not uploader.exists(full_url, auth=None):
-                    # Upload the blob only if it does not exist, but don't rely on dedup,
-                    # because the server might not support it
+                if is_summary or not uploader.exists(full_url, auth=None):
                     output.info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
                     output.info(f"File '{basename}' already in backup sources server, "
                                 "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(f"The source backup server '{url}' needs authentication"
-                                     f"/permissions, please provide 'source_credentials.json': {e}")
+                if is_summary:
+                    output.warning("Could not update summary '{basename}' in backup sources server. "
+                                   "Skipping updating file but continuing with upload. "
+                                   f"Missing permissions?: {e}")s
+                else:
+                    raise ConanException(f"The source backup server '{url}' needs authentication"
+                                         f"/permissions, please provide 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
         return files
