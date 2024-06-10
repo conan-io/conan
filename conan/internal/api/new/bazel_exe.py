@@ -18,13 +18,16 @@ class {{package_name}}Recipe(ConanFile):
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "main/*", "WORKSPACE"
-
     generators = "BazelToolchain"
 
     def layout(self):
         bazel_layout(self)
 
     def build(self):
+        from conan.api.output import ConanOutput
+        ConanOutput().warning("This is the template for Bazel 6.x version, "
+                              "but it will be overridden by the 'bazel_7_exe' template "
+                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
         bazel = Bazel(self)
         bazel.build(target="//main:{{name}}")
 
@@ -51,8 +54,6 @@ class {{package_name}}Test(ConanFile):
 """
 
 _bazel_build_exe = """\
-load("@rules_cc//cc:defs.bzl", "cc_binary")
-
 cc_binary(
     name = "{{name}}",
     srcs = ["main.cpp", "{{name}}.cpp", "{{name}}.h"]

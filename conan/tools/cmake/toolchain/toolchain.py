@@ -9,7 +9,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
+from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
@@ -19,7 +19,6 @@ from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
@@ -166,6 +165,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("extra_flags", ExtraFlagsBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("extra_variables", ExtraVariablesBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
                                        ("pkg_config", PkgConfigBlock),
@@ -179,6 +179,7 @@ class CMakeToolchain(object):
         self.presets_prefix = "conan"
         self.presets_build_environment = None
         self.presets_run_environment = None
+        self.absolute_paths = False  # By default use relative paths to toolchain and presets
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -201,7 +202,6 @@ class CMakeToolchain(object):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                            keep_trailing_newline=True).render(**context)
-        content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
 
     @property
@@ -227,16 +227,16 @@ class CMakeToolchain(object):
         check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
-            save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
-            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
+            toolchain_file = self.filename
+            save(os.path.join(self._conanfile.generators_folder, toolchain_file), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {toolchain_file}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
-                                                 toolchain_file or self.filename))
+
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
@@ -266,9 +266,9 @@ class CMakeToolchain(object):
 
             cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
 
-        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
+        write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
                             self.user_presets_path, self.presets_prefix, buildenv, runenv,
-                            cmake_executable)
+                            cmake_executable, self.absolute_paths)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

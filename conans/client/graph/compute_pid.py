@@ -38,6 +38,9 @@ def compute_package_id(node, new_config, config_version):
             else:
                 data[require] = req_info
 
+    if conanfile.vendor:  # Make the package_id fully independent of dependencies versions
+        data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
+
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
@@ -57,11 +60,12 @@ def compute_package_id(node, new_config, config_version):
 
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
-            try:
-                conanfile.validate_build()
-            except ConanInvalidConfiguration as e:
-                # This 'cant_build' will be ignored if we don't have to build the node.
-                node.cant_build = str(e)
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
 
     run_validate_package_id(conanfile)
 

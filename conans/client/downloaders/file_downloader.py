@@ -49,6 +49,7 @@ class FileDownloader:
                         time.sleep(retry_wait)
 
             self.check_checksum(file_path, md5, sha1, sha256)
+            self._output.debug(f"Downloaded {file_path} from {url}")
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)

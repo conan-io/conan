@@ -32,9 +32,6 @@ class URLCredentials:
         creds_path = os.path.join(cache_folder, "source_credentials.json")
         if not os.path.exists(creds_path):
             return
-        template = Template(load(creds_path))
-        content = template.render({"platform": platform, "os": os})
-        content = json.loads(content)
 
         def _get_auth(credentials):
             result = {}
@@ -52,10 +49,13 @@ class URLCredentials:
                 raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
 
         try:
+            template = Template(load(creds_path))
+            content = template.render({"platform": platform, "os": os})
+            content = json.loads(content)
             self._urls = {credentials["url"]: _get_auth(credentials)
                           for credentials in content["credentials"]}
-        except KeyError as e:
-            raise ConanException(f"Authentication error, wrong source_credentials.json layout: {e}")
+        except Exception as e:
+            raise ConanException(f"Error loading 'source_credentials.json' {creds_path}: {repr(e)}")
 
     def add_auth(self, url, kwargs):
         for u, creds in self._urls.items():

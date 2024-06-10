@@ -39,6 +39,7 @@ def profile_plugin(profile):
             except ConanException:
                 pass
     _check_correct_cppstd(settings)
+    _check_correct_cstd(settings)
 
 def _check_correct_cppstd(settings):
     from conan.tools.scm import Version
@@ -74,6 +75,36 @@ def _check_correct_cppstd(settings):
                     "20": "192",
                     "17": "191",
                     "14": "190"}.get(cppstd)
+        if mver and version < mver:
+            _error(compiler, cppstd, mver, version)
+
+
+def _check_correct_cstd(settings):
+    from conan.tools.scm import Version
+    def _error(compiler, cstd, min_version, version):
+        from conan.errors import ConanException
+        raise ConanException(f"The provided compiler.cstd={cstd} requires at least {compiler}"
+                             f">={min_version} but version {version} provided")
+    cstd = settings.get("compiler.cstd")
+    version = settings.get("compiler.version")
+
+    if cstd and version:
+        cstd = cstd.replace("gnu", "")
+        version = Version(version)
+        mver = None
+        compiler = settings.get("compiler")
+        if compiler == "gcc":
+            # TODO: right versions
+            mver = {}.get(cstd)
+        elif compiler == "clang":
+            # TODO: right versions
+            mver = {}.get(cstd)
+        elif compiler == "apple-clang":
+            # TODO: Right versions
+            mver = {}.get(cstd)
+        elif compiler == "msvc":
+            mver = {"17": "192",
+                    "11": "192"}.get(cstd)
         if mver and version < mver:
             _error(compiler, cppstd, mver, version)
 """
@@ -230,7 +261,8 @@ class _ProfileValueParser(object):
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
-                                                         "replace_requires", "replace_tool_requires"])
+                                                         "replace_requires", "replace_tool_requires",
+                                                         "runner"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -302,7 +334,20 @@ class _ProfileValueParser(object):
             base_profile.buildenv.update_profile_env(buildenv)
         if runenv is not None:
             base_profile.runenv.update_profile_env(runenv)
+
+
+        runner = _ProfileValueParser._parse_key_value(doc.runner) if doc.runner else {}
+        base_profile.runner.update(runner)
         return base_profile
+
+    @staticmethod
+    def _parse_key_value(raw_info):
+        result = OrderedDict()
+        for br_line in raw_info.splitlines():
+            tokens = br_line.split("=", 1)
+            pattern, req_list = tokens
+            result[pattern.strip()] = req_list.strip()
+        return result
 
     @staticmethod
     def _parse_tool_requires(doc):

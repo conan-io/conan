@@ -25,11 +25,12 @@ class GraphBinariesAnalyzer(object):
 
     def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
+        self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        compat_folder = HomePaths(self._cache.cache_folder).compatibility_plugin_path
+        compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder)
 
     @staticmethod
@@ -150,7 +151,7 @@ class GraphBinariesAnalyzer(object):
             if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
                 _compatible_found(package_id, compatible_package)
                 return
-        if not update:
+        if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
@@ -180,10 +181,14 @@ class GraphBinariesAnalyzer(object):
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
-        if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_INVALID):
-            # BINARY_BUILD IS NOT A VIABLE fallback for invalid
-            node.binary = BINARY_INVALID
+        if node.binary == BINARY_BUILD:
+            conanfile = node.conanfile
+            if conanfile.vendor and not conanfile.conf.get("tools.graph:vendor", choices=("build",)):
+                node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a vendoring one, " \
+                                              f"needs to be built from source, but it " \
+                                              "didn't enable 'tools.graph:vendor=build' to compute " \
+                                              "its dependencies"
+                node.binary = BINARY_INVALID
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
@@ -232,12 +237,6 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_download(node, remotes, update)
         else:  # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
-
-        # The INVALID should only prevail if a compatible package, due to removal of
-        # settings in package_id() was not found
-        if node.binary in (BINARY_MISSING, BINARY_BUILD):
-            if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
-                node.binary = BINARY_INVALID
 
     def _process_compatible_node(self, node, remotes, update):
         """ simplified checking of compatible_packages, that should be found existing, but
@@ -322,8 +321,9 @@ class GraphBinariesAnalyzer(object):
                     # The final data is the cache one, not the server one
                     node.binary_remote = None
                     node.prev = cache_latest_prev.revision
+                    if cache_time > node.pref_timestamp:
+                        output.info("Current package revision is newer than the remote one")
                     node.pref_timestamp = cache_time
-                    output.info("Current package revision is newer than the remote one")
         if not node.binary:
             node.binary = BINARY_CACHE
             node.binary_remote = None
@@ -335,7 +335,7 @@ class GraphBinariesAnalyzer(object):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
         if config_mode is None:
             return
-        config_version_file = HomePaths(self._cache.cache_folder).config_version_path
+        config_version_file = HomePaths(self._home_folder).config_version_path
         try:
             config_refs = json.loads(load(config_version_file))["config_version"]
             result = OrderedDict()
@@ -350,7 +350,7 @@ class GraphBinariesAnalyzer(object):
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "
                                  f"'{os.path.basename(config_version_file)}'"
-                                 f" file in cache: {self._cache.cache_folder}: {e}")
+                                 f" file in cache: {self._home_folder}: {e}")
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
