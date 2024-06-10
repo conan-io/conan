@@ -121,8 +121,18 @@ class UploadAPI:
             basename = os.path.basename(file)
             full_url = url + basename
             try:
-                # Always upload summary .json but only upload blob if it does not already exist
-                if file.endswith(".json") or not uploader.exists(full_url, auth=None):
+                if file.endswith(".json"):
+                    # Try to update the summary, but don't fail if it is not possible
+                    # (e.g. because the file needs overwriting, and we have no delete permissions)
+                    output.info(f"Updating summary '{basename}' in backup sources server")
+                    try:
+                        uploader.upload(full_url, file, dedup=False, auth=None)
+                    except (AuthenticationException, ForbiddenException) as e:
+                        output.warning(f"Could not update summary '{basename}' "
+                                       f"in backup sources server. Missing permissions?: {e}")
+                elif not uploader.exists(full_url, auth=None):
+                    # Upload the blob only if it does not exist, but don't rely on dedup,
+                    # because the server might not support it
                     output.info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
