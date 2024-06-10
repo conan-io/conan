@@ -133,7 +133,7 @@ class UploadAPI:
                 if is_summary:
                     output.warning(f"Could not update summary '{basename}' in backup sources server. "
                                    "Skipping updating file but continuing with upload. "
-                                   f"Missing permissions?: {e}")s
+                                   f"Missing permissions?: {e}")
                 else:
                     raise ConanException(f"The source backup server '{url}' needs authentication"
                                          f"/permissions, please provide 'source_credentials.json': {e}")
