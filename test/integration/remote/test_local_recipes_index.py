@@ -343,15 +343,10 @@ class TestPythonRequires:
               "1.0":
                 folder: all
             """)
-        zlib = textwrap.dedent("""
-            from conan import ConanFile
-            class Zlib(ConanFile):
-                name = "pkg"
-                python_requires = "pyreq/1.0"
-                """)
+        pkg = str(GenConanfile("pkg").with_python_requires("pyreq/1.0"))
         save_files(recipes_folder,
                    {"pkg/config.yml": config,
-                    "pkg/all/conanfile.py": zlib,
+                    "pkg/all/conanfile.py": pkg,
                     "pyreq/config.yml": config,
                     "pyreq/all/conanfile.py": str(GenConanfile("pyreq", "1.0"))})
         return folder
@@ -362,6 +357,6 @@ class TestPythonRequires:
         c.run("list * -r=local")
         assert "pyreq/1.0" in c.out
         assert "pkg/1.0" in c.out
-        c.run("install --requires=pkg/1.0 --build missing")
+        c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
         assert "pkg/1.0: Created package" in c.out
