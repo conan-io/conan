@@ -55,8 +55,7 @@ class _CMakePresets:
                 cache_variables["BUILD_TESTING"] = "OFF"
 
         # In case user is injecting its own toolchain file, still need to locate generated CMakeDeps
-        toolchain_file = conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
-        if toolchain_file:
+        if conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file"):
             build_paths = [conanfile.generators_folder]
             for req in conanfile.dependencies.values():
                 cppinfo = req.cpp_info.aggregated_components()
