@@ -5,7 +5,7 @@ from collections import deque
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -52,7 +52,10 @@ class DepsGraphBuilder(object):
                     continue
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
-                if new_node:
+                if new_node and (not new_node.conanfile.vendor
+                                 or new_node.recipe == RECIPE_EDITABLE or
+                                 new_node.conanfile.conf.get("tools.graph:vendor",
+                                                             choices=("build",))):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
                     open_requires.extendleft((r, new_node)
@@ -386,6 +389,7 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _compute_down_options(node, require, new_ref):
         # The consumer "up_options" are the options that come from downstream to this node
+        visible = require.visible and not node.conanfile.vendor
         if require.options is not None:
             # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
@@ -395,11 +399,11 @@ class DepsGraphBuilder(object):
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is
             # now possible to do "self.build_requires(..., options={k:v})" to specify it
-            if require.visible:
+            if visible:
                 # Only visible requirements in the host context propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
-            if require.visible:
+            if visible:
                 down_options = node.conanfile.up_options
             elif not require.build:  # for requires in "host", like test_requires, pass myoptions
                 down_options = node.conanfile.private_up_options

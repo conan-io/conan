@@ -249,24 +249,39 @@ class LinkerScriptsBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
+        {% if cppstd %}
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        {% endif %}
+        {% if cstd %}
+        message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
+        set(CMAKE_C_STANDARD {{ cstd }})
+        set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
+        set(CMAKE_C_STANDARD_REQUIRED ON)
+        {% endif %}
         """)
 
     def context(self):
         compiler_cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        if compiler_cppstd is None:
-            return None
-
-        if compiler_cppstd.startswith("gnu"):
-            cppstd = compiler_cppstd[3:]
-            cppstd_extensions = "ON"
-        else:
-            cppstd = compiler_cppstd
-            cppstd_extensions = "OFF"
-        return {"cppstd": cppstd, "cppstd_extensions": cppstd_extensions}
+        compiler_cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        result = {}
+        if compiler_cppstd is not None:
+            if compiler_cppstd.startswith("gnu"):
+                result["cppstd"] = compiler_cppstd[3:]
+                result["cppstd_extensions"] = "ON"
+            else:
+                result["cppstd"] = compiler_cppstd
+                result["cppstd_extensions"] = "OFF"
+        if compiler_cstd is not None:
+            if compiler_cstd.startswith("gnu"):
+                result["cstd"] = compiler_cstd[3:]
+                result["cstd_extensions"] = "ON"
+            else:
+                result["cstd"] = compiler_cstd
+                result["cstd_extensions"] = "OFF"
+        return result or None
 
 
 class SharedLibBock(Block):
@@ -549,8 +564,8 @@ class FindFiles(Block):
         return host_runtime_dirs
 
     def _join_paths(self, paths):
-        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
         paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+        paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
         return " ".join([f'"{p}"' for p in paths])
 
     def context(self):
@@ -1057,6 +1072,46 @@ class GenericSystemBlock(Block):
                 "winsdk_version": winsdk_version,
                 "gen_platform_sdk_version": gen_platform_sdk_version}
 
+class ExtraVariablesBlock(Block):
+    template = textwrap.dedent(r"""
+        {% if extra_variables %}
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
+        {% endfor %}
+        {% endif %}
+    """)
+
+    CMAKE_CACHE_TYPES = ["BOOL","FILEPATH", "PATH", "STRING", "INTERNAL"]
+
+    def get_exact_type(self, key, value):
+        if isinstance(value, str):
+            return f"\"{value}\""
+        elif isinstance(value, (int, float)):
+            return value
+        elif isinstance(value, dict):
+            var_value = self.get_exact_type(key, value.get("value"))
+            is_cache = value.get("cache")
+            if is_cache:
+                if not isinstance(is_cache, bool):
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)')
+                var_type = value.get("type")
+                if not var_type:
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "{key}"')
+                if var_type not in self.CMAKE_CACHE_TYPES:
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables invalid type "{var_type}" for cache variable "{key}". Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
+                # Set docstring as variable name if not defined
+                docstring = value.get("docstring") or key
+                return f"{var_value} CACHE {var_type} \"{docstring}\""
+            else:
+                return var_value
+
+    def context(self):
+        # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
+        extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={}, check_type=dict)
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = self.get_exact_type(key, value)
+        return {"extra_variables": parsed_extra_variables}
 
 class OutputDirsBlock(Block):
 

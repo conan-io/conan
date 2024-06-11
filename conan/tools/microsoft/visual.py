@@ -118,6 +118,7 @@ class VCVars:
         if vs_install_path == "":  # Empty string means "disable"
             return
 
+        msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
         if compiler == "clang":
             # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
             if not conanfile.settings.get_safe("compiler.runtime"):
@@ -127,20 +128,24 @@ class VCVars:
             vs_version = {"v140": "14",
                           "v141": "15",
                           "v142": "16",
-                          "v143": "17"}.get(toolset_version)
+                          "v143": "17",
+                          "v144": "17"}.get(toolset_version)
             if vs_version is None:
-                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
+                raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
             vcvars_ver = {"v140": "14.0",
                           "v141": "14.1",
                           "v142": "14.2",
-                          "v143": "14.3"}.get(toolset_version)
+                          "v143": "14.3",
+                          "v144": "14.4"}.get(toolset_version)
+            if vcvars_ver and msvc_update is not None:
+                vcvars_ver += f"{msvc_update}"
         else:
             vs_version = vs_ide_version(conanfile)
             if int(vs_version) <= 14:
                 vcvars_ver = None
             else:
                 compiler_version = str(conanfile.settings.compiler.version)
-                compiler_update = conanfile.settings.get_safe("compiler.update", "")
+                compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update", "")
                 # The equivalent of compiler 19.26 is toolset 14.26
                 vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
 

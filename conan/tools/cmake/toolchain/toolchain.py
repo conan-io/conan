@@ -9,7 +9,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
+from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
@@ -165,6 +165,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("extra_flags", ExtraFlagsBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("extra_variables", ExtraVariablesBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
                                        ("pkg_config", PkgConfigBlock),

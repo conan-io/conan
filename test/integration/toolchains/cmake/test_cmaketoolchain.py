@@ -1575,3 +1575,74 @@ def test_output_dirs_gnudirs_local_custom():
     c.run("build .")
     _assert_install(c.out)
     assert "CMAKE_INSTALL_PREFIX" not in c.out
+
+
+def test_toolchain_extra_variables():
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:extra_variables={'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': '42' }
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
+                 "windows": windows_profile})
+
+    # Test passing extra_variables from pro ile
+    client.run("install . --profile:host=windows")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
+    assert 'set(FOO "42")' in toolchain
+
+    # Test input from command line passing dict between doble quotes
+    client.run(textwrap.dedent(r"""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': 42.2, 'DICT': {'value': 1}, 'CACHE_VAR': {'value': 'hello world', 'cache': True, 'type': 'BOOL', 'docstring': 'test variable'}}"
+    """)
+    )
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
+    assert 'set(FOO 42.2)' in toolchain
+    assert 'set(DICT 1)' in toolchain
+    assert 'set(CACHE_VAR "hello world" CACHE BOOL "test variable")' in toolchain
+
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': 'true'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)' in client.out
+
+    # Test invalid cache variable
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "invalid"' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True, 'type': 'INVALID_TYPE'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables invalid type "INVALID_TYPE" for cache variable "invalid". Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CACHE_VAR_DEFAULT_DOC': {'value': 'hello world', 'cache': True, 'type': 'PATH'}}"
+    """))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in toolchain
+
+
+def test_variables_wrong_scaping():
+    # https://github.com/conan-io/conan/issues/16432
+    c = TestClient()
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "pkg/conanfile.txt": "[tool_requires]\ntool/0.1\n[generators]\nCMakeToolchain"})
+    c.run("create tool")
+    c.run("install pkg")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f'list(PREPEND CMAKE_PROGRAM_PATH "{cache_folder}' in toolchain
+
+    c.run("install pkg --deployer=full_deploy")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain

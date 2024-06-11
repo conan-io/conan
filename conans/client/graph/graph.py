@@ -108,6 +108,8 @@ class Node(object):
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
 
+        if self.conanfile.vendor:
+            return
         # Check if need to propagate downstream
         if not self.dependants:
             return
@@ -154,6 +156,8 @@ class Node(object):
         # Check if need to propagate downstream
         # Then propagate downstream
 
+        if self.conanfile.vendor:
+            return result
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:

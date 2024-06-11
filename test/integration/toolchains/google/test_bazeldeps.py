@@ -1,4 +1,5 @@
 import os
+import pathlib
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -53,8 +54,6 @@ def test_bazel_relative_paths():
     assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
     # Components precompiled libs
     # Root package precompiled libs
 
@@ -150,8 +149,6 @@ def test_bazeldeps_and_tool_requires():
     c.run("install --requires=dep/0.1 -g BazelDeps --build=missing")
     build_file = c.load("dep/BUILD.bazel")
     expected = textwrap.dedent("""\
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
     # Components precompiled libs
     # Root package precompiled libs
     cc_import(
@@ -617,6 +614,7 @@ def test_with_editable_layout():
     recipes_folder = client.current_folder.replace("\\", "/")
     with client.chdir("pkg"):
         client.run("install . -g BazelDeps")
+        # TODO: Remove when dropped Bazel 6.x compatibility
         content = client.load("dependencies.bzl")
         assert textwrap.dedent(f"""\
         def load_conan_dependencies():
@@ -625,7 +623,17 @@ def test_with_editable_layout():
                 path="{recipes_folder}/dep",
                 build_file="{recipes_folder}/pkg/dep/BUILD.bazel",
             )""") in content
+        # Bazel 7.x
+        content = client.load("conan_deps_module_extension.bzl")
+        assert textwrap.dedent(f"""\
+        def _load_dependenies_impl(mctx):
+            conan_dependency_repo(
+                name = "dep",
+                package_path = "{recipes_folder}/dep",
+                build_file_path = "{recipes_folder}/pkg/dep/BUILD.bazel",
+            )""") in content
         content = client.load("dep/BUILD.bazel")
+        assert pathlib.Path(client.current_folder, "conan_deps_repo_rules.bzl").exists()
         assert textwrap.dedent("""\
         cc_import(
             name = "mylib_precompiled",
@@ -756,10 +764,16 @@ def test_tool_requires():
             ":component3",
         ],
     )""") in client.load("build-other-repo/BUILD.bazel")
+    # TODO: Remove when dropped Bazel 6.x compatibility
     # Let's check if the names used in the dependencies.bzl are correct
     content = client.load("dependencies.bzl")
     assert 'name="build-other-repo"' in content  # build context + bazel_repository_name prop
     assert 'name="build-tool"' in content  # build context + package reference name
+    # Bazel 7.x
+    # Let's check if the names used in the conan_deps_repo_rules.bzl are correct
+    content = client.load("conan_deps_module_extension.bzl")
+    assert 'name = "build-other-repo"' in content  # build context + bazel_repository_name prop
+    assert 'name = "build-tool"' in content  # build context + package reference name
 
 
 def test_tool_requires_not_created_if_no_activated():

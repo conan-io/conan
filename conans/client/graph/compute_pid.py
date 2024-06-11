@@ -38,6 +38,9 @@ def compute_package_id(node, new_config, config_version):
             else:
                 data[require] = req_info
 
+    if conanfile.vendor:  # Make the package_id fully independent of dependencies versions
+        data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
+
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)

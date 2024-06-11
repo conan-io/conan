@@ -92,6 +92,7 @@ class ConanFileMock(ConanFile):
         self.options = options or Options()
         self.generators = []
         self.conf = Conf()
+        self.conf_build = Conf()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_export_sources(".")
