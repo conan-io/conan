@@ -1,6 +1,6 @@
 import unittest
 
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
 

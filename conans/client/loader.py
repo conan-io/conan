@@ -20,7 +20,7 @@ from conans.errors import ConanException, NotFoundException, conanfile_exception
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DATA_YML
+from conan.internal.paths import DATA_YML
 from conans.util.files import load, chdir, load_user_encoded
 
 

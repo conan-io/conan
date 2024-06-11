@@ -13,7 +13,7 @@ from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
-from conans.paths import CONANINFO
+from conan.internal.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
 

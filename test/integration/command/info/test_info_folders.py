@@ -3,7 +3,7 @@ import textwrap
 import json
 import pytest
 
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
 from conan.internal.cache.conan_reference_layout import EXPORT_FOLDER
 

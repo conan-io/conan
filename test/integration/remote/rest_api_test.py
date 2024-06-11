@@ -15,7 +15,7 @@ from conans.client.userio import UserInput
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
+from conan.internal.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import LocalDBMock
 from conan.test.utils.server_launcher import TestServerLauncher

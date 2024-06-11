@@ -5,7 +5,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import PACKAGE_TGZ_NAME
+from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TestServer, TurboTestClient

@@ -8,7 +8,7 @@ from conans.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANINFO
+from conan.internal.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 
