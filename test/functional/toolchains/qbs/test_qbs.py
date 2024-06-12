@@ -50,6 +50,7 @@ def test_qbs_all_products():
 
         def build(self):
             qbs = Qbs(self)
+            qbs.resolve()
             qbs.build_all()
         ''')
 
@@ -89,6 +90,7 @@ def test_qbs_specific_products():
 
         def build(self):
             qbs = Qbs(self)
+            qbs.resolve()
             qbs.build(products=["hello", "hello"])
         ''')
 
@@ -130,6 +132,7 @@ def test_qbs_multiple_configurations():
             qbs = Qbs(self)
             qbs.add_configuration("release", {"qbs.debugInformation": False})
             qbs.add_configuration("debug", {"qbs.debugInformation": True})
+            qbs.resolve()
             qbs.build()
         ''')
 

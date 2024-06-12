@@ -16,7 +16,7 @@ from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir, human_size
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
 
 

@@ -9,7 +9,7 @@ from datetime import timedelta
 from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
-from conans.paths import conan_expand_user
+from conan.internal.paths import conan_expand_user
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore

@@ -4,7 +4,7 @@ import os
 from bottle import FileUpload, static_file
 
 from conans.errors import RecipeNotFoundException, PackageNotFoundException, NotFoundException
-from conans.paths import CONAN_MANIFEST
+from conan.internal.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
