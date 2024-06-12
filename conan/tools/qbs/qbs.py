@@ -25,7 +25,6 @@ class Qbs(object):
         self._set_project_file(project_file)
         self.jobs = build_jobs(conanfile)
         self._configuration = dict()
-        self._resolved = False
 
     def _set_project_file(self, project_file):
         if not project_file:
@@ -63,12 +62,7 @@ class Qbs(object):
         cmd = 'qbs resolve %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)
 
-        self._resolved = True
-
     def _build(self, products, all_products):
-        # for backward compatibility when there was only build()
-        if not self._resolved:
-            self.resolve()
 
         args = self._get_common_arguments()
         args.append('--no-install')
