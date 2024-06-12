@@ -3,7 +3,7 @@ import os
 import sys
 
 from conans import REVISIONS
-from conans.paths import conan_expand_user
+from conan.internal.paths import conan_expand_user
 from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 

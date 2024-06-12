@@ -6,7 +6,7 @@ from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANINFO, CONAN_MANIFEST
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.service.authorize import BasicAuthorizer
 from conans.server.service.v2.search import SearchService
 from conans.server.service.v2.service_v2 import ConanServiceV2

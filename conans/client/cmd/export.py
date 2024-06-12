@@ -7,7 +7,7 @@ from conan.tools.scm import Git
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DATA_YML
+from conan.internal.paths import DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
