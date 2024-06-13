@@ -414,6 +414,7 @@ class TestDefaultCompat:
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
+            from conan.errors import ConanException
             from conan.tools.build import valid_max_cppstd
             class Dep(ConanFile):
                 name = "dep"
@@ -425,6 +426,10 @@ class TestDefaultCompat:
                     valid_max_cppstd(self, "14")  # Will not fail
                     self.output.info(f"PACKAGE_ID SETTINGS: {cppstd1}=={cppstd2}")
                     assert cppstd1 == cppstd2
+                    try:  # Settings are protected against modification
+                        self.settings.os = "Linux"
+                    except ConanException:
+                        self.output.error("Someone tried to change settings!!!!")
                 """)
 
         c.save({"dep/conanfile.py": dep,
@@ -432,7 +437,10 @@ class TestDefaultCompat:
 
         settings = "-s os=Linux -s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
         c.run(f"create dep {settings} -s compiler.cppstd=14")
+        # Settings are actually protected against modification, so this shouldn't have higher risk
+        assert "dep/0.1: ERROR: Someone tried to change settings!!!!" in c.out
         c.run(f"install --requires=dep/0.1 {settings} -s compiler.cppstd=20")
+        assert "dep/0.1: ERROR: Someone tried to change settings!!!!" in c.out
         assert "dep/0.1: PACKAGE_ID SETTINGS: 17==17" in c.out
 
     def test_msvc_194_fallback(self):
