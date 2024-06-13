@@ -9,7 +9,7 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.profiles import create_profile as _create_profile
 from conan.test.utils.test_files import temp_folder

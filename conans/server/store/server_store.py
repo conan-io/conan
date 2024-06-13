@@ -2,7 +2,7 @@ import os
 from os.path import join, normpath, relpath
 
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
-from conans.paths import CONAN_MANIFEST
+from conan.internal.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList

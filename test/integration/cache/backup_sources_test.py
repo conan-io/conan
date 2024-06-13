@@ -538,8 +538,16 @@ class TestDownloadCacheBackupSources:
         def get_file(file):
             return static_file(file, http_server_base_folder_backup1)
 
+        @http_server.server.put("/downloader1/<file>")
+        def put_file(file):
+            if file in os.listdir(http_server_base_folder_backup1):
+                return HTTPError(401, "You Are Not Allowed Here")
+            dest = os.path.join(http_server_base_folder_backup1, file)
+            with open(dest, 'wb') as f:
+                f.write(request.body.read())
+
         @http_server.server.get("/downloader2/<file>")
-        def get_file(file):
+        def get_file_2(file):
             return static_file(file, http_server_base_folder_backup2)
 
         http_server.run_server()
@@ -555,15 +563,27 @@ class TestDownloadCacheBackupSources:
                             sha256="{sha256}")
            """)
         client.save_home({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                            f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
-                            f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"})
-
+                          f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+                          f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"
+                          f"core.sources:upload_url=http://localhost:{http_server.port}/downloader1/\n"
+                          "core.upload:retry=0\ncore.download:retry=0"})
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
         assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
         # TODO: Check better message with Authentication error message
         assert "failed in 'origin'" in client.out
+
+        # Now try to upload once to the first backup server. It's configured so it has write permissions but no overwrite
+        client.run("upload * -c -r=default")
+        upload_server_contents = os.listdir(http_server_base_folder_backup1)
+        assert sha256 in upload_server_contents
+        assert sha256 + ".json" in upload_server_contents
+
+        client.run("remove * -c -r=default")
+
+        client.run("upload * -c -r=default")
+        assert f"Could not update summary '{sha256}.json' in backup sources server" in client.out
 
     def test_ok_when_origin_bad_sha256(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")

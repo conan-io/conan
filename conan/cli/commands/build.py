@@ -23,7 +23,8 @@ def build(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-d", "--deployer", action="append",
-                        help='Deploy using the provided deployer to the output folder')
+                        help="Deploy using the provided deployer to the output folder. "
+                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--build-require", action='store_true', default=False,

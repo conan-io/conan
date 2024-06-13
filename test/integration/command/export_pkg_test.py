@@ -6,7 +6,7 @@ import textwrap
 import unittest
 from textwrap import dedent
 
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 

@@ -175,7 +175,10 @@ def graph_info(conan_api, parser, subparser, *args):
     subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
-                           help='Deploy using the provided deployer to the output folder')
+                           help="Deploy using the provided deployer to the output folder. "
+                                "Built-in deployers: 'full_deploy', 'direct_deploy'. Deployers "
+                                "will only deploy recipes, as 'conan graph info' do not retrieve "
+                                "binaries")
     subparser.add_argument("-df", "--deployer-folder",
                            help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
