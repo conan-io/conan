@@ -611,5 +611,5 @@ def test_consumer_invalid_profile_multiple_groups():
     })
     client.run("build . --profile:host myprofs/myprofile -g CMakeToolchain",
                assert_error=True)
-    assert "Profile file has duplicated sections: [conf], [settings]" in client.out
-    assert "Invalid: 'settings.os' value not defined" in client.out
+    assert ("ERROR: Error reading 'myprofs/myprofile' profile: ConfigParser: "
+            "Duplicated section: [settings]") in client.out

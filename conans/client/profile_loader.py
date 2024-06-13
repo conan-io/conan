@@ -263,10 +263,6 @@ class _ProfileValueParser(object):
                                                          "options", "conf", "buildenv", "runenv",
                                                          "replace_requires", "replace_tool_requires",
                                                          "runner"])
-        if doc.duplicated_sections:
-            sections = ', '.join(sorted([f'[{s}]' for s in doc.duplicated_sections]))
-            ConanOutput().warning(f"Profile file has duplicated sections: {sections}. It could cause"
-                                  f" some unexpected behavior.")
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None

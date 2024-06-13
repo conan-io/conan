@@ -29,7 +29,6 @@ class ConfigParser(object):
     """
     def __init__(self, text, allowed_fields=None, strip_comments=False):
         self._sections = {}
-        self._duplicated_sections = set()
         self._allowed_fields = allowed_fields or []
         pattern = re.compile(r"^\[([a-z_]{2,50})]")
         current_lines = None
@@ -45,9 +44,10 @@ class ConfigParser(object):
                 if self._allowed_fields and field not in self._allowed_fields:
                     raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
                 current_lines = []
+                # Duplicated section
                 if field in self._sections:
-                    # WARNING: This section is already defined. It'll override the existing one.
-                    self._duplicated_sections.add(field)
+                    raise ConanException(f"ConfigParser: Duplicated section: [{field}]. It could"
+                                         f"cause some unexpected behavior.")
                 self._sections[field] = current_lines
             else:
                 if current_lines is None:
@@ -57,10 +57,6 @@ class ConfigParser(object):
                     line = line.split('    #', 1)[0]
                     line = line.strip()
                 current_lines.append(line)
-
-    @property
-    def duplicated_sections(self):
-        return self._duplicated_sections
 
     def line_items(self):
         # Used atm by load_binary_info()
