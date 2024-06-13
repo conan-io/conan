@@ -106,7 +106,8 @@ def write_generators(conanfile, app):
                     continue
                 except Exception as e:
                     # When a generator fails, it is very useful to have the whole stacktrace
-                    conanfile.output.error(traceback.format_exc(), error_type="exception")
+                    if not isinstance(e, ConanException):
+                        conanfile.output.error(traceback.format_exc(), error_type="exception")
                     raise ConanException(f"Error in generator '{generator_name}': {str(e)}") from e
     finally:
         # restore the generators attribute, so it can raise
