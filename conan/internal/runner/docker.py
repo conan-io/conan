@@ -64,13 +64,28 @@ class DockerRunner:
         import docker
         import docker.api.build
         try:
-            self.docker_client = docker.from_env()
-            self.docker_api = docker.APIClient()
+            try:
+                self.docker_client = docker.from_env()
+                self.docker_api = docker.APIClient()
+            except:
+                docker_base_urls = [
+                    os.environ.get('CONAN_RUNNER_DOCKER_HOST'),
+                    os.environ.get('DOCKER_HOST'),
+                    'unix:///var/run/docker.sock',
+                    f'unix://{os.path.expanduser("~")}/.rd/docker.sock'
+                ]
+                for base_url in docker_base_urls:
+                    try:
+                        self.docker_client = docker.DockerClient(base_url=base_url, version='auto')
+                        break
+                    except:
+                        continue
+                self.docker_api = self.docker_client.api
             docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
             raise ConanException("Docker Client failed to initialize."
                                  "\n - Check if docker is installed and running"
-                                 "\n - Run 'pip install pip install conan[runners]'")
+                                 "\n - Run 'pip install conan[runners]'")
         self.conan_api = conan_api
         self.build_profile = build_profile
         self.args = args
