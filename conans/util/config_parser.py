@@ -46,8 +46,7 @@ class ConfigParser(object):
                 current_lines = []
                 # Duplicated section
                 if field in self._sections:
-                    raise ConanException(f"ConfigParser: Duplicated section: [{field}]. It could"
-                                         f"cause some unexpected behavior.")
+                    raise ConanException(f"ConfigParser: Duplicated section: [{field}]")
                 self._sections[field] = current_lines
             else:
                 if current_lines is None:
