@@ -1096,7 +1096,8 @@ class ExtraVariablesBlock(Block):
                     raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" invalid type "{var_type}" for cache variable. Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
                 # Set docstring as variable name if not defined
                 docstring = value.get("docstring") or key
-                return f"{var_value} CACHE {var_type} \"{docstring}\"{" FORCE" if is_force else ""}"
+                force_str = " FORCE" if is_force else "" # Support python < 3.11
+                return f"{var_value} CACHE {var_type} \"{docstring}\"{force_str}"
             else:
                 if is_force:
                     raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" is only allowed for cache variables')
