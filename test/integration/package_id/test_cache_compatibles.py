@@ -430,6 +430,14 @@ class TestDefaultCompat:
                         self.settings.os = "Linux"
                     except ConanException:
                         self.output.error("Someone tried to change settings!!!!")
+                    try:  # Settings are protected against modification
+                        del self.settings.os
+                    except ConanException:
+                        self.output.error("Someone tried to remove settings!!!!")
+                    try:  # Settings are protected against modification
+                        self.settings.rm_safe("os")
+                    except ConanException:
+                        self.output.error("Someone tried to rm_safe settings!!!!")
                 """)
 
         c.save({"dep/conanfile.py": dep,
@@ -439,8 +447,12 @@ class TestDefaultCompat:
         c.run(f"create dep {settings} -s compiler.cppstd=14")
         # Settings are actually protected against modification, so this shouldn't have higher risk
         assert "dep/0.1: ERROR: Someone tried to change settings!!!!" in c.out
-        c.run(f"install --requires=dep/0.1 {settings} -s compiler.cppstd=20")
+        assert "dep/0.1: ERROR: Someone tried to remove settings!!!!" in c.out
+        assert "dep/0.1: ERROR: Someone tried to rm_safe settings!!!!" in c.out
+        c.run(f"install --requires=dep/0.1 {settings} -s compiler.cppstd=20 --build=missing")
         assert "dep/0.1: ERROR: Someone tried to change settings!!!!" in c.out
+        assert "dep/0.1: ERROR: Someone tried to remove settings!!!!" in c.out
+        assert "dep/0.1: ERROR: Someone tried to rm_safe settings!!!!" in c.out
         assert "dep/0.1: PACKAGE_ID SETTINGS: 17==17" in c.out
 
     def test_msvc_194_fallback(self):

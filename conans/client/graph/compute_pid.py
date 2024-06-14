@@ -67,6 +67,7 @@ def compute_package_id(node, new_config, config_version):
                     # This 'cant_build' will be ignored if we don't have to build the node.
                     node.cant_build = str(e)
 
+    conanfile.settings._frozen_rm = True
     run_validate_package_id(conanfile)
 
     if conanfile.info.settings_target:

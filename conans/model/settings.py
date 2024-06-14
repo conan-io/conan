@@ -192,6 +192,7 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem.new(v, f"{name}.{k}") for k, v in definition.items()}
         self._frozen = False
+        self._frozen_rm = False
 
     def serialize(self):
         """
@@ -225,6 +226,9 @@ class Settings(object):
         rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
         of the current value of the "compiler"
         """
+        if self._frozen_rm:
+            raise ConanException(f"Tried to remove '{name}' setting in package_id(). "
+                                 f"Use self.info.settings instead")
         if "." in name:
             setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
             try:
@@ -278,6 +282,9 @@ class Settings(object):
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
+        if self._frozen_rm:
+            raise ConanException(f"Tried to remove '{field}' setting in package_id(). "
+                                 f"Use self.info.settings instead")
         self._check_field(field)
         del self._data[field]
 
