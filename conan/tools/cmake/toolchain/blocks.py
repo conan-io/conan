@@ -1081,20 +1081,27 @@ class ExtraVariablesBlock(Block):
             return value
         elif isinstance(value, dict):
             var_value = self.get_exact_type(key, value.get("value"))
+            is_force = value.get("force")
+            if is_force:
+                if not isinstance(is_force, bool):
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" must be a boolean')
             is_cache = value.get("cache")
             if is_cache:
                 if not isinstance(is_cache, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)')
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "cache" must be a boolean')
                 var_type = value.get("type")
                 if not var_type:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "{key}"')
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" needs "type" defined for cache variable')
                 if var_type not in self.CMAKE_CACHE_TYPES:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables invalid type "{var_type}" for cache variable "{key}". Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" invalid type "{var_type}" for cache variable. Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
                 # Set docstring as variable name if not defined
                 docstring = value.get("docstring") or key
-                return f"{var_value} CACHE {var_type} \"{docstring}\""
+                return f"{var_value} CACHE {var_type} \"{docstring}\"{" FORCE" if is_force else ""}"
             else:
+                if is_force:
+                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" is only allowed for cache variables')
                 return var_value
+
 
     def context(self):
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
