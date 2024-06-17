@@ -812,6 +812,24 @@ class TestListCompact:
 
         assert expected == expected_output
 
+    @pytest.mark.parametrize("pattern", [
+        "pkg/*",
+        "pkg/1.0",
+        "pkg/1.0#*",
+        "pkg/1.0#*:*",
+        "pkg/1.0#*:*#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e"
+    ])
+    def test_list_compact_patterns(self, pattern):
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create pkg")
+        c.run(f"list {pattern} --format=compact")
+
 
 class TestListBinaryFilter:
 
