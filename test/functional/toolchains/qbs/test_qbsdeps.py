@@ -111,6 +111,7 @@ def test_qbsdeps_with_qbs_toolchain():
             exports_sources = "*.cpp", "*.h", "*.qbs"
             settings = "os", "compiler", "build_type", "arch"
             generators = "QbsDeps"
+            generators_folder = "generators"
 
             def requirements(self):
                 self.requires("hello/1.0")

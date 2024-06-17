@@ -55,8 +55,9 @@ class Qbs(object):
         if self.profile:
             args.append('profile:%s' % self.profile)
 
-        if os.path.exists(os.path.join(self._conanfile.source_folder, 'conan-qbs-deps')):
-            args.append('moduleProviders.conan.installDirectory:' + self._conanfile.source_folder)
+        generators_folder = self._conanfile.generators_folder
+        if os.path.exists(os.path.join(generators_folder, 'conan-qbs-deps')):
+            args.append('moduleProviders.conan.installDirectory:' + generators_folder)
 
         for name in self._configuration:
             config = self._configuration[name]
