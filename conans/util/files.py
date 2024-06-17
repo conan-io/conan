@@ -306,12 +306,15 @@ def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
     for root, dirs, files in os.walk(folder):
+        if root != folder and not dirs and not files:  # empty folder
+            rel_path = root[len(folder) + 1:].replace("\\", "/")
+            symlinked_folders[rel_path] = root
+            continue
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
                 rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
                 symlinked_folders[rel_path] = abs_path
-                continue
         for f in files:
             if f == ".DS_Store":
                 continue
