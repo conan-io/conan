@@ -1188,6 +1188,14 @@ class ToolchainBlocks:
         return self._blocks[name]
 
     def process_blocks(self):
+        blocks = self._conanfile.conf.get("tools.cmake.cmaketoolchain:blocks", check_type=list)
+        if blocks is not None:
+            try:
+                new_blocks = OrderedDict((b, self._blocks[b]) for b in blocks)
+            except KeyError as e:
+                raise ConanException(f"Block '{e}' defined in tools.cmake.cmaketoolchain:blocks "
+                                     "does not exist in {")
+            self._blocks = new_blocks
         result = []
         for b in self._blocks.values():
             content = b.get_rendered_content()

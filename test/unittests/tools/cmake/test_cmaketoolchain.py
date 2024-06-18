@@ -162,6 +162,13 @@ def test_user_toolchain(conanfile):
     assert 'include("myowntoolchain.cmake")' in content
 
 
+def test_block_selection(conanfile):
+    conanfile.conf.define("tools.cmake.cmaketoolchain:blocks", [])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert '' == content
+
+
 @pytest.fixture
 def conanfile_apple():
     c = ConanFile(None)
