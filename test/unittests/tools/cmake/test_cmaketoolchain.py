@@ -86,6 +86,14 @@ def test_select_blocks(conanfile):
     assert "CMAKE_CXX_FLAGS_INIT" in content
     assert "_CMAKE_IN_TRY_COMPILE" not in content
 
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.keep("generic_system")
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
 
 def test_dict_keys(conanfile):
     toolchain = CMakeToolchain(conanfile)
