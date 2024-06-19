@@ -116,22 +116,34 @@ class AutotoolsToolchain:
                                                " when tools.android:ndk_path is defined too.")
             arch = self._conanfile.settings.get_safe("arch")
             os_build = self._conanfile.settings_build.get_safe("os")
+            ndk_os_folder = {
+                'Macos': 'darwin',
+                'iOS': 'darwin',
+                'watchOS': 'darwin',
+                'tvOS': 'darwin',
+                'visionOS': 'darwin',
+                'FreeBSD': 'linux',
+                'Linux': 'linux',
+                'Windows': 'windows',
+                'WindowsCE': 'windows',
+                'WindowsStore': 'windows'
+            }.get(os_build, "linux")
             ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
-                                   "{}-x86_64".format(os_build), "bin")
+                                   f"{ndk_os_folder}-x86_64", "bin")
             android_api_level = self._conanfile.settings.get_safe("os.api_level")
             android_target = {'armv7': 'armv7a-linux-androideabi',
                               'armv8': 'aarch64-linux-android',
                               'x86': 'i686-linux-android',
                               'x86_64': 'x86_64-linux-android'}.get(arch)
             os_build = self._conanfile.settings_build.get_safe('os')
-            compiler_extension = ".cmd" if os_build == "Windows" else ""
+            ext = ".cmd" if os_build == "Windows" else ""
             ret = {
-                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{compiler_extension}"),
-                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{compiler_extension}"),
+                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
                 "LD": os.path.join(ndk_bin, "ld"),
                 "STRIP": os.path.join(ndk_bin, "llvm-strip"),
                 "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
-                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{compiler_extension}"),
+                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
                 "AR": os.path.join(ndk_bin, "llvm-ar"),
                 "host": android_target
             }
