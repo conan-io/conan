@@ -16,7 +16,7 @@ from test.conftest import tools_locations
                                                  ])
 @pytest.mark.tool("android_ndk")
 @pytest.mark.tool("autotools")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     profile_host = textwrap.dedent("""
     include(default)
