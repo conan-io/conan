@@ -1302,9 +1302,10 @@ class ToolchainBlocks:
 
     def select(self, name, *args):
         """
-        keep the blocks provided as arguments, remove the others
+        keep the blocks provided as arguments, remove the others, except pre-existing "variables"
+        and "preprocessor", to not break behavior
         """
-        to_keep = [name] + list(args)
+        to_keep = [name] + list(args) + ["variables", "preprocessor"]
         self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
     def __setitem__(self, name, block_type):
