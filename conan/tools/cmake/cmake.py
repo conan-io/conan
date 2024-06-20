@@ -1,4 +1,5 @@
 import os
+import sys
 
 from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.cmake.presets import load_cmake_presets
@@ -31,7 +32,7 @@ def _cmake_cmd_line_args(conanfile, generator):
     return args
 
 
-class CMake(object):
+class CMake:
     """ CMake helper to use together with the CMakeToolchain feature """
 
     def __init__(self, conanfile):
@@ -182,6 +183,28 @@ class CMake(object):
         """
         self._conanfile.output.info("Running CMake.build()")
         self._build(build_type, target, cli_args, build_tool_args, stdout=stdout, stderr=stderr)
+        stderr = (stderr or sys.stderr)
+        stdout = (stdout or sys.stdout)
+
+        def _get_output(stream):
+            pos = stream.tell()
+            stream.seek(0)
+            output = stream.read()
+            stream.seek(pos)
+            return output
+
+        def _parse_missing_headers(output):
+            if "C1083" in output:
+                return True
+            if "file not found" in output:
+                return True
+            if "No such file or directory" in output:
+                return True
+
+        if _parse_missing_headers(_get_output(stderr)) or _parse_missing_headers(_get_output(stdout)):
+            self._conanfile.output.error("CMake: Missing headers, check your include directories")
+            self._conanfile.output.warn("CMake: This can be caused by missing dependencies")
+            self._conanfile.output.warn("CMake: Check the output above for more information")
 
     def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None):
         """
