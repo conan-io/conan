@@ -1,16 +1,12 @@
-import os
 import re
 from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
 from conans.errors import ConanException
-from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conan.internal.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
-from conans.util.files import load
 
 
 def filter_packages(query, results: Dict[PkgReference, dict]):
@@ -67,23 +63,6 @@ def _evaluate(prop_name, prop_value, binary_info):
         return compatible_prop(info_options.get(prop_name), prop_value)
 
 
-def search_recipes(cache, pattern=None, ignorecase=True):
-    # Conan references in main storage
-    if pattern:
-        if isinstance(pattern, RecipeReference):
-            pattern = repr(pattern)
-        pattern = translate(pattern)
-        pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
-
-    refs = cache.all_refs()
-    if pattern:
-        _refs = []
-        for r in refs:
-            match_ref = str(r) if not r.revision else repr(r)
-            if _partial_match(pattern, match_ref):
-                _refs.append(r)
-        refs = _refs
-    return refs
 
 
 def _partial_match(pattern, reference):
@@ -91,40 +70,10 @@ def _partial_match(pattern, reference):
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
     tokens = reference.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
+    partials = []
+    partial = ''
+    for t in tokens:
+        partial += t
+        partials.append(partial)
 
-    def partial_sums(iterable):
-        partial = ''
-        for i in iterable:
-            partial += i
-            yield partial
-
-    return any(map(pattern.match, list(partial_sums(tokens))))
-
-
-def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
-    """
-    param package_layout: Layout for the given reference
-    """
-
-    result = OrderedDict()
-
-    package_layouts = []
-    for pref in prefs:
-        latest_prev = cache.get_latest_package_reference(pref)
-        package_layouts.append(cache.pkg_layout(latest_prev))
-
-    for pkg_layout in package_layouts:
-        # Read conaninfo
-        info_path = os.path.join(pkg_layout.package(), CONANINFO)
-        if not os.path.exists(info_path):
-            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
-                                 f"without conaninfo.txt in: {info_path}")
-        conan_info_content = load(info_path)
-
-        info = load_binary_info(conan_info_content)
-        pref = pkg_layout.reference
-        # The key shoudln't have the latest package revision, we are asking for package configs
-        pref.revision = None
-        result[pkg_layout.reference] = info
-
-    return result
+    return any(map(pattern.match, partials))

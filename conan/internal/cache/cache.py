@@ -1,7 +1,9 @@
 import hashlib
 import os
+import re
 import shutil
 import uuid
+from fnmatch import translate
 from typing import List
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
@@ -168,8 +170,23 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def all_refs(self):
-        return self._db.list_references()
+    def search_recipes(self, pattern=None, ignorecase=True):
+        # Conan references in main storage
+        if pattern:
+            if isinstance(pattern, RecipeReference):
+                pattern = repr(pattern)
+            pattern = translate(pattern)
+            pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
+
+        refs = self._db.list_references()
+        if pattern:
+            _refs = []
+            for r in refs:
+                match_ref = str(r) if not r.revision else repr(r)
+                if _partial_match(pattern, match_ref):
+                    _refs.append(r)
+            refs = _refs
+        return refs
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
