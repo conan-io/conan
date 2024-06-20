@@ -214,9 +214,9 @@ class AutotoolsToolchain:
         env = Environment()
         # Setting Android cross-compilation flags (if exist)
         if self.android_cross_flags:
-            for env_var, value in self.android_cross_flags.items():
-                compiler = unix_path(self._conanfile, value)
-                env.define(env_var, compiler)
+            for env_var, env_value in self.android_cross_flags.items():
+                unix_env_value = unix_path(self._conanfile, env_value)
+                env.define(env_var, unix_env_value)
         else:
             # Setting user custom compiler executables flags
             compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
