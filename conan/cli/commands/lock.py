@@ -11,7 +11,7 @@ from conans.model.recipe_ref import RecipeReference
 
 
 @conan_command(group="Consumer")
-def lock(conan_api, parser, *args):
+def lock(conan_api, parser, *args):  # noqa
     """
     Create or manage lockfiles.
     """
@@ -63,7 +63,7 @@ def lock_create(conan_api, parser, subparser, *args):
 
 
 @conan_subcommand()
-def lock_merge(conan_api, parser, subparser, *args):
+def lock_merge(conan_api, parser, subparser, *args): # noqa
     """
     Merge 2 or more lockfiles.
     """
@@ -132,7 +132,7 @@ def lock_add(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def lock_remove(conan_api, parser, subparser, *args):
     """
-    Remove requires, build-requires or python-requires from an existing or new lockfile.
+    Remove requires, build-requires or python-requires from an existing lockfile.
     References can be supplied with and without revisions like "--requires=pkg/version",
     """
     subparser.add_argument('--requires', action="append", help='Remove references to lockfile.')
@@ -153,4 +153,29 @@ def lock_remove(conan_api, parser, subparser, *args):
                                                   python_requires=args.python_requires,
                                                   build_requires=args.build_requires,
                                                   config_requires=args.config_requires)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
+
+
+@conan_subcommand()
+def lock_update(conan_api, parser, subparser, *args):
+    """
+    Update requires, build-requires or python-requires from an existing lockfile.
+    References that matches the arguments package names will be replaced by the arguments.
+    References can be supplied with and without revisions like "--requires=pkg/version",
+    """
+    subparser.add_argument('--requires', action="append", help='Update references to lockfile.')
+    subparser.add_argument('--build-requires', action="append",
+                           help='Update build-requires from lockfile')
+    subparser.add_argument('--python-requires', action="append",
+                           help='Update python-requires from lockfile')
+    subparser.add_argument('--config-requires', action="append",
+                           help='Update config-requires from lockfile')
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+                           help="Filename of the created lockfile")
+    subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
+    args = parser.parse_args(*args)
+
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
+    lockfile.update(requires=args.requires, build_requires=args.build_requires,
+                    python_requires=args.python_requires, config_requires=args.config_requires)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
