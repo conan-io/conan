@@ -40,7 +40,6 @@ def profile_plugin(profile):
                 pass
     _check_correct_cppstd(settings)
     _check_correct_cstd(settings)
-    _warn_android_ndk_version(settings)
 
 
 def _check_correct_cppstd(settings):
@@ -109,19 +108,6 @@ def _check_correct_cstd(settings):
                     "11": "192"}.get(cstd)
         if mver and version < mver:
             _error(compiler, cppstd, mver, version)
-
-
-def _warn_android_ndk_version(settings):
-    if settings.get("os") != "Android":
-        return
-    ndk_version = settings.get("os.ndk_version")
-    if ndk_version is None:
-        return
-    import re
-    if not re.match(r"r([0-9]{2})([A-Za-z]?)$", ndk_version):
-        from conan.api.output import ConanOutput
-        ConanOutput().warning(f"The Android os.ndk_version={ndk_version} "
-                              "should be in the form 'r26' or 'r26a'")
 """
 
 
