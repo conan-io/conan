@@ -88,7 +88,7 @@ def test_select_blocks(conanfile):
 
     # remove multiple
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks.keep("generic_system")
+    toolchain.blocks.enabled("generic_system")
     content = toolchain.content
     assert "########## 'generic_system' block #############" in content
     assert "########## 'variables' block #############" not in content

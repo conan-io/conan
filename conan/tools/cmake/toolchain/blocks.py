@@ -1305,12 +1305,12 @@ class ToolchainBlocks:
         keep the blocks provided as arguments, remove the others, except pre-existing "variables"
         and "preprocessor", to not break behavior
         """
-        self._conanfile.output.warning("CMakeToolchain.select is deprecated. Use CMakeToolchain.keep"
+        self._conanfile.output.warning("CMakeToolchain.select is deprecated. Use blocks.enabled()"
                                        " instead", warn_tag="deprecated")
         to_keep = [name] + list(args) + ["variables", "preprocessor"]
         self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
-    def keep(self, name, *args):
+    def enabled(self, name, *args):
         """
         keep the blocks provided as arguments, remove the others
         """
