@@ -31,7 +31,7 @@ def test_basic_api():
 
 def test_api_command():
     # The ``CommandAPI`` requires a bit more of setup
-    api = ConanAPI()
+    api = ConanAPI(cache_folder=temp_folder())
     cli = Cli(api)
     cli.add_commands()
     result = api.command.run(["remote", "list"])
