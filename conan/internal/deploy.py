@@ -212,8 +212,24 @@ def _copy_pattern(pattern, src_dir, output_dir, keep_symlinks):
             if os.path.lexists(dst):
                 os.remove(dst)
             shutil.copy2(src, dst, follow_symlinks=not keep_symlinks)
+            if os.path.islink(dst):
+                # Explicitly copy symlink targets since these don't always match the library name.
+                # E.g. libpng.so -> libpng16.so -> libpng16.so.16 -> libpng16.so.16.43.0
+                _copy_symlinks(src, output_dir)
             output.verbose(f"Copied {src}")
             file_count += 1
         except Exception as e:
             raise ConanException(f"{output.scope}: Copying of '{src}' to '{dst}' failed: {e}.")
     return file_count
+
+
+def _copy_symlinks(src, output_dir):
+    rel_link_target = os.readlink(src)
+    if os.path.normpath(rel_link_target) != os.path.basename(rel_link_target):
+        raise ConanException(f"Refusing to copy a symlink '{src}' targeting an external folder: {rel_link_target}")
+    link_target = os.path.join(os.path.dirname(src), rel_link_target)
+    link_dst = os.path.join(output_dir, rel_link_target)
+    if not os.path.lexists(link_dst):
+        shutil.copy2(link_target, link_dst, follow_symlinks=False)
+        if os.path.islink(link_dst):
+            _copy_symlinks(link_target, output_dir)
