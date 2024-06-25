@@ -268,7 +268,7 @@ class TestBuildRequiresVisible(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(app, [(libc, True, True, False, False)])
         _check_transitive(libc, [(libb, True, True, False, False),
-                                 (liba, False, False, True, False)])  # liba is build & visible!
+                                 (liba, True, True, True, False)])  # liba is build & visible!
         _check_transitive(libb, [(liba, True, True, True, False)])
 
 
@@ -639,7 +639,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(lib, [(cmake, False, False, True, True)])
         _check_transitive(app, [(lib, True, True, False, False),
-                                (cmake, False, False, True, False)])
+                                (cmake, False, False, True, True)])
 
     def test_conflict_diamond(self):
         # app -> libb -(br public)-> cmake/0.1
@@ -695,7 +695,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
 
     def test_tool_requires_override(self):
         # app -> libb -(br public)-> protobuf/0.1
@@ -726,7 +726,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
         _check_transitive(libb, [(protobuf_host, True, True, False, False),
                                  (protobuf_build, False, False, True, True)])
 

@@ -1194,9 +1194,9 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libd, True, True, False, False),
                                 (libc, True, True, False, False),
-                                (libb, False, False, True, False)])
+                                (libb, True, True, True, False)])
         _check_transitive(libd, [(libc, True, True, False, False),
-                                 (libb, False, False, True, False)])
+                                 (libb, True, True, True, False)])
         _check_transitive(libc, [(libb, True, True, True, False)])
 
 
