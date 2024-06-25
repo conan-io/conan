@@ -62,6 +62,7 @@ os:
                 ios_version: *ios_version
     Android:
         api_level: [ANY]
+        ndk_version: [null, ANY]
     FreeBSD:
     SunOS:
     AIX:
