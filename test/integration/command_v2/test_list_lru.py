@@ -1,3 +1,4 @@
+import json
 import time
 
 import pytest
@@ -50,3 +51,17 @@ class TestLRU:
         assert "pkg" in c.out
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" not in c.out
         assert "dep" not in c.out
+
+    def test_update_lru_when_used_as_dependency(self):
+        """Show that using a recipe as a dependency will update its LRU"""
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0")})
+
+        c.run("create dep")
+        time.sleep(2)
+        c.run("create .")
+        # Dep is not removed because its lru was updated as part of the above create
+        c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
+        removed = json.loads(c.load("removed.json"))
+        assert len(removed["Local Cache"]) == 0
