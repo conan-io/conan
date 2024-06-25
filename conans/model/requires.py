@@ -268,19 +268,8 @@ class Requirement:
             # TODO: We could implement checks in case private is violated (e.g shared libs)
             return
 
-        if require.build:  # public!
-            # TODO: To discuss if this way of conflicting build_requires is actually useful or not
-            downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=self.visible, direct=False)
-            return downstream_require
-
-        if self.build:  # Build-requires
-            # If the above is shared or the requirement is explicit run=True
-            if dep_pkg_type is PackageType.SHARED or require.run:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=False, direct=False)
-                return downstream_require
-            return
+        if self.build and dep_pkg_type is not PackageType.SHARED and not require.run:  # Build-requires
+            return # don't propagate non-run packages
 
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:
@@ -338,6 +327,9 @@ class Requirement:
 
         if self.test:
             downstream_require.test = True
+
+        if self.build or require.build:
+            downstream_require.build = True
 
         # If the current one is resolving conflicts, the downstream one will be too
         downstream_require.force = require.force
