@@ -47,7 +47,7 @@ def trim_conandata(conanfile, raise_if_missing=True):
     only
     """
     if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
-        raise ConanException("The 'trim_conandata()' can only be used in the 'export()' method")
+        raise ConanException("The 'trim_conandata()' tool can only be used in the 'export()' method or 'post_export()' hook")
     path = os.path.join(conanfile.export_folder, "conandata.yml")
     if not os.path.exists(path):
         if raise_if_missing:
