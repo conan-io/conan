@@ -848,7 +848,13 @@ class CompilersBlock(Block):
     template = textwrap.dedent(r"""
         {% for lang, compiler_path in compilers.items() %}
         set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
+        {% if cmake_cpp_link_executable %}
+        set(CMAKE_{{ lang }}_LINK_EXECUTABLE {{ cmake_cpp_link_executable }})
+        {% endif %}
         {% endfor %}
+        {% if cmake_ar %}
+        set(CMAKE_AR {{ cmake_ar }})
+        {% endif %}
     """)
 
     def context(self):
@@ -865,7 +871,9 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-        return {"compilers": compilers}
+        return {"compilers": compilers,
+                "cmake_ar": compilers_by_conf["ar"] if "ar" in compilers_by_conf else None,
+                "cmake_cpp_link_executable": compilers_by_conf["ld"] if "ld" in compilers_by_conf else None}
 
 
 class GenericSystemBlock(Block):
