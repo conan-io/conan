@@ -1046,6 +1046,28 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
 
 
+def test_set_cmake_ar_and_ld():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=clang
+    compiler.version=15
+    compiler.libcxx=libstdc++11
+    [conf]
+    tools.build:compiler_executables={"c": "/my/local/gcc", "ar": "/my/custom/ar", "ld": "/my/custom/ld"}
+    """)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_C_LINK_EXECUTABLE /my/custom/ld)' in toolchain
+    assert 'set(CMAKE_AR /my/custom/ar)' in toolchain
+
+
 def test_cmake_layout_toolchain_folder():
     """ in single-config generators, the toolchain is a different file per configuration
     https://github.com/conan-io/conan/issues/12827
