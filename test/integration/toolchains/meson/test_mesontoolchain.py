@@ -273,6 +273,28 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
     assert f"b_vscrt = '{vscrt}'" in content
 
 
+def test_ar_ld_from_compiler_executables():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=clang
+        compiler.version=16
+
+        [conf]
+        tools.build:compiler_executables={"ar": "CUSTOM_AR", "ld": "CUSTOM_LD"}
+   """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "c_ld = 'CUSTOM_LD'" in content
+    assert "cpp_ld = 'CUSTOM_LD'" in content
+    assert "ar = 'CUSTOM_AR'" in content
+
+
 def test_env_vars_from_build_require():
     conanfile = textwrap.dedent("""
     from conan import ConanFile

@@ -289,12 +289,12 @@ class MesonToolchain(object):
         # PR related: https://github.com/mesonbuild/meson/pull/6457
         #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD``
         #: environment value
-        self.c_ld = build_env.get("CC_LD")
+        self.c_ld = compilers_by_conf.get("ld") or self._sanitize_env_format(build_env.get("CC_LD"))
         #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD``
         #: environment value
-        self.cpp_ld = build_env.get("CXX_LD")
+        self.cpp_ld = compilers_by_conf.get("ld") or self._sanitize_env_format(build_env.get("CXX_LD"))
         #: Defines the Meson ``ar`` variable. Defaulted to ``AR`` build environment value
-        self.ar = build_env.get("AR")
+        self.ar = compilers_by_conf.get("ar") or self._sanitize_env_format(build_env.get("AR"))
         #: Defines the Meson ``strip`` variable. Defaulted to ``STRIP`` build environment value
         self.strip = build_env.get("STRIP")
         #: Defines the Meson ``as`` variable. Defaulted to ``AS`` build environment value
