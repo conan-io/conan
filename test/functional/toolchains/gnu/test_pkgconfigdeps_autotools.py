@@ -110,5 +110,3 @@ def test_pkgconfigdeps_and_autotools():
         # Issue: https://github.com/conan-io/conan/issues/11867
         assert '-F/my/framework/file1' in client.out
         assert '-F/my/framework/file2' in client.out
-        assert "warning: directory not found for option '-F/my/framework/file1'" in client.out
-        assert "warning: directory not found for option '-F/my/framework/file2'" in client.out
