@@ -1098,3 +1098,22 @@ def test_pkg_config_deps_and_private_deps():
     # Now, it passes and creates the pc files correctly (the skipped one is not created)
     client.run("install .")
     assert "Requires:" not in client.load("pkg.pc")
+
+
+def test_keep_prefix_path_deployers():
+    """
+    Testing that there is no duplicated prefix path in relative folders when
+    dependency is deployed.
+
+    Issue related: https://github.com/conan-io/conan/issues/16543
+    """
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1")})
+    client.run("create dep/conanfile.py")
+    client.run("install --requires=dep/0.1 --output-folder=deploy  --deployer=direct_deploy"
+               " --deployer-folder=deploy -g PkgConfigDeps")
+    content = client.load(os.path.join("deploy", "dep.pc"))
+    assert "prefix=deploy/direct_deploy/dep" in content
+    assert "libdir=${prefix}/lib" in content
+    assert "includedir=${prefix}/include" in content
+    assert "bindir=${prefix}/bin" in content
