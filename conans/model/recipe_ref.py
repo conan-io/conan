@@ -187,6 +187,23 @@ class RecipeReference:
             return not condition
         return condition
 
+    def partial_match(self, pattern):
+        """
+        Finds if pattern matches any of partial sums of tokens of conan reference
+        """
+        tokens = [self.name, "/", str(self.version)]
+        if self.user:
+            tokens += ["@", self.user]
+        if self.channel:
+            tokens += ["/", self.channel]
+        if self.revision:
+            tokens += ["#", self.revision]
+        partial = ""
+        for token in tokens:
+            partial += token
+            if pattern.match(partial):
+                return True
+
 
 def ref_matches(ref, pattern, is_consumer):
     if not ref or not str(ref):

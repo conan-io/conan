@@ -2,7 +2,6 @@ from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
-from conans.search.search import search_recipes
 
 
 class RangeResolver:
@@ -57,7 +56,7 @@ class RangeResolver:
         local_found = self._cached_cache.get(pattern)
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
-            local_found = search_recipes(self._cache, pattern)
+            local_found = self._cache.search_recipes(pattern)
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]

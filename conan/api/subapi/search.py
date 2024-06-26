@@ -1,5 +1,4 @@
 from conan.internal.conan_app import ConanApp
-from conans.search.search import search_recipes
 
 
 class SearchAPI:
@@ -17,7 +16,7 @@ class SearchAPI:
         if remote:
             refs = app.remote_manager.search_recipes(remote, query)
         else:
-            references = search_recipes(app.cache, query)
+            references = app.cache.search_recipes(query)
             # For consistency with the remote search, we return references without revisions
             # user could use further the API to look for the revisions
             refs = []

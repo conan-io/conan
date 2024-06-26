@@ -4,13 +4,13 @@ from typing import Dict
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput, TimedOutput
+from conan.internal.api.list.query_parse import filter_package_configs
 from conan.internal.conan_app import ConanApp
 from conan.internal.paths import CONANINFO
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
-from conans.search.search import filter_packages
 from conans.util.dates import timelimit
 from conans.util.files import load
 
@@ -89,7 +89,18 @@ class ListAPI:
         :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :return: Dict[PkgReference, PkgConfiguration]
         """
-        return filter_packages(query, pkg_configurations)
+        if query is None:
+            return pkg_configurations
+        try:
+            if "!" in query:
+                raise ConanException("'!' character is not allowed")
+            if "~" in query:
+                raise ConanException("'~' character is not allowed")
+            if " not " in query or query.startswith("not "):
+                raise ConanException("'not' operator is not allowed")
+            return filter_package_configs(pkg_configurations, query)
+        except Exception as exc:
+            raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
     @staticmethod
     def filter_packages_profile(packages, profile, ref):

@@ -180,12 +180,7 @@ class PkgCache:
 
         refs = self._db.list_references()
         if pattern:
-            _refs = []
-            for r in refs:
-                match_ref = str(r) if not r.revision else repr(r)
-                if _partial_match(pattern, match_ref):
-                    _refs.append(r)
-            refs = _refs
+            refs = [r for r in refs if r.partial_match(pattern)]
         return refs
 
     def exists_prev(self, pref):

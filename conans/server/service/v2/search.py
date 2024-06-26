@@ -7,7 +7,6 @@ from conans.errors import ForbiddenException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO
-from conans.search.search import _partial_match
 from conans.server.utils.files import list_folder_subdirs
 from conans.util.files import load
 
@@ -93,7 +92,7 @@ class SearchService(object):
                 fields_dir = [underscore_to_none(d) for d in subdir.split("/")]
                 new_ref = RecipeReference(*fields_dir)
                 new_ref.revision = None
-                if _partial_match(b_pattern, repr(new_ref)):
+                if new_ref.partial_match(b_pattern):
                     ret.add(new_ref)
 
             return sorted(ret)
