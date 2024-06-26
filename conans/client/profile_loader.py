@@ -41,6 +41,7 @@ def profile_plugin(profile):
     _check_correct_cppstd(settings)
     _check_correct_cstd(settings)
 
+
 def _check_correct_cppstd(settings):
     from conan.tools.scm import Version
     def _error(compiler, cppstd, min_version, version):

@@ -327,3 +327,36 @@ class TestLockRemove:
                 "other/1.0@user", "pkg/1.0@team", "engine/1.0"}.difference(removed)
         for pkg in rest:
             assert pkg in lock
+
+
+class TestLockUpdate:
+    @pytest.mark.parametrize("kind, old, new", [
+        ("requires", "math/1.0", "math/1.1"),
+        ("build-requires", "cmake/1.0", "cmake/1.1"),
+        ("python-requires", "mytool/1.0", "mytool/1.1"),
+    ])
+    def test_lock_update(self, kind, old, new):
+        c = TestClient()
+        lock = textwrap.dedent("""\
+            {
+                "version": "0.5",
+                "requires": [
+                    "math/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "math/1.0#12345%1702683584.3411012",
+                    "engine/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ],
+                "build_requires": [
+                    "cmake/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "ninja/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ],
+                "python_requires": [
+                    "mytool/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "othertool/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ]
+            }
+            """)
+        c.save({"conan.lock": lock})
+        c.run(f"lock update --{kind}={new}")
+        lock = c.load("conan.lock")
+        assert old not in lock
+        assert new in lock
