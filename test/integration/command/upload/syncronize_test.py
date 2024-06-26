@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conan.tools.files.files import untargz  # FIXME: DO not import from tools
+from conan.tools.files.files import _untargz  # FIXME: DO not import from tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import EXPORT_TGZ_NAME
@@ -30,7 +30,7 @@ class SynchronizeTest(unittest.TestCase):
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        _untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted.txt")), "delete me")
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted2.txt")), "delete me2")
 
@@ -42,7 +42,7 @@ class SynchronizeTest(unittest.TestCase):
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        _untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertFalse(os.path.exists(os.path.join(tmp, "to_be_deleted.txt")))
         self.assertTrue(os.path.exists(os.path.join(tmp, "to_be_deleted2.txt")))
 
@@ -60,7 +60,7 @@ class SynchronizeTest(unittest.TestCase):
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        _untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted2.txt")), "modified content")
         self.assertTrue(load(os.path.join(tmp, "new_file.lib")), "new file")
         self.assertFalse(os.path.exists(os.path.join(tmp, "to_be_deleted.txt")))

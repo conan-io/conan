@@ -280,12 +280,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
            in a single folder it will flat the folder moving all the contents to the parent folder.
     """
 
-    output = conanfile.output
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, strip_root)
-    if filename.endswith(".gz"):
+    output = conanfile.output if conanfile is not None else None
+    if filename.endswith(".gz") and not filename.endswith(".tar.gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
         if target_dir:
@@ -294,13 +290,53 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             with open(target_name, "wb") as fout:
                 shutil.copyfileobj(fin, fout)
         return
-    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root)
+    elif filename.endswith((".tar",
+                            ".tar.gz", ".tgz",
+                            ".tar.bz2", ".tbz2",
+                            ".tar.xz", ".txz")):
+        return _untargz(filename, destination, pattern, strip_root)
+    else:
+        return _unzip(filename, destination, pattern, strip_root, keep_permissions, output)
 
+
+def _untargz(filename, destination=".", pattern=None, strip_root=False):
+    # NOT EXPOSED at `conan.tools.files` but used in tests
+    import tarfile
+    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+        if not pattern and not strip_root:
+            tarredgzippedFile.extractall(destination)
+        else:
+            members = tarredgzippedFile.getmembers()
+
+            if strip_root:
+                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
+                common_folder = os.path.commonprefix(names).split("/", 1)[0]
+                if not common_folder and len(names) > 1:
+                    raise ConanException("The tgz file contains more than 1 folder in the root")
+                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
+                    raise ConanException("The tgz file contains a file in the root")
+                # Remove the directory entry if present
+                members = [m for m in members if m.name != common_folder]
+                for member in members:
+                    name = member.name.replace("\\", "/")
+                    member.name = name.split("/", 1)[1]
+                    member.path = member.name
+                    if member.linkpath.startswith(common_folder):
+                        # https://github.com/conan-io/conan/issues/11065
+                        linkpath = member.linkpath.replace("\\", "/")
+                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkname = member.linkpath
+            if pattern:
+                members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                      tarredgzippedFile.getmembers()))
+            tarredgzippedFile.extractall(destination, members=members)
+
+
+def _unzip(filename, destination=".", pattern=None, strip_root=False, keep_permissions=False,
+           output=None):
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
-
-    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+    if output is not None and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
             the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
             txt_msg = "Unzipping %d %%"
@@ -312,7 +348,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     else:
         def print_progress(_, __):
             pass
-
     with zipfile.ZipFile(filename, "r") as z:
         zip_info = z.infolist()
         if pattern:
@@ -346,7 +381,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
-                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
+                    output.error(f"Error extracting {file_.filename}\n{str(e)}", error_type="exception")
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
@@ -359,41 +394,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                         perm = file_.external_attr >> 16 & 0xFFF
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
-                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
+                    output.error(f"Error extracting {file_.filename}\n{str(e)}", error_type="exception")
         output.writeln("")
-
-
-def untargz(filename, destination=".", pattern=None, strip_root=False):
-    # NOT EXPOSED at `conan.tools.files` but used in tests
-    import tarfile
-    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        if not pattern and not strip_root:
-            tarredgzippedFile.extractall(destination)
-        else:
-            members = tarredgzippedFile.getmembers()
-
-            if strip_root:
-                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
-                common_folder = os.path.commonprefix(names).split("/", 1)[0]
-                if not common_folder and len(names) > 1:
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
-                    raise ConanException("The tgz file contains a file in the root")
-                # Remove the directory entry if present
-                members = [m for m in members if m.name != common_folder]
-                for member in members:
-                    name = member.name.replace("\\", "/")
-                    member.name = name.split("/", 1)[1]
-                    member.path = member.name
-                    if member.linkpath.startswith(common_folder):
-                        # https://github.com/conan-io/conan/issues/11065
-                        linkpath = member.linkpath.replace("\\", "/")
-                        member.linkpath = linkpath.split("/", 1)[1]
-                        member.linkname = member.linkpath
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
-            tarredgzippedFile.extractall(destination, members=members)
 
 
 def check_sha1(conanfile, file_path, signature):

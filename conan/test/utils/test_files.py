@@ -8,7 +8,7 @@ import tempfile
 import time
 from io import BytesIO
 
-from conan.tools.files.files import untargz
+from conan.tools.files.files import _untargz
 from conans.client.subsystems import get_cased_path
 from conans.errors import ConanException
 from conan.internal.paths import PACKAGE_TGZ_NAME
@@ -62,7 +62,7 @@ def uncompress_packaged_files(paths, pref):
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
         raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
     tmp = temp_folder()
-    untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
+    _untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
     return tmp
 
 

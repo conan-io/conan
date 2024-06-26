@@ -327,11 +327,11 @@ def gather_files(folder):
 
 # FIXME: This is very repeated with the tools.unzip, but wsa needed for config-install unzip
 def unzip(filename, destination="."):
-    from conan.tools.files.files import untargz  # FIXME, importing from conan.tools
+    from conan.tools.files.files import _untargz  # FIXME, importing from conan.tools
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination)
+        return _untargz(filename, destination)
     if filename.endswith(".gz"):
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
@@ -339,7 +339,7 @@ def unzip(filename, destination="."):
         save(target_name, file_content)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination)
+        return _untargz(filename, destination)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
