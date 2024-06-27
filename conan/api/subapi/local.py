@@ -9,6 +9,7 @@ from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.source import run_source_method
 from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.conf import Conf
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import chdir
 
@@ -75,8 +76,10 @@ class LocalAPI:
         conanfile = app.loader.load_consumer(path, name=name, version=version,
                                              user=user, channel=channel, graph_lock=None,
                                              remotes=remotes)
-        # This profile is empty, but with the conf from global.conf
+        # Ensure the profile has the necessary core confs
+        Conf._keep_core = True
         profile = self._conan_api.profiles.get_profile([])
+        del Conf._keep_core
         initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
         # This is important, otherwise the ``conan source`` doesn't define layout and fails
         if hasattr(conanfile, "layout"):

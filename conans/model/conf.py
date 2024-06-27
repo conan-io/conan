@@ -463,7 +463,7 @@ class Conf:
     def filter_user_modules(self):
         result = Conf()
         for k, v in self._values.items():
-            if _is_profile_module(k):
+            if hasattr(Conf, "_keep_core") or _is_profile_module(k):
                 result._values[k] = v
         return result
 

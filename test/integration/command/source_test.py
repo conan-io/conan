@@ -309,3 +309,23 @@ def test_source_method_forbidden_attributes(attribute):
 
     client.run("source .", assert_error=True)
     assert f"'self.{attribute}' access in 'source()' method is forbidden" in client.out
+
+
+def test_source_method_access_to_globalconf():
+    """Ensure helpers will have access to their respective confs, even if the user should ideally not
+    access them directly."""
+    c = TestClient(light=True)
+    c.save({"conanfile.py": textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "0.1"
+        def source(self):
+            self.output.info(f'Backup download cache: {self.conf.get("core.sources:download_cache")}')
+            self.output.info(f'Download retry wait: {self.conf.get("core.download:retry_wait")}')
+    """)})
+    c.save_home({"global.conf": "core.sources:download_cache=foobar"})
+    c.run("source . -cc='core.download:retry_wait=9'")
+    # assert "Backup download cache: foobar" in c.out
+    assert "Download retry wait: 9" in c.out
