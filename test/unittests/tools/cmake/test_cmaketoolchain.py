@@ -95,6 +95,34 @@ def test_select_blocks(conanfile):
     assert "########## 'preprocessor' block #############" not in content
 
 
+def test_enabled_blocks_conf(conanfile):
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["generic_system"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" not in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    # remove multiple
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks",
+                          ["generic_system", "cmake_flags_init"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["potato"])
+    toolchain = CMakeToolchain(conanfile)
+    with pytest.raises(ConanException) as e:
+        _ = toolchain.content
+    assert "Block 'potato' defined in tools.cmake.cmaketoolchain:enabled_blocks doesn't" in str(e)
+
+
 def test_dict_keys(conanfile):
     toolchain = CMakeToolchain(conanfile)
     assert "generic_system" in toolchain.blocks.keys()
@@ -180,13 +208,6 @@ def test_user_toolchain(conanfile):
     toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
     content = toolchain.content
     assert 'include("myowntoolchain.cmake")' in content
-
-
-def test_block_selection(conanfile):
-    conanfile.conf.define("tools.cmake.cmaketoolchain:blocks", [])
-    toolchain = CMakeToolchain(conanfile)
-    content = toolchain.content
-    assert '' == content
 
 
 @pytest.fixture
