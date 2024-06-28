@@ -104,7 +104,9 @@ class ListAPI:
             options = data.get("options", {})
             for k, v in options.items():
                 for pattern, pattern_options in profile_options.items():
-                    if ref_matches(ref, pattern, None):
+                    # Accept &: as referring to the current package being listed,
+                    # even if it's not technically a "consumer"
+                    if ref_matches(ref, pattern, True):
                         value = pattern_options.get_safe(k)
                         if value is not None and value != v:
                             options_match = False
