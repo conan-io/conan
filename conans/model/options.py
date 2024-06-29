@@ -19,11 +19,8 @@ class _PackageOption:
         self._value = value  # Value None = not defined
         self.important = False
         # possible_values only possible origin is recipes
-        if possible_values is None:
-            self._possible_values = None
-        else:
-            # This can contain "ANY"
-            self._possible_values = [str(v) if v is not None else None for v in possible_values]
+        self._possible_values = None
+        self.constrain_possible_values(possible_values)
 
     def dumps(self, scope=None):
         if self._value is None:
@@ -94,6 +91,13 @@ class _PackageOption:
             return
         if None not in self._possible_values:
             raise ConanException("'options.%s' value not defined" % self._name)
+
+    def constrain_possible_values(self, possible_values):
+        if possible_values is None:
+            self._possible_values = None
+        else:
+            # This can contain "ANY"
+            self._possible_values = [str(v) if v is not None else None for v in possible_values]
 
 
 class _PackageOptions:
@@ -213,6 +217,13 @@ class _PackageOptions:
             if is_pattern and k not in self._data:
                 continue
             self._set(k, v)
+
+    def constrain_possible_values(self, field, possible_values):
+        self._ensure_exists(field)
+        if self._freeze:
+            raise ConanException(f"Cannot constrain option '{field}' possible values after it has "
+                                 f"been set to '{self._data[field].value}'")
+        self._data[field].constrain_possible_values(possible_values)
 
 
 class Options:

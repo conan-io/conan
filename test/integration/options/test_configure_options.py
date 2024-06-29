@@ -123,3 +123,32 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1")
         self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+
+
+def test_possible_values_based_on_version():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.scm import Version
+
+    class Pkg(ConanFile):
+        name = "foo"
+        options = {"my_option": ["foo", "v1", "v2"]}
+        default_options = {"my_option": "foo"}
+        def config_options(self):
+            if Version(self.version) < "2.0":
+                self.options.my_option.constrain_possible_values(["foo", "v1"])
+            else:
+                self.options.my_option.constrain_possible_values(["foo", "v2"])
+
+    """)})
+
+    tc.run("graph info . --version=1.0 -o='&:my_option=v1'")
+    tc.run("graph info . --version=1.0 -o='&:my_option=v2'", assert_error=True)
+    assert "ERROR: 'v2' is not a valid 'options.my_option' value.\nPossible values are ['foo', 'v1']" in tc.out
+    tc.run("graph info . --version=1.0 -o='&:my_option=foo'")
+
+    tc.run("graph info . --version=2.0 -o='&:my_option=v1'", assert_error=True)
+    assert "ERROR: 'v1' is not a valid 'options.my_option' value.\nPossible values are ['foo', 'v2']" in tc.out
+    tc.run("graph info . --version=2.0 -o='&:my_option=v2'")
+    tc.run("graph info . --version=2.0 -o='&:my_option=foo'")
