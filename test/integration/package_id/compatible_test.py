@@ -407,12 +407,9 @@ class TestNewCompatibility:
         tc = TestClient()
         profile = textwrap.dedent("""
                    [settings]
-                   os = Windows
                    compiler=msvc
                    compiler.version=194
                    compiler.runtime=dynamic
-                   build_type=Release
-                   arch=x86_64
                    """)
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
                  "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0").with_setting("compiler"),
