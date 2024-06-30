@@ -400,3 +400,12 @@ class TestNewCompatibility:
 
         c.run("install --requires=pdfium/2020.9 -pr=myprofile -s build_type=Debug")
         assert "missing. Using compatible package" in c.out
+
+    def test_compatibility_msvc_and_cppstd(self):
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
+                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0").with_setting("compiler")})
+
+        tc.run("create dep -s compiler=msvc -s compiler.version=194 -s compiler.cppstd=20 -s compiler.runtime=dynamic")
+        tc.run("create . -s compiler=msvc -s compiler.version=194 -s compiler.cppstd=17 -s compiler.runtime=dynamic")
+        tc.assert_listed_binary({"dep/1.0": ("b6d26a6bc439b25b434113982791edf9cab4d004", "Cache")})
