@@ -454,44 +454,52 @@ class InstallGraph:
                   "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
-    def raise_errors(self):
+    def get_missing_invalid_packages(self):
         missing, invalid = [], []
-        for ref, install_node in self._nodes.items():
+        for _, install_node in self._nodes.items():
             for package in install_node.packages.values():
                 if package.binary == BINARY_MISSING:
                     missing.append(package)
                 elif package.binary == BINARY_INVALID:
                     invalid.append(package)
+        return missing, invalid
 
+    def raise_errors(self, basic_output=False):
+        missing, invalid = self.get_missing_invalid_packages()
         if invalid:
-            msg = ["There are invalid packages:"]
-            for package in invalid:
-                node = package.nodes[0]
-                if node.cant_build and node.should_build:
-                    binary, reason = "Cannot build for this configuration", node.cant_build
-                else:
-                    binary, reason = "Invalid", node.conanfile.info.invalid
-                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
-            raise ConanInvalidConfiguration("\n".join(msg))
+            self._raise_invalid(invalid)
         if missing:
-            self._raise_missing(missing)
+            self._raise_missing(missing, basic_output)
 
     def get_errors(self):
         try:
-            self.raise_errors()
+            self.raise_errors(basic_output=True)
         except ConanException as e:
             return e
         return None
 
-    def _raise_missing(self, missing):
+    def _raise_invalid(self, invalid):
+        msg = ["There are invalid packages:"]
+        for package in invalid:
+            node = package.nodes[0]
+            if node.cant_build and node.should_build:
+                binary, reason = "Cannot build for this configuration", node.cant_build
+            else:
+                binary, reason = "Invalid", node.conanfile.info.invalid
+            msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
+        raise ConanInvalidConfiguration("\n".join(msg))
+
+
+    def _raise_missing(self, missing, basic_output=False):
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
         missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-        missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
-        out = ConanOutput()
-        for pref_str in missing_prefs_str:
-            out.error(f"Missing binary: {pref_str}", error_type="exception")
-        out.writeln("")
+        if not basic_output:
+            missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+            out = ConanOutput()
+            for pref_str in missing_prefs_str:
+                out.error(f"Missing binary: {pref_str}", error_type="exception")
+            out.writeln("")
 
         # Report details just the first one
         install_node = missing[0]
@@ -499,9 +507,10 @@ class InstallGraph:
         package_id = node.package_id
         ref, conanfile = node.ref, node.conanfile
 
-        msg = f"Can't find a '{ref}' package binary '{package_id}' for the configuration:\n"\
-              f"{conanfile.info.dumps()}"
-        conanfile.output.warning(msg)
+        if not basic_output:
+            msg = f"Can't find a '{ref}' package binary '{package_id}' for the configuration:\n"\
+                  f"{conanfile.info.dumps()}"
+            conanfile.output.warning(msg)
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
@@ -518,7 +527,7 @@ class InstallGraph:
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'. You can try:
                - List all available packages using 'conan list "{ref}:*" -r=remote'
-               - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
+               - Explain missing binaries: replace 'conan {"graph info" if basic_output else "install"} ...' with 'conan graph explain ...'
                - {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
