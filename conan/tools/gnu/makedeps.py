@@ -30,6 +30,7 @@ import re
 import textwrap
 
 from jinja2 import Template, StrictUndefined
+from typing import Optional
 
 from conan.internal import check_duplicated_generator
 from conan.tools.files import save
@@ -65,6 +66,15 @@ def _makefy(name: str) -> str:
     :return: Safe makefile variable, not including bad characters that are not parsed correctly
     """
     return re.sub(r'[^0-9A-Z_]', '_', name.upper())
+
+
+def _makefy_properties(properties: dict) -> Optional[dict]:
+    """
+    Convert property dictionary keys to Make-variable-friendly syntax
+    :param properties: The property dictionary to be converted
+    :return: Modified property dictionary with keys not including bad characters that are not parsed correctly
+    """
+    return {_makefy(name): value for name, value in  properties.items()} if properties else None
 
 
 def _conan_prefix_flag(variable: str) -> str:
@@ -366,7 +376,7 @@ class DepComponentContentGenerator:
             "name": _makefy(self._name),
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
-            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info.components[self._name]._properties.items()} if self._dep.cpp_info.components[self._name]._properties else None,
+            "properties": _makefy_properties(self._dep.cpp_info.components[self._name]._properties),
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
@@ -431,7 +441,7 @@ class DepContentGenerator:
             "components": list(self._dep.cpp_info.get_sorted_components().keys()),
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
-            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info._properties.items()} if self._dep.cpp_info._properties else None,
+            "properties": _makefy_properties(self._dep.cpp_info._properties),
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
