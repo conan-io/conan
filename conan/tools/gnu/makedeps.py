@@ -131,6 +131,14 @@ def _jinja_format_list_values() -> str:
             {%- endif -%}
             {%- endmacro %}
 
+            {%- macro define_multiple_variable_value(var, values) -%}
+            {%- if values is not none -%}
+            {% for property_name, value in values.items() %}
+            {{ var }}_{{ property_name }} = {{ value }}
+            {% endfor %}
+            {%- endif -%}
+            {%- endmacro %}
+
             {%- macro define_variable_value(var, values) -%}
             {%- if values is not none -%}
             {%- if values|length > 0 -%}
@@ -397,6 +405,7 @@ class DepContentGenerator:
         {{- define_variable_value_safe("CONAN_REQUIRES_{}".format(name), cpp_info_flags, 'requires') -}}
         {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}".format(name), cpp_info_flags, 'system_libs') -}}
         {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
+        {{- define_multiple_variable_value("CONAN_PROPERTY_{}".format(name), properties) -}}
         """)
 
     def __init__(self, dependency, require, root: str, sysroot, dirs: dict, flags: dict):
@@ -420,6 +429,7 @@ class DepContentGenerator:
             "components": list(self._dep.cpp_info.get_sorted_components().keys()),
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
+            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info._properties.items()},
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
