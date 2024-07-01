@@ -1110,10 +1110,10 @@ def test_keep_prefix_path_deployers():
     client = TestClient()
     client.save({"dep/conanfile.py": GenConanfile("dep", "0.1")})
     client.run("create dep/conanfile.py")
-    client.run("install --requires=dep/0.1 --output-folder=deploy  --deployer=direct_deploy"
-               " --deployer-folder=deploy -g PkgConfigDeps")
-    content = client.load(os.path.join("deploy", "dep.pc"))
-    assert "prefix=deploy/direct_deploy/dep" in content
+    client.run("install --requires=dep/0.1 --deployer=direct_deploy "
+               "--deployer-folder=mydeploy -g PkgConfigDeps")
+    content = client.load("dep.pc")
+    assert f"prefix={client.current_folder}/mydeploy/direct_deploy/dep" in content
     assert "libdir=${prefix}/lib" in content
     assert "includedir=${prefix}/include" in content
     assert "bindir=${prefix}/bin" in content

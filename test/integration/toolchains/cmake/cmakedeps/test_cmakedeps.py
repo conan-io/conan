@@ -757,3 +757,33 @@ def test_different_versions():
     c.run("install --requires=dep/2.3 -g CMakeDeps")
     config = c.load("dep-config.cmake")
     assert 'set(dep_VERSION_STRING "2.3")' in config
+
+
+def test_using_deployer_folder():
+    """
+    Related to: https://github.com/conan-io/conan/issues/16543
+
+    CMakeDeps was failing if --deployer-folder was used. The error looked like:
+
+    conans.errors.ConanException: Error in generator 'CMakeDeps': error generating context for 'dep/1.0': mydeploy/direct_deploy/dep/include is not absolute
+    """
+    c = TestClient()
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=15
+    os=Macos
+    """)
+    c.save({
+        "host": profile,
+        "dep/conanfile.py": GenConanfile("dep")})
+    c.run("create dep --version 1.0")
+    c.run("install --requires=dep/1.0 --deployer=direct_deploy "
+          "--deployer-folder=mydeploy -g CMakeDeps")
+    content = c.load("DEP-release-x86_64-data.cmake")
+    assert ('set(dep_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/mydeploy/direct_deploy/dep")'
+            in content)

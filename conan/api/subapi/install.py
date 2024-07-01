@@ -1,3 +1,5 @@
+import os
+
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
 from conans.client.generators import write_generators
@@ -70,7 +72,10 @@ class InstallAPI:
 
         # The previous .set_base_folders has already decided between the source_folder and output
         if deploy or deploy_package:
-            base_folder = deploy_folder or conanfile.folders.base_build
+            base_folder = conanfile.folders.base_build
+            # Issue related: https://github.com/conan-io/conan/issues/16543
+            if deploy_folder:
+                base_folder = os.path.join(base_folder, deploy_folder)
             do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
 
         final_generators = []
