@@ -352,6 +352,7 @@ class ConanFile:
         from conans.util.runners import conan_run
         if not quiet:
             ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
+            ConanOutput().verbose(f"{self.display_name}: Full command: {wrapped_cmd}")
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
         if not quiet:
             ConanOutput().writeln("")
