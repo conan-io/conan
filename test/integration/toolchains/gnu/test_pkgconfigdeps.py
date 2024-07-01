@@ -1100,10 +1100,10 @@ def test_pkg_config_deps_and_private_deps():
     assert "Requires:" not in client.load("pkg.pc")
 
 
-def test_keep_prefix_path_deployers():
+def test_using_deployer_folder():
     """
-    Testing that there is no duplicated prefix path in relative folders when
-    dependency is deployed.
+    Testing that the absolute path is kept as the prefix instead of the
+    relative path.
 
     Issue related: https://github.com/conan-io/conan/issues/16543
     """
