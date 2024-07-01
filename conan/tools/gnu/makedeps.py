@@ -340,6 +340,7 @@ class DepComponentContentGenerator:
         {{- define_variable_value_safe("CONAN_FRAMEWORKS_{}_{}".format(dep_name, name), cpp_info_flags, 'frameworks') -}}
         {{- define_variable_value_safe("CONAN_REQUIRES_{}_{}".format(dep_name, name), cpp_info_flags, 'requires') -}}
         {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), cpp_info_flags, 'system_libs') -}}
+        {{- define_multiple_variable_value("CONAN_PROPERTY_{}_{}".format(dep_name, name), properties) -}}
         """)
 
     def __init__(self, dependency, component_name: str, dirs: dict, flags: dict):
@@ -364,7 +365,8 @@ class DepComponentContentGenerator:
             "dep_name": _makefy(self._dep.ref.name),
             "name": _makefy(self._name),
             "cpp_info_dirs": self._dirs,
-            "cpp_info_flags": self._flags
+            "cpp_info_flags": self._flags,
+            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info.components[self._name]._properties.items()} if self._dep.cpp_info.components[self._name]._properties else None,
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
@@ -429,7 +431,7 @@ class DepContentGenerator:
             "components": list(self._dep.cpp_info.get_sorted_components().keys()),
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
-            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info._properties.items()},
+            "properties": {_makefy(name): value for name, value in  self._dep.cpp_info._properties.items()} if self._dep.cpp_info._properties else None,
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
