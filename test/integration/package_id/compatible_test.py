@@ -400,3 +400,32 @@ class TestNewCompatibility:
 
         c.run("install --requires=pdfium/2020.9 -pr=myprofile -s build_type=Debug")
         assert "missing. Using compatible package" in c.out
+
+    def test_compatibility_erase_package_id(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PdfiumConan(ConanFile):
+                name = "diligent-core"
+                version = "1.0"
+                settings = "compiler"
+
+                def package_id(self):
+                    self.info.settings.compiler.runtime = "foobar"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Windows
+            compiler=msvc
+            compiler.version=192
+            compiler.runtime=dynamic
+            build_type=Release
+            arch=x86_64
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+
+        c.run("create . -pr:a=myprofile -s compiler.cppstd=20")
+        c.run("install --requires=diligent-core/1.0 -pr:a=myprofile -s compiler.cppstd=17", assert_error=True)
+        assert "ERROR: Invalid setting 'foobar' is not a valid 'settings.compiler.runtime' value." in c.out
