@@ -241,7 +241,8 @@ def graph_info(conan_api, parser, subparser, *args):
             "package_filter": args.package_filter,
             "conan_api": conan_api,
             "conan_error": deps_graph.error,
-            "conan_warning": InstallGraph(deps_graph).get_errors()}
+            # Do not compute graph errors if there are dependency errors
+            "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
 
 
 @conan_subcommand(formatters={"text": explain_formatter_text,
