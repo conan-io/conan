@@ -136,6 +136,8 @@ class GraphBinariesAnalyzer(object):
             conanfile.info = compatible_pkg  # Redefine current
 
             # TODO: Improve this interface
+            # The package_id method might have modified the settings to erase information,
+            # ensure we allow those new values
             conanfile.settings = conanfile.settings.copy_conaninfo_settings()
             conanfile.settings.update_values(compatible_pkg.settings.values_list)
             # Trick to allow mutating the options (they were freeze=True)
