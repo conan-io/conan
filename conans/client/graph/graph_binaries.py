@@ -134,9 +134,11 @@ class GraphBinariesAnalyzer(object):
                                   f"compatible package '{pkg_id}': {diff}")
             # So they are available in package_info() method
             conanfile.info = compatible_pkg  # Redefine current
+
+            # TODO: Improve this interface
+            conanfile.settings = conanfile.settings.copy_conaninfo_settings()
             conanfile.settings.update_values(compatible_pkg.settings.values_list)
             # Trick to allow mutating the options (they were freeze=True)
-            # TODO: Improve this interface
             conanfile.options = conanfile.options.copy_conaninfo_options()
             conanfile.options.update_options(compatible_pkg.options)
 

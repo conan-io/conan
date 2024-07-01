@@ -410,9 +410,11 @@ class TestNewCompatibility:
                 name = "diligent-core"
                 version = "1.0"
                 settings = "compiler"
+                options = {"foo": ["no"]}
 
                 def package_id(self):
                     self.info.settings.compiler.runtime = "foobar"
+                    self.info.options.foo = "yes"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -427,5 +429,5 @@ class TestNewCompatibility:
                 "myprofile": profile})
 
         c.run("create . -pr:a=myprofile -s compiler.cppstd=20")
-        c.run("install --requires=diligent-core/1.0 -pr:a=myprofile -s compiler.cppstd=17", assert_error=True)
-        assert "ERROR: Invalid setting 'foobar' is not a valid 'settings.compiler.runtime' value." in c.out
+        c.run("install --requires=diligent-core/1.0 -pr:a=myprofile -s compiler.cppstd=17")
+        assert "ERROR: Invalid setting 'foobar' is not a valid 'settings.compiler.runtime' value." not in c.out
