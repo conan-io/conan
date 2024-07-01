@@ -17,12 +17,13 @@ def get_conan_user_home():
 
     def _find_conanrc_file():
         path = Path(os.getcwd())
-        while path.is_dir() and len(path.parts) > 1:  # finish at '/'
+        while True:
             conanrc_file = path / ".conanrc"
             if conanrc_file.is_file():
                 return conanrc_file
-            else:
-                path = path.parent
+            if len(path.parts) == 1:  # finish at '/'
+                break
+            path = path.parent
 
     def _user_home_from_conanrc_file():
         try:
@@ -49,8 +50,8 @@ def get_conan_user_home():
         user_home = conan_expand_user(user_home)
     if not os.path.isabs(user_home):
         raise ConanException("Invalid CONAN_HOME value '%s', "
-                        "please specify an absolute or path starting with ~/ "
-                        "(relative to user home)" % user_home)
+                             "please specify an absolute or path starting with ~/ "
+                             "(relative to user home)" % user_home)
     return user_home
 
 

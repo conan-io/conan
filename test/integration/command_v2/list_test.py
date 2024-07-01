@@ -896,3 +896,13 @@ class TestListBinaryFilter:
         assert len(pkg["packages"]) == 1
         settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
         assert settings == {"arch": "x86", "os": "Windows"}
+
+        # &: will also match every package being listed, as if it was a consumer
+        c.run(f"list *:* -fo &:shared=False --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 2
+        settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
+        assert settings == {"arch": "x86", "os": "Windows"}
