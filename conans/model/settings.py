@@ -61,9 +61,9 @@ class SettingsItem:
         """ deepcopy, recursive
         This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
         values, but not all, just the "final" values without subsettings.
-        We cannot let usres manipulate to random strings
+        We cannot let users manipulate to random strings
         things that contain subsettings like ``compiler``, because that would leave the thing
-        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        in an undefined state, with some now inconsistent subsettings, that cannot be accessed
         anymore. So with this change the options are:
         - If you need more "binary-compatible" descriptions of a compiler, lets say like
         "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
