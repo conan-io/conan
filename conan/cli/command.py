@@ -99,13 +99,14 @@ class BaseConanCommand:
         formatter(info)
 
     def _raise_errors(self, info):
-        if info and "conan_error" in info and isinstance(info["conan_error"], Exception):
-            raise info["conan_error"]
-        if info and "conan_warning" in info and isinstance(info["conan_warning"], Exception):
-            try:
-                raise info["conan_warning"]
-            except ConanException as e:
-                ConanOutput().warning(e)
+        if info and type(info) == dict:
+            if "conan_error" in info and isinstance(info["conan_error"], Exception):
+                raise info["conan_error"]
+            if "conan_warning" in info and isinstance(info["conan_warning"], Exception):
+                try:
+                    raise info["conan_warning"]
+                except ConanException as e:
+                    ConanOutput().warning(e)
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
