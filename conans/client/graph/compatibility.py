@@ -65,9 +65,9 @@ def cppstd_compat(conanfile):
         new_combinations = []
         for comb in combinations:
             for f in factor:
-                comb = comb.copy()
-                comb.update(f)
-                new_combinations.append(comb)
+                new_comb = comb.copy()
+                new_comb.update(f)
+                new_combinations.append(new_comb)
         combinations.extend(new_combinations)
 
     ret = []
