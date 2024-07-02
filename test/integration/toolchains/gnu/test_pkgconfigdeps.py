@@ -1113,7 +1113,8 @@ def test_using_deployer_folder():
     client.run("install --requires=dep/0.1 --deployer=direct_deploy "
                "--deployer-folder=mydeploy -g PkgConfigDeps")
     content = client.load("dep.pc")
-    assert f"prefix={client.current_folder}/mydeploy/direct_deploy/dep" in content
+    prefix_base = client.current_folder.replace('\\', '/')
+    assert f"prefix={prefix_base}/mydeploy/direct_deploy/dep" in content
     assert "libdir=${prefix}/lib" in content
     assert "includedir=${prefix}/include" in content
     assert "bindir=${prefix}/bin" in content
