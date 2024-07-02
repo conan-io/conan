@@ -64,23 +64,21 @@ class DockerRunner:
         import docker
         import docker.api.build
         try:
-            try:
-                self.docker_client = docker.from_env()
-                self.docker_api = docker.APIClient()
-            except:
-                docker_base_urls = [
-                    os.environ.get('CONAN_RUNNER_DOCKER_HOST'),
-                    os.environ.get('DOCKER_HOST'),
-                    'unix:///var/run/docker.sock',
-                    f'unix://{os.path.expanduser("~")}/.rd/docker.sock'
-                ]
-                for base_url in docker_base_urls:
-                    try:
-                        self.docker_client = docker.DockerClient(base_url=base_url, version='auto')
-                        break
-                    except:
-                        continue
-                self.docker_api = self.docker_client.api
+            docker_base_urls = [
+                None, # Default docker configuration, let the python library detect the socket
+                os.environ.get('DOCKER_HOST'), # Connect to socket defined in DOCKER_HOST
+                'unix:///var/run/docker.sock', # Default linux socket
+                f'unix://{os.path.expanduser("~")}/.rd/docker.sock' # Rancher linux socket
+            ]
+            for base_url in docker_base_urls:
+                try:
+                    ConanOutput().verbose(f'Trying to connect to docker "{base_url or "default"}" socket')
+                    self.docker_client = docker.DockerClient(base_url=base_url, version='auto')
+                    ConanOutput().verbose(f'Connected to docker "{base_url or "default"}" socket')
+                    break
+                except:
+                    continue
+            self.docker_api = self.docker_client.api
             docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
             raise ConanException("Docker Client failed to initialize."
