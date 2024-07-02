@@ -779,11 +779,11 @@ def test_using_deployer_folder():
     os=Macos
     """)
     c.save({
-        "host": profile,
+        "profile": profile,
         "dep/conanfile.py": GenConanfile("dep")})
     c.run("create dep --version 1.0")
-    c.run("install --requires=dep/1.0 -pr host --deployer=direct_deploy "
+    c.run("install --requires=dep/1.0 -pr profile --deployer=direct_deploy "
           "--deployer-folder=mydeploy -g CMakeDeps")
-    content = c.load("DEP-release-x86_64-data.cmake")
+    content = c.load("dep-release-x86_64-data.cmake")
     assert ('set(dep_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/mydeploy/direct_deploy/dep")'
             in content)
