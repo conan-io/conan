@@ -240,7 +240,7 @@ def graph_info(conan_api, parser, subparser, *args):
             "field_filter": args.filter,
             "package_filter": args.package_filter,
             "conan_api": conan_api,
-            "conan_error": deps_graph.error,
+            "conan_error": str(deps_graph.error) if deps_graph.error else None,
             # Do not compute graph errors if there are dependency errors
             "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
 

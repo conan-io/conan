@@ -481,7 +481,7 @@ class InstallGraph:
         try:
             self.raise_errors(basic_output=True)
         except ConanException as e:
-            return e
+            return str(e)
         return None
 
     def _raise_invalid(self, invalid):
