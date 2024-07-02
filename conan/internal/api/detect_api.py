@@ -384,14 +384,9 @@ def detect_default_compiler():
         return None, None, None
 
     if platform.system() == "Windows":
-        ide_version = _detect_vs_ide_version()
-        version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
-        if ide_version == "17":
-            update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
-            if update and int(update) >= 10:
-                version = "194"
-        if version:
-            return 'msvc', Version(version), None
+        compiler, version, compiler_exe = detect_msvc_compiler()
+        if compiler:
+            return compiler, version, compiler_exe
 
     if platform.system() == "SunOS":
         sun_cc, sun_cc_version, compiler_exe = detect_suncc_compiler()
@@ -533,8 +528,12 @@ def detect_clang_compiler(compiler_exe="clang"):
 
 
 def detect_msvc_compiler():
-    version = _detect_vs_ide_version()
-    version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
+    ide_version = _detect_vs_ide_version()
+    version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
+    if ide_version == "17":
+        update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
+        if update and int(update) >= 10:
+            version = "194"
     if version:
         return 'msvc', Version(version), None
     return None, None, None
