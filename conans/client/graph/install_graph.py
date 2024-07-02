@@ -454,7 +454,7 @@ class InstallGraph:
                   "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
-    def get_missing_invalid_packages(self):
+    def _get_missing_invalid_packages(self):
         def analyze_package(package):
             if package.binary == BINARY_MISSING:
                 missing.append(package)
@@ -471,7 +471,7 @@ class InstallGraph:
         return missing, invalid
 
     def raise_errors(self, basic_output=False):
-        missing, invalid = self.get_missing_invalid_packages()
+        missing, invalid = self._get_missing_invalid_packages()
         if invalid:
             self._raise_invalid(invalid)
         if missing:
