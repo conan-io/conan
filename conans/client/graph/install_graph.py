@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -275,7 +276,7 @@ class _InstallConfiguration:
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
-            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+            cmd += " " + " ".join(f"-o {shlex.quote(o)}" for o in self.options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
