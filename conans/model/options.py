@@ -29,10 +29,14 @@ class _PackageOption:
         if self._value is None:
             return None
         important = "!" if self.important else ""
+        value = self._value
+        if " " in value:
+            value = value.replace('"', r'\"')
+            value = f'"{value}"'
         if scope:
-            return "%s:%s%s=%s" % (scope, self._name, important, self._value)
+            return "%s:%s%s=%s" % (scope, self._name, important, value)
         else:
-            return "%s%s=%s" % (self._name, important, self._value)
+            return "%s%s=%s" % (self._name, important, value)
 
     def copy_conaninfo_option(self):
         # To generate a copy without validation, for package_id info.options value
