@@ -236,7 +236,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
 
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
-def test_create_docker_runner_profile_deafault_folder():
+def test_create_docker_runner_profile_default_folder():
     """
     Tests the ``conan create . ``
     """
