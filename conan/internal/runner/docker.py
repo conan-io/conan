@@ -256,6 +256,7 @@ class DockerRunner:
             raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
         if self.cache != 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
+            self.run_command('cp -r "'+self.abs_docker_path+'/.conanrunner/profiles/." ${HOME}/.conan2/profiles/.', log=False)
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 if os.path.exists( os.path.join(self.abs_runner_home_path, file_name)):
                     self.run_command('cp "'+self.abs_docker_path+'/.conanrunner/'+file_name+'" ${HOME}/.conan2/'+file_name, log=False)
