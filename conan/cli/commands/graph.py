@@ -8,6 +8,7 @@ from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
+from conan.cli.formatters.graph.build_order_html import format_build_order_html
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
@@ -62,7 +63,8 @@ def json_build_order(build_order):
     cli_out_write(json.dumps(build_order, indent=4))
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
     Compute the build order of a dependency graph.
