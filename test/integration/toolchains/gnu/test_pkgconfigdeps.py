@@ -1098,3 +1098,23 @@ def test_pkg_config_deps_and_private_deps():
     # Now, it passes and creates the pc files correctly (the skipped one is not created)
     client.run("install .")
     assert "Requires:" not in client.load("pkg.pc")
+
+
+def test_using_deployer_folder():
+    """
+    Testing that the absolute path is kept as the prefix instead of the
+    relative path.
+
+    Issue related: https://github.com/conan-io/conan/issues/16543
+    """
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1")})
+    client.run("create dep/conanfile.py")
+    client.run("install --requires=dep/0.1 --deployer=direct_deploy "
+               "--deployer-folder=mydeploy -g PkgConfigDeps")
+    content = client.load("dep.pc")
+    prefix_base = client.current_folder.replace('\\', '/')
+    assert f"prefix={prefix_base}/mydeploy/direct_deploy/dep" in content
+    assert "libdir=${prefix}/lib" in content
+    assert "includedir=${prefix}/include" in content
+    assert "bindir=${prefix}/bin" in content

@@ -281,3 +281,15 @@ def test_self_build_require():
     c.assert_listed_binary({"grpc/0.1": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Build")})
     c.assert_listed_binary({"grpc/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache")},
                            build=True)
+
+
+def test_name_provide_error_message():
+    tc = TestClient(light=True)
+    tc.save({"libjepg/conanfile.py": GenConanfile("libjpeg", "0.1"),
+             "mozjpeg/conanfile.py": GenConanfile("mozjpeg", "0.1").with_provides("libjpeg")})
+    tc.run("create libjepg")
+    tc.run("create mozjpeg")
+
+    tc.run("graph info --requires=mozjpeg/0.1 --requires=libjpeg/0.1", assert_error=True)
+    # This used to report that None was provided, but now it reports the name of the provides
+    assert "ERROR: Provide Conflict: Both 'libjpeg/0.1' and 'mozjpeg/0.1' provide '['libjpeg']'" in tc.out
