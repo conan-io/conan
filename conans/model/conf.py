@@ -52,6 +52,7 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
+    "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

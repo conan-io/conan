@@ -7,7 +7,7 @@ from conan.api.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
-                          EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
+                                  EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
                                gzopen_without_timestamps, set_dirty_context_manager, mkdir,
                                human_size)
@@ -81,10 +81,17 @@ class PackagePreparator:
         self._global_conf = global_conf
 
     def prepare(self, upload_bundle, enabled_remotes):
+        local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, bundle in upload_bundle.refs().items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
+            url = conanfile.conan_data.get("scm", {}).get("url") if conanfile.conan_data else None
+            if local_url != "allow" and url is not None:
+                if not any(url.startswith(v) for v in ("ssh", "git", "http", "file")):
+                    raise ConanException(f"Package {ref} contains conandata scm url={url}\n"
+                                         "This isn't a remote URL, the build wontt be reproducible\n"
+                                         "Failing because conf 'core.scm:local_url!=allow'")
 
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
