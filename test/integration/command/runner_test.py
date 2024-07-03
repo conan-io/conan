@@ -268,7 +268,6 @@ def test_create_docker_runner_profile_deafault_folder():
     cache=copy
     remove=True
     """)
-    # client.save({"host_from_profile": profile_host, "build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
     client.save({"host_from_profile": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
     client.save({"build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
     client.run("new cmake_lib -d name=pkg -d version=0.2")
