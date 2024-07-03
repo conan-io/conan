@@ -90,7 +90,7 @@ class PackagePreparator:
             if local_url != "allow" and url is not None:
                 if not any(url.startswith(v) for v in ("ssh", "git", "http", "file")):
                     raise ConanException(f"Package {ref} contains conandata scm url={url}\n"
-                                         "This isn't a remote URL, the build wontt be reproducible\n"
+                                         "This isn't a remote URL, the build won't be reproducible\n"
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
             if bundle.get("upload"):
