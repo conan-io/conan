@@ -455,12 +455,12 @@ class InstallGraph:
         return result
 
     def _get_missing_invalid_packages(self):
+        missing, invalid = [], []
         def analyze_package(package):
             if package.binary == BINARY_MISSING:
                 missing.append(package)
             elif package.binary == BINARY_INVALID:
                 invalid.append(package)
-        missing, invalid = [], []
         for _, install_node in self._nodes.items():
             if self._order == "recipe":
                 for package in install_node.packages.values():

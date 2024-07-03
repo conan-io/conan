@@ -539,7 +539,7 @@ def test_build_order_missing_package_check_error():
     bo_json = json.loads(c.stdout)
     assert bo_json["order_by"] == "configuration"
     assert exit_code != 0
-    assert "ERROR: Missing prebuilt package for 'dep/0.1'" in c.out
+    assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in c.out
 
     result = [
         [
