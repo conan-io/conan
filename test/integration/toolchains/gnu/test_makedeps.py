@@ -30,6 +30,7 @@ def test_make_dirs_with_abs_path():
                 lib_dir2 = os.path.join(self.package_folder, "lib2")
                 self.cpp_info.includedirs = [include_dir]
                 self.cpp_info.libdirs = [lib_dir, lib_dir2]
+                self.cpp_info.set_property("my_prop", "my prop value")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -44,6 +45,7 @@ def test_make_dirs_with_abs_path():
     assert f'CONAN_LIB_DIRS_MYLIB = \\\n\t$(CONAN_LIB_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/lib \\\n\t$(CONAN_LIB_DIR_FLAG)$(CONAN_ROOT_MYLIB)/lib2' in makefile_content
     assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
     assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIR_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
+    assert 'CONAN_PROPERTY_MYLIB_MY_PROP = my prop value' in makefile_content
 
     lines = makefile_content.splitlines()
     for line_no, line in enumerate(lines):
@@ -90,6 +92,7 @@ def test_make_empty_dirs():
     assert 'CONAN_BIN_DIRS' not in makefile_content
     assert 'CONAN_LIBS' not in makefile_content
     assert 'CONAN_FRAMEWORK_DIRS' not in makefile_content
+    assert 'CONAN_PROPERTY' not in makefile_content
 
 
 def test_libs_and_system_libs():
@@ -197,6 +200,7 @@ def test_make_with_public_deps_and_component_requires():
             def package_info(self):
                 self.cpp_info.components["mycomponent"].requires.append("lib::cmp1")
                 self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+                self.cpp_info.components["myfirstcomp"].set_property("my_prop", "my prop value")
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -235,6 +239,8 @@ def test_make_with_public_deps_and_component_requires():
     assert 'CONAN_LIBS_LIB_CMP1 = $(CONAN_LIB_FLAG)libcmp1\n' in makefile_content
     assert 'CONAN_REQUIRES = $(CONAN_REQUIRES_SECOND)\n' in makefile_content
     assert 'CONAN_LIBS = $(CONAN_LIBS_LIB)\n' in makefile_content
+
+    assert 'CONAN_PROPERTY_SECOND_MYFIRSTCOMP_MY_PROP = my prop value\n' in makefile_content
 
 
 def test_make_with_public_deps_and_component_requires_second():
