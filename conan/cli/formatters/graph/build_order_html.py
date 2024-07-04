@@ -1,13 +1,13 @@
-import os
 from jinja2 import select_autoescape, Template
+
 from conan.api.output import cli_out_write
 
-build_order_html = r"""
-<html lang="en">
+build_order_html = r"""<html lang="en">
     <head>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js" integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-              integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js"
+        integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     </head>
 
     <body>
@@ -27,6 +27,7 @@ build_order_html = r"""
                 box-sizing: border-box;
                 overflow-y: auto;
                 font-size: 14px;
+                width: 400px;
             }
 
             .content {
@@ -37,7 +38,7 @@ build_order_html = r"""
             }
 
             #cy {
-                flex-grow: 0.75;
+                flex-grow: 1;
             }
 
             #node-info {
@@ -49,17 +50,50 @@ build_order_html = r"""
                 font-size: 12px;
                 word-wrap: break-word;
             }
+
+            .legend {
+                margin-top: 20px;
+                font-size: 14px;
+            }
+
+            .legend-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 5px;
+            }
+
+            .legend-color {
+                width: 20px;
+                height: 20px;
+                margin-right: 10px;
+            }
         </style>
 
-        <div class="d-flex w-100 h-100">
-            <div class="sidebar col-md-4 col-lg-3">
-                <div id="node-info">
-                    <p>Click on a node to see details.</p>
+        <div class="sidebar">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FFCC80;"></div>
+                    <span>All packages need to be built</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FFEB3B;"></div>
+                    <span>Some packages need to be built</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #A5D6A7;"></div>
+                    <span>Cache</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #A5D6FF;"></div>
+                    <span>Download</span>
                 </div>
             </div>
-            <div class="content col-md-8 col-lg-9">
-                <div id="cy"></div>
+            <div id="node-info">
+                <p>Click on a node to see details.</p>
             </div>
+        </div>
+        <div class="content">
+            <div id="cy"></div>
         </div>
 
         <script type="text/javascript">
@@ -69,9 +103,7 @@ build_order_html = r"""
                 var elements = [];
                 var edges = [];
 
-                var positions = { x: 100, y: 50 };
                 var yOffset = 50;
-
                 var posX = 0;
                 var posY = 0;
                 var columns = 4;
@@ -91,15 +123,32 @@ build_order_html = r"""
                         var libData = Array.isArray(lib.packages) ? lib.packages[0][0] : lib;
                         var libType = libData.binary || libData.build || libData.cache;
 
+                        var isAllBuild = true;
+                        var isSomeBuild = false;
+
+                        if (Array.isArray(lib.packages)) {
+                            lib.packages.forEach(pkgArray => {
+                                pkgArray.forEach(pkg => {
+                                    if (pkg.binary === "Build") {
+                                        isSomeBuild = true;
+                                    } else {
+                                        isAllBuild = false;
+                                    }
+                                });
+                            });
+                        }
+
                         var nodeColor;
-                        if (libType === "Build") {
-                            nodeColor = "#FFCC80"; // Light orange
+                        if (isAllBuild) {
+                            nodeColor = "#FFCC80"; // Light orange for all build
+                        } else if (isSomeBuild) {
+                            nodeColor = "#FFEB3B"; // Yellow for some build
                         } else if (libType === "Cache") {
                             nodeColor = "#A5D6A7"; // Light green
                         } else if (libType === "Download") {
-                            nodeColor = "#A5D6FF"; // Light green
+                            nodeColor = "#A5D6FF"; // Light blue
                         } else {
-                            nodeColor = "#B2DFDB"; // Default color
+                            nodeColor = "#FFFFFF"; // Default color
                         }
 
                         if ((libIndex + 1) % columns === 0) {
@@ -201,10 +250,7 @@ build_order_html = r"""
 
 def _render_build_order(build_order, template):
     from conans import __version__ as client_version
-    context = {
-        'build_order': build_order,
-        'version': client_version,
-    }
+    context = {'build_order': build_order, 'version': client_version, }
     return template.render(context)
 
 
