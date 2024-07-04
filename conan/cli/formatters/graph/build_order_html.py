@@ -125,6 +125,8 @@ build_order_html = r"""<html lang="en">
 
                         var isAllBuild = true;
                         var isSomeBuild = false;
+                        var shape = 'rectangle';
+                        var borderColor = '#00695C';
 
                         if (Array.isArray(lib.packages)) {
                             lib.packages.forEach(pkgArray => {
@@ -133,6 +135,10 @@ build_order_html = r"""<html lang="en">
                                         isSomeBuild = true;
                                     } else {
                                         isAllBuild = false;
+                                    }
+                                    if (pkg.context === "build") {
+                                        shape = 'cut-rectangle';
+                                        borderColor = '#0000FF';  // Different border color for build context
                                     }
                                 });
                             });
@@ -157,7 +163,7 @@ build_order_html = r"""<html lang="en">
                         }
 
                         elements.push({
-                            data: { id: libId, parent: stepId, label: libLabel, info: lib, color: nodeColor },
+                            data: { id: libId, parent: stepId, label: libLabel, info: lib, color: nodeColor, shape: shape, borderColor: borderColor },
                             position: { x: posX + libLabel.length / 2.0 * 12, y: posY }
                         });
                         posX += libLabel.length * 12;
@@ -177,14 +183,14 @@ build_order_html = r"""<html lang="en">
                     boxSelectionEnabled: false,
                     style: [
                         {
-                            selector: 'node[color]',
+                            selector: 'node[color][shape][borderColor]',
                             style: {
-                                'shape': 'rectangle',
+                                'shape': 'data(shape)',
                                 'content': 'data(label)',
                                 'text-valign': 'center',
                                 'text-halign': 'center',
                                 'background-color': 'data(color)',
-                                'border-color': '#00695C',
+                                'border-color': 'data(borderColor)',
                                 'border-width': 1,
                                 'width': 'label',
                                 'height': 'label',
