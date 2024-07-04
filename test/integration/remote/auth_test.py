@@ -5,7 +5,7 @@ import unittest
 
 from requests.models import Response
 
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
