@@ -176,7 +176,7 @@ class PkgCache:
             if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
+            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
 
         refs = self._db.list_references()
         if pattern:
