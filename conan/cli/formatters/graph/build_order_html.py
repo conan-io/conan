@@ -11,25 +11,57 @@ build_order_html = r"""
     <body>
         <style>
             body {
-              font: 14px helvetica neue, helvetica, arial, sans-serif;
+              font: 18px helvetica neue, helvetica, arial, sans-serif;
+              display: flex;
+              margin: 0;
+              padding: 0;
+              height: 100vh;
+            }
+
+            .sidebar {
+              width: 20%;
+              background: #f9f9f9;
+              border-right: 1px solid #ccc;
+              padding: 20px;
+              box-sizing: border-box;
+              overflow-y: auto;
+              font-size: 16px;
+            }
+
+            .content {
+              flex-grow: 1;
+              display: flex;
+              flex-direction: column;
             }
 
             #cy {
-              height: 100vh;
-              width: 100vw;
-              position: absolute;
-              left: 0;
-              top: 0;
+              flex-grow: 1;
+            }
+
+            #node-info {
+              margin-top: 20px;
+              background: #f9f9f9;
+              padding: 10px;
+              font-family: monospace;
+              white-space: pre-wrap;  /* Makes the text wrap */
+              font-size: 24px;
             }
         </style>
 
-        <div id="cy"></div>
+        <div class="sidebar">
+            <div id="node-info">
+                <p>Click on a node to see details.</p>
+            </div>
+        </div>
+        <div class="content">
+            <div id="cy"></div>
+        </div>
 
         <script type="text/javascript">
             document.addEventListener("DOMContentLoaded", function() {
                 var buildOrderData = {{ build_order | tojson }};
 
-                                var elements = [];
+                var elements = [];
                 var edges = [];
 
                 var positions = { x: 100, y: 50 };
@@ -56,10 +88,10 @@ build_order_html = r"""
                         }
 
                         elements.push({
-                            data: { id: libId, parent: stepId, label: libLabel},
-                            position: { x: posX + libLabel.length/2.0 * 12, y: posY}
+                            data: { id: libId, parent: stepId, label: libLabel, info: lib },
+                            position: { x: posX + libLabel.length / 2.0 * 12, y: posY }
                         });
-                        posX += libLabel.length * 12;
+                        posX += libLabel.length * 12 + 20; // Adding extra spacing between nodes
                     });
 
                     if (stepIndex > 0) {
@@ -67,7 +99,7 @@ build_order_html = r"""
                         edges.push({ data: { id: prevStepId + '_to_' + stepId, source: prevStepId, target: stepId } });
                     }
 
-                    posY = posY + yOffset * 2;
+                    posY += yOffset * 2;
                     posX = 0;
                 });
 
@@ -125,12 +157,24 @@ build_order_html = r"""
                         fit: true
                     }
                 });
+
+                // Add click event listener to nodes
+                cy.on('tap', 'node', function(evt){
+                    var node = evt.target;
+                    var info = node.data('info');
+                    var infoHtml = '';
+                    for (var key in info) {
+                        if (info.hasOwnProperty(key)) {
+                            infoHtml += '<p><strong>' + key + ':</strong> ' + JSON.stringify(info[key], null, 2) + '</p>';
+                        }
+                    }
+                    document.getElementById('node-info').innerHTML = infoHtml;
+                });
             });
         </script>
     </body>
 </html>
 """
-
 
 def _render_build_order(build_order, template):
     from conans import __version__ as client_version
