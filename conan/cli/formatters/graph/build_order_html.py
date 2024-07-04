@@ -151,7 +151,7 @@ build_order_html = r"""<html lang="en">
                             nodeColor = "#FFFFFF"; // Default color
                         }
 
-                        if ((libIndex + 1) % columns === 0) {
+                        if (libIndex % columns === 0) {
                             posX = 0;
                             posY += yOffset; // move to the next row
                         }
