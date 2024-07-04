@@ -29,30 +29,46 @@ build_order_html = r"""
             document.addEventListener("DOMContentLoaded", function() {
                 var buildOrderData = {{ build_order | tojson }};
 
-                var elements = [];
+                                var elements = [];
                 var edges = [];
+
                 var positions = { x: 100, y: 50 };
-                var yOffset = 100;
+                var yOffset = 50;
+
+                var posX = 0;
+                var posY = 0;
+                var columns = 4;
 
                 buildOrderData.forEach((step, stepIndex) => {
                     var stepId = 'step' + stepIndex;
                     elements.push({
                         data: { id: stepId, label: 'Step ' + (stepIndex + 1) },
-                        position: { x: positions.x, y: positions.y + stepIndex * yOffset }
+                        position: { x: posX, y: posY }
                     });
 
                     step.forEach((lib, libIndex) => {
                         var libId = stepId + '_lib' + libIndex;
+                        var libLabel = lib.ref.split('#')[0];
+
+                        if ((libIndex + 1) % columns === 0) {
+                            posX = 0;
+                            posY += yOffset; // move to the next row
+                        }
+
                         elements.push({
-                            data: { id: libId, parent: stepId, label: lib.ref.split('#')[0] },
-                            position: { x: positions.x + (libIndex + 1) * 150, y: positions.y + stepIndex * yOffset }
+                            data: { id: libId, parent: stepId, label: libLabel},
+                            position: { x: posX + libLabel.length/2.0 * 12, y: posY}
                         });
+                        posX += libLabel.length * 12;
                     });
 
                     if (stepIndex > 0) {
                         var prevStepId = 'step' + (stepIndex - 1);
                         edges.push({ data: { id: prevStepId + '_to_' + stepId, source: prevStepId, target: stepId } });
                     }
+
+                    posY = posY + yOffset * 2;
+                    posX = 0;
                 });
 
                 var cy = cytoscape({
@@ -71,7 +87,8 @@ build_order_html = r"""
                                 'border-width': 1,
                                 'width': 'label',
                                 'height': 'label',
-                                'padding': '5px'
+                                'padding': '5px',
+                                'font-family': 'monospace'
                             }
                         },
                         {
@@ -83,7 +100,8 @@ build_order_html = r"""
                                 'background-opacity': 0.1,
                                 'border-color': '#004D40',
                                 'border-width': 2,
-                                'padding': 10
+                                'padding': 10,
+                                'font-family': 'monospace'
                             }
                         },
                         {
@@ -103,7 +121,8 @@ build_order_html = r"""
                     },
                     layout: {
                         name: 'preset',
-                        padding: 5
+                        padding: 5,
+                        fit: true
                     }
                 });
             });
