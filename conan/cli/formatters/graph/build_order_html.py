@@ -3,58 +3,120 @@ from jinja2 import select_autoescape, Template
 from conan.api.output import cli_out_write
 
 build_order_html = r"""
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mermaid Diagram</title>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
-    </script>
-    <style>
-        .mermaid {
-            width: 100%;
-            height: 100vh;
-        }
-    </style>
-</head>
-<body>
-    <div class="mermaid">
-        graph TD;
-        %% Step definitions
-        {{ mermaid_content }}
-    </div>
-</body>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js" integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </head>
+
+    <body>
+        <style>
+            body {
+              font: 14px helvetica neue, helvetica, arial, sans-serif;
+            }
+
+            #cy {
+              height: 100vh;
+              width: 100vw;
+              position: absolute;
+              left: 0;
+              top: 0;
+            }
+        </style>
+
+        <div id="cy"></div>
+
+        <script type="text/javascript">
+            document.addEventListener("DOMContentLoaded", function() {
+                var buildOrderData = {{ build_order | tojson }};
+
+                var elements = [];
+                var edges = [];
+                var positions = { x: 100, y: 50 };
+                var yOffset = 100;
+
+                buildOrderData.forEach((step, stepIndex) => {
+                    var stepId = 'step' + stepIndex;
+                    elements.push({
+                        data: { id: stepId, label: 'Step ' + (stepIndex + 1) },
+                        position: { x: positions.x, y: positions.y + stepIndex * yOffset }
+                    });
+
+                    step.forEach((lib, libIndex) => {
+                        var libId = stepId + '_lib' + libIndex;
+                        elements.push({
+                            data: { id: libId, parent: stepId, label: lib.ref.split('#')[0] },
+                            position: { x: positions.x + (libIndex + 1) * 150, y: positions.y + stepIndex * yOffset }
+                        });
+                    });
+
+                    if (stepIndex > 0) {
+                        var prevStepId = 'step' + (stepIndex - 1);
+                        edges.push({ data: { id: prevStepId + '_to_' + stepId, source: prevStepId, target: stepId } });
+                    }
+                });
+
+                var cy = cytoscape({
+                    container: document.getElementById('cy'),
+                    boxSelectionEnabled: false,
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'shape': 'rectangle',
+                                'content': 'data(label)',
+                                'text-valign': 'center',
+                                'text-halign': 'center',
+                                'background-color': '#B2DFDB',
+                                'border-color': '#00695C',
+                                'border-width': 1,
+                                'width': 'label',
+                                'height': 'label',
+                                'padding': '5px'
+                            }
+                        },
+                        {
+                            selector: ':parent',
+                            style: {
+                                'text-valign': 'top',
+                                'text-halign': 'center',
+                                'shape': 'round-rectangle',
+                                'background-opacity': 0.1,
+                                'border-color': '#004D40',
+                                'border-width': 2,
+                                'padding': 10
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'curve-style': 'bezier',
+                                'target-arrow-shape': 'triangle',
+                                'line-color': '#004D40',
+                                'target-arrow-color': '#004D40',
+                                'width': 2
+                            }
+                        }
+                    ],
+                    elements: {
+                        nodes: elements,
+                        edges: edges
+                    },
+                    layout: {
+                        name: 'preset',
+                        padding: 5
+                    }
+                });
+            });
+        </script>
+    </body>
 </html>
 """
 
 
-def _prepare_mermaid_content(build_order):
-    content = ""
-    for index, step in enumerate(build_order):
-        content += f"subgraph Step{index + 1}\n"
-        content += "direction TB\n"
-        for row in range(0, len(step), 4):
-            row_libs = step[row:row + 4]
-            row_content = "\n".join([
-                                        f"{lib['ref'].replace('/', '_').replace('.', '_').split('#')[0]}[\"{lib['ref'].split('#')[0]}\"]"
-                                        for lib in row_libs])
-            content += f"{row_content}\n"
-        content += "end\n"
-
-    for step_index in range(len(build_order) - 1):
-        content += f"Step{step_index + 1} --> Step{step_index + 2}\n"
-
-    return content
-
-
 def _render_build_order(build_order, template):
     from conans import __version__ as client_version
-    mermaid_content = _prepare_mermaid_content(build_order)
     context = {
-        'mermaid_content': mermaid_content,
+        'build_order': build_order,
         'version': client_version,
     }
     return template.render(context)
