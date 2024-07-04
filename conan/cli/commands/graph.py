@@ -131,7 +131,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     return install_order_serialized
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merge more than 1 build-order file.

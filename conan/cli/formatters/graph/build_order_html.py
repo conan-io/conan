@@ -6,12 +6,14 @@ build_order_html = r"""
 <html lang="en">
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js" integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+              integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
     </head>
 
     <body>
         <style>
             body {
-              font: 18px helvetica neue, helvetica, arial, sans-serif;
+              font: 16px helvetica neue, helvetica, arial, sans-serif;
               display: flex;
               margin: 0;
               padding: 0;
@@ -19,7 +21,6 @@ build_order_html = r"""
             }
 
             .sidebar {
-              width: 20%;
               background: #f9f9f9;
               border-right: 1px solid #ccc;
               padding: 20px;
@@ -32,10 +33,11 @@ build_order_html = r"""
               flex-grow: 1;
               display: flex;
               flex-direction: column;
+              overflow: hidden;
             }
 
             #cy {
-              flex-grow: 1;
+              flex-grow: 0.8;
             }
 
             #node-info {
@@ -44,17 +46,20 @@ build_order_html = r"""
               padding: 10px;
               font-family: monospace;
               white-space: pre-wrap;  /* Makes the text wrap */
-              font-size: 24px;
+              font-size: 22px;
+              word-wrap: break-word; /* Ensures long words break and wrap */
             }
         </style>
 
-        <div class="sidebar">
-            <div id="node-info">
-                <p>Click on a node to see details.</p>
+        <div class="d-flex w-100 h-100">
+            <div class="sidebar col-md-4 col-lg-3">
+                <div id="node-info">
+                    <p>Click on a node to see details.</p>
+                </div>
             </div>
-        </div>
-        <div class="content">
-            <div id="cy"></div>
+            <div class="content col-md-8 col-lg-9">
+                <div id="cy"></div>
+            </div>
         </div>
 
         <script type="text/javascript">
@@ -82,13 +87,26 @@ build_order_html = r"""
                         var libId = stepId + '_lib' + libIndex;
                         var libLabel = lib.ref.split('#')[0];
 
+                        // Determine the type of the library
+                        var libData = Array.isArray(lib.packages) ? lib.packages[0][0] : lib;
+                        var libType = libData.binary || libData.build || libData.cache;
+
+                        var nodeColor;
+                        if (libType === "Build") {
+                            nodeColor = "#FFCC80"; // Light orange
+                        } else if (libType === "Cache") {
+                            nodeColor = "#A5D6A7"; // Light green
+                        } else {
+                            nodeColor = "#B2DFDB"; // Default color
+                        }
+
                         if ((libIndex + 1) % columns === 0) {
                             posX = 0;
                             posY += yOffset; // move to the next row
                         }
 
                         elements.push({
-                            data: { id: libId, parent: stepId, label: libLabel, info: lib },
+                            data: { id: libId, parent: stepId, label: libLabel, info: lib, color: nodeColor },
                             position: { x: posX + libLabel.length / 2.0 * 12, y: posY }
                         });
                         posX += libLabel.length * 12 + 20; // Adding extra spacing between nodes
@@ -114,7 +132,7 @@ build_order_html = r"""
                                 'content': 'data(label)',
                                 'text-valign': 'center',
                                 'text-halign': 'center',
-                                'background-color': '#B2DFDB',
+                                'background-color': 'data(color)',
                                 'border-color': '#00695C',
                                 'border-width': 1,
                                 'width': 'label',
@@ -175,6 +193,7 @@ build_order_html = r"""
     </body>
 </html>
 """
+
 
 def _render_build_order(build_order, template):
     from conans import __version__ as client_version
