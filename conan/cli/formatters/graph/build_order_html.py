@@ -13,41 +13,41 @@ build_order_html = r"""
     <body>
         <style>
             body {
-              font: 16px helvetica neue, helvetica, arial, sans-serif;
-              display: flex;
-              margin: 0;
-              padding: 0;
-              height: 100vh;
+                font: 14px helvetica neue, helvetica, arial, sans-serif;
+                display: flex;
+                margin: 0;
+                padding: 0;
+                height: 100vh;
             }
 
             .sidebar {
-              background: #f9f9f9;
-              border-right: 1px solid #ccc;
-              padding: 20px;
-              box-sizing: border-box;
-              overflow-y: auto;
-              font-size: 16px;
+                background: #f9f9f9;
+                border-right: 1px solid #ccc;
+                padding: 20px;
+                box-sizing: border-box;
+                overflow-y: auto;
+                font-size: 14px;
             }
 
             .content {
-              flex-grow: 1;
-              display: flex;
-              flex-direction: column;
-              overflow: hidden;
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
 
             #cy {
-              flex-grow: 0.8;
+                flex-grow: 0.75;
             }
 
             #node-info {
-              margin-top: 20px;
-              background: #f9f9f9;
-              padding: 10px;
-              font-family: monospace;
-              white-space: pre-wrap;  /* Makes the text wrap */
-              font-size: 22px;
-              word-wrap: break-word; /* Ensures long words break and wrap */
+                margin-top: 20px;
+                background: #f9f9f9;
+                padding: 10px;
+                font-family: monospace;
+                white-space: pre-wrap;
+                font-size: 12px;
+                word-wrap: break-word;
             }
         </style>
 
@@ -96,6 +96,8 @@ build_order_html = r"""
                             nodeColor = "#FFCC80"; // Light orange
                         } else if (libType === "Cache") {
                             nodeColor = "#A5D6A7"; // Light green
+                        } else if (libType === "Download") {
+                            nodeColor = "#A5D6FF"; // Light green
                         } else {
                             nodeColor = "#B2DFDB"; // Default color
                         }
@@ -109,7 +111,7 @@ build_order_html = r"""
                             data: { id: libId, parent: stepId, label: libLabel, info: lib, color: nodeColor },
                             position: { x: posX + libLabel.length / 2.0 * 12, y: posY }
                         });
-                        posX += libLabel.length * 12 + 20; // Adding extra spacing between nodes
+                        posX += libLabel.length * 12;
                     });
 
                     if (stepIndex > 0) {
@@ -126,7 +128,7 @@ build_order_html = r"""
                     boxSelectionEnabled: false,
                     style: [
                         {
-                            selector: 'node',
+                            selector: 'node[color]',
                             style: {
                                 'shape': 'rectangle',
                                 'content': 'data(label)',
@@ -138,7 +140,8 @@ build_order_html = r"""
                                 'width': 'label',
                                 'height': 'label',
                                 'padding': '5px',
-                                'font-family': 'monospace'
+                                'font-family': 'monospace',
+                                'font-size': '16px'
                             }
                         },
                         {
@@ -151,7 +154,8 @@ build_order_html = r"""
                                 'border-color': '#004D40',
                                 'border-width': 2,
                                 'padding': 10,
-                                'font-family': 'monospace'
+                                'font-family': 'monospace',
+                                'font-size': '16px'
                             }
                         },
                         {
