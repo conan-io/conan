@@ -1,8 +1,8 @@
 from jinja2 import select_autoescape, Template
-
 from conan.api.output import cli_out_write
 
-build_order_html = r"""<html lang="en">
+build_order_html = r"""
+<html lang="en">
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js"
         integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ=="
@@ -47,7 +47,7 @@ build_order_html = r"""<html lang="en">
                 padding: 12px;
                 font-family: monospace;
                 white-space: pre-wrap;
-                font-size: 11px;
+                font-size: 12px;
                 word-wrap: break-word;
             }
 
@@ -86,6 +86,14 @@ build_order_html = r"""<html lang="en">
                 <div class="legend-item">
                     <div class="legend-color" style="background-color: #79eb8a;"></div>
                     <span>Download</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="border: 1px solid black; width: 20px; height: 20px;"></div>
+                    <span>Requirements in the <i>host</i> context</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="border: 1px solid black; border-radius: 50%; width: 20px; height: 20px;"></div>
+                    <span>Requirements in the <i>build</i> context</span>
                 </div>
             </div>
             <div id="node-info">
@@ -251,7 +259,6 @@ build_order_html = r"""<html lang="en">
     </body>
 </html>
 """
-
 
 def _render_build_order(build_order, template):
     from conans import __version__ as client_version
