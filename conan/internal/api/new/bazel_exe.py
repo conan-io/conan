@@ -17,7 +17,7 @@ class {{package_name}}Recipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "main/*", "WORKSPACE"
+    exports_sources = "main/*", "WORKSPACE", ".bazelrc"
     generators = "BazelToolchain"
 
     def layout(self):
@@ -61,7 +61,9 @@ cc_binary(
 """
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
-
+_bazel_rc = """\
+{% if outputRootDir is defined %}startup --output_user_root={{outputRootDir}}{% endif %}
+"""
 
 bazel_exe_files = {"conanfile.py": conanfile_exe,
                    "main/{{name}}.cpp": source_cpp,
@@ -69,5 +71,6 @@ bazel_exe_files = {"conanfile.py": conanfile_exe,
                    "main/main.cpp": test_main,
                    "main/BUILD": _bazel_build_exe,
                    "WORKSPACE": _bazel_workspace,
+                   ".bazelrc": _bazel_rc,
                    "test_package/conanfile.py": test_conanfile_exe_v2
                    }

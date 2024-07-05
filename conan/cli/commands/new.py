@@ -68,7 +68,7 @@ def new(conan_api, parser, *args):
                 template_vars.extend(meta.find_undeclared_variables(ast))
 
             injected_vars = {"conan_version", "package_name", "as_name"}
-            optional_vars = {"requires", "tool_requires"}
+            optional_vars = {"requires", "tool_requires", "outputRootDir"}
             template_vars = list(set(template_vars) - injected_vars - optional_vars)
             template_vars.sort()
             return template_vars

@@ -17,7 +17,7 @@ class {{package_name}}Recipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "main/*", "MODULE.bazel"
+    exports_sources = "main/*", "MODULE.bazel", ".bazelrc"
     generators = "BazelToolchain"
 
     def config_options(self):
@@ -116,6 +116,9 @@ cc_shared_library(
 """
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
+_bazel_rc = """\
+{% if outputRootDir is defined %}startup --output_user_root={{outputRootDir}}{% endif %}
+"""
 _test_bazel_module_bazel = """\
 load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
 use_repo(load_conan_dependencies, "{{name}}")
@@ -136,7 +139,9 @@ bazel_lib_files_7 = {"conanfile.py": conanfile_sources_v2,
                      "main/{{name}}.h": source_h,
                      "main/BUILD": _get_bazel_build(),
                      "MODULE.bazel": _bazel_workspace,
+                     ".bazelrc": _bazel_rc,
                      "test_package/conanfile.py": test_conanfile_v2,
                      "test_package/main/example.cpp": test_main,
                      "test_package/main/BUILD": _bazel_build_test,
-                     "test_package/MODULE.bazel": _test_bazel_module_bazel}
+                     "test_package/MODULE.bazel": _test_bazel_module_bazel,
+                     "test_package/.bazelrc": _bazel_rc}

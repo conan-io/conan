@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
 
@@ -65,6 +66,7 @@ def test_bazel_simple_cross_compilation():
         "profile_host": profile_host,
         "conanfile.py": conanfile,
         "WORKSPACE": "",
+        ".bazelrc": f"startup --output_user_root={temp_folder(path_with_spaces=False)}",
         "main/BUILD": BUILD,
         "main/myapp.cpp": gen_function_cpp(name="myapp"),
         "main/myapp.h": gen_function_h(name="myapp"),
