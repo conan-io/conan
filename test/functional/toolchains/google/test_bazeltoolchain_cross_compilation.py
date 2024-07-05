@@ -61,12 +61,13 @@ def test_bazel_simple_cross_compilation():
     )
     """)
     client = TestClient(path_with_spaces=False)
+    bazel_root_dir = temp_folder(path_with_spaces=False).replace("\\", "/")
     client.save({
         "profile": profile,
         "profile_host": profile_host,
         "conanfile.py": conanfile,
         "WORKSPACE": "",
-        ".bazelrc": f"startup --output_user_root={temp_folder(path_with_spaces=False)}",
+        ".bazelrc": f"startup --output_user_root={bazel_root_dir}",
         "main/BUILD": BUILD,
         "main/myapp.cpp": gen_function_cpp(name="myapp"),
         "main/myapp.h": gen_function_h(name="myapp"),

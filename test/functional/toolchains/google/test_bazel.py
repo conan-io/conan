@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.fixture(scope="module")
 def bazel_output_root_dir():
-    return temp_folder(path_with_spaces=False)
+    return temp_folder(path_with_spaces=False).replace("\\", "/")
 
 
 @pytest.fixture(scope="module")
