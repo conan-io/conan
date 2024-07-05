@@ -68,13 +68,13 @@ def _makefy(name: str) -> str:
     return re.sub(r'[^0-9A-Z_]', '_', name.upper())
 
 
-def _makefy_properties(properties: dict) -> Optional[dict]:
+def _makefy_properties(properties: Optional[dict]) -> dict:
     """
     Convert property dictionary keys to Make-variable-friendly syntax
-    :param properties: The property dictionary to be converted
+    :param properties: The property dictionary to be converted (None is also accepted)
     :return: Modified property dictionary with keys not including bad characters that are not parsed correctly
     """
-    return {_makefy(name): value for name, value in  properties.items()} if properties else None
+    return {_makefy(name): value for name, value in  properties.items()} if properties else {}
 
 
 def _conan_prefix_flag(variable: str) -> str:
@@ -142,11 +142,9 @@ def _jinja_format_list_values() -> str:
             {%- endmacro %}
 
             {%- macro define_multiple_variable_value(var, values) -%}
-            {%- if values is not none -%}
             {% for property_name, value in values.items() %}
             {{ var }}_{{ property_name }} = {{ value }}
             {% endfor %}
-            {%- endif -%}
             {%- endmacro %}
 
             {%- macro define_variable_value(var, values) -%}
