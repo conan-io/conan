@@ -72,19 +72,19 @@ build_order_html = r"""<html lang="en">
         <div class="sidebar">
             <div class="legend">
                 <div class="legend-item">
-                    <div class="legend-color" style="background-color: #FFCC80;"></div>
+                    <div class="legend-color" style="background-color: #ffff37;"></div>
                     <span>All packages need to be built</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background-color: #FFEB3B;"></div>
+                    <div class="legend-color" style="background-color: #ff9b28;"></div>
                     <span>Some packages need to be built</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background-color: #A5D6A7;"></div>
+                    <div class="legend-color" style="background-color: #70c7e6;"></div>
                     <span>Cache</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background-color: #A5D6FF;"></div>
+                    <div class="legend-color" style="background-color: #79eb8a;"></div>
                     <span>Download</span>
                 </div>
             </div>
@@ -137,7 +137,7 @@ build_order_html = r"""<html lang="en">
                                         isAllBuild = false;
                                     }
                                     if (pkg.context === "build") {
-                                        shape = 'cut-rectangle';
+                                        shape = 'ellipse';
                                         borderColor = '#0000FF';  // Different border color for build context
                                     }
                                 });
@@ -146,13 +146,13 @@ build_order_html = r"""<html lang="en">
 
                         var nodeColor;
                         if (isAllBuild) {
-                            nodeColor = "#FFCC80"; // Light orange for all build
+                            nodeColor = "#ffff37"; // Light orange for all build
                         } else if (isSomeBuild) {
-                            nodeColor = "#FFEB3B"; // Yellow for some build
+                            nodeColor = "#ff9b28"; // Yellow for some build
                         } else if (libType === "Cache") {
-                            nodeColor = "#A5D6A7"; // Light green
+                            nodeColor = "#70c7e6"; // Light green
                         } else if (libType === "Download") {
-                            nodeColor = "#A5D6FF"; // Light blue
+                            nodeColor = "#79eb8a"; // Light blue
                         } else {
                             nodeColor = "#FFFFFF"; // Default color
                         }
@@ -192,8 +192,7 @@ build_order_html = r"""<html lang="en">
                                 'background-color': 'data(color)',
                                 'border-color': 'data(borderColor)',
                                 'border-width': 1,
-                                'width': 'label',
-                                'height': 'label',
+                                'width': function(ele) { return ele.data('label').length * 10.5; },
                                 'padding': '5px',
                                 'font-family': 'monospace',
                                 'font-size': '16px'
