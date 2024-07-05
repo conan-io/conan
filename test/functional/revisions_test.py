@@ -658,6 +658,7 @@ def test_touching_other_server():
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out
 
 
+@pytest.mark.artifactory_ready
 def test_reupload_older_revision():
     """ upload maintains the server history
         https://github.com/conan-io/conan/issues/7331
