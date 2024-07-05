@@ -21,9 +21,9 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "Linux", pyvers: ["PY312"]])
     }
     if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36"]])
+        configs.add([node: "Linux", pyvers: ["PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY38"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
