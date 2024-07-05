@@ -27,7 +27,7 @@ build_order_html = r"""<html lang="en">
                 box-sizing: border-box;
                 overflow-y: auto;
                 font-size: 14px;
-                width: 400px;
+                width: 440px;
             }
 
             .content {
@@ -44,10 +44,10 @@ build_order_html = r"""<html lang="en">
             #node-info {
                 margin-top: 20px;
                 background: #f9f9f9;
-                padding: 10px;
+                padding: 12px;
                 font-family: monospace;
                 white-space: pre-wrap;
-                font-size: 12px;
+                font-size: 11px;
                 word-wrap: break-word;
             }
 
