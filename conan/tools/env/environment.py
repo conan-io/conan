@@ -1,7 +1,12 @@
 import os
 import textwrap
+import random
+import string
+from jinja2 import Template
 from collections import OrderedDict
 from contextlib import contextmanager
+from pathlib import Path
+
 
 from conans.client.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
@@ -19,16 +24,19 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
-    bats, shs, ps1s = [], [], []
+    bats, shs, ps1s, fishs = [], [], [], []
 
-    accept = accepted_extensions or ("ps1", "bat", "sh")
-    # TODO: This implemantation is dirty, improve it
+    accept = accepted_extensions or ("ps1", "bat", "sh", "fish")
+    # TODO: This implementation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)
         if f.lower().endswith(".sh"):
             if os.path.isfile(f) and "sh" in accept:
                 f = subsystem_path(subsystem, f)
                 shs.append(f)
+        elif f.lower().endswith(".fish"):
+            if os.path.isfile(f) and "fish" in accept:
+                fishs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f) and "bat" in accept:
                 bats.append(f)
@@ -39,6 +47,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
             path_ps1 = "{}.ps1".format(f)
+            path_fish = "{}.fish".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
             if os.path.isfile(path_ps1) and "ps1" in accept:
@@ -46,10 +55,12 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
+            if os.path.isfile(path_fish) and "fish" in accept:
+                fishs.append(path_fish)
 
-    if bool(bats + ps1s) + bool(shs) > 1:
+    if bool(bats + ps1s) + bool(shs) > 1 + bool(fishs) > 1:
         raise ConanException("Cannot wrap command with different envs,"
-                             "{} - {}".format(bats+ps1s, shs))
+                             "{} - {} - {}".format(bats+ps1s, shs, fishs))
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -62,6 +73,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
+    elif fishs:
+        launchers = " && ".join('. \\"{}\\"'.format(f) for f in fishs)
+        return 'fish -c "{}; and {}"'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
@@ -520,11 +534,75 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
+    def save_fish(self, file_location):
+        """Save a fish script file with the environment variables defined in the Environment object.
+
+        It generates a function to deactivate the environment variables configured in the Environment object.
+
+        TODO: Honor append and prepend paths from recipe to the fish shell syntax.
+        buildenv_info.append_path should be fish set -a
+        buildenv_info.prepend_path should be fish set -p
+        buildenv_info.define_path should be fish set
+
+        :param file_location: The path to the file to save the fish script.
+        """
+        filepath, filename = os.path.split(file_location)
+        function_name = f"deactivate_{Path(filename).stem}"
+        group = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+        script_content = Template(textwrap.dedent("""
+            function remove_path
+                set -l variable_name $argv[1]
+                set -l to_remove $argv[2]
+                if set -l index (contains -i $to_remove $$variable_name)
+                    set -e {$variable_name}[$index]
+                end
+            end
+            function {{ function_name }}
+                echo "Restoring environment"
+                for var in $conan_{{ group }}_del
+                    set -e $var
+                end
+                set -e conan_{{ group }}_del
+                {% for item in vars_define.keys() %}
+                if set -q conan_{{ group }}_{{ item }}
+                    remove_path {{ item }} $conan_{{ group }}_{{ item }}
+                    set -e conan_{{ group }}_{{ item }}
+                end
+                {% endfor %}
+            end
+
+            {% for item, value in vars_define.items() %}
+            if not set -q {{ item }}
+                set -ga conan_{{ group }}_del {{ item }}
+                set -gx {{ item }} "{{ value }}"
+            else
+                set -g conan_{{ group }}_{{ item }} "{{ value }}"
+                set -pgx {{ item }} "{{ value }}"
+            end
+            {% endfor %}
+            exit 0
+            """))
+        values = self._values.keys()
+        vars_define = {}
+        for varname, varvalues in self._values.items():
+            abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
+            value = varvalues.get_str("", self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
+            value = value.replace('"', '\\"')
+            vars_define[varname] = value
+
+        if values:
+            content = script_content.render(function_name=function_name, group=group,
+                                            vars_define=vars_define)
+            save(file_location, content)
+
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
         If the conf "tools.env.virtualenv:powershell" is set to True it will generate powershell
         launchers if Windows.
+
+        If the conf "tools.env.virtualenv:fish" is set to True it will generate fish launchers.
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
@@ -534,18 +612,27 @@ class EnvVars:
         if ext:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
+            is_fish = ext == ".fish"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
-            if is_ps1:
+            is_fish = self._conanfile.conf.get("tools.env.virtualenv:fish", check_type=bool)
+            if is_fish:
+                filename = filename + ".fish"
+                is_bat = False
+                is_ps1 = False
+            elif is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
+                is_fish = False
             else:
                 filename = filename + (".bat" if is_bat else ".sh")
 
         path = os.path.join(self._conanfile.generators_folder, filename)
         if is_bat:
             self.save_bat(path)
+        elif is_fish:
+            self.save_fish(path)
         elif is_ps1:
             self.save_ps1(path)
         else:

@@ -168,6 +168,7 @@ def _generate_aggregated_env(conanfile):
         bats = []
         shs = []
         ps1s = []
+        fishs = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             # Only the .bat and .ps1 are made relative to current script
@@ -176,6 +177,9 @@ def _generate_aggregated_env(conanfile):
                 bats.append("%~dp0/"+path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".fish"):
+                path = os.path.abspath(path)
+                fishs.append(path)
             elif env_script.endswith(".ps1"):
                 path = os.path.relpath(path, conanfile.generators_folder)
                 # This $PSScriptRoot uses the current script directory
@@ -188,6 +192,14 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  sh_content(deactivates(shs)))
+        if fishs:
+            def fish_content(files):
+                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+            fishs = [it for it in fishs if os.path.exists(it)]
+            if fishs:
+                filename = "conan{}.fish".format(group)
+                generated.append(filename)
+                save(os.path.join(conanfile.generators_folder, filename), fish_content(fishs))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
