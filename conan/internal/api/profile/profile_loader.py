@@ -335,7 +335,6 @@ class _ProfileValueParser(object):
         if runenv is not None:
             base_profile.runenv.update_profile_env(runenv)
 
-
         runner = _ProfileValueParser._parse_key_value(doc.runner) if doc.runner else {}
         base_profile.runner.update(runner)
         return base_profile

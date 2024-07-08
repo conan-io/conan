@@ -5,7 +5,7 @@ import unittest
 from collections import OrderedDict
 from datetime import timedelta
 
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
 

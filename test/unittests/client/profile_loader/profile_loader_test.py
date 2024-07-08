@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.client.profile_loader import _ProfileParser, ProfileLoader
+from conan.internal.api.profile.profile_loader import _ProfileParser, ProfileLoader
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings

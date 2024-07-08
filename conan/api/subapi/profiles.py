@@ -4,7 +4,7 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 
 from conans.client.loader import load_python_file
-from conans.client.profile_loader import ProfileLoader
+from conan.internal.api.profile.profile_loader import ProfileLoader
 from conans.errors import ConanException, scoped_traceback
 from conans.model.profile import Profile
 

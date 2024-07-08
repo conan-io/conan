@@ -5,7 +5,7 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.errors import ConanException
-from conans.client.generators import relativize_path
+from conan.internal.api.install.generators import relativize_path
 
 """
 

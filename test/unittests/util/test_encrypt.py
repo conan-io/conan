@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from conans.util import encrypt
+from conan.internal.api.remotes import encrypt
 
 
 def test_encryp_basic():
