@@ -62,7 +62,7 @@ cc_binary(
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
 _bazel_rc = """\
-{% if outputRootDir is defined %}startup --output_user_root={{outputRootDir}}{% endif %}
+{% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 
 bazel_exe_files = {"conanfile.py": conanfile_exe,

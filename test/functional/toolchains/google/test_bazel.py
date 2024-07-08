@@ -41,7 +41,7 @@ def base_profile():
 @pytest.mark.tool("bazel", "6.3.2")
 def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
-    client.run(f"new bazel_exe -d name=myapp -d version=1.0 -d outputRootDir={bazel_output_root_dir}")
+    client.run(f"new bazel_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -59,7 +59,7 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
 @pytest.mark.tool("bazel", "7.1.2")
 def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
-    client.run(f"new bazel_7_exe -d name=myapp -d version=1.0 -d outputRootDir={bazel_output_root_dir}")
+    client.run(f"new bazel_7_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -104,7 +104,7 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     # A regular library made with Bazel
     with client.chdir("myfirstlib"):
-        client.run(f"new bazel_lib -d name=myfirstlib -d version=1.2.11 -d outputRootDir={bazel_output_root_dir}")
+        client.run(f"new bazel_lib -d name=myfirstlib -d version=1.2.11 -d output_root_dir={bazel_output_root_dir}")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -121,7 +121,7 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
         # We prepare a consumer with Bazel (library mysecondlib using myfirstlib)
         # and a test_package with an example executable
         os_ = platform.system()
-        client.run(f"new bazel_lib -d name=mysecondlib -d version=1.0 -d outputRootDir={bazel_output_root_dir}")
+        client.run(f"new bazel_lib -d name=mysecondlib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
@@ -230,7 +230,7 @@ def test_transitive_libs_consuming(shared, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     # A regular library made with Bazel
     with client.chdir("myfirstlib"):
-        client.run(f"new bazel_7_lib -d name=myfirstlib -d version=1.2.11 -d outputRootDir={bazel_output_root_dir}")
+        client.run(f"new bazel_7_lib -d name=myfirstlib -d version=1.2.11 -d output_root_dir={bazel_output_root_dir}")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -247,7 +247,7 @@ def test_transitive_libs_consuming(shared, bazel_output_root_dir):
         # We prepare a consumer with Bazel (library mysecondlib using myfirstlib)
         # and a test_package with an example executable
         os_ = platform.system()
-        client.run(f"new bazel_7_lib -d name=mysecondlib -d version=1.0 -d outputRootDir={bazel_output_root_dir}")
+        client.run(f"new bazel_7_lib -d name=mysecondlib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'

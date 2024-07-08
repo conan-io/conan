@@ -121,7 +121,7 @@ cc_shared_library(
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
 _bazel_rc = """\
-{% if outputRootDir is defined %}startup --output_user_root={{outputRootDir}}{% endif %}
+{% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 _test_bazel_workspace = """
 load("@//conan:dependencies.bzl", "load_conan_dependencies")
