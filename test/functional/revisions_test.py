@@ -707,12 +707,13 @@ def test_reupload_older_revision_new_binaries():
         https://github.com/conan-io/conan/pull/16621
     """
     c = TestClient(default_server_user=True)
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("export .")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+    c.run("create . -s os=Linux")
     rrev1 = c.exported_recipe_revision()
     c.run("upload * -r=default -c")
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("potato = 42")})
-    c.run("export .")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")
+                                                      .with_class_attribute("potato = 42")})
+    c.run("create . -s os=Linux")
     rrev2 = c.exported_recipe_revision()
     c.run("upload * -r=default -c")
 
@@ -729,8 +730,9 @@ def test_reupload_older_revision_new_binaries():
     check_order()
 
     # If we create the same older revision, and upload, still the same order
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("export .")
+    # c.run("remove * -c")  # Make sure no other revision
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+    c.run("create . -s os=Windows")
     rrev3 = c.exported_recipe_revision()
     assert rrev3 == rrev1
     c.run(f"upload pkg*#{rrev3} -r=default -c --force")
