@@ -74,7 +74,7 @@ def _makefy_properties(properties: Optional[dict]) -> dict:
     :param properties: The property dictionary to be converted (None is also accepted)
     :return: Modified property dictionary with keys not including bad characters that are not parsed correctly
     """
-    return {_makefy(name): value for name, value in  properties.items()} if properties else {}
+    return {_makefy(name): value for name, value in properties.items()} if properties else {}
 
 
 def _conan_prefix_flag(variable: str) -> str:
