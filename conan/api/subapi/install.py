@@ -1,8 +1,9 @@
 import os
 
+from conan.internal.api.install.generators import write_generators
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
-from conans.client.generators import write_generators
+
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.installer import BinaryInstaller
 from conans.errors import ConanInvalidConfiguration
