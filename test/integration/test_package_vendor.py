@@ -138,3 +138,42 @@ def test_vendor_dont_propagate_options():
     c.run("install consumer_shared --build=app/* -c tools.graph:vendor=build")
     c.assert_listed_binary({"pkga/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Cache"),
                             "app/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+
+
+def test_package_vendor_export_pkg():
+    c = TestClient()
+    app = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy, save
+
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            package_type = "application"
+            vendor = True
+            requires = "pkga/0.1"
+            def package(self):
+                copy(self, "*", src=self.dependencies["pkga"].package_folder,
+                     dst=self.package_folder)
+                save(self, os.path.join(self.package_folder, "app.exe"), "app")
+            """)
+
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_package_type("shared-library")
+                                                            .with_package_file("pkga.dll", "dll"),
+            "app/conanfile.py": app
+            })
+    c.run("create pkga")
+    c.run("build app")  # -c tools.graph:vendor=build will be automatic
+    c.run("export-pkg app")
+    assert "pkga/0.1" in c.out  # In the export-pkg process, dependencies are still needed
+    assert "conanfile.py (app/0.1): package(): Packaged 1 '.dll' file: pkga.dll" in c.out
+
+    # we can safely remove pkga, once the package is created, it can work without deps
+    c.run("remove pkg* -c")
+    c.run("list app:*")
+    assert "pkga" not in c.out  # The binary doesn't depend on pkga
+    c.run("install --requires=app/0.1 --deployer=full_deploy")
+    assert "pkga" not in c.out
+    assert c.load("full_deploy/host/app/0.1/app.exe") == "app"
+    assert c.load("full_deploy/host/app/0.1/pkga.dll") == "dll"
