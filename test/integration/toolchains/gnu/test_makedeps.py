@@ -31,6 +31,7 @@ def test_make_dirs_with_abs_path():
                 self.cpp_info.includedirs = [include_dir]
                 self.cpp_info.libdirs = [lib_dir, lib_dir2]
                 self.cpp_info.set_property("my_prop", "my prop value")
+                self.cpp_info.set_property("my_prop_with_newline", "my\\nprop")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -46,6 +47,8 @@ def test_make_dirs_with_abs_path():
     assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
     assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIR_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
     assert 'CONAN_PROPERTY_MYLIB_MY_PROP = my prop value' in makefile_content
+    assert 'CONAN_PROPERTY_MYLIB_MY_PROP_WITH_NEWLINE' not in makefile_content
+    assert "WARN: Skipping propery 'my_prop_with_newline' because it contains newline" in client.stderr
 
     lines = makefile_content.splitlines()
     for line_no, line in enumerate(lines):
@@ -201,6 +204,7 @@ def test_make_with_public_deps_and_component_requires():
                 self.cpp_info.components["mycomponent"].requires.append("lib::cmp1")
                 self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
                 self.cpp_info.components["myfirstcomp"].set_property("my_prop", "my prop value")
+                self.cpp_info.components["myfirstcomp"].set_property("my_prop_with_newline", "my\\nprop")
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -241,6 +245,8 @@ def test_make_with_public_deps_and_component_requires():
     assert 'CONAN_LIBS = $(CONAN_LIBS_LIB)\n' in makefile_content
 
     assert 'CONAN_PROPERTY_SECOND_MYFIRSTCOMP_MY_PROP = my prop value\n' in makefile_content
+    assert 'CONAN_PROPERTY_SECOND_MYFIRSTCOMP_MY_PROP_WITH_NEWLINE' not in makefile_content
+    assert "WARN: Skipping propery 'my_prop_with_newline' because it contains newline" in client2.stderr
 
 
 def test_make_with_public_deps_and_component_requires_second():
