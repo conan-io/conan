@@ -98,7 +98,7 @@ def get_build_folder_custom_vars(conanfile):
             tmp = var
         else:
             raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
-                                 " to start with 'settings.' or 'options.': {}".format(s))
+                                 " to start with 'settings.', 'options.' or '.user': {}".format(s))
         if tmp:
             ret.append(tmp.lower())
 
