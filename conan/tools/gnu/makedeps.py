@@ -32,6 +32,7 @@ import textwrap
 from jinja2 import Template, StrictUndefined
 from typing import Optional
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.files import save
 
@@ -669,8 +670,8 @@ class MakeDeps:
             # Require is not used at the moment, but its information could be used, and will be used in Conan 2.0
             if require.build:
                 continue
-
-            dep_gen = DepGenerator(dep, require, self._conanfile.output)
+            output = ConanOutput(scope=f"{self._conanfile} MakeDeps: {dep}:")
+            dep_gen = DepGenerator(dep, require, output)
             make_infos.append(dep_gen.makeinfo)
             deps_buffer += dep_gen.generate()
 
