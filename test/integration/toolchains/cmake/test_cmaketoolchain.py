@@ -1278,6 +1278,32 @@ def test_build_folder_vars_self_name_version():
     assert "conan-windows-pkg-0.1-debug" in presets
 
 
+def test_build_folder_vars_constants_user():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "dep"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"user.myvalue\"]'"
+    settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
+    c.run("install . -c={} {}".format(conf, settings))
+    assert "cmake --preset conan-myvalue-debug" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "build", "myvalue", "Debug"))
+    presets = load(os.path.join(c.current_folder,
+                                "build/myvalue/Debug/generators/CMakePresets.json"))
+    assert "conan-myvalue-debug" in presets
+
+
 def test_extra_flags():
     client = TestClient()
     conanfile = textwrap.dedent("""
