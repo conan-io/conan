@@ -315,7 +315,7 @@ class Settings(object):
                 for setting in list_settings[:-1]:
                     attr = getattr(attr, setting)
             except ConanException:  # fails if receiving settings doesn't have it defined
-                pass
+                raise
             else:
                 value = str(value) if value is not None else None
                 setattr(attr, list_settings[-1], value)
