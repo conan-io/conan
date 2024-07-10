@@ -6,37 +6,40 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 
 from conan.test.utils.tools import TestClient
+from conans.util.files import load
+
+conanfile_dep = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import save, copy
+
+    class TestConan(ConanFile):
+        name = "dep"
+        version = "1.0"
+        def package(self):
+            save(self, os.path.join(self.package_folder, "file.txt"), "Hello World!")
+
+        def install(self):
+            self.output.info(f"Running install method in {self.install_folder}")
+            # copy(self, "*", src=self.package_folder, dst=self.install_folder)
+            copy(self, "file.txt", src=self.package_folder, dst=self.install_folder)
+            save(self, os.path.join(self.install_folder, "installed.txt"), "Installed file")
+
+        def package_info(self):
+            self.output.info(f"Running package_info method in {self.package_folder}")
+    """)
 
 
-class TestLocalFlows:
+class TestBasicLocalFlows:
 
     @pytest.fixture
-    def client():
+    def client(self):
         tc = TestClient(light=True)
-        tc.save({"dep/conanfile.py": textwrap.dedent("""
-        import os
-        from conan import ConanFile
-        from conan.tools.files import save, copy
-
-        class TestConan(ConanFile):
-            name = "dep"
-            version = "1.0"
-            def package(self):
-                save(self, os.path.join(self.package_folder, "file.txt"), "Hello World!")
-
-            def install(self):
-                self.output.info(f"Running install method in {self.install_folder}")
-                # copy(self, "*", src=self.package_folder, dst=self.install_folder)
-                copy(self, "file.txt", src=self.package_folder, dst=self.install_folder)
-
-            def package_info(self):
-                self.output.info(f"Running package_info method in {self.package_folder}")
-        """)})
+        tc.save({"dep/conanfile.py": conanfile_dep})
         tc.run("export dep")
         return tc
 
-
-    def test_basic_install_method(client):
+    def test_basic_install_method(self, client):
         client.run("create dep")
         layout = client.created_layout()
         assert layout.package().endswith("p")
@@ -45,10 +48,12 @@ class TestLocalFlows:
         assert f"Running package_info method in {layout.install()}" in client.out
         client.run("install --requires=dep/1.0")
         assert f"Running package_info method in {layout.install()}" in client.out
+        # Only issue is that the PackageLayout has no idea about the redirected package folder
+        # So we have to know to check for it in tests, but oh well
+        assert "installed.txt" in os.listdir(layout.install())
+        assert "installed.txt" not in os.listdir(layout.package())
 
-
-    @pytest.mark.parametrize("build_missing", [True, False])
-    def test_dependency_install_method(client, build_missing):
+    def test_dependency_install_method(self, client):
         client.save({"app/conanfile.py": textwrap.dedent("""
                  from conan import ConanFile
                  class TestConan(ConanFile):
@@ -60,57 +65,64 @@ class TestLocalFlows:
                          dep_pkg_folder = self.dependencies["dep"].package_folder
                          self.output.info(f"Dep package folder: {dep_pkg_folder}")
                  """)})
-        if not build_missing:
-            client.run("create dep")
-        build_flag = "--build=missing" if build_missing else ""
-        client.run(f"create app {build_flag}")
-        # Dep package folder: /private/var/folders/lw/6bflvp3s3t5b56n2p_bj_vx80000gn/T/tmpy1wku27hconans/path with spaces/.conan2/p/b/depadc6c4067b602/i
-        # TODO: Check that the package_folder printed here is the installed folder, not the package folder
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("create app")
+        assert f"Dep package folder: {dep_layout.package()}" not in client.out
+        assert f"Dep package folder: {dep_layout.install()}" in client.out
 
 
 class TestRemoteFlows:
-    def test_remote_upload_install_method():
+
+    @pytest.fixture
+    def client(self):
         tc = TestClient(light=True, default_server_user=True)
-        conanfile = textwrap.dedent("""
-                import os
-                from conan import ConanFile
-                from conan.tools.files import save, copy
+        tc.save({"dep/conanfile.py": conanfile_dep})
+        tc.run("export dep")
+        return tc
 
-                class TestConan(ConanFile):
-                    name = "dep"
-                    version = "1.0"
-                    def package(self):
-                        save(self, os.path.join(self.package_folder, "file.txt"), "Hello World! - {}")
+    def test_remote_upload_install_method(self, client):
+        client.run("create dep")
+        created_pref = client.created_package_reference("dep/1.0")
+        client.run("upload * -r=default -c")
 
-                    def install(self):
-                        self.output.info(f"Running install method in {self.install_folder}")
-                        # copy(self, "*", src=self.package_folder, dst=self.install_folder)
-                        copy(self, "file.txt", src=self.package_folder, dst=self.install_folder)
-                        save(self, os.path.join(self.install_folder, "installed.txt"), "Installed file")
+        # Only the package folder is uploaded, not the install folder
+        uploaded_pref_path = client.servers["default"].test_server.server_store.package(created_pref)
+        manifest_contents = load(os.path.join(uploaded_pref_path, "conanmanifest.txt"))
+        assert "file.txt" in manifest_contents
+        assert "installed.txt" not in manifest_contents
 
-                    def package_info(self):
-                        self.output.info(f"Running package_info method in {self.package_folder}")
-                """)
-        tc.save({"conanfile.py": conanfile})
-        tc.run("create .")
-        created_package = tc.created_package_reference("dep/1.0")
-        tc.run("upload * -r=default -c")
-        # TODO: Check what is in the server - it ought to be the real package folder, not the install folder
-        print()
-        tc.run("remove * -c")
-        tc.run(f"download {created_package} -r=default")
-        # No install folder yet because it has not been used in any graph, we just get the normal package folder
+        client.run("remove * -c")
+        client.run(f"download {created_pref} -r=default")
+        downloaded_pref_layout = client.get_latest_pkg_layout(created_pref)
+        assert "file.txt" in os.listdir(downloaded_pref_layout.package())
+        assert "installed.txt" not in os.listdir(downloaded_pref_layout.package())
+        assert not os.path.exists(os.path.join(downloaded_pref_layout.install()))
 
-        print()
-        tc.run(f"cache path {created_package}")
-        package_folder = tc.out.strip()
+        client.run(f"cache path {created_pref}")
+        package_folder = client.out.strip()
+        assert package_folder == downloaded_pref_layout.package()
         assert package_folder.endswith("p")
-        assert "file.txt" in os.listdir(package_folder)
-        assert "installed.txt" not in os.listdir(package_folder)
-        assert not os.path.exists(os.path.join(package_folder, "..", "i"))
-        # Now this install will run the install method
-        tc.run("install --requires=dep/1.0")
+        # Now this install will run the install() method
+        client.run("install --requires=dep/1.0")
+        assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
 
-        tc.run("remove * -c")
-        tc.run("install --requires=dep/1.0 -r=default")
-        print()
+        client.run("remove * -c")
+        client.run("install --requires=dep/1.0 -r=default")
+        assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
+
+
+class TestEditableFlows:
+    @pytest.fixture
+    def client(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": conanfile_dep})
+        return tc
+
+    def test_editable_install_method(self, client):
+        client.run("editable add dep")
+        # If we try to consume it, it will run the install() method
+        client.run("install --requires=dep/1.0")
+        # TODO: Make this not fail
+        assert "Running install method in" in client.out
+
