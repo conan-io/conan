@@ -338,15 +338,7 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            # TODO: Add install() method call and redirect package_folder to the install folder
-            if hasattr(conanfile, "install"):
-                install_folder = package_layout.install()
-                conanfile.folders.set_install_folder(install_folder)
-                if not os.path.exists(install_folder):
-                    mkdir(install_folder)
-                    with conanfile_exception_formatter(conanfile, "install"):
-                        conanfile.install()
-                conanfile.folders.set_base_package(install_folder)
+            self._call_install_method(conanfile, package_layout.install())
             self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -382,6 +374,8 @@ class BinaryInstaller:
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+            # TODO: Run install method
+            # self._call_install_method(conanfile, os.path.join(output_folder or rooted_base_path, "i"))
             # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=rooted_base_path, is_editable=True)
 
@@ -463,3 +457,12 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+
+    def _call_install_method(self, conanfile, install_folder):
+        if hasattr(conanfile, "install"):
+            conanfile.folders.set_install_folder(install_folder)
+            if not os.path.exists(install_folder):
+                mkdir(install_folder)
+                with conanfile_exception_formatter(conanfile, "install"):
+                    conanfile.install()
+            conanfile.folders.set_base_package(install_folder)
