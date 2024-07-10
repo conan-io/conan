@@ -461,6 +461,7 @@ class BinaryInstaller:
     def _call_install_method(self, conanfile, install_folder):
         if hasattr(conanfile, "install"):
             conanfile.folders.set_install_folder(install_folder)
+            # TODO: If tis is editable, we probably need to regenerate the install nontheless
             if not os.path.exists(install_folder):
                 mkdir(install_folder)
                 with conanfile_exception_formatter(conanfile, "install"):
