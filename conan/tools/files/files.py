@@ -367,6 +367,7 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+        tarredgzippedFile.extraction_filter = (lambda member_, _: member_)  # fully_trusted (Py3.14)
         if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:
