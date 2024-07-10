@@ -1989,28 +1989,29 @@ def test_cmake_toolchain_ninja_multi_config():
             "profile_debug": profile_debug,
             "profile_relwithdebinfo": profile_relwithdebinfo,
             "src/main.cpp": main,
-            "CMakeLists.txt": cmakelists}, clean_first=True)
+            "CMakeLists.txt": cmakelists})
     c.run("install . -pr=./profile_release")
     c.run("install . -pr=./profile_debug")
     c.run("install . -pr=./profile_relwithdebinfo")
 
     with c.chdir("build"):
-        c.run_command("cmake .. -G \"Ninja Multi-Config\" -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
+        c.run_command(f"cmake .. -G \"Ninja Multi-Config\" "
+                      "-DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
         c.run_command("cmake --build . --config Release")
         c.run_command("cmake --build . --config Debug")
         c.run_command("cmake --build . --config RelWithDebInfo")
 
-    c.run_command(r"build/Release/example")
+    c.run_command(os.sep.join([".", "build", "Release", "example"]))
     assert 'DEFINE conan_test_answer=42!' in c.out
     assert 'DEFINE conan_test_other=24!' in c.out
     assert 'complex=' not in c.out
 
-    c.run_command(r"build/Debug/example")
+    c.run_command(os.sep.join([".", "build", "Debug", "example"]))
     assert 'DEFINE conan_test_answer=123' in c.out
     assert 'other=' not in c.out
     assert 'complex=' not in c.out
 
-    c.run_command(r"build/RelWithDebInfo/example")
+    c.run_command(os.sep.join([".", "build", "RelWithDebInfo", "example"]))
     assert 'DEFINE conan_test_answer=456!' in c.out
     assert 'DEFINE conan_test_other=abc!' in c.out
     assert 'DEFINE conan_test_complex="1 2"!' in c.out
