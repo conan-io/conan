@@ -1913,3 +1913,104 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert 'DEFINE conan_test_answer=123' in c.out
     assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
+
+
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_ninja_multi_config():
+    c = TestClient()
+    profile_release = textwrap.dedent(r"""
+        include(default)
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=42", "conan_test_other=24"]
+        """)
+    profile_debug = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=Debug
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=123"]
+        """)
+    profile_relwithdebinfo = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=RelWithDebInfo
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=456", "conan_test_other=abc", 'conan_test_complex="1 2"']
+        """)
+
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent(r"""
+        #include <iostream>
+        #include <stdio.h>
+
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("DEFINE %s=%s!\n", #x, STR(x))
+
+        int main() {
+            SHOW_DEFINE(conan_test_answer);
+            #ifdef conan_test_other
+            SHOW_DEFINE(conan_test_other);
+            #endif
+            #ifdef conan_test_complex
+            SHOW_DEFINE(conan_test_complex);
+            #endif
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        add_executable(example src/main.cpp)
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "profile_release": profile_release,
+            "profile_debug": profile_debug,
+            "profile_relwithdebinfo": profile_relwithdebinfo,
+            "src/main.cpp": main,
+            "CMakeLists.txt": cmakelists}, clean_first=True)
+    c.run("install . -pr=./profile_release")
+    c.run("install . -pr=./profile_debug")
+    c.run("install . -pr=./profile_relwithdebinfo")
+
+    with c.chdir("build"):
+        c.run_command("cmake .. -G \"Ninja Multi-Config\" -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
+        c.run_command("cmake --build . --config Release")
+        c.run_command("cmake --build . --config Debug")
+        c.run_command("cmake --build . --config RelWithDebInfo")
+
+    c.run_command(r"build/Release/example")
+    assert 'DEFINE conan_test_answer=42!' in c.out
+    assert 'DEFINE conan_test_other=24!' in c.out
+    assert 'complex=' not in c.out
+
+    c.run_command(r"build/Debug/example")
+    assert 'DEFINE conan_test_answer=123' in c.out
+    assert 'other=' not in c.out
+    assert 'complex=' not in c.out
+
+    c.run_command(r"build/RelWithDebInfo/example")
+    assert 'DEFINE conan_test_answer=456!' in c.out
+    assert 'DEFINE conan_test_other=abc!' in c.out
+    assert 'DEFINE conan_test_complex="1 2"!' in c.out
