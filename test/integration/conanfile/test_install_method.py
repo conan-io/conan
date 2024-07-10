@@ -109,12 +109,16 @@ class TestToolRequiresFlows:
 
                 def build(self):
                     self.output.info("Running build method")
-                    self.output.info(f"Dep bindir: {self.dependencies.build['dep'].cpp_info.bindir}")
-                    self.output.info(f"Is installed? {os.path.join(self.dependencies.build['dep'].cpp_info.bindir, 'installed,.txt')}")
+                    bindir = self.dependencies.build['dep'].cpp_info.bindir
+                    self.output.info(f"Dep bindir: {bindir}")
+                    self.output.info(f"Is installed? {os.path.exists(os.path.join(bindir, 'installed.txt'))}")
             """)})
         tc.run("create dep --build-require")
+        dep_layout = tc.created_layout()
         tc.run("create app")
-        assert "app/1.0: Is installed? True"
+        # This fails. cpp_info is using the original package folder to construct the final path
+        assert f"Dep bindir: {dep_layout.install()}" in tc.out
+        assert "app/1.0: Is installed? True" in tc.out
 
 
 class TestRemoteFlows:
