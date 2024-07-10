@@ -1294,7 +1294,7 @@ def test_build_folder_vars_constants_user():
                 cmake_layout(self)
         """)
     c.save({"conanfile.py": conanfile})
-    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"user.myvalue\"]'"
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"const.myvalue\"]'"
     settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
     c.run("install . -c={} {}".format(conf, settings))
     assert "cmake --preset conan-myvalue-debug" in c.out
