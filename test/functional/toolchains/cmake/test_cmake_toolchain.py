@@ -1916,7 +1916,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
 
 
 @pytest.mark.tool("ninja")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_toolchain_ninja_multi_config():
     c = TestClient()
     profile_release = textwrap.dedent(r"""
