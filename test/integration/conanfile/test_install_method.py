@@ -72,6 +72,51 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.install()}" in client.out
 
 
+class TestToolRequiresFlows:
+    def test_tool_requires(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save, copy
+
+            class TestConan(ConanFile):
+                name = "dep"
+                version = "1.0"
+                package_type = "application"
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "bin", "executable.txt"), "Base")
+
+                def install(self):
+                    self.output.info(f"Running install method in {self.install_folder}")
+                    copy(self, "*", src=self.package_folder, dst=self.install_folder)
+                    save(self, os.path.join(self.install_folder, "installed.txt"), "Installed file")
+
+                def package_info(self):
+                    self.output.info(f"Running package_info method in {self.package_folder}")
+                    self.cpp_info.bindirs = ["bin"]
+
+            """), "app/conanfile.py": textwrap.dedent("""
+            from conan import ConanFile
+            import os
+
+            class TestConan(ConanFile):
+                name = "app"
+                version = "1.0"
+
+                def build_requirements(self):
+                    self.tool_requires("dep/1.0")
+
+                def build(self):
+                    self.output.info("Running build method")
+                    self.output.info(f"Dep bindir: {self.dependencies.build['dep'].cpp_info.bindir}")
+                    self.output.info(f"Is installed? {os.path.join(self.dependencies.build['dep'].cpp_info.bindir, 'installed,.txt')}")
+            """)})
+        tc.run("create dep --build-require")
+        tc.run("create app")
+        assert "app/1.0: Is installed? True"
+
+
 class TestRemoteFlows:
 
     @pytest.fixture
