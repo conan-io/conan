@@ -49,6 +49,7 @@ class Folders(object):
         self.source = ""
         self.build = ""
         self.package = ""
+        self.install = ""
         self.generators = ""
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
@@ -141,6 +142,13 @@ class Folders(object):
     def package_folder(self):
         """For the cache, the package folder is only the base"""
         return self._base_package
+
+    def set_install_folder(self, folder):
+        self.install = folder
+
+    @property
+    def install_folder(self):
+        return self.install
 
     @property
     def generators_folder(self):

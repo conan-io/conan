@@ -338,6 +338,15 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
+            # TODO: Add install() method call and redirect package_folder to the install folder
+            if hasattr(conanfile, "install"):
+                install_folder = package_layout.install()
+                conanfile.folders.set_install_folder(install_folder)
+                if not os.path.exists(install_folder):
+                    mkdir(install_folder)
+                    with conanfile_exception_formatter(conanfile, "install"):
+                        conanfile.install()
+                conanfile.folders.set_base_package(install_folder)
             self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):

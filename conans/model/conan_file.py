@@ -319,6 +319,10 @@ class ConanFile:
         return self.folders.base_package
 
     @property
+    def install_folder(self):
+        return self.folders.install_folder
+
+    @property
     def generators_folder(self):
         return self.folders.generators_folder
 
