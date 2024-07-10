@@ -36,7 +36,7 @@ def dockerfile_path(name=None):
     return path
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared():
     """
     Tests the ``conan create . ``
@@ -73,13 +73,13 @@ def test_create_docker_runner_cache_shared():
 
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host -pr:b build -vvv")
+    client.run("create . -pr:h host -pr:b build")
 
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_from_cache():
     """
     Tests the ``conan create . ``
@@ -116,13 +116,13 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
 
     client.save({"default_host": profile_host, "default_build": profile_build}, path=client.cache.profiles_path)
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h default_host -pr:b default_build -vvv")
+    client.run("create . -pr:h default_host -pr:b default_build")
 
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_folder():
     """
     Tests the ``conan create . ``
@@ -160,12 +160,12 @@ def test_create_docker_runner_cache_shared_profile_folder():
     client.save({"build": profile_build})
     client.save({"docker_default": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h docker_default -pr:b build -vvv")
+    client.run("create . -pr:h docker_default -pr:b build")
 
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
@@ -220,14 +220,14 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_copy -pr:b build -vvv")
+    client.run("create . -pr:h host_copy -pr:b build")
 
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
-    client.run("create . -pr:h host_clean -pr:b build -vvv")
+    client.run("create . -pr:h host_clean -pr:b build")
 
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
@@ -235,7 +235,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_profile_default_folder():
     """
     Tests the ``conan create . ``
@@ -271,7 +271,7 @@ def test_create_docker_runner_profile_default_folder():
     client.save({"host_from_profile": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
     client.save({"build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_from_profile -pr:b build_from_profile -vvv")
+    client.run("create . -pr:h host_from_profile -pr:b build_from_profile")
 
     assert "Container conan-runner-docker running" in client.out
     assert "Restore: pkg/0.2" in client.out
@@ -280,7 +280,7 @@ def test_create_docker_runner_profile_default_folder():
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
@@ -315,7 +315,7 @@ def test_create_docker_runner_dockerfile_file_path():
     """)
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host -pr:b build -vvv")
+    client.run("create . -pr:h host -pr:b build")
 
     assert "Container conan-runner-docker running" in client.out
     assert "Restore: pkg/0.2" in client.out
@@ -324,7 +324,7 @@ def test_create_docker_runner_dockerfile_file_path():
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
@@ -385,11 +385,11 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     client.save({"profile": profile})
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type, shared)
     # create should also work
-    client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings -vvv))
+    client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile():
     """
     Tests the ``conan create . ``
@@ -434,7 +434,7 @@ def test_create_docker_runner_from_configfile():
 
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h 'host' -pr:b 'build' -vvv")
+    client.run("create . -pr:h 'host' -pr:b 'build'")
 
     assert "Container my-custom-conan-runner-container running" in client.out
     assert "Restore: pkg/0.2" in client.out
@@ -443,7 +443,7 @@ def test_create_docker_runner_from_configfile():
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile_with_args():
     """
     Tests the ``conan create . ``
@@ -490,16 +490,16 @@ def test_create_docker_runner_from_configfile_with_args():
 
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h 'host' -pr:b 'build' -vvv")
+    client.run("create . -pr:h 'host' -pr:b 'build'")
 
-    assert "test/integration/command/dockerfiles/Dockerfile_args" in client.out
+    assert "command/dockerfiles/Dockerfile_args" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
 
-# @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_default_build_profile():
     """
     Tests the ``conan create . ``
@@ -526,7 +526,7 @@ def test_create_docker_runner_default_build_profile():
 
     client.save({"host_clean": profile_host})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_clean -vvv")
+    client.run("create . -pr:h host_clean")
 
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
