@@ -1995,11 +1995,12 @@ def test_cmake_toolchain_ninja_multi_config():
     c.run("install . -pr=./profile_relwithdebinfo")
 
     with c.chdir("build"):
-        c.run_command(f"cmake .. -G \"Ninja Multi-Config\" "
+        env = r".\generators\conanbuild.bat &&" if platform.system() == "Windows" else ""
+        c.run_command(f"{env} cmake .. -G \"Ninja Multi-Config\" "
                       "-DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
-        c.run_command("cmake --build . --config Release")
-        c.run_command("cmake --build . --config Debug")
-        c.run_command("cmake --build . --config RelWithDebInfo")
+        c.run_command(f"{env} cmake --build . --config Release")
+        c.run_command(f"{env} cmake --build . --config Debug")
+        c.run_command(f"{env} cmake --build . --config RelWithDebInfo")
 
     c.run_command(os.sep.join([".", "build", "Release", "example"]))
     assert 'DEFINE conan_test_answer=42!' in c.out
