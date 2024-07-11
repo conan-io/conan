@@ -501,5 +501,5 @@ def test_set_value_non_existing_values():
         settings.update_values([("foo.bar", "A")])
     assert "'settings.foo' doesn't exist for 'settings'" in str(cm.value)
     # it does not raise any error
-    settings.update_values([("foo", "A")], raise_error=False)
-    settings.update_values([("foo.bar", "A")], raise_error=False)
+    settings.update_values([("foo", "A")], raise_undefined=False)
+    settings.update_values([("foo.bar", "A")], raise_undefined=False)

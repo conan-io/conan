@@ -302,7 +302,7 @@ class Settings(object):
     def items(self):
         return self.values_list
 
-    def update_values(self, values, raise_error=True):
+    def update_values(self, values, raise_undefined=True):
         """
         Receives a list of tuples (compiler.version, value)
         This is more an updater than a setter.
@@ -318,7 +318,7 @@ class Settings(object):
                 value = str(value) if value is not None else None
                 setattr(attr, list_settings[-1], value)
             except ConanException:  # fails if receiving settings doesn't have it defined
-                if raise_error:
+                if raise_undefined:
                     raise
 
     def constrained(self, constraint_def):
