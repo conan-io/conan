@@ -339,7 +339,8 @@ class BinaryInstaller:
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
             self._call_install_method(conanfile, package_layout.install())
-            self._call_package_info(conanfile, pkg_folder, is_editable=False)
+            # TODO: Improve API to avoid this branch
+            self._call_package_info(conanfile, package_layout.install() if hasattr(conanfile, "install") else pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         # It will only run generation

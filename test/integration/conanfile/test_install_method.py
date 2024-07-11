@@ -90,7 +90,7 @@ class TestToolRequiresFlows:
                 def install(self):
                     self.output.info(f"Running install method in {self.install_folder}")
                     copy(self, "*", src=self.package_folder, dst=self.install_folder)
-                    save(self, os.path.join(self.install_folder, "installed.txt"), "Installed file")
+                    save(self, os.path.join(self.install_folder, "bin", "installed.txt"), "Installed file")
 
                 def package_info(self):
                     self.output.info(f"Running package_info method in {self.package_folder}")
