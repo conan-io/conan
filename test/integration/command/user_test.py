@@ -429,10 +429,10 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # Token should expire
-        time.sleep(2.5)
+        time.sleep(3)
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Token should expire
-        time.sleep(2.5)
+        time.sleep(3)
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
