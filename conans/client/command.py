@@ -571,6 +571,7 @@ class Command(object):
                                                      require_overrides=args.require_override)
 
             self._warn_revisions()
+            self._warn_conan_version()
 
         except ConanException as exc:
             info = exc.info
@@ -2192,8 +2193,11 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
     def _warn_conan_version(self):
-        self._out.warning("*** Conan 1 is legacy and on a deprecation path ***")
-        self._out.warning("*** Please upgrade to Conan 2 ***")
+        self._out.writeln("")
+        self._out.warning("*"*50)
+        self._out.warning("*** Conan 1 is legacy and on a deprecation path **")
+        self._out.warning("*********** Please upgrade to Conan 2 ************")
+        self._out.warning("*" * 50)
 
     def _warn_revisions(self):
         if self._conan.app and not self._conan.app.config.revisions_enabled:
