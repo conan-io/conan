@@ -375,8 +375,6 @@ class BinaryInstaller:
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
-            # TODO: Run install method
-            # self._call_install_method(conanfile, os.path.join(output_folder or rooted_base_path, "i"))
             # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=rooted_base_path, is_editable=True)
 
@@ -462,10 +460,9 @@ class BinaryInstaller:
     def _call_install_method(self, conanfile, install_folder):
         if hasattr(conanfile, "install"):
             conanfile.folders.set_install_folder(install_folder)
-            # TODO: If this is editable, we probably need to regenerate the install nontheless
-            # TODO: Think if it makes sense to have hooks for install
             if not os.path.exists(install_folder):
                 mkdir(install_folder)
                 with conanfile_exception_formatter(conanfile, "install"):
                     conanfile.install()
+            # TODO: Keep the orignal info in something like "invariante_package_folder"
             conanfile.folders.set_base_package(install_folder)

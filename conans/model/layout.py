@@ -45,6 +45,8 @@ class Folders(object):
 
         self._base_recipe_metadata = None
         self._base_pkg_metadata = None
+        # TODO: Think about adding invariant package fodlder ref in case of install()
+        # self._invariant_package_folder = None
 
         self.source = ""
         self.build = ""
@@ -144,11 +146,17 @@ class Folders(object):
         return self._base_package
 
     def set_install_folder(self, folder):
+        # TODO: Store when the install folder is set, to be able to access the old package later
+        #self._invariant_package_folder = self.package_folder
         self.install = folder
 
     @property
     def install_folder(self):
         return self.install
+
+    @property
+    def invariant_package_folder(self):
+        return self._invariant_package_folder
 
     @property
     def generators_folder(self):

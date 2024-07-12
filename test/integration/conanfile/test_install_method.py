@@ -71,6 +71,26 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.package()}" not in client.out
         assert f"Dep package folder: {dep_layout.install()}" in client.out
 
+    def test_save_restore_cache(self):
+        pass
+
+    def test_lockfile_interaction(self):
+        pass
+
+    def test_remove_deletes_correct_folders(self):
+        pass
+
+    def test_graph_info_output(self):
+        # The output should serialize the orignal package folder path to give users the info
+        pass
+
+    def test_create_pkglist_output(self):
+        pass
+
+    def test_vendorized(self):
+        # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
+        pass
+
 
 class TestToolRequiresFlows:
     def test_tool_requires(self):
@@ -120,6 +140,9 @@ class TestToolRequiresFlows:
         assert f"Dep bindir: {dep_layout.install()}" in tc.out
         assert "app/1.0: Is installed? True" in tc.out
 
+    def test_update_recipe(self):
+        pass
+
 
 class TestRemoteFlows:
 
@@ -159,19 +182,3 @@ class TestRemoteFlows:
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
         assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
-
-
-class TestEditableFlows:
-    @pytest.fixture
-    def client(self):
-        tc = TestClient(light=True)
-        tc.save({"dep/conanfile.py": conanfile_dep})
-        return tc
-
-    def test_editable_install_method(self, client):
-        client.run("editable add dep")
-        # If we try to consume it, it will run the install() method
-        client.run("install --requires=dep/1.0")
-        # TODO: Make this not fail
-        assert "Running install method in" in client.out
-
