@@ -6,7 +6,7 @@ from collections import OrderedDict
 import pytest
 from mock import patch
 
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
