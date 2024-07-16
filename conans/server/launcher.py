@@ -3,7 +3,6 @@ import os
 import sys
 
 from conans import REVISIONS
-from conan.internal.paths import conan_expand_user
 from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 
@@ -23,7 +22,7 @@ class ServerLauncher(object):
         if server_dir:
             user_folder = server_folder = server_dir
         else:
-            user_folder = conan_expand_user("~")
+            user_folder = os.path.expanduser("~")
             server_folder = os.path.join(user_folder, '.conan_server')
 
         server_config = migrate_and_get_server_config(
