@@ -11,7 +11,7 @@ import pytest
 from conans.errors import ConanException, ConanConnectionError
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import load, save
 
 

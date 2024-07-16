@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class UserTest(unittest.TestCase):
