@@ -34,6 +34,7 @@ class Git:
                 self._excluded = c.get("core.scm:excluded", check_type=list)
             else:
                 self._excluded = conf_excluded
+        self._local_url = global_conf.get("core.scm:local_url", choices=["allow", "block"])
 
     def run(self, cmd, hidden_output=None):
         """
@@ -176,16 +177,14 @@ class Git:
         in_remote = self.commit_in_remote(commit, remote=remote)
         if in_remote:
             return url, commit
-        # TODO: Once we know how to pass [conf] to export, enable this
-        # conf_name = "tools.scm:local"
-        # allow_local = self._conanfile.conf[conf_name]
-        # if not allow_local:
-        #    raise ConanException("Current commit {} doesn't exist in remote {}\n"
-        #                         "use '-c {}=1' to allow it".format(commit, remote, conf_name))
+        if self._local_url == "block":
+            raise ConanException(f"Current commit {commit} doesn't exist in remote {remote}\n"
+                                 "Failing according to 'core.scm:local_url=block' conf")
 
-        self._conanfile.output.warning("Current commit {} doesn't exist in remote {}\n"
-                                       "This revision will not be buildable in other "
-                                       "computer".format(commit, remote))
+        if self._local_url != "allow":
+            self._conanfile.output.warning("Current commit {} doesn't exist in remote {}\n"
+                                           "This revision will not be buildable in other "
+                                           "computer".format(commit, remote))
         return self.get_repo_root(), commit
 
     def get_repo_root(self):

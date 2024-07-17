@@ -123,15 +123,13 @@ class GnuToolchain:
         if is_msvc(self._conanfile):
             extra_env_vars = {"CC": "cl -nologo",
                               "CXX": "cl -nologo",
-                              "LD": "link -nologo",
-                              "AR": "lib",
                               "NM": "dumpbin -symbols",
                               "OBJDUMP": ":",
                               "RANLIB": ":",
                               "STRIP": ":"}
         # Configuration map
         compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
-                             "rc": "RC", "ld": "LD", "ar": "AR", "nm": "NM", "ranlib": "RANLIB",
+                             "rc": "RC", "nm": "NM", "ranlib": "RANLIB",
                              "objdump": "OBJDUMP", "strip": "STRIP"}
         # Compiler definitions by conf
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},

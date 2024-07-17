@@ -83,6 +83,21 @@ class _LockRequires:
         self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
         return remove
 
+    def update(self, refs, name):
+        if not refs:
+            return
+        for r in refs:
+            r = RecipeReference.loads(r)
+            new_reqs = {}
+            for k, v in self._requires.items():
+                if r.name == k.name:
+                    ConanOutput().info(f"Replacing {name}: {k.repr_notime()} -> {repr(r)}")
+                else:
+                    new_reqs[k] = v
+            self._requires = new_reqs
+            self._requires[r] = None  # No package-id at the moment
+        self.sort()
+
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
 
@@ -210,6 +225,12 @@ class Lockfile(object):
         _remove(build_requires, self._build_requires, "build_require")
         _remove(python_requires, self._python_requires, "python_require")
         _remove(config_requires, self._conf_requires, "config_requires")
+
+    def update(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
+        self._requires.update(requires, "require")
+        self._build_requires.update(build_requires, "build_requires")
+        self._python_requires.update(python_requires, "python_requires")
+        self._conf_requires.update(config_requires, "config_requires")
 
     @staticmethod
     def deserialize(data):

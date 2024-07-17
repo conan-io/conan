@@ -78,12 +78,11 @@ class _PCContentGenerator:
         ret = {}
         for i, directory in enumerate(folders):
             directory = os.path.normpath(directory).replace("\\", "/")
-            prefix = ""
-            if not os.path.isabs(directory):
-                prefix = "${prefix}/"
-            elif directory.startswith(prefix_path_):
+            if directory.startswith(prefix_path_):
                 prefix = "${prefix}/"
                 directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
+            else:
+                prefix = "" if os.path.isabs(directory) else "${prefix}/"
             suffix = str(i) if i else ""
             var_name = f"{folder_name}{suffix}"
             ret[var_name] = f"{prefix}{directory}"

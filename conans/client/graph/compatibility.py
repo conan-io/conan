@@ -65,10 +65,10 @@ def cppstd_compat(conanfile):
         new_combinations = []
         for comb in combinations:
             for f in factor:
-                comb = comb.copy()
-                comb.update(f)
-                new_combinations.append(comb)
-        combinations = new_combinations
+                new_comb = comb.copy()
+                new_comb.update(f)
+                new_combinations.append(new_comb)
+        combinations.extend(new_combinations)
 
     ret = []
     for comb in combinations:
@@ -146,12 +146,12 @@ class BinaryCompatibility:
                 compat_info = conanfile.original_info.clone()
                 settings = elem.get("settings")
                 if settings:
-                    compat_info.settings.update_values(settings)
+                    compat_info.settings.update_values(settings, raise_undefined=False)
                 options = elem.get("options")
                 if options:
                     compat_info.options.update(options_values=OrderedDict(options))
                 result.append(compat_info)
                 settings_target = elem.get("settings_target")
                 if settings_target and compat_info.settings_target:
-                    compat_info.settings_target.update_values(settings_target)
+                    compat_info.settings_target.update_values(settings_target, raise_undefined=False)
         return result

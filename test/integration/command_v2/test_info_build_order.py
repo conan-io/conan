@@ -73,6 +73,14 @@ def test_info_build_order():
     assert bo_json["order_by"] == "recipe"
     assert bo_json["order"] == result
 
+    # test html format
+    c.run("graph build-order consumer --build=missing --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=recipe --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=configuration --format=html")
+    assert "<body>" in c.stdout
+
 
 def test_info_build_order_configuration():
     c = TestClient()
@@ -331,6 +339,11 @@ def test_info_build_order_merge_multi_product():
     ]
 
     assert bo_json == result
+
+    # test that html format for build-order-merge generates something
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=html")
+    assert "<body>" in c.stdout
+
 
 
 def test_info_build_order_merge_multi_product_configurations():

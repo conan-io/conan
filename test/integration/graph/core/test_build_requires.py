@@ -795,6 +795,15 @@ class TestLoops(GraphManagerTest):
         assert deps_graph.error.ancestor == cmake
         assert deps_graph.error.node == cmake2
 
+    def test_infinite_recursion_test(self):
+        """Ensure that direct conflicts in a node are properly reported and Conan does not loop"""
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("app").with_package_type("application")})
+        tc.run("create . --version=1.0 --build-require")
+        tc.run("create . --version=1.1 --build-require")
+        tc.run("graph info --tool-requires=app/1.1 --tool-requires=app/1.0", assert_error=True)
+        assert "Duplicated requirement: app/1.0" in tc.out
+
 
 def test_tool_requires():
     """Testing temporary tool_requires attribute being "an alias" of build_require and
