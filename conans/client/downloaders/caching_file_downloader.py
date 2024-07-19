@@ -20,8 +20,9 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name)
-        self._cache = helpers.cache
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name,
+                                               source_credentials=True)
+        self._home_folder = helpers.home_folder
         self._output = conanfile.output
         self._conanfile = conanfile
 
@@ -49,7 +50,7 @@ class SourcesCachingDownloader:
         something is found.
         """
         # We are going to use the download_urls definition for backups
-        download_cache_folder = download_cache_folder or HomePaths(self._cache.cache_folder).default_sources_backup_folder
+        download_cache_folder = download_cache_folder or HomePaths(self._home_folder).default_sources_backup_folder
         # regular local shared download cache, not using Conan backup sources servers
         backups_urls = backups_urls or ["origin"]
         if download_cache_folder and not os.path.isabs(download_cache_folder):

@@ -5,7 +5,7 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.errors import ConanException
-
+from conan.internal.api.install.generators import relativize_path
 
 """
 
@@ -57,6 +57,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
         root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        # it is the relative path of the caller, not the dependency
+        root_folder = relativize_path(root_folder, self.cmakedeps._conanfile,
+                                      "${CMAKE_CURRENT_LIST_DIR}")
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,

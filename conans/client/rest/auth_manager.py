@@ -23,11 +23,11 @@ LOGIN_RETRIES = 3
 
 class ConanApiAuthManager(object):
 
-    def __init__(self, rest_client_factory, cache, global_conf):
+    def __init__(self, rest_client_factory, cache_folder, localdb, global_conf):
         self._rest_client_factory = rest_client_factory
-        self._localdb = cache.localdb
+        self._localdb = localdb
         self._global_conf = global_conf
-        self._cache_folder = cache.cache_folder
+        self._cache_folder = cache_folder
 
     def call_rest_api_method(self, remote, method_name, *args, **kwargs):
         """Handles AuthenticationException and request user to input a user and a password"""

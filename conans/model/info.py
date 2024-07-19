@@ -149,6 +149,14 @@ class RequirementInfo:
         self.package_id = self._package_id
         self.recipe_revision = None
 
+    def revision_mode(self):
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
+        self.recipe_revision = self._ref.revision
+
     def full_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
@@ -223,6 +231,10 @@ class RequirementsInfo(UserRequirementsDict):
         for r in self._data.values():
             r.full_package_mode()
 
+    def revision_mode(self):
+        for r in self._data.values():
+            r.revision_mode()
+
     def full_mode(self):
         for r in self._data.values():
             r.full_mode()
@@ -284,6 +296,10 @@ class PythonRequiresInfo:
     def full_recipe_mode(self):
         for r in self._refs:
             r.full_recipe_mode()
+
+    def revision_mode(self):
+        for r in self._refs:
+            r.revision_mode()
 
     def full_mode(self):
         for r in self._refs:

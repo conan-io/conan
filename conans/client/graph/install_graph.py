@@ -66,7 +66,7 @@ class _InstallPackageReference:
     def _build_args(self):
         if self.binary != BINARY_BUILD:
             return None
-        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -160,7 +160,7 @@ class _InstallRecipeReference:
             if dep.dst.binary != BINARY_SKIP:
                 if dep.dst.ref == node.ref:  # If the node is itself, then it is internal dep
                     install_pkg_ref.depends.append(dep.dst.pref.package_id)
-                else:
+                elif dep.dst.ref not in self.depends:
                     self.depends.append(dep.dst.ref)
 
     def _install_order(self):
@@ -272,7 +272,7 @@ class _InstallConfiguration:
     def _build_args(self):
         if self.binary != BINARY_BUILD:
             return None
-        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -510,7 +510,7 @@ class InstallGraph:
 
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'. You can try:
-               - List all available packages using 'conan list {ref}:* -r=remote'
+               - List all available packages using 'conan list "{ref}:*" -r=remote'
                - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
                - {build_msg}
 

@@ -47,7 +47,7 @@ class UploadAPI:
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
-        signer = PkgSignaturesPlugin(app.cache)
+        signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
 
@@ -114,23 +114,29 @@ class UploadAPI:
 
         app = ConanApp(self.conan_api)
         # TODO: verify might need a config to force it to False
-        uploader = FileUploader(app.requester, verify=True, config=config)
+        uploader = FileUploader(app.requester, verify=True, config=config, source_credentials=True)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general
         for file in files:
             basename = os.path.basename(file)
             full_url = url + basename
+            is_summary = file.endswith(".json")
+            file_kind = "summary" if is_summary else "file"
             try:
-                # Always upload summary .json but only upload blob if it does not already exist
-                if file.endswith(".json") or not uploader.exists(full_url, auth=None):
-                    output.info(f"Uploading file '{basename}' to backup sources server")
+                if is_summary or not uploader.exists(full_url, auth=None):
+                    output.info(f"Uploading {file_kind} '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
                     output.info(f"File '{basename}' already in backup sources server, "
                                 "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(f"The source backup server '{url}' needs authentication"
-                                     f"/permissions, please provide 'source_credentials.json': {e}")
+                if is_summary:
+                    output.warning(f"Could not update summary '{basename}' in backup sources server. "
+                                   "Skipping updating file but continuing with upload. "
+                                   f"Missing permissions?: {e}")
+                else:
+                    raise ConanException(f"The source backup server '{url}' needs authentication"
+                                         f"/permissions, please provide 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
         return files

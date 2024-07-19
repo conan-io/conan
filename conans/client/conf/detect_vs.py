@@ -4,7 +4,6 @@ from shutil import which
 
 from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException
-from conans.util.env import get_env
 
 
 def vs_installation_path(version):
@@ -12,7 +11,7 @@ def vs_installation_path(version):
 
 
 def vs_detect_update(version):
-    version = {"193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     full_version = _vs_installation_path(version)[1]
     components = full_version.split(".")
     if len(components) > 1:
@@ -69,7 +68,7 @@ def vswhere(all_=False, prerelease=True, products=None, requires=None, version="
                              "'products' or 'requires' parameter")
 
     installer_path = None
-    program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
+    program_files = os.environ.get("ProgramFiles(x86)") or os.environ.get("ProgramFiles")
     if program_files:
         expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                      "vswhere.exe")

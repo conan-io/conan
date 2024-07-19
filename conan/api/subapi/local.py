@@ -2,7 +2,7 @@ import os
 
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
-from conans.client.cache.editable import EditablePackages
+from conan.internal.api.local.editable import EditablePackages
 from conans.client.conanfile.build import run_build_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
@@ -60,7 +60,8 @@ class LocalAPI:
 
     def editable_remove(self, path=None, requires=None, cwd=None):
         if path:
-            path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+            path = make_abs_path(path, cwd)
+            path = os.path.join(path, "conanfile.py")
         return self.editable_packages.remove(path, requires)
 
     def editable_list(self):
@@ -109,9 +110,10 @@ class LocalAPI:
             with chdir(conanfile.build_folder):
                 conanfile.test()
 
-    def inspect(self, conanfile_path, remotes, lockfile):
+    def inspect(self, conanfile_path, remotes, lockfile, name=None, version=None, user=None,
+                channel=None):
         app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
-                                          user=None, channel=None, remotes=remotes, graph_lock=lockfile)
+        conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
+                                          channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
 

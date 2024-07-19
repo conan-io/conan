@@ -33,6 +33,7 @@ def create(conan_api, parser, *args):
     parser.add_argument("-bt", "--build-test", action="append",
                         help="Same as '--build' but only for the test_package requires. By default"
                              " if not specified it will take the '--build' value if specified")
+    raw_args = args[0]
     args = parser.parse_args(*args)
 
     if args.test_missing and args.test_folder == "":
@@ -62,6 +63,25 @@ def create(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
+    if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
+        from conan.internal.runner.docker import DockerRunner
+        from conan.internal.runner.ssh import SSHRunner
+        from conan.internal.runner.wsl import WSLRunner
+        try:
+            runner_type = profile_host.runner['type'].lower()
+        except KeyError:
+            raise ConanException(f"Invalid runner configuration. 'type' must be defined")
+        runner_instances_map = {
+            'docker': DockerRunner,
+            # 'ssh': SSHRunner,
+            # 'wsl': WSLRunner,
+        }
+        try:
+            runner_instance = runner_instances_map[runner_type]
+        except KeyError:
+            raise ConanException(f"Invalid runner type '{runner_type}'. Allowed values: {', '.join(runner_instances_map.keys())}")
+        return runner_instance(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
@@ -75,6 +95,9 @@ def create(conan_api, parser, *args):
     else:
         requires = [ref] if not is_build else None
         tool_requires = [ref] if is_build else None
+        if conanfile.vendor:  # Automatically allow repackaging for conan create
+            pr = profile_build if is_build else profile_host
+            pr.conf.update("&:tools.graph:vendor", "build")
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,

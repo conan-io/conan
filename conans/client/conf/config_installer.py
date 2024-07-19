@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir, load
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
 
 
@@ -44,8 +44,8 @@ def _hide_password(resource):
 
 
 @contextmanager
-def tmp_config_install_folder(cache):
-    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install")
+def tmp_config_install_folder(cache_folder):
+    tmp_folder = os.path.join(cache_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.abspath(tmp_folder)
     rmdir(tmp_folder)
@@ -56,24 +56,24 @@ def tmp_config_install_folder(cache):
         rmdir(tmp_folder)
 
 
-def _process_git_repo(config, cache):
+def _process_git_repo(config, cache_folder):
     output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
-    with tmp_config_install_folder(cache) as tmp_folder:
+    with tmp_config_install_folder(cache_folder) as tmp_folder:
         with chdir(tmp_folder):
             args = config.args or ""
             ret, out = detect_runner('git clone "{}" . {}'.format(config.uri, args))
             if ret != 0:
                 raise ConanException("Can't clone repo: {}".format(out))
             output.info("Repo cloned!")
-        _process_folder(config, tmp_folder, cache)
+        _process_folder(config, tmp_folder, cache_folder)
 
 
-def _process_zip_file(config, zippath, cache, tmp_folder, first_remove=False):
+def _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=False):
     unzip(zippath, tmp_folder)
     if first_remove:
         os.unlink(zippath)
-    _process_folder(config, tmp_folder, cache)
+    _process_folder(config, tmp_folder, cache_folder)
 
 
 def _filecopy(src, filename, dst):
@@ -91,20 +91,20 @@ def _filecopy(src, filename, dst):
     shutil.copyfile(src, dst)
 
 
-def _process_file(directory, filename, config, cache, folder):
+def _process_file(directory, filename, config, cache_folder, folder):
     output = ConanOutput()
     if filename == "settings.yml":
         output.info("Installing settings.yml")
-        _filecopy(directory, filename, cache.cache_folder)
+        _filecopy(directory, filename, cache_folder)
     elif filename == "remotes.json":
         output.info("Defining remotes from remotes.json")
-        _filecopy(directory, filename, cache.cache_folder)
+        _filecopy(directory, filename, cache_folder)
     else:
         relpath = os.path.relpath(directory, folder)
         if config.target_folder:
-            target_folder = os.path.join(cache.cache_folder, config.target_folder, relpath)
+            target_folder = os.path.join(cache_folder, config.target_folder, relpath)
         else:
-            target_folder = os.path.join(cache.cache_folder, relpath)
+            target_folder = os.path.join(cache_folder, relpath)
 
         if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
             remove(target_folder)
@@ -114,7 +114,7 @@ def _process_file(directory, filename, config, cache, folder):
         _filecopy(directory, filename, target_folder)
 
 
-def _process_folder(config, folder, cache, ignore=None):
+def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
@@ -127,21 +127,21 @@ def _process_folder(config, folder, cache, ignore=None):
         for f in files:
             rel_path = os.path.relpath(os.path.join(root, f), folder)
             if not conanignore.matches(rel_path):
-                _process_file(root, f, config, cache, folder)
+                _process_file(root, f, config, cache_folder, folder)
 
 
-def _process_download(config, cache, requester):
+def _process_download(config, cache_folder, requester):
     output = ConanOutput()
-    with tmp_config_install_folder(cache) as tmp_folder:
+    with tmp_config_install_folder(cache_folder) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
         path = urlsplit(config.uri).path
         filename = os.path.basename(path)
         zippath = os.path.join(tmp_folder, filename)
         try:
-            downloader = FileDownloader(requester=requester)
+            downloader = FileDownloader(requester=requester, source_credentials=True)
             downloader.download(url=config.uri, file_path=zippath, verify_ssl=config.verify_ssl,
                                 retry=1)
-            _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
+            _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
@@ -181,22 +181,23 @@ def _is_compressed_file(filename):
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None, ignore=None):
-    cache, requester = app.cache, app.requester
+    requester = app.requester
+    cache_folder = app.cache_folder
     config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":
-            _process_git_repo(config, cache)
+            _process_git_repo(config, cache_folder)
         elif config.type == "dir":
-            _process_folder(config, config.uri, cache, ignore)
+            _process_folder(config, config.uri, cache_folder, ignore)
         elif config.type == "file":
             if _is_compressed_file(config.uri):
-                with tmp_config_install_folder(cache) as tmp_folder:
-                    _process_zip_file(config, config.uri, cache, tmp_folder)
+                with tmp_config_install_folder(cache_folder) as tmp_folder:
+                    _process_zip_file(config, config.uri, cache_folder, tmp_folder)
             else:
                 dirname, filename = os.path.split(config.uri)
-                _process_file(dirname, filename, config, cache, dirname)
+                _process_file(dirname, filename, config, cache_folder, dirname)
         elif config.type == "url":
-            _process_download(config, cache, requester=requester)
+            _process_download(config, cache_folder, requester=requester)
         else:
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:

@@ -17,13 +17,13 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         configs.add([node: "Linux", pyvers: ["PY312"]])
     }
     if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36"]])
+        configs.add([node: "Linux", pyvers: ["PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY38"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
@@ -39,10 +39,10 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
 }
 
 String getDockerImage(String moduleName) {
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional"){
+    else if (moduleName=="test/functional"){
         return "conanio/ci-functional"
     }
     return ""
@@ -50,7 +50,7 @@ String getDockerImage(String moduleName) {
 
 boolean shouldTestServer(String moduleName) {
     // run conan_server --help after running functional tests
-    if (moduleName=="conans/test/functional") {
+    if (moduleName=="test/functional") {
         return true
     }
     return false
@@ -79,7 +79,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20 -rs"
 
                 if (shouldTestServer(module)) {
                     def rm = (nodeName=="Windows") ? "del" : "rm"
@@ -167,7 +167,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["test/unittests", "test/integration", "test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
@@ -198,7 +198,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
- 
+
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }

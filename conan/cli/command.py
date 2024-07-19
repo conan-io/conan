@@ -52,7 +52,8 @@ class BaseConanCommand:
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
                                  "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
         parser.add_argument("-cc", "--core-conf", action="append",
-                            help="Global configuration for Conan")
+                            help="Define core configuration, overwriting global.conf "
+                                 "values. E.g.: -cc core:non_interactive=True")
 
     @property
     def _help_formatters(self):

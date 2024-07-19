@@ -360,6 +360,8 @@ def detect_default_compiler():
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
+        if "/usr/bin/cc" == command or "/usr/bin/c++" == command:  # Symlinks of linux "alternatives"
+            return _cc_compiler(command)
         if "clang" in command.lower():
             return detect_clang_compiler(command)
         if "gnu-cc" in command or "gcc" in command or "g++" in command or "c++" in command:
@@ -407,7 +409,7 @@ def detect_default_compiler():
 
 
 def default_msvc_ide_version(version):
-    version = {"193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     if version:
         return Version(version)
 
@@ -424,16 +426,22 @@ def _detect_vs_ide_version():
     return None
 
 
-def _cc_compiler():
+def _cc_compiler(compiler_exe="cc"):
     # Try to detect the "cc" linux system "alternative". It could point to gcc or clang
     try:
-        compiler_exe = "cc"
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
             return None, None, None
         compiler = "clang" if "clang" in out else "gcc"
-        installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
-        if installed_version:
+        # clang and gcc have version after a space, first try to find that to skip extra numbers
+        # that might appear in the first line of the output before the version
+        installed_version = re.search(r" ([0-9]+(\.[0-9])+)", out)
+        # Try only major but with spaces next
+        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9])?)", out)
+        # Fallback to the first number we find optionally followed by other version fields
+        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9])?)", out)
+        if installed_version and installed_version.group():
+            installed_version = installed_version.group()
             ConanOutput(scope="detect_api").info("Found cc=%s-%s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
@@ -520,8 +528,12 @@ def detect_clang_compiler(compiler_exe="clang"):
 
 
 def detect_msvc_compiler():
-    version = _detect_vs_ide_version()
-    version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
+    ide_version = _detect_vs_ide_version()
+    version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
+    if ide_version == "17":
+        update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
+        if update and int(update) >= 10:
+            version = "194"
     if version:
         return 'msvc', Version(version), None
     return None, None, None
@@ -575,3 +587,12 @@ def default_compiler_version(compiler, version):
     elif compiler == "intel-cc":
         return major
     return version
+
+
+def detect_sdk_version(sdk):
+    if platform.system() != "Darwin":
+        return
+    cmd = f'xcrun -sdk {sdk} --show-sdk-version'
+    result = check_output_runner(cmd)
+    result = result.strip()
+    return result

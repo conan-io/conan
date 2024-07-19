@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONANFILE, DATA_YML
+from conan.internal.paths import CONANFILE, DATA_YML
 from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 
 
@@ -80,14 +80,6 @@ class RecipeLayout(LayoutBase):
     def sources_remove(self):
         src_folder = self.source()
         rmdir(src_folder)
-
-    def export_remove(self):
-        export_folder = self.export()
-        rmdir(export_folder)
-        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
-        rmdir(export_src_folder)
-        download_export = self.download_export()
-        rmdir(download_export)
 
 
 class PackageLayout(LayoutBase):

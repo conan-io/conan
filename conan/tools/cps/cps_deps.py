@@ -1,3 +1,4 @@
+from conan.cps.cps import CPS
 from conan.tools.files import save
 
 import glob
@@ -8,12 +9,6 @@ import os
 class CPSDeps:
     def __init__(self, conanfile):
         self.conanfile = conanfile
-
-    _package_type_map = {
-        "shared-library": "dylib",
-        "static-library": "archive",
-        "header-library": "interface"
-    }
 
     def find_library(self, libdirs, bindirs, name, shared, dll):
         libdirs = [x.replace("\\", "/") for x in libdirs]
@@ -45,9 +40,6 @@ class CPSDeps:
 
     def _component(self, package_type, cpp_info, build_type):
         component = {}
-        component["Type"] = self._package_type_map.get(str(package_type), "unknown")
-        component["Definitions"] = cpp_info.defines
-        component["Includes"] = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:  # No compiled libraries, header-only
             return component
@@ -79,33 +71,8 @@ class CPSDeps:
                 mapping[dep.ref.name] = cps_in_package
                 continue
 
-            cps = {"Cps-Version": "0.8.1",
-                   "Name": dep.ref.name,
-                   "Version": str(dep.ref.version)}
-
-            build_type = str(self.conanfile.settings.build_type).lower()
-            cps["Configurations"] = [build_type]
-
-            if not dep.cpp_info.has_components:
-                # single component, called same as library
-                component = self._component(dep.package_type, dep.cpp_info, build_type)
-                if dep.dependencies:
-                    for transitive_dep in dep.dependencies.items():
-                        dep_name = transitive_dep[0].ref.name
-                        component["Requires"] = [f"{dep_name}:{dep_name}"]
-
-                cps["Default-Components"] = [f"{dep.ref.name}"]
-                cps["Components"] = {f"{dep.ref.name}": component}
-            else:
-                sorted_comps = dep.cpp_info.get_sorted_components()
-                for comp_name, comp in sorted_comps.items():
-                    component = self._component(dep.package_type, comp, build_type)
-                    cps.setdefault("Components", {})[comp_name] = component
-                cps["Default-Components"] = [comp_name for comp_name in sorted_comps]
-
-            output_file = os.path.join(self.conanfile.generators_folder, f"{dep.ref.name}.cps")
-            cps_json = json.dumps(cps, indent=4)
-            save(self.conanfile, output_file, cps_json)
+            cps = CPS.from_conan(dep)
+            output_file = cps.save(self.conanfile.generators_folder)
             mapping[dep.ref.name] = output_file
 
         name = ["cpsmap",

@@ -83,6 +83,21 @@ class _LockRequires:
         self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
         return remove
 
+    def update(self, refs, name):
+        if not refs:
+            return
+        for r in refs:
+            r = RecipeReference.loads(r)
+            new_reqs = {}
+            for k, v in self._requires.items():
+                if r.name == k.name:
+                    ConanOutput().info(f"Replacing {name}: {k.repr_notime()} -> {repr(r)}")
+                else:
+                    new_reqs[k] = v
+            self._requires = new_reqs
+            self._requires[r] = None  # No package-id at the moment
+        self.sort()
+
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
 
@@ -211,6 +226,12 @@ class Lockfile(object):
         _remove(python_requires, self._python_requires, "python_require")
         _remove(config_requires, self._conf_requires, "config_requires")
 
+    def update(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
+        self._requires.update(requires, "require")
+        self._build_requires.update(build_requires, "build_requires")
+        self._python_requires.update(python_requires, "python_requires")
+        self._conf_requires.update(config_requires, "config_requires")
+
     @staticmethod
     def deserialize(data):
         """ constructs a GraphLock from a json like dict
@@ -261,7 +282,6 @@ class Lockfile(object):
             locked_refs = self._conf_requires.refs()
         else:
             locked_refs = self._requires.refs()
-        self._resolve_overrides(require)
         try:
             self._resolve(require, locked_refs, resolve_prereleases)
         except ConanException:
@@ -273,13 +293,19 @@ class Lockfile(object):
                 ConanOutput().error(msg, error_type="exception")
             raise
 
-    def _resolve_overrides(self, require):
-        existing = self._overrides.get(require.ref)
-        if existing is not None and len(existing) == 1:
-            require.overriden_ref = require.ref  # Store that the require has been overriden
-            ref = next(iter(existing))
-            require.ref = ref
-            require.override_ref = ref
+    def resolve_overrides(self, require):
+        """ The lockfile contains the overrides to be able to inject them when the lockfile is
+        applied to upstream dependencies, that have the overrides downstream
+        """
+        if not self._overrides:
+            return
+
+        overriden = self._overrides.get(require.ref)
+        if overriden and len(overriden) == 1:
+            override_ref = next(iter(overriden))
+            require.overriden_ref = require.overriden_ref or require.ref.copy()
+            require.override_ref = override_ref
+            require.ref = override_ref
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:

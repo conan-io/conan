@@ -17,10 +17,7 @@ from os import path
 
 # The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
-excluded_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and
-                          d not in ("utils", "assets")]
+excluded_test_packages = ["test"]
 
 
 def get_requires(filename):

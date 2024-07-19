@@ -9,6 +9,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
+from conan.internal.api.remotes.localdb import LocalDB
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -141,10 +142,10 @@ class RemotesAPI:
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
         _save(self._remotes_file, remotes)
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         for remote in removed:
             remove_local_recipes_index_remote(self.conan_api, remote)
-            app.cache.localdb.clean(remote_url=remote.url)
+            localdb.clean(remote_url=remote.url)
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
@@ -200,9 +201,9 @@ class RemotesAPI:
 
     def user_info(self, remote: Remote):
         # TODO: Review
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         user_info = {}
-        user, token, _ = app.cache.localdb.get_login(remote.url)
+        user, token, _ = localdb.get_login(remote.url)
         user_info["name"] = remote.name
         user_info["user_name"] = user
         user_info["authenticated"] = True if token else False
@@ -225,29 +226,29 @@ class RemotesAPI:
 
         :param remote: The ``Remote`` object to logout
         """
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         # The localdb only stores url + username + token, not remote name, so use URL as key
-        app.cache.localdb.clean(remote_url=remote.url)
+        localdb.clean(remote_url=remote.url)
 
     def user_set(self, remote: Remote, username):
         # TODO: Review
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self.conan_api.cache_folder)
         if username == "":
             username = None
-        app.cache.localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
+        localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
 
     def user_auth(self, remote: Remote, with_user=False):
         # TODO: Review
         app = ConanApp(self.conan_api)
         if with_user:
-            user, token, _ = app.cache.localdb.get_login(remote.url)
+            user, token, _ = app.localdb.get_login(remote.url)
             if not user:
                 var_name = f"CONAN_LOGIN_USERNAME_{remote.name.replace('-', '_').upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
         app.remote_manager.check_credentials(remote)
-        user, token, _ = app.cache.localdb.get_login(remote.url)
+        user, token, _ = app.localdb.get_login(remote.url)
         return user
 
 

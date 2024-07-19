@@ -7,7 +7,7 @@ from conan.tools.scm import Git
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DATA_YML
+from conan.internal.paths import DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
@@ -44,8 +44,8 @@ def cmd_export(app, global_conf, conanfile_path, name, version, user, channel, g
     recipe_metadata = recipe_layout.metadata()
     mkdir(recipe_metadata)
     conanfile.folders.set_base_recipe_metadata(recipe_metadata)
-    export_recipe(conanfile, export_folder)
-    export_source(conanfile, export_src_folder)
+    _export_recipe(conanfile, export_folder)
+    _export_source(conanfile, export_src_folder)
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Execute post-export hook before computing the digest
@@ -128,7 +128,7 @@ def _classify_patterns(patterns):
     return included, excluded
 
 
-def export_source(conanfile, destination_source_folder):
+def _export_source(conanfile, destination_source_folder):
     if callable(conanfile.exports_sources):
         raise ConanException("conanfile 'exports_sources' shouldn't be a method, "
                              "use 'export_sources()' instead")
@@ -145,7 +145,7 @@ def export_source(conanfile, destination_source_folder):
     _run_method(conanfile, "export_sources")
 
 
-def export_recipe(conanfile, destination_folder):
+def _export_recipe(conanfile, destination_folder):
     if callable(conanfile.exports):
         raise ConanException("conanfile 'exports' shouldn't be a method, use 'export()' instead")
     if isinstance(conanfile.exports, str):

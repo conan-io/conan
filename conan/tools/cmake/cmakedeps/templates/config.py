@@ -23,12 +23,19 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 return "{}Config.cmake".format(self.file_name)
 
     @property
+    def additional_variables_prefixes(self):
+        prefix_list = (
+            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile) or [])
+        return list(set([self.file_name] + prefix_list))
+
+    @property
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
-                "file_name": self.file_name,
+                "file_name":  self.file_name,
+                "additional_variables_prefixes": self.additional_variables_prefixes,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
@@ -67,13 +74,16 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
-        set({{ file_name }}_VERSION_STRING "{{ version }}")
-        set({{ file_name }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ file_name }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
-        set({{ file_name }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
-        set({{ file_name }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
+        {% for prefix in additional_variables_prefixes %}
+        set({{ prefix }}_VERSION_STRING "{{ version }}")
+        set({{ prefix }}_INCLUDE_DIRS {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ prefix }}_INCLUDE_DIR {{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }} )
+        set({{ prefix }}_LIBRARIES {{ pkg_var(pkg_name, 'LIBRARIES', config_suffix) }} )
+        set({{ prefix }}_DEFINITIONS {{ pkg_var(pkg_name, 'DEFINITIONS', config_suffix) }} )
 
-        # Only the first installed configuration is included to avoid the collision
+        {% endfor %}
+
+        # Only the last installed configuration BUILD_MODULES are included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})

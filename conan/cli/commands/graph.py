@@ -8,15 +8,15 @@ from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
+from conan.cli.formatters.graph.build_order_html import format_build_order_html
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
-from conans.errors import ConanConnectionError, NotFoundException
+from conans.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
-from conans.model.version_range import VersionRange
 
 
 def explain_formatter_text(data):
@@ -63,7 +63,8 @@ def json_build_order(build_order):
     cli_out_write(json.dumps(build_order, indent=4))
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
     Compute the build order of a dependency graph.
@@ -130,7 +131,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     return install_order_serialized
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merge more than 1 build-order file.
@@ -176,7 +178,10 @@ def graph_info(conan_api, parser, subparser, *args):
     subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
-                           help='Deploy using the provided deployer to the output folder')
+                           help="Deploy using the provided deployer to the output folder. "
+                                "Built-in deployers: 'full_deploy', 'direct_deploy'. Deployers "
+                                "will only deploy recipes, as 'conan graph info' do not retrieve "
+                                "binaries")
     subparser.add_argument("-df", "--deployer-folder",
                            help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
@@ -214,10 +219,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          remotes, args.update,
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
-    if deps_graph.error:
-        ConanOutput().info("Graph error", Color.BRIGHT_RED)
-        ConanOutput().info("    {}".format(deps_graph.error), Color.BRIGHT_RED)
-    else:
+    if not deps_graph.error:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
@@ -252,7 +254,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
                            help='Whether the provided reference is a build-require')
     subparser.add_argument('--missing', nargs="?",
                            help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                                "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                                "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                                 "If revision is not specified, it is assumed latest one.")
 
     args = parser.parse_args(*args)
