@@ -91,8 +91,6 @@ class _Component:
             self.libdirs = ["lib"]
             self.bindirs = ["bin"]
 
-        self.type = None  # By default it will be the package_type
-
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -238,6 +236,16 @@ class _Component:
     def libs(self):
         if self._libs is None:
             self._libs = []
+        if isinstance(self._libs, dict):
+            return [self._libs.keys()]  # Return a list to not break any interface
+        return self._libs
+
+    @property
+    def full_libs(self):
+        if self._libs is None:
+            self._libs = []
+        if isinstance(self._libs, list):
+            return {k: {} for k in self._libs}
         return self._libs
 
     @libs.setter

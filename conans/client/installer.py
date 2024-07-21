@@ -413,9 +413,6 @@ class BinaryInstaller:
                         MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
 
-                # CPS
-                conanfile.cpp.package.type = conanfile.package_type
-
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
