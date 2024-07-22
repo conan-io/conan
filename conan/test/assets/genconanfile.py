@@ -49,6 +49,8 @@ class GenConanfile(object):
         self._cmake_build = False
         self._class_attributes = None
 
+        self._is_tested_ref_build_require = None
+
     def with_package_type(self, value):
         self._package_type = value
         return self
@@ -142,6 +144,10 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = self._get_full_ref_str(ref)
             self._test_requires.append(ref_str)
+        return self
+
+    def with_test_reference_as_build_require(self):
+        self._is_tested_ref_build_require = True
         return self
 
     def with_build_requirement(self, ref, **kwargs):
@@ -403,12 +409,12 @@ class GenConanfile(object):
     def _install_method_render(self):
         lines = []
         if self._install_lines:
-            lines.extend("        {}".format(line) for line in self._install_lines)
+            lines.extend("    {}".format(line) for line in self._install_lines)
 
         if not lines:
             return ""
         return """
-        def install(self):
+    def install(self):
     {}
         """.format("\n".join(lines))
 
@@ -456,11 +462,20 @@ class GenConanfile(object):
 
     @property
     def _test_lines_render(self):
-        lines = ["",
-                 "    def requirements(self):",
-                 '         self.requires(self.tested_reference_str)',
-                 "",
-                 '    def test(self):'] + ['        %s' % m for m in self._test_lines]
+        if self._is_tested_ref_build_require:
+            lines = ["",
+                     "    def build_requirements(self):",
+                     '         self.tool_requires(self.tested_reference_str)',
+                     "",
+                     '    def test(self):']
+        else:
+            lines = ["",
+                     "    def requirements(self):",
+                     '         self.requires(self.tested_reference_str)',
+                     "",
+                     '    def test(self):']
+
+        lines += ['        %s' % m for m in self._test_lines]
         return "\n".join(lines)
 
     @property

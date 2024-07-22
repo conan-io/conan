@@ -150,7 +150,24 @@ class TestToolRequiresFlows:
         pass
 
     def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
-        pass
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("app", "1.0")
+                .with_import("from conan.tools.files import save")
+                .with_package_type("application")
+                .with_package("save(self, 'file.txt', 'Hello World!')")
+                .with_package_info({"bindirs": ["bin"]}, {})
+                .with_install("save(self, 'installed.txt', 'Installed file')"),
+                 "test_package/conanfile.py": GenConanfile()
+                .with_import("from conan.tools.files import save")
+                .with_import("import os")
+                .with_test_reference_as_build_require()
+                .with_test(
+                     "bindir = self.dependencies.build[self.tested_reference_str].cpp_info.bindir",
+                     "save(self, os.path.join(bindir, 'test.txt'), 'Test file')")})
+        tc.run("create . --build-require")
+        created_ref = tc.created_package_reference("app/1.0")
+        tc.run(f"cache check-integrity {created_ref}")
+        assert "There are corrupted artifacts" not in tc.out
 
 
 class TestRemoteFlows:
