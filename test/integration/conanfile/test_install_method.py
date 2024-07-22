@@ -98,7 +98,9 @@ class TestBasicLocalFlows:
         client.run("cache restore conan_cache_save.tgz")
         client.run(f"cache path {dep_layout.reference}")
         package_folder = client.out.strip()
-        assert "installed.txt" in os.listdir(package_folder)
+        # The install() folder does not exist as restoring is not considered usage, so it never runs
+        # so this is just the immutable package_folder
+        assert "installed.txt" not in os.listdir(package_folder)
 
     def test_lockfile_interaction(self):
         pass
