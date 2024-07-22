@@ -4,8 +4,9 @@ import os
 from enum import Enum
 
 from conan.api.output import ConanOutput
+from conans.model.build_info import CppInfo
 from conans.model.pkg_type import PackageType
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 class CPSComponentType(Enum):
@@ -14,6 +15,7 @@ class CPSComponentType(Enum):
     INTERFACE = "interface"
     EXE = "exe"
     JAR = "jar"
+    UNKNOWN = "unknown"
 
     def __str__(self):
         return self.value
@@ -108,8 +110,15 @@ class CPSComponent:
             component["link_location"] = self.link_location
         return component
 
-    def deserialize(self):
-        pass
+    @staticmethod
+    def deserialize(data):
+        comp = CPSComponent()
+        comp.type = CPSComponentType(data.get("type"))
+        comp.includes = data.get("includes")
+        comp.definitions = data.get("definitions")
+        comp.location = data.get("location")
+        comp.link_location = data.get("link_location")
+        return comp
 
     @staticmethod
     def from_cpp_info(cpp_info, pkg_type, libname=None):
@@ -151,9 +160,7 @@ class CPS:
     def serialize(self):
         cps = {"cps_version": "0.12.0",
                "name": self.name,
-               "version": self.version,
-               "default_components": self.default_components,
-               "components": {}}
+               "version": self.version}
 
         # Supplemental
         for data in "license", "description", "website":
@@ -163,13 +170,26 @@ class CPS:
         if self.configurations:
             cps["configurations"] = self.configurations
 
+        cps["default_components"] = self.default_components
+        cps["components"] = {}
         for name, comp in self.components.items():
             cps["components"][name] = comp.serialize()
 
         return cps
 
-    def deserialize(self):
-        pass
+    @staticmethod
+    def deserialize(data):
+        cps = CPS()
+        cps.name = data.get("name")
+        cps.version = data.get("version")
+        cps.license = data.get("license")
+        cps.description = data.get("description")
+        cps.website = data.get("website")
+        cps.configurations = data.get("configurations")
+        cps.default_components = data.get("default_components")
+        cps.components = {k: CPSComponent.deserialize(v)
+                          for k, v in data.get("components", {}).items()}
+        return cps
 
     @staticmethod
     def from_conan(dep):
@@ -214,7 +234,23 @@ class CPS:
 
         return cps
 
+    def to_conan(self):
+        cpp_info = CppInfo()
+        if len(self.components) == 1:
+            comp = next(iter(self.components.values()))
+            cpp_info.includedirs = comp.includes
+            cpp_info.defines = comp.definitions
+        else:
+            for comp_name, comp in self.components.items():
+                cpp_info.components[comp_name] = comp.to_conan()
+        return cpp_info
+
     def save(self, folder):
         filename = os.path.join(folder, f"{self.name}.cps")
         save(filename, json.dumps(self.serialize(), indent=4))
         return filename
+
+    @staticmethod
+    def load(file):
+        contents = load(file)
+        return CPS.deserialize(json.loads(contents))

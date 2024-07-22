@@ -1,8 +1,10 @@
+import json
 import os
 import shutil
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
+from conan.cps.cps import CPS
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conan.internal.api.install.generators import write_generators
@@ -407,6 +409,10 @@ class BinaryInstaller:
             with conanfile_exception_formatter(conanfile, "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
+                cps_file = os.path.join(package_folder, f"{conanfile.name}.cps")
+                if os.path.exists(cps_file):
+                    cps = CPS.load(cps_file)
+                    conanfile.cpp_info = cps.to_conan()
                 if hasattr(conanfile, "package_info"):
                     with conanfile_remove_attr(conanfile, ['info', "source_folder", "build_folder"],
                                                "package_info"):

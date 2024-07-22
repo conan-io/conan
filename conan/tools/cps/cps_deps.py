@@ -1,7 +1,6 @@
 from conan.cps.cps import CPS
 from conan.tools.files import save
 
-import glob
 import json
 import os
 
@@ -9,29 +8,6 @@ import os
 class CPSDeps:
     def __init__(self, conanfile):
         self.conanfile = conanfile
-
-
-
-    def _component(self, package_type, cpp_info, build_type):
-        component = {}
-
-        if not cpp_info.libs:  # No compiled libraries, header-only
-            return component
-        is_shared = package_type == "shared-library"
-        if is_shared and self.conanfile.settings.os == "Windows":
-            dll_location = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
-                                             cpp_info.libs, is_shared, dll=True)
-            import_library = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
-                                               cpp_info.libs, is_shared, dll=False)
-            locations = {'Location': dll_location,
-                         'Link-Location': import_library}
-            component["Configurations"] = {build_type: locations}  # noqa
-        elif package_type == "static-library":
-            library_location = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
-                                                 cpp_info.libs, is_shared, dll=False)
-            component["Configurations"] = {build_type: {'Location': library_location}}
-
-        return component
 
     def generate(self):
         self.conanfile.output.info(f"[CPSDeps] generators folder {self.conanfile.generators_folder}")

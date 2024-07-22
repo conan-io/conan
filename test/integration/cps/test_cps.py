@@ -50,14 +50,14 @@ def test_cps_in_pkg():
     c = TestClient()
     cps = textwrap.dedent("""
         {
-          "Cps-Version": "0.8.1",
-          "Name": "pkg",
-          "Version": "0.1",
-          "Configurations": ["release"],
-          "Default-Components": ["pkg"],
-          "Components": {
-            "pkg": { "Type": "unknown", "Definitions": [],
-                     "Includes": ["include"]}
+          "cps_version": "0.8.1",
+          "name": "pkg",
+          "version": "0.1",
+          "configurations": ["release"],
+          "default-Components": ["pkg"],
+          "components": {
+            "pkg": { "type": "unknown", "definitions": ["mydefine"],
+                     "includes": ["myinc"]}
           }
         }
         """)
@@ -87,3 +87,10 @@ def test_cps_in_pkg():
         assert os.path.exists(path_cps)
 
     assert not os.path.exists(os.path.join(c.current_folder, "mypkg.cps"))
+
+    c.run("install --requires=mypkg/0.1 -s arch=x86_64 -g CMakeDeps")
+    print(c.out)
+    cmake = c.load("mypkg-release-x86_64-data.cmake")
+    print(cmake)
+    assert 'set(mypkg_INCLUDE_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myinc")' in cmake
+    assert 'set(mypkg_COMPILE_DEFINITIONS_RELEASE "mydefine")' in cmake
