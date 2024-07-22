@@ -319,6 +319,10 @@ class ConanFile:
         return self.folders.base_package
 
     @property
+    def immutable_package_folder(self):
+        return self.folders.immutable_package_folder
+
+    @property
     def install_folder(self):
         return self.folders.install_folder
 
