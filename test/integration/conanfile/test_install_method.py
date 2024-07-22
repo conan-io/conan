@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 
@@ -71,8 +72,33 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.package()}" not in client.out
         assert f"Dep package folder: {dep_layout.install()}" in client.out
 
-    def test_save_restore_cache(self):
-        pass
+    def test_cache_path_command(self, client):
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        pref = client.created_package_reference("dep/1.0")
+        client.run(f"cache path {pref}")
+        assert dep_layout.package() not in client.out
+        assert dep_layout.install() in client.out
+
+    def test_save_restore_cache(self, client):
+        # Not created in the cache, just exported, nothing breaks because there is not even a package there
+        client.run("cache save *:*")
+        client.run("remove * -c")
+        client.run("cache restore conan_cache_save.tgz")
+        # Now create the package and then save/restore
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("cache save *:* -f=json", redirect_stdout="saved.json")
+        saved = json.loads(client.load("saved.json"))
+        pref = dep_layout.reference
+        assert saved["Local Cache"]["dep/1.0"]["revisions"][pref.ref.revision]["packages"][pref.package_id]["revisions"][pref.revision]["package_folder"] in dep_layout.package()
+        client.run("remove * -c")
+        assert not os.path.exists(dep_layout.package())
+        assert not os.path.exists(dep_layout.install())
+        client.run("cache restore conan_cache_save.tgz")
+        client.run(f"cache path {dep_layout.reference}")
+        package_folder = client.out.strip()
+        assert "installed.txt" in os.listdir(package_folder)
 
     def test_lockfile_interaction(self):
         pass
@@ -93,6 +119,9 @@ class TestBasicLocalFlows:
         pass
 
     def test_check_integrity(self):
+        pass
+
+    def test_access_invariant_from_consumer(self):
         pass
 
 
