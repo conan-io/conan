@@ -240,9 +240,10 @@ class GenConanfile(object):
         self._package_id_lines.append(line)
         return self
 
-    def with_test(self, line):
+    def with_test(self, *lines):
         self._test_lines = self._test_lines or []
-        self._test_lines.append(line)
+        for line in lines:
+            self._test_lines.append(line)
         return self
 
     def with_cmake_build(self):
