@@ -81,7 +81,8 @@ class TestBasicLocalFlows:
         pass
 
     def test_graph_info_output(self):
-        # The output should serialize the orignal package folder path to give users the info
+        # The output should serialize the orignal package folder path to give users the info,
+        # but maybe also the install one?
         pass
 
     def test_create_pkglist_output(self):
@@ -89,9 +90,6 @@ class TestBasicLocalFlows:
 
     def test_vendorized(self):
         # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
-        pass
-
-    def test_original_package_available_graph_info(self):
         pass
 
     def test_check_integrity(self):
