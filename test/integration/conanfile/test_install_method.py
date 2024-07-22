@@ -90,8 +90,13 @@ class TestBasicLocalFlows:
     def test_vendorized(self):
         # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
         pass
+
     def test_original_package_available_graph_info(self):
         pass
+
+    def test_check_integrity(self):
+        pass
+
 
 class TestToolRequiresFlows:
     def test_tool_requires(self):
