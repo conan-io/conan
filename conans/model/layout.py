@@ -46,7 +46,7 @@ class Folders(object):
         self._base_recipe_metadata = None
         self._base_pkg_metadata = None
         # TODO: Think about adding invariant package fodlder ref in case of install()
-        # self._invariant_package_folder = None
+        self._original_package_folder = None
 
         self.source = ""
         self.build = ""
