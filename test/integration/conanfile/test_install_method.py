@@ -97,6 +97,9 @@ class TestBasicLocalFlows:
     def test_check_integrity(self):
         pass
 
+    def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
+        pass
+
 
 class TestToolRequiresFlows:
     def test_tool_requires(self):
