@@ -80,6 +80,9 @@ class TestBasicLocalFlows:
         assert dep_layout.package() not in client.out
         assert dep_layout.install() in client.out
 
+    def test_remove_deletes_correct_folders(self):
+        pass
+
     def test_save_restore_cache(self, client):
         # Not created in the cache, just exported, nothing breaks because there is not even a package there
         client.run("cache save *:*")
@@ -103,9 +106,6 @@ class TestBasicLocalFlows:
         assert "installed.txt" not in os.listdir(package_folder)
 
     def test_lockfile_interaction(self):
-        pass
-
-    def test_remove_deletes_correct_folders(self):
         pass
 
     def test_graph_info_output(self):
