@@ -146,7 +146,6 @@ class Folders(object):
         return self._base_package
 
     def set_install_folder(self, folder):
-        # TODO: Store when the install folder is set, to be able to access the old package later
         self._original_package_folder = self.package_folder
         self.install = folder
 
