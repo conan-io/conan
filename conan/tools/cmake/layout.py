@@ -94,9 +94,11 @@ def get_build_folder_custom_vars(conanfile):
                     tmp = "{}_{}".format(var, value)
         elif group == "self":
             tmp = getattr(conanfile, var, None)
+        elif group == "const":
+            tmp = var
         else:
             raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
-                                 " to start with 'settings.' or 'options.': {}".format(s))
+                                 f" to start with 'settings.', 'options.', 'self.' or 'const.': {s}")
         if tmp:
             ret.append(tmp.lower())
 

@@ -4,7 +4,7 @@ import textwrap
 from requests import Response
 
 from conan.test.utils.tools import TestClient, TestRequester
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
 
 

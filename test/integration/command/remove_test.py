@@ -9,7 +9,7 @@ from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 conaninfo = '''
 [settings]

@@ -1,5 +1,6 @@
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -29,3 +30,15 @@ def test_settings_not_defined_consuming():
     # It doesn't fail, even if settings not defined
     c.run("install --requires=pkg/1.0 -pr=profile -s os=Linux -s arch=x86")
     # It doesn't fail, even if settings different value
+
+
+def test_settings_undefined():
+    client = TestClient()
+    client.save({
+        "conanfile.py": GenConanfile(name="hello", version="1.0")
+    })
+    # Undefined settings field
+    client.run("install . -s foo=None", assert_error=True)
+    assert "'settings.foo' doesn't exist for 'settings'" in client.out
+    client.run("install . -s foo.bar=None", assert_error=True)
+    assert "'settings.foo' doesn't exist for 'settings'" in client.out

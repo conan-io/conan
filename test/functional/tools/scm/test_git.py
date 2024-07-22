@@ -617,7 +617,7 @@ class TestGitBasicSCMFlow:
                                                    "CMakeLists.txt": "mycmake"}, folder=folder)
 
         c = TestClient(default_server_user=True)
-        c.run_command('git clone "{}" .'.format(url))
+        c.run_command('git clone "file://{}" .'.format(url))
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
@@ -648,7 +648,7 @@ class TestGitBasicSCMFlow:
         conanfile = self.conanfile_scm if conanfile_scm else self.conanfile_full
         url = git_create_bare_repo()
         c = TestClient(default_server_user=True)
-        c.run_command('git clone "{}" .'.format(url))
+        c.run_command('git clone "file://{}" .'.format(url))
         c.save({"conanfile.py": conanfile,
                 "src/myfile.h": "myheader!",
                 "CMakeLists.txt": "mycmake"})
