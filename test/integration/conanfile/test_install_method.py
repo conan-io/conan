@@ -222,6 +222,7 @@ class TestRemoteFlows:
         client.run(f"download {created_pref} -r=default")
         downloaded_pref_layout = client.get_latest_pkg_layout(created_pref)
         assert "file.txt" in os.listdir(downloaded_pref_layout.package())
+        # Download is not an "usage" of the package, so no install() is yet executed
         assert "installed.txt" not in os.listdir(downloaded_pref_layout.package())
         assert not os.path.exists(os.path.join(downloaded_pref_layout.install()))
 
