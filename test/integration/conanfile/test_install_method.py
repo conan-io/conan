@@ -140,8 +140,26 @@ class TestBasicLocalFlows:
         client.run(f"cache check-integrity {dep_layout.reference}", assert_error=True)
         assert "There are corrupted artifacts" in client.out
 
-    def test_access_invariant_from_consumer(self):
-        pass
+    @pytest.mark.parametrize("with_install_method", [True, False])
+    def test_access_immutable_from_consumer(self, client, with_install_method):
+        if not with_install_method:
+            client.save({"dep/conanfile.py": GenConanfile("dep", "1.0")})
+        client.save({"app/conanfile.py": GenConanfile("app", "1.0")
+                     .with_requires("dep/1.0")
+                     .with_package("dep = self.dependencies['dep/1.0']",
+                                   "self.output.info(f'Immutable package: {dep.immutable_package_folder}')",
+                                   # TODO: Think about if we want this interface
+                                   # "self.output.info(f'Install: {dep.install_folder}')",
+                                   "self.output.info(f'Package: {dep.package_folder}')")})
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("create app")
+        assert f"app/1.0: Immutable package: {dep_layout.package()}" in client.out
+        # assert f"app/1.0: Install: {dep_layout.install()}" in client.out
+        if with_install_method:
+            assert f"app/1.0: Package: {dep_layout.install()}" in client.out
+        else:
+            assert f"app/1.0: Package: {dep_layout.package()}" in client.out
 
 
 class TestToolRequiresFlows:
