@@ -12,7 +12,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io
-- Slack: https://cpplang.slack.com (#conan channel)
+- Slack: https://cpplang.slack.com (#conan channel. Please, click [here](https://join.slack.com/t/cpplang/shared_invite/zt-1snzdn6rp-rOUxF3166oz1_11Tr5H~xg) to get an invitation)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -27,18 +27,12 @@ Conan is a package manager for C and C++ developers:
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its Python-based recipes, together with extension points allow for great power and flexibility.
-- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cpplang-inviter.cppalliance.org/ #conan channel).
+- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cppalliance.org/slack/ #conan channel).
   This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
 This is the **developer/maintainer** documentation. For user documentation, go to https://docs.conan.io
-
-
-| **develop2**            |
-|-------------------------|
-| [![Build Status Develop](https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop)](https://ci.conan.io/blue/organizations/jenkins/ConanTestSuitev2/activity)  |
-
 
 
 ## Setup
@@ -61,7 +55,7 @@ You can run Conan from source in Windows, MacOS, and Linux:
   $ cd conan-io && sudo pip install -e .
   ```
 
-  If you are in Windows, using ``sudo`` is not required.
+  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first, is mandatory.
 
 - **You are ready, try to run Conan:**
 
@@ -79,9 +73,9 @@ You can run Conan from source in Windows, MacOS, and Linux:
 
 
 Feedback and contribution are always welcome in this project.
-Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop2/.github/CONTRIBUTING.md).
 Also, if you plan to contribute, please add some testing for your changes. You can read the [Conan
-tests guidelines section](https://github.com/conan-io/conan/blob/develop/conans/test/README.md) for
+tests guidelines section](https://github.com/conan-io/conan/blob/develop2/test/README.md) for
 some advice on how to write tests for Conan.
 
 ### Running the tests
@@ -90,6 +84,7 @@ some advice on how to write tests for Conan.
 **Install Python requirements**
 
 ```bash
+$ python -m pip install -r conans/requirements.txt
 $ python -m pip install -r conans/requirements_server.txt
 $ python -m pip install -r conans/requirements_dev.txt
 ```
@@ -133,7 +128,7 @@ OK
 To run specific tests, you can specify the test name too, something like:
 
 ```bash
-$ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
+$ python -m pytest test/functional/command/export_test.py::TestRevisionModeSCM::test_revision_mode_scm -s
 ```
 
 The `-s` argument can be useful to see some output that otherwise is captured by *pytest*.

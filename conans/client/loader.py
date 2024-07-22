@@ -5,6 +5,7 @@ import re
 import sys
 import types
 import uuid
+from threading import Lock
 
 import yaml
 
@@ -19,7 +20,7 @@ from conans.errors import ConanException, NotFoundException, conanfile_exception
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DATA_YML
+from conan.internal.paths import DATA_YML
 from conans.util.files import load, chdir, load_user_encoded
 
 
@@ -52,8 +53,11 @@ class ConanFileLoader:
             return conanfile, cached[1]
 
         try:
-            module, conanfile = parse_conanfile(conanfile_path)
-            if tested_python_requires:
+            module, conanfile = _parse_conanfile(conanfile_path)
+            if isinstance(tested_python_requires, RecipeReference):
+                if getattr(conanfile, "python_requires", None) == "tested_reference_str":
+                    conanfile.python_requires = tested_python_requires.repr_notime()
+            elif tested_python_requires:
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
@@ -126,14 +130,9 @@ class ConanFileLoader:
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
                 conanfile.set_name()
-            if name and name != conanfile.name:
-                raise ConanException("Package recipe with name %s!=%s" % (name, conanfile.name))
         if hasattr(conanfile, "set_version"):
             with conanfile_exception_formatter("conanfile.py", "set_version"):
                 conanfile.set_version()
-            if version and version != conanfile.version:
-                raise ConanException("Package recipe with version %s!=%s"
-                                     % (version, conanfile.version))
 
         return conanfile
 
@@ -162,7 +161,9 @@ class ConanFileLoader:
                                     remotes, update, check_update,
                                     tested_python_requires=tested_python_requires)
 
-        ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
+        if conanfile.channel and not conanfile.user:
+            raise ConanException(f"{conanfile_path}: Can't specify channel without user")
+        ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
@@ -206,7 +207,8 @@ class ConanFileLoader:
         conanfile._conan_is_consumer = True
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, display_name):
+    @staticmethod
+    def _parse_conan_txt(contents, path, display_name):
         conanfile = ConanFile(display_name)
 
         try:
@@ -241,7 +243,6 @@ class ConanFileLoader:
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile.txt\n"
                                  "Options should be specified as 'pkg/*:option=value'")
-
         return conanfile
 
     def load_virtual(self, requires=None, tool_requires=None, python_requires=None, graph_lock=None,
@@ -252,7 +253,7 @@ class ConanFileLoader:
 
         if tool_requires:
             for reference in tool_requires:
-                conanfile.requires.build_require(repr(reference))
+                conanfile.requires.tool_require(repr(reference))
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))
@@ -293,10 +294,14 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def parse_conanfile(conanfile_path):
-    module, filename = load_python_file(conanfile_path)
+_load_python_lock = Lock()  # Loading our Python files is not thread-safe (modifies sys)
+
+
+def _parse_conanfile(conanfile_path):
+    with _load_python_lock:
+        module, module_id = _load_python_file(conanfile_path)
     try:
-        conanfile = _parse_module(module, filename)
+        conanfile = _parse_module(module, module_id)
         return module, conanfile
     except Exception as e:  # re-raise with file name
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -305,9 +310,21 @@ def parse_conanfile(conanfile_path):
 def load_python_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
+    with _load_python_lock:
+        module, module_id = _load_python_file(conan_file_path)
+    return module, module_id
+
+
+def _load_python_file(conan_file_path):
+    """ From a given path, obtain the in memory python import module
+    """
 
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
+
+    def new_print(*args, **kwargs):  # Make sure that all user python files print() goes to stderr
+        kwargs.setdefault("file", sys.stderr)
+        print(*args, **kwargs)
 
     module_id = str(uuid.uuid1())
     current_dir = os.path.dirname(conan_file_path)
@@ -351,6 +368,7 @@ def load_python_file(conan_file_path):
                 else:
                     if folder.startswith(current_dir):
                         module = sys.modules.pop(added)
+                        module.print = new_print
                         sys.modules["%s.%s" % (module_id, added)] = module
     except ConanException:
         raise
@@ -362,6 +380,7 @@ def load_python_file(conan_file_path):
     finally:
         sys.path.pop(0)
 
+    loaded.print = new_print
     return loaded, module_id
 
 

@@ -4,11 +4,13 @@ import shutil
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
+from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import NotFoundException, ConanException, AuthenticationException, \
     ForbiddenException
-from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
+from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
 
 
 class SourcesCachingDownloader:
@@ -18,8 +20,9 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name)
-        self._cache = helpers.cache
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name,
+                                               source_credentials=True)
+        self._home_folder = helpers.home_folder
         self._output = conanfile.output
         self._conanfile = conanfile
 
@@ -47,7 +50,7 @@ class SourcesCachingDownloader:
         something is found.
         """
         # We are going to use the download_urls definition for backups
-        download_cache_folder = download_cache_folder or self._cache.default_sources_backup_folder
+        download_cache_folder = download_cache_folder or HomePaths(self._home_folder).default_sources_backup_folder
         # regular local shared download cache, not using Conan backup sources servers
         backups_urls = backups_urls or ["origin"]
         if download_cache_folder and not os.path.isabs(download_cache_folder):
@@ -158,6 +161,7 @@ class ConanInternalCacheDownloader:
         if self._download_cache and not os.path.isabs(self._download_cache):
             raise ConanException("core.download:download_cache must be an absolute path")
         self._file_downloader = FileDownloader(requester, scope=scope)
+        self._scope = scope
 
     def download(self, url, file_path, auth, verify_ssl, retry, retry_wait, metadata=False):
         if not self._download_cache or metadata:  # Metadata not cached and can be overwritten
@@ -175,6 +179,15 @@ class ConanInternalCacheDownloader:
                     self._file_downloader.download(url, cached_path, retry=retry,
                                                    retry_wait=retry_wait, verify_ssl=verify_ssl,
                                                    auth=auth, overwrite=False)
+            else:  # Found in cache!
+                total_length = os.path.getsize(cached_path)
+                is_large_file = total_length > 10000000  # 10 MB
+                if is_large_file:
+                    base_name = os.path.basename(file_path)
+                    hs = human_size(total_length)
+                    ConanOutput(scope=self._scope).info(f"Copying {hs} {base_name} from download "
+                                                        f"cache, instead of downloading it")
+
             # Everything good, file in the cache, just copy it to final destination
             mkdir(os.path.dirname(file_path))
             shutil.copy2(cached_path, file_path)

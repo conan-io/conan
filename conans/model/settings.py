@@ -1,5 +1,6 @@
 import yaml
 
+from conan.internal.internal_tools import is_universal_arch
 from conans.errors import ConanException
 
 
@@ -17,25 +18,32 @@ def undefined_field(name, field, fields=None, value=None):
     return ConanException("\n".join(result))
 
 
-class SettingsItem(object):
+class SettingsItem:
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
     - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
-    def __init__(self, definition, name):
+    def __init__(self, definition, name, value):
+        self._definition = definition  # range of possible values
         self._name = name  # settings.compiler
-        self._value = None  # gcc
+        self._value = value  # gcc
+
+    @staticmethod
+    def new(definition, name):
+        if definition is None:
+            raise ConanException(f"Definition of settings.yml '{name}' cannot be null")
         if isinstance(definition, dict):
-            self._definition = {}
+            parsed_definitions = {}
             # recursive
             for k, v in definition.items():
                 # None string from yaml definition maps to python None, means not-defined value
                 k = str(k) if k is not None else None
-                self._definition[k] = Settings(v, name, k)
+                parsed_definitions[k] = Settings(v, name, k)
         else:
             # list or tuple of possible values, it can include "ANY"
-            self._definition = [str(v) if v is not None else None for v in definition]
+            parsed_definitions = [str(v) if v is not None else None for v in definition]
+        return SettingsItem(parsed_definitions, name, None)
 
     def __contains__(self, value):
         return value in (self._value or "")
@@ -43,21 +51,19 @@ class SettingsItem(object):
     def copy(self):
         """ deepcopy, recursive
         """
-        result = SettingsItem({}, name=self._name)
-        result._value = self._value
         if not isinstance(self._definition, dict):
-            result._definition = self._definition[:]
+            definition = self._definition  # Not necessary to copy this, not mutable
         else:
-            result._definition = {k: v.copy() for k, v in self._definition.items()}
-        return result
+            definition = {k: v.copy() for k, v in self._definition.items()}
+        return SettingsItem(definition, self._name, self._value)
 
     def copy_conaninfo_settings(self):
         """ deepcopy, recursive
         This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
         values, but not all, just the "final" values without subsettings.
-        We cannot let usres manipulate to random strings
+        We cannot let users manipulate to random strings
         things that contain subsettings like ``compiler``, because that would leave the thing
-        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        in an undefined state, with some now inconsistent subsettings, that cannot be accessed
         anymore. So with this change the options are:
         - If you need more "binary-compatible" descriptions of a compiler, lets say like
         "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
@@ -65,14 +71,12 @@ class SettingsItem(object):
         - Settings that are "final" (lists), like build_type, or arch or compiler.version they
         can get any value without issues.
         """
-        result = SettingsItem({}, name=self._name)
-        result._value = self._value
         if not isinstance(self._definition, dict):
-            result._definition = self._definition[:] + ["ANY"]
+            definition = self._definition[:] + ["ANY"]
         else:
-            result._definition = {k: v.copy_conaninfo_settings()
-                                  for k, v in self._definition.items()}
-        return result
+            definition = {k: v.copy_conaninfo_settings() for k, v in self._definition.items()}
+            definition["ANY"] = Settings()
+        return SettingsItem(definition, self._name, self._value)
 
     def __bool__(self):
         if not self._value:
@@ -97,7 +101,8 @@ class SettingsItem(object):
 
     def _validate(self, value):
         value = str(value) if value is not None else None
-        if "ANY" not in self._definition and value not in self._definition:
+        is_universal = is_universal_arch(value, self._definition) if self._name == "settings.arch" else False
+        if "ANY" not in self._definition and value not in self._definition and not is_universal:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
 
@@ -106,6 +111,11 @@ class SettingsItem(object):
             raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
             raise ConanException("'%s' value not defined" % self._name)
+        return self._get_definition()
+
+    def _get_definition(self):
+        if self._value not in self._definition and "ANY" in self._definition:
+            return self._definition["ANY"]
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -142,7 +152,7 @@ class SettingsItem(object):
         partial_name = ".".join(self._name.split(".")[1:])
         result.append((partial_name, self._value))
         if isinstance(self._definition, dict):
-            sub_config_dict = self._definition[self._value]
+            sub_config_dict = self._get_definition()
             result.extend(sub_config_dict.values_list)
         return result
 
@@ -150,7 +160,7 @@ class SettingsItem(object):
         if self._value is None and None not in self._definition:
             raise ConanException("'%s' value not defined" % self._name)
         if isinstance(self._definition, dict):
-            self._definition[self._value].validate()
+            self._get_definition().validate()
 
     def possible_values(self):
         if isinstance(self._definition, list):
@@ -180,8 +190,7 @@ class Settings(object):
             raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
-        self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
-                      for k, v in definition.items()}
+        self._data = {k: SettingsItem.new(v, f"{name}.{k}") for k, v in definition.items()}
         self._frozen = False
 
     def serialize(self):
@@ -196,7 +205,7 @@ class Settings(object):
 
     def get_safe(self, name, default=None):
         """
-        Get the setting value avoiding
+        Get the setting value avoiding throwing if it does not exist or has been removed
         :param name:
         :param default:
         :return:
@@ -223,20 +232,21 @@ class Settings(object):
             except KeyError:
                 pass
         else:
-            self._data.pop(name, None)
+            if name == "*":
+                self.clear()
+            else:
+                self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive
         """
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        for k, v in self._data.items():
-            result._data[k] = v.copy()
+        result._data = {k: v.copy() for k, v in self._data.items()}
         return result
 
     def copy_conaninfo_settings(self):
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        for k, v in self._data.items():
-            result._data[k] = v.copy_conaninfo_settings()
+        result._data = {k: v.copy_conaninfo_settings() for k, v in self._data.items()}
         return result
 
     @staticmethod
@@ -292,23 +302,24 @@ class Settings(object):
     def items(self):
         return self.values_list
 
-    def update_values(self, vals):
-        """ receives a list of tuples (compiler.version, value)
-        This is more an updated than a setter
+    def update_values(self, values, raise_undefined=True):
+        """
+        Receives a list of tuples (compiler.version, value)
+        This is more an updater than a setter.
         """
         self._frozen = False  # Could be restored at the end, but not really necessary
-        assert isinstance(vals, (list, tuple)), vals
-        for (name, value) in vals:
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
             list_settings = name.split(".")
             attr = self
             try:
                 for setting in list_settings[:-1]:
                     attr = getattr(attr, setting)
-            except ConanException:  # fails if receiving settings doesn't have it defined
-                pass
-            else:
                 value = str(value) if value is not None else None
                 setattr(attr, list_settings[-1], value)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                if raise_undefined:
+                    raise
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

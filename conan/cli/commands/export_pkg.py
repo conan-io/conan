@@ -7,6 +7,7 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import _get_test_conanfile_path
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers.graph import print_graph_basic
+from conans.errors import ConanException
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -45,11 +46,14 @@ def export_pkg(conan_api, parser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
 
+    conanfile = conan_api.local.inspect(path, remotes, lockfile, name=args.name,
+                                        version=args.version, user=args.user, channel=args.channel)
+    # The package_type is not fully processed at export
+    if conanfile.package_type == "python-require":
+        raise ConanException("export-pkg can only be used for binaries, not for 'python-require'")
     ref, conanfile = conan_api.export.export(path=path, name=args.name, version=args.version,
                                              user=args.user, channel=args.channel, lockfile=lockfile,
                                              remotes=remotes)
-    # The package_type is not fully processed at export
-    assert conanfile.package_type != "python-require", "A python-require cannot be export-pkg"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
                                                          args.build_require)
 
@@ -90,9 +94,10 @@ def export_pkg(conan_api, parser, *args):
 
     if test_conanfile_path:
         from conan.cli.commands.test import run_test
-        deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes=None, lockfile=lockfile, update=False, build_modes=None)
-        # TODO: Do something with lockfile, same as create()
+        # same as ``conan create`` the lockfile, and deps graph is the one of the exported-pkg
+        # not the one from test_package
+        run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
+                 remotes=remotes, lockfile=lockfile, update=None, build_modes=None)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,

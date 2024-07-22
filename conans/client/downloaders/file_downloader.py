@@ -3,7 +3,7 @@ import re
 import time
 
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
@@ -13,9 +13,10 @@ from conans.util.sha import check_with_algorithm_sum
 
 class FileDownloader:
 
-    def __init__(self, requester, scope=None):
+    def __init__(self, requester, scope=None, source_credentials=None):
         self._output = ConanOutput(scope=scope)
         self._requester = requester
+        self._source_credentials = source_credentials
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
@@ -44,11 +45,12 @@ class FileDownloader:
                     if counter == retry:
                         raise
                     else:
-                        self._output.error(exc)
+                        self._output.warning(exc, warn_tag="network")
                         self._output.info(f"Waiting {retry_wait} seconds to retry...")
                         time.sleep(retry_wait)
 
             self.check_checksum(file_path, md5, sha1, sha256)
+            self._output.debug(f"Downloaded {file_path} from {url}")
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -73,7 +75,8 @@ class FileDownloader:
 
         try:
             response = self._requester.get(url, stream=True, verify=verify_ssl, auth=auth,
-                                           headers=headers)
+                                           headers=headers,
+                                           source_credentials=self._source_credentials)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 
@@ -86,7 +89,7 @@ class FileDownloader:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
-                raise AuthenticationException()
+                raise AuthenticationException(response_to_str(response))
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         def get_total_length():
@@ -104,8 +107,13 @@ class FileDownloader:
         try:
             total_length = get_total_length()
             is_large_file = total_length > 10000000  # 10 MB
-            t_start = time.time()
             base_name = os.path.basename(file_path)
+
+            def msg_format(msg, downloaded):
+                perc = int(total_downloaded_size * 100 / total_length)
+                return msg + f" {human_size(downloaded)} {perc}% {base_name}"
+            timed_output = TimedOutput(10, out=self._output, msg_format=msg_format)
+
             if is_large_file:
                 hs = human_size(total_length)
                 action = "Downloading" if range_start == 0 else "Continuing download of"
@@ -119,12 +127,7 @@ class FileDownloader:
                     file_handler.write(chunk)
                     total_downloaded_size += len(chunk)
                     if is_large_file:
-                        t = time.time()
-                        if t - t_start > 10:  # Every 10 seconds
-                            hs = human_size(total_downloaded_size)
-                            perc = int(total_downloaded_size*100/total_length)
-                            self._output.info(f"Downloaded {hs} {perc}% {base_name}")
-                            t_start = t
+                        timed_output.info("Downloaded", total_downloaded_size)
 
             gzip = (response.headers.get("content-encoding") == "gzip")
             response.close()

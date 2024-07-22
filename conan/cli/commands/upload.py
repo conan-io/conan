@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -9,10 +9,10 @@ from conan.errors import ConanException
 
 
 def summary_upload_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
-    cli_out_write("Upload summary:")
+    ConanOutput().subtitle("Upload summary")
     info = results["results"]
 
     def format_upload(item):
@@ -50,7 +50,7 @@ def upload(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
@@ -85,10 +85,13 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
+
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
+        if args.only_recipe:
+            package_list.only_recipes()
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
@@ -98,15 +101,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         if not args.list and not args.confirm and "*" in args.pattern:
             _ask_confirm_upload(conan_api, package_list)
 
-        if args.check:
-            conan_api.cache.check_integrity(package_list)
-        # Check if the recipes/packages are in the remote
-        conan_api.upload.check_upstream(package_list, remote, enabled_remotes, args.force)
-        conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
-
-        if not args.dry_run:
-            conan_api.upload.upload(package_list, remote)
-            conan_api.upload.upload_backup_sources(package_list)
+        conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
+                                     args.force, args.metadata, args.dry_run)
     elif args.list:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded

@@ -9,14 +9,17 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
+from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, \
+    GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
+    VSDebuggerEnvironment, VariablesBlock, PreprocessorBlock
+from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
@@ -54,42 +57,18 @@ class Variables(OrderedDict):
                     data[key] = str(var).replace('"', '\\"')
 
 
-class CMakeToolchain(object):
+class CMakeToolchain:
 
     filename = CONAN_TOOLCHAIN_FILENAME
 
-    _template = textwrap.dedent("""
-        {% macro iterate_configs(var_config, action) %}
-            {% for it, values in var_config.items() %}
-                {% set genexpr = namespace(str='') %}
-                {% for conf, value in values -%}
-                set(CONAN_DEF_{{ conf }}{{ it }} "{{ value }}")
-                {% endfor %}
-                {% for conf, value in values -%}
-                    {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + conf|string + it|string + '},' %}
-                    {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
-                {% endfor %}
-                {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
-                {% endfor %}
-                {% if action=='set' %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
-                    "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_compile_definitions' -%}
-                add_compile_definitions({{ it }}={{ genexpr.str }})
-                {% endif %}
-            {% endfor %}
-        {% endmacro %}
-
+    _template = textwrap.dedent("""\
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
-
         message(STATUS "Using Conan toolchain: ${CMAKE_CURRENT_LIST_FILE}")
-
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
         endif()
@@ -98,23 +77,8 @@ class CMakeToolchain(object):
         {{ conan_block }}
         {% endfor %}
 
-        # Variables
-        {% for it, value in variables.items() %}
-        {% if value is boolean %}
-        set({{ it }} {{ value|cmake_value }} CACHE BOOL "Variable {{ it }} conan-toolchain defined")
-        {% else %}
-        set({{ it }} {{ value|cmake_value }} CACHE STRING "Variable {{ it }} conan-toolchain defined")
-        {% endif %}
-        {% endfor %}
-        # Variables  per configuration
-        {{ iterate_configs(variables_config, action='set') }}
-
-        # Preprocessor definitions
-        {% for it, value in preprocessor_definitions.items() %}
-        add_compile_definitions("{{ it }}={{ value }}")
-        {% endfor %}
-        # Preprocessor definitions per configuration
-        {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
+        if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
+        endif()
         """)
 
     def __init__(self, conanfile, generator=None):
@@ -124,6 +88,11 @@ class CMakeToolchain(object):
         # This doesn't support multi-config, they go to the same configPreset common in multi-config
         self.cache_variables = {}
         self.preprocessor_definitions = Variables()
+
+        self.extra_cxxflags = []
+        self.extra_cflags = []
+        self.extra_sharedlinkflags = []
+        self.extra_exelinkflags = []
 
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),
@@ -136,21 +105,28 @@ class CMakeToolchain(object):
                                        ("linker_scripts", LinkerScriptsBlock),
                                        ("libcxx", GLibCXXBlock),
                                        ("vs_runtime", VSRuntimeBlock),
+                                       ("vs_debugger_environment", VSDebuggerEnvironment),
                                        ("cppstd", CppStdBlock),
                                        ("parallel", ParallelBlock),
                                        ("extra_flags", ExtraFlagsBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("extra_variables", ExtraVariablesBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
                                        ("pkg_config", PkgConfigBlock),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock),
-                                       ("output_dirs", OutputDirsBlock)])
+                                       ("output_dirs", OutputDirsBlock),
+                                       ("variables", VariablesBlock),
+                                       ("preprocessor", PreprocessorBlock)])
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
         self.user_presets_path = "CMakeUserPresets.json"
         self.presets_prefix = "conan"
+        self.presets_build_environment = None
+        self.presets_run_environment = None
+        self.absolute_paths = False  # By default use relative paths to toolchain and presets
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -159,10 +135,7 @@ class CMakeToolchain(object):
 
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
-            "variables": self.variables,
-            "variables_config": self.variables.configuration_types,
-            "preprocessor_definitions": self.preprocessor_definitions,
-            "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
+
             "conan_blocks": blocks
         }
 
@@ -171,9 +144,25 @@ class CMakeToolchain(object):
     @property
     def content(self):
         context = self._context()
-        content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
-        content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+        content = Template(self._template, trim_blocks=True, lstrip_blocks=True,
+                           keep_trailing_newline=True).render(**context)
         return content
+
+    @property
+    def is_multi_configuration(self):
+        return is_multi_configuration(self.generator)
+
+    def _find_cmake_exe(self):
+        for req in self._conanfile.dependencies.direct_build.values():
+            if req.ref.name == "cmake":
+                for bindir in req.cpp_info.bindirs:
+                    cmake_path = os.path.join(bindir, "cmake")
+                    cmake_exe_path = os.path.join(bindir, "cmake.exe")
+
+                    if os.path.exists(cmake_path):
+                        return cmake_path
+                    elif os.path.exists(cmake_exe_path):
+                        return cmake_exe_path
 
     def generate(self):
         """
@@ -182,16 +171,16 @@ class CMakeToolchain(object):
         check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
-            save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
-            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
+            toolchain_file = self.filename
+            save(os.path.join(self._conanfile.generators_folder, toolchain_file), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {toolchain_file}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
-                                                 toolchain_file or self.filename))
+
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
@@ -206,8 +195,24 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
-        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path, self.presets_prefix)
+        buildenv, runenv, cmake_executable = None, None, None
+
+        if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
+                                    check_type=str, choices=("disabled", "")) != "disabled":
+
+            build_env = self.presets_build_environment.vars(self._conanfile) if self.presets_build_environment else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+            run_env = self.presets_run_environment.vars(self._conanfile) if self.presets_run_environment else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
+
+            buildenv = {name: value for name, value in
+                        build_env.items(variable_reference="$penv{{{name}}}")}
+            runenv = {name: value for name, value in
+                      run_env.items(variable_reference="$penv{{{name}}}")}
+
+            cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
+
+        write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
+                            self.user_presets_path, self.presets_prefix, buildenv, runenv,
+                            cmake_executable, self.absolute_paths)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

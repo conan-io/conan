@@ -1,21 +1,27 @@
+from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
-from conans.search.search import search_recipes
 
 
 class RangeResolver:
 
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, global_conf, editable_packages):
         self._cache = conan_app.cache
+        self._editable_packages = editable_packages
         self._remote_manager = conan_app.remote_manager
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
-        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
+        self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
-        version_range = require.version_range
+        try:
+            version_range = require.version_range
+        except Exception as e:
+            base = base_conanref or "conanfile"
+            raise ConanException(f"\n    Recipe '{base}' requires '{require.ref}' "
+                                 f"version-range definition error:\n    {e}")
         if version_range is None:
             return
         assert isinstance(version_range, VersionRange)
@@ -30,7 +36,7 @@ class RangeResolver:
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if resolved_ref is None or update:
+        if resolved_ref is None or should_update_reference(search_ref, update):
             remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
@@ -50,11 +56,11 @@ class RangeResolver:
         local_found = self._cached_cache.get(pattern)
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
-            local_found = search_recipes(self._cache, pattern)
+            local_found = self._cache.search_recipes(pattern)
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]
-            local_found.extend(r for r in self._cache.editable_packages.edited_refs
+            local_found.extend(r for r in self._editable_packages.edited_refs
                                if r.name == search_ref.name and r.user == search_ref.user
                                and r.channel == search_ref.channel)
             self._cached_cache[pattern] = local_found
@@ -62,6 +68,9 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
+        if remote.allowed_packages and not any(search_ref.matches(f, is_consumer=False)
+                                               for f in remote.allowed_packages):
+            return []
         pattern = str(search_ref)
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})
         results = pattern_cached.get(remote.name)
@@ -80,7 +89,7 @@ class RangeResolver:
             resolved_version = self._resolve_version(version_range, remote_results,
                                                      self._resolve_prereleases)
             if resolved_version:
-                if not update:
+                if not should_update_reference(search_ref, update):
                     return resolved_version  # Return first valid occurrence in first remote
                 else:
                     update_candidates.append(resolved_version)

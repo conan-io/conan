@@ -29,13 +29,17 @@ class Requirement:
         self._direct = direct
         self.options = options
         # Meta and auxiliary information
+        # The "defining_require" is the require that defines the current value. If this require is
+        # overriden/forced, this attribute will point to the overriding/forcing requirement.
+        self.defining_require = self  # if not overriden, it points to itself
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
+        self.skip = False
 
     @property
-    def skip(self):
-        return not (self.headers or self.libs or self.run or self.build)
+    def files(self):  # require needs some files in dependency package
+        return self.headers or self.libs or self.run or self.build
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -223,7 +227,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.visible and other.visible) or
+                 ((self.visible or self.test) and (other.visible or other.test)) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -267,7 +271,7 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=True, direct=False)
+                                             run=False, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -298,10 +302,12 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
-            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
-                downstream_require.headers = False
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            # This is faster than pkg_type in (pkg.shared, pkg.static, ....)
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 downstream_require.libs = False
+                downstream_require.headers = False
+            elif pkg_type is PackageType.STATIC:
+                downstream_require.headers = False
 
         assert require.visible, "at this point require should be visible"
 
@@ -315,11 +321,11 @@ class Requirement:
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
 
+        if self.visible is False:
+            downstream_require.visible = False
+
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
-            if self.visible is False:
-                downstream_require.visible = False
-
             if self.headers is False:
                 downstream_require.headers = False
 
@@ -364,7 +370,7 @@ class Requirement:
         non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
         unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 if dep_pkg_type is PackageType.SHARED:
                     self.package_id_mode = non_embed_mode
                 else:
@@ -466,6 +472,18 @@ class Requirements:
                     raise ConanException("Wrong 'tool_requires' definition, "
                                          "did you mean 'build_requirements()'?")
 
+    def reindex(self, require, new_name):
+        """ This operation is necessary when the reference name of a package is changed
+        as a result of an "alternative" replacement of the package name, otherwise the dictionary
+        gets broken by modified key
+        """
+        result = OrderedDict()
+        for k, v in self._requires.items():
+            if k is require:
+                k.ref.name = new_name
+            result[k] = v
+        self._requires = result
+
     def values(self):
         return self._requires.values()
 
@@ -502,16 +520,6 @@ class Requirements:
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
-
-    def override(self, ref):
-        req = Requirement(ref)
-        old_requirement = self._requires.get(req)
-        if old_requirement is not None:
-            req.force = True
-            self._requires[req] = req
-        else:
-            req.override = True
-            self._requires[req] = req
 
     def test_require(self, ref, run=None, options=None, force=None):
         """
@@ -559,3 +567,6 @@ class Requirements:
 
     def serialize(self):
         return [v.serialize() for v in self._requires.values()]
+
+    def __len__(self):
+        return len(self._requires)

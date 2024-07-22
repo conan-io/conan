@@ -26,8 +26,13 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     settings_build = _per_package_settings(conanfile, profile_build, ref)
     if is_build_require or base_context == CONTEXT_BUILD:
         _initialize_conanfile(conanfile, profile_build, settings_build.copy(), ref)
+        conanfile.buildenv_build = None
+        conanfile.conf_build = None
     else:
         _initialize_conanfile(conanfile, profile_host, settings_host, ref)
+        # Host profile with some build profile information
+        conanfile.buildenv_build = profile_build.buildenv.get_profile_env(ref, conanfile._conan_is_consumer)
+        conanfile.conf_build = profile_build.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)
     conanfile.settings_build = settings_build
     conanfile.settings_target = None
 

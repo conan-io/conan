@@ -9,8 +9,8 @@ from conans.errors import ConanException
 
 
 def summary_remove_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
     cli_out_write("Remove summary:")
     info = results["results"]
@@ -41,7 +41,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Remove without requesting a confirmation')
@@ -51,6 +51,12 @@ def remove(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-r', '--remote', action=OnceArgument,
                         help='Will remove from the specified remote')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument('--lru', default=None, action=OnceArgument,
+                        help="Remove recipes and binaries that have not been recently used. Use a"
+                             " time limit like --lru=5d (days) or --lru=4w (weeks),"
+                             " h (hours), m(minutes)")
+    parser.add_argument("--dry-run", default=False, action="store_true",
+                        help="Do not remove any items, only print those which would be removed")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -59,6 +65,10 @@ def remove(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
+    if args.remote and args.lru:
+        raise ConanException("'--lru' cannot be used in remotes, only in cache")
+    if args.list and args.lru:
+        raise ConanException("'--lru' cannot be used with input package list")
 
     ui = UserInput(conan_api.config.get("core:non_interactive"))
     remote = conan_api.remotes.get(args.remote) if args.remote else None
@@ -78,7 +88,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, rrev="*", prev="*")
         if ref_pattern.package_id is None and args.package_query is not None:
             raise ConanException('--package-query supplied but the pattern does not match packages')
-        package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+        package_list = conan_api.list.select(ref_pattern, args.package_query, remote, lru=args.lru)
         multi_package_list = MultiPackagesList()
         multi_package_list.add(cache_name, package_list)
 
@@ -88,7 +98,8 @@ def remove(conan_api: ConanAPI, parser, *args):
         packages = ref_bundle.get("packages")
         if packages is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
-                conan_api.remove.recipe(ref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.recipe(ref, remote=remote)
             else:
                 ref_dict.pop(ref.revision)
                 if not ref_dict:
@@ -104,7 +115,8 @@ def remove(conan_api: ConanAPI, parser, *args):
 
         for pref, _ in prefs.items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                conan_api.remove.package(pref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.package(pref, remote=remote)
             else:
                 pref_dict = packages[pref.package_id]["revisions"]
                 pref_dict.pop(pref.revision)

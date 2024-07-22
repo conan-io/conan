@@ -31,7 +31,7 @@ class PkgConfig:
         with env.vars(self._conanfile).apply():
             # This way we get the environment from ConanFile, from profile (default buildenv)
             output = StringIO()
-            self._conanfile.run(command, stdout=output)
+            self._conanfile.run(command, stdout=output, quiet=True)
         value = output.getvalue().strip()
         return value
 
@@ -94,6 +94,7 @@ class PkgConfig:
         """
         if not self.provides:
             raise ConanException("PkgConfig error, '{}' files not available".format(self._library))
+        self._conanfile.output.verbose(f"PkgConfig fill cpp_info for {self._library}")
         if is_system:
             cpp_info.system_libs = self.libs
         else:

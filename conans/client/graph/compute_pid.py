@@ -6,12 +6,13 @@ from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, Pyth
 from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
-def compute_package_id(node, new_config):
+def compute_package_id(node, new_config, config_version):
     """
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
 
+    # TODO: Extract
     unknown_mode = new_config.get("core.package_id:default_unknown_mode", default="semver_mode")
     non_embed_mode = new_config.get("core.package_id:default_non_embed_mode", default="minor_mode")
     # recipe_revision_mode already takes into account the package_id
@@ -21,7 +22,7 @@ def compute_package_id(node, new_config):
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
-        python_requires = python_requires.all_refs()
+        python_requires = python_requires.info_requires()
 
     data = OrderedDict()
     build_data = OrderedDict()
@@ -37,6 +38,9 @@ def compute_package_id(node, new_config):
             else:
                 data[require] = req_info
 
+    if conanfile.vendor:  # Make the package_id fully independent of dependencies versions
+        data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
+
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
@@ -50,18 +54,24 @@ def compute_package_id(node, new_config):
                                reqs_info=reqs_info,
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,
-                               conf=conanfile.conf.copy_conaninfo_conf())
+                               conf=conanfile.conf.copy_conaninfo_conf(),
+                               config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
 
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
-            try:
-                conanfile.validate_build()
-            except ConanInvalidConfiguration as e:
-                # This 'cant_build' will be ignored if we don't have to build the node.
-                node.cant_build = str(e)
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
 
     run_validate_package_id(conanfile)
+
+    if conanfile.info.settings_target:
+        # settings_target has beed added to conan package via package_id api
+        conanfile.original_info.settings_target = conanfile.info.settings_target
 
     info = conanfile.info
     node.package_id = info.package_id()

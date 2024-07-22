@@ -26,6 +26,11 @@ class RecipeReference:
         self.revision = revision
         self.timestamp = timestamp
 
+    def copy(self):
+        # Used for creating copy in lockfile-overrides mechanism
+        return RecipeReference(self.name, self.version, self.user, self.channel, self.revision,
+                               self.timestamp)
+
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.repr_notime()
@@ -149,8 +154,8 @@ class RecipeReference:
         if self.channel and validation_pattern.match(self.channel) is None:
             raise ConanException(f"Invalid package channel '{self.channel}'")
 
-        # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
-        pattern = re.compile(r'[.+-]')
+        # Warn if they use .+ in the name/user/channel, as it can be problematic for generators
+        pattern = re.compile(r'[.+]')
         if pattern.search(self.name):
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
         if self.user and pattern.search(self.user):
@@ -174,13 +179,30 @@ class RecipeReference:
             no_user_channel = True
 
         condition = ((pattern == "&" and is_consumer) or
-                      fnmatch.fnmatchcase(str(self), pattern) or
-                      fnmatch.fnmatchcase(self.repr_notime(), pattern))
+                     fnmatch.fnmatchcase(str(self), pattern) or
+                     fnmatch.fnmatchcase(self.repr_notime(), pattern))
         if no_user_channel:
             condition = condition and not self.user and not self.channel
         if negate:
             return not condition
         return condition
+
+    def partial_match(self, pattern):
+        """
+        Finds if pattern matches any of partial sums of tokens of conan reference
+        """
+        tokens = [self.name, "/", str(self.version)]
+        if self.user:
+            tokens += ["@", self.user]
+        if self.channel:
+            tokens += ["/", self.channel]
+        if self.revision:
+            tokens += ["#", self.revision]
+        partial = ""
+        for token in tokens:
+            partial += token
+            if pattern.match(partial):
+                return True
 
 
 def ref_matches(ref, pattern, is_consumer):

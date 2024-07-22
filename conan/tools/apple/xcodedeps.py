@@ -323,10 +323,7 @@ class XcodeDeps(object):
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
-        # Include transitive requires
         all_file_content = ""
-        for require, dep in requires:
-            all_file_content = self._all_xconfig_file(get_transitive_requires(self._conanfile, dep), all_file_content)
 
         # Include direct requires
         direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})

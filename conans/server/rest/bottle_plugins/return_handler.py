@@ -1,5 +1,3 @@
-import traceback
-
 from bottle import HTTPResponse
 
 from conans.errors import ConanException

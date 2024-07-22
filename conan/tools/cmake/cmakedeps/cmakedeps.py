@@ -1,5 +1,9 @@
-import os
+import textwrap
 
+import jinja2
+from jinja2 import Template
+
+from conan.api.output import Color
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
@@ -10,8 +14,8 @@ from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetCon
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 
 
 class CMakeDeps(object):
@@ -43,6 +47,7 @@ class CMakeDeps(object):
         generator_files = self.content
         for generator_file, content in generator_files.items():
             save(self._conanfile, generator_file, content)
+        self.generate_aggregator()
 
     @property
     def content(self):
@@ -66,6 +71,7 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
+        direct_configs = []
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
@@ -87,6 +93,23 @@ class CMakeDeps(object):
             if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
                 self._generate_files(require, dep, ret, find_module_mode=True)
 
+            if require.direct:  # aggregate config information for user convenience
+                find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
+                config = ConfigTemplate(self, require, dep, find_module_mode)
+                direct_configs.append(config)
+
+        if direct_configs:
+            # Some helpful verbose messages about generated files
+            msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
+            for config in direct_configs:
+                msg.append(f"    find_package({config.file_name})")
+            targets = ' '.join(c.root_target_name for c in direct_configs)
+            msg.append(f"    target_link_libraries(... {targets})")
+            if self._conanfile._conan_is_consumer:
+                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
+            else:
+                self._conanfile.output.verbose("\n".join(msg))
+
         return ret
 
     def _generate_files(self, require, dep, ret, find_module_mode):
@@ -95,8 +118,7 @@ class CMakeDeps(object):
             ret[config_version.filename] = config_version.render()
 
         data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
-        data_content = relativize_generated_file(data_target.render(), self._conanfile,
-                                                 "${CMAKE_CURRENT_LIST_DIR}")
+        data_content = data_target.render()
         ret[data_target.filename] = data_content
 
         target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
@@ -106,11 +128,9 @@ class CMakeDeps(object):
         ret[targets.filename] = targets.render()
 
         config = ConfigTemplate(self, require, dep, find_module_mode)
-        # Check if the XXConfig.cmake exists to keep the first generated configuration
-        # to only include the build_modules from the first conan install. The rest of the
-        # file is common for the different configurations.
-        if not os.path.exists(config.filename):
-            ret[config.filename] = config.render()
+        # Only the latest configuration BUILD_MODULES and additional_variables will be used
+        # in multi-config they will be overwritten by the latest install
+        ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
         """
@@ -162,3 +182,41 @@ class CMakeDeps(object):
         if tmp is None:
             return "config"
         return tmp.lower()
+
+    def generate_aggregator(self):
+        host = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
+
+        configs = []
+        for require, dep in list(host.items()) + list(build_req.items()) + list(test_req.items()):
+            if not require.direct:
+                continue
+            if require.build and dep.ref.name not in self.build_context_activated:
+                continue
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
+            cmake_find_mode = cmake_find_mode.lower()
+            find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
+            config = ConfigTemplate(self, require, dep, find_module_mode)
+            configs.append(config)
+
+        template = textwrap.dedent("""\
+            message(STATUS "Conan: Using CMakeDeps conandeps_legacy.cmake aggregator via include()")
+            message(STATUS "Conan: It is recommended to use explicit find_package() per dependency instead")
+
+            {% for config in configs %}
+            find_package({{config.file_name}})
+            {% endfor %}
+
+            set(CONANDEPS_LEGACY {% for t in configs %} {{t.root_target_name}} {% endfor %})
+            """)
+
+        template = Template(template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=jinja2.StrictUndefined)
+        conandeps = template.render({"configs": configs})
+        save(self._conanfile, "conandeps_legacy.cmake", conandeps)
+
+    def get_transitive_requires(self, conanfile):
+        # Prepared to filter transitive tool-requires with visible=True
+        return get_transitive_requires(self._conanfile, conanfile)

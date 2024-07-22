@@ -1,14 +1,15 @@
 import os
 
 from conan.internal.cache.conan_reference_layout import METADATA
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.loader import load_python_file
 from conans.util.files import mkdir
 
 
 class PkgSignaturesPlugin:
-    def __init__(self, cache):
+    def __init__(self, cache, home_folder):
         self._cache = cache
-        signer = os.path.join(cache.plugins_path, "sign", "sign.py")
+        signer = HomePaths(home_folder).sign_plugin_path
         if os.path.isfile(signer):
             mod, _ = load_python_file(signer)
             # TODO: At the moment it requires both methods sign and verify, but that might be relaxed

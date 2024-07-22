@@ -3,7 +3,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conans.client.generators import relativize_generated_file
+from conan.internal.api.install.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -135,12 +135,14 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self, placeholder, subsystem, pathsep):
+    def get_str(self, placeholder, subsystem, pathsep, root_path=None, script_path=None):
         """
         :param subsystem:
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
         :param pathsep: The path separator, typically ; or :
+        :param root_path: To do a relativize of paths, the base root path to be replaced
+        :param script_path: the replacement instead of the script path
         :return: a string representation of the env-var value, including the $NAME-like placeholder
         """
         values = []
@@ -151,6 +153,13 @@ class _EnvValue:
             else:
                 if self._path:
                     v = subsystem_path(subsystem, v)
+                    if root_path is not None:
+                        if v.startswith(root_path):  # relativize
+                            v = v.replace(root_path, script_path, 1)
+                        elif os.sep == "\\":  # Just in case user specified C:/path/to/somewhere
+                            r = root_path.replace("\\", "/")
+                            if v.startswith(r):
+                                v = v.replace(r, script_path.replace("\\", "/"))
                 values.append(v)
         if self._path:
             return pathsep.join(values)
@@ -169,6 +178,9 @@ class _EnvValue:
             if v is _EnvVarPlaceHolder:
                 continue
             rel_path = os.path.relpath(v, package_folder)
+            if rel_path.startswith(".."):
+                # If it is pointing to a folder outside of the package, then do not relocate
+                continue
             self._values[i] = os.path.join(deploy_folder, rel_path)
 
     def set_relative_base_folder(self, folder):
@@ -326,7 +338,7 @@ class EnvVars:
 
     """
     def __init__(self, conanfile, values, scope):
-        self._values = values # {var_name: _EnvValue}, just a reference to the Environment
+        self._values = values  # {var_name: _EnvValue}, just a reference to the Environment
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
@@ -415,12 +427,13 @@ class EnvVars:
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
+        abs_base_path, new_path = relativize_paths(self._conanfile, "%~dp0")
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
+            value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
-        content = relativize_generated_file(content, self._conanfile, "%~dp0")
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         open(file_location, "w", encoding="utf-8").write(content)
@@ -456,8 +469,10 @@ class EnvVars:
             {deactivate}
         """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
+        abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep)
+            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
             if value:
                 value = value.replace('"', '`"')  # escape quotes
                 result.append('$env:{}="{}"'.format(varname, value))
@@ -465,7 +480,6 @@ class EnvVars:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
-        content = relativize_generated_file(content, self._conanfile, "$PSScriptRoot")
         # It is very important to save it correctly with utf-16, the Conan util save() is broken
         # and powershell uses utf-16 files!!!
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
@@ -473,7 +487,7 @@ class EnvVars:
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
            echo "echo Restoring environment" > "{deactivate_file}"
            for v in {vars}
@@ -492,8 +506,10 @@ class EnvVars:
               {deactivate}
               """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
+        abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
             if value:
                 result.append('export {}="{}"'.format(varname, value))
@@ -501,7 +517,6 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
-        content = relativize_generated_file(content, self._conanfile, "$script_folder")
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 

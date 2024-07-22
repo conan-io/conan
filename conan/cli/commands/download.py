@@ -1,5 +1,3 @@
-from multiprocessing.pool import ThreadPool
-
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import ConanOutput
@@ -23,7 +21,7 @@ def download(conan_api: ConanAPI, parser, *args):
 
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument("--only-recipe", action='store_true', default=False,
                         help='Download only the recipe/s, not the binary packages.')
@@ -52,44 +50,15 @@ def download(conan_api: ConanAPI, parser, *args):
             package_list = multi_package_list[remote.name]
         except KeyError:
             raise ConanException(f"The current package list does not contain remote '{remote.name}'")
+        if args.only_recipe:
+            package_list.only_recipes()
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
 
-    parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
-
-    refs = []
-    prefs = []
-    for ref, recipe_bundle in package_list.refs().items():
-        refs.append(ref)
-        for pref, _ in package_list.prefs(ref, recipe_bundle).items():
-            prefs.append(pref)
-
-    if parallel <= 1:
-        for ref in refs:
-            conan_api.download.recipe(ref, remote, args.metadata)
-        for pref in prefs:
-            conan_api.download.package(pref, remote, args.metadata)
+    if package_list.recipes:
+        conan_api.download.download_full(package_list, remote, args.metadata)
     else:
-        _download_parallel(parallel, conan_api, refs, prefs, remote)
+        ConanOutput().warning(f"No packages were downloaded because the package list is empty.")
 
     return {"results": {"Local Cache": package_list.serialize()}}
-
-
-def _download_parallel(parallel, conan_api, refs, prefs, remote):
-
-    thread_pool = ThreadPool(parallel)
-    # First the recipes in parallel, we have to make sure the recipes are downloaded before the
-    # packages
-    ConanOutput().info("Downloading recipes in %s parallel threads" % parallel)
-    thread_pool.starmap(conan_api.download.recipe, [(ref, remote) for ref in refs])
-    thread_pool.close()
-    thread_pool.join()
-
-    # Then the packages in parallel
-    if prefs:
-        thread_pool = ThreadPool(parallel)
-        ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
-        thread_pool.starmap(conan_api.download.package,  [(pref, remote) for pref in prefs])
-        thread_pool.close()
-        thread_pool.join()

@@ -10,38 +10,39 @@ void cancelPrevious() {
 }
 
 String getTempFolder(String nodeName) {
-    if (nodeName=="Windows") { return "D:/J/t/" }
+    if (nodeName=="Windows") { return "C:/J/t_v2/" }
     return "/tmp/"
 }
 
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
+        configs.add([node: "Linux", pyvers: ["PY312"]])
+    }
     if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "M1Macos", pyvers: ["PY36"]])
-        }
+        configs.add([node: "Linux", pyvers: ["PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY38"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36"]])
+        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     return configs
 }
 
 String getDockerImage(String moduleName) {
-    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+    if (moduleName=="test/unittests" || moduleName=="test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional"){
+    else if (moduleName=="test/functional"){
         return "conanio/ci-functional"
     }
     return ""
@@ -49,7 +50,7 @@ String getDockerImage(String moduleName) {
 
 boolean shouldTestServer(String moduleName) {
     // run conan_server --help after running functional tests
-    if (moduleName=="conans/test/functional") {
+    if (moduleName=="test/functional") {
         return true
     }
     return false
@@ -65,11 +66,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 def scmVars = checkout scm
                 def commit = scmVars["GIT_COMMIT"].substring(0, 4)
 
-                // leaving the flavor here to later adapt con conan 1.x new pipeline
-                // will have to add more configs
-                def flavor = "enabled_revisions"
-
-                def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/${flavor}/"
+                def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/"
                 def venvName = "env_${env.BUILD_NUMBER}_${pythonVersion}_${commit}"
 
                 def pipArguments = "--no-cache-dir --timeout 30"
@@ -82,7 +79,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20 -rs"
 
                 if (shouldTestServer(module)) {
                     def rm = (nodeName=="Windows") ? "del" : "rm"
@@ -95,7 +92,12 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 if (nodeName=="Linux") {
                     try {
                         def dockerImage = getDockerImage(module)
+                        docker.image(dockerImage).pull()
                         docker.image(dockerImage).inside("--entrypoint=") {
+
+                            // we only test scons in Linux
+                            pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
+
                             def sourcedir = "/home/conan/"
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")
@@ -113,7 +115,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     }
                     finally {}
                 }
-                else if (nodeName=="M1Macos") {
+                else if (nodeName=="M2Macos") {
                     def localDir = "/Users/jenkins"
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
@@ -132,7 +134,6 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="Windows") {
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "CONAN_BASH_PATH=c:/tools/msys64/usr/bin/bash",
-                             "CONAN_USER_HOME_SHORT=${workDir}.conan",
                              "PY27=Python27", "PY36=Python36", "PY38=Python38-64"]) {
                         try {
                             bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")
@@ -166,7 +167,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["test/unittests", "test/integration", "test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
@@ -174,8 +175,7 @@ void deployToPypiTest() {
             def scmVars = checkout scm
             checkout scm
             stage("Deploy conan to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
-                                 string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'PYPITEST_CONAN_CREDENTIALS', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
                     def deployConan = "python -m pip install twine && " \
                                     + "python .ci/bump_dev_version.py && " \
                                     + "rm -rf dist/ && python setup.py sdist && " \
@@ -184,8 +184,7 @@ void deployToPypiTest() {
                 }
             }
             stage("Deploy conan-server to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
-                                 string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'PYPITEST_CONAN_SERVER_CREDENTIALS', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
                     def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
                                      + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
                     sh(script: deployServer)
@@ -199,7 +198,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
- 
+
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }

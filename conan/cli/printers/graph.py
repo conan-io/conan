@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
-    BINARY_SYSTEM_TOOL
+from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
+    BINARY_PLATFORM
 
 
 def print_graph_basic(graph):
@@ -56,6 +56,11 @@ def print_graph_basic(graph):
         for k, v in sorted(reqs_to_print.items()):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
+    if graph.replaced_requires:
+        output.info("Replaced requires", Color.BRIGHT_YELLOW)
+        for k, v in graph.replaced_requires.items():
+            output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
+
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
         output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
@@ -74,6 +79,17 @@ def print_graph_basic(graph):
         for d, reason in deprecated.items():
             reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
+
+    if graph.options_conflicts:
+        output.info("Options conflicts", Color.BRIGHT_YELLOW)
+        for ref, ref_conflicts in graph.options_conflicts.items():
+            for option, conflict_info in ref_conflicts.items():
+                prev_value = conflict_info['value']
+                output.info(f"    {ref}:{option}={prev_value} (current value)", Color.BRIGHT_CYAN)
+                for src_ref, conflict_value in conflict_info["conflicts"]:
+                    output.info(f"        {src_ref}->{option}={conflict_value}", Color.BRIGHT_CYAN)
+        output.info("    It is recommended to define options values in profiles, not in recipes",
+                    Color.BRIGHT_CYAN)
 
 
 def print_graph_packages(graph):
@@ -105,14 +121,19 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
-            msg = f"{tab}{name} - {status}"
-            if remote is not None and status != BINARY_SKIP:
-                msg += f" ({remote.name})"
+            name = pref.repr_notime() if status != BINARY_PLATFORM else str(pref.ref)
+            msg = f"{tab}{name} - "
             if status == BINARY_SKIP:
                 skipped_requires.append(str(pref.ref))
-                output.verbose(msg, Color.BRIGHT_CYAN)
+                output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
+            elif status == BINARY_MISSING or status == BINARY_INVALID:
+                output.write(msg, Color.BRIGHT_CYAN)
+                output.writeln(status, Color.BRIGHT_RED)
             else:
+                # Support python36
+                msg += status
+                if remote:
+                    msg += f" ({remote.name})"
                 output.info(msg, Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)

@@ -2,7 +2,8 @@ from conans.errors import ConanException
 
 
 class GraphError(ConanException):
-    pass
+    def serialize(self):
+        return
 
 
 class GraphConflictError(GraphError):
@@ -14,20 +15,25 @@ class GraphConflictError(GraphError):
         self.prev_require = prev_require
         self.base_previous = base_previous
 
+    def serialize(self):
+        dst_id = self.prev_node.id if self.prev_node else None
+        return {"type": "conflict",
+                "name": self.require.ref.name,
+                "branch1": {"src_id": self.base_previous.id, "src_ref": str(self.base_previous.ref),
+                            "dst_id": dst_id, "require": self.prev_require.serialize()},
+                "branch2": {"src_id": self.node.id, "src_ref": str(self.node.ref),
+                            "require": self.require.serialize()}}
+
     def __str__(self):
-        if self.node.ref is not None and self.base_previous.ref is not None:
-            return f"Version conflict: {self.node.ref}->{self.require.ref}, " \
-                   f"{self.base_previous.ref}->{self.prev_require.ref}."
-        else:
-            conflicting_node = self.node.ref or self.base_previous.ref
-            conflicting_node_msg = ""
-            if conflicting_node is not None:
-                conflicting_node_msg = f"\nConflict originates from {conflicting_node}\n"
-            return f"Version conflict: " \
-                   f"Conflict between {self.require.ref} and {self.prev_require.ref} in the graph." \
-                   f"{conflicting_node_msg}" \
-                   f"\nRun conan graph info with your recipe and add --format=html " \
-                   f"to inspect the graph errors in an easier to visualize way."
+        conflicting_node = self.node.ref or self.base_previous.ref
+        conflicting_node_msg = ""
+        if conflicting_node is not None:
+            conflicting_node_msg = f"\nConflict originates from {conflicting_node}\n"
+        return f"Version conflict: " \
+               f"Conflict between {self.require.ref} and {self.prev_require.ref} in the graph." \
+               f"{conflicting_node_msg}" \
+               f"\nRun 'conan graph info ... --format=html > graph.html' " \
+               f"and open 'graph.html' to inspect the conflict graphically."
 
 
 class GraphLoopError(GraphError):
@@ -64,7 +70,7 @@ class GraphProvidesError(GraphError):
 
     def __str__(self):
         return f"Provide Conflict: Both '{self.node.ref}' and '{self.conflicting_node.ref}' " \
-               f"provide '{self.node.conanfile.provides}'."
+               f"provide '{self.node.conanfile.provides or self.conflicting_node.conanfile.provides}'."
 
 
 class GraphRuntimeError(GraphError):

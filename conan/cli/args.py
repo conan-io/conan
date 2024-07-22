@@ -1,3 +1,5 @@
+import argparse
+
 from conan.cli.command import OnceArgument
 from conan.errors import ConanException
 
@@ -29,7 +31,7 @@ def add_lockfile_args(parser):
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
-                        help="Lock package-id and package-revision information")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
     parser.add_argument("--lockfile-overrides",
@@ -45,56 +47,58 @@ def add_common_install_arguments(parser):
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
 
-    update_help = ("Will check the remote and in case a newer version and/or revision of "
-                   "the dependencies exists there, it will install those in the local cache. "
+    update_help = ("Will install newer versions and/or revisions in the local cache "
+                   "for the given reference, or all in case no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
-    parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help=update_help)
+
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
 
 
 def add_profiles_args(parser):
-    def profile_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-pr{}".format(short_suffix),
-                            "--profile{}".format(long_suffix),
-                            default=None, action="append",
-                            dest='profile_{}'.format(machine),
-                            help='Apply the specified profile to the {} machine'.format(machine))
+    contexts = ["build", "host"]
 
-    def settings_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-s{}".format(short_suffix),
-                            "--settings{}".format(long_suffix),
+    # This comes from the _AppendAction code but modified to add to the contexts
+    class ContextAllAction(argparse.Action):
+
+        def __call__(self, action_parser, namespace, values, option_string=None):
+            for context in contexts:
+                items = getattr(namespace, self.dest + "_" + context, None)
+                items = items[:] if items else []
+                items.append(values)
+                setattr(namespace, self.dest + "_" + context, items)
+
+    def create_config(short, long, example=None):
+        parser.add_argument(f"-{short}", f"--{long}",
+                            default=None,
                             action="append",
-                            dest='settings_{}'.format(machine),
-                            help='Settings to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
-                                                                                 short_suffix))
+                            dest=f"{long}_host",
+                            metavar=long.upper(),
+                            help=f'Apply the specified {long}. '
+                                 f'By default, or if specifying -{short}:h (--{long}:host), it applies to the host context. '
+                                 f'Use -{short}:b (--{long}:build) to specify the build context, '
+                                 f'or -{short}:a (--{long}:all) to specify both contexts at once'
+                                   + ('' if not example else f". Example: {example}"))
+        for context in contexts:
+            parser.add_argument(f"-{short}:{context[0]}", f"--{long}:{context}",
+                                default=None,
+                                action="append",
+                                dest=f"{long}_{context}",
+                                help="")
 
-    def options_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-o{}".format(short_suffix),
-                            "--options{}".format(long_suffix),
-                            action="append",
-                            dest="options_{}".format(machine),
-                            help='Define options values ({} machine), e.g.:'
-                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
+        parser.add_argument(f"-{short}:a", f"--{long}:all",
+                            default=None,
+                            action=ContextAllAction,
+                            dest=long,
+                            metavar=f"{long.upper()}_ALL",
+                            help="")
 
-    def conf_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-c{}".format(short_suffix),
-                            "--conf{}".format(long_suffix),
-                            action="append",
-                            dest='conf_{}'.format(machine),
-                            help='Configuration to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -c{} '
-                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
-                                                                                     short_suffix))
-
-    for item_fn in [options_args, profile_args, settings_args, conf_args]:
-        item_fn("host", "",
-                "")  # By default it is the HOST, the one we are building binaries for
-        item_fn("build", ":b", ":build")
-        item_fn("host", ":h", ":host")
+    create_config("pr", "profile")
+    create_config("o", "options", "-o pkg:with_qt=true")
+    create_config("s", "settings", "-s compiler=gcc")
+    create_config("c", "conf", "-c tools.cmake.cmaketoolchain:generator=Xcode")
 
 
 def add_reference_args(parser):
@@ -126,10 +130,10 @@ def validate_common_graph_args(args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
-    if args.channel and not args.user:
-        raise ConanException("Can't specify --channel without --user")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
     if args.path and (args.requires or args.tool_requires):
         raise ConanException("--requires and --tool-requires arguments are incompatible with "
                              f"[path] '{args.path}' argument")
+    if not args.path and args.build_require:
+        raise ConanException("--build-require should only be used with <path> argument")

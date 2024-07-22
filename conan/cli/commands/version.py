@@ -12,10 +12,22 @@ def version(conan_api, parser, *args):
     Give information about the Conan client version.
     """
 
-    return {'version': str(conan_version),
+    return {
+            'version': str(conan_version),
+            'conan_path': sys.argv[0],
             'python': {
                 'version': platform.python_version().replace('\n', ''),
                 'sys_version': sys.version.replace('\n', ''),
+                'sys_executable': sys.executable,
+                'is_frozen': getattr(sys, 'frozen', False),
+                'architecture': platform.machine(),
+                },
+            'system': {
+                'version': platform.version(),
+                'platform': platform.platform(),
+                'system': platform.system(),
+                'release': platform.release(),
+                'cpu': platform.processor(),
                 }
             }
 

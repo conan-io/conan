@@ -11,19 +11,22 @@ from conans.util.files import load
 
 
 class RemoteCredentials:
-    def __init__(self, cache):
-        self._cache = cache
+    def __init__(self, cache_folder, global_conf):
+        self._global_conf = global_conf
         self._urls = {}
-        creds_path = os.path.join(cache.cache_folder, "credentials.json")
+        creds_path = os.path.join(cache_folder, "credentials.json")
         if not os.path.exists(creds_path):
             return
-        template = Template(load(creds_path))
-        content = template.render({"platform": platform, "os": os})
-        content = json.loads(content)
+        try:
+            template = Template(load(creds_path))
+            content = template.render({"platform": platform, "os": os})
+            content = json.loads(content)
 
-        self._urls = {credentials["remote"]: {"user": credentials["user"],
-                                              "password": credentials["password"]}
-                      for credentials in content["credentials"]}
+            self._urls = {credentials["remote"]: {"user": credentials["user"],
+                                                  "password": credentials["password"]}
+                          for credentials in content["credentials"]}
+        except Exception as e:
+            raise ConanException(f"Error loading 'credentials.json' {creds_path}: {repr(e)}")
 
     def auth(self, remote, user=None, password=None):
         if user is not None and password is not None:
@@ -45,7 +48,7 @@ class RemoteCredentials:
             return env_user, env_passwd
 
         # If not found, then interactive prompt
-        ui = UserInput(self._cache.new_config.get("core:non_interactive", check_type=bool))
+        ui = UserInput(self._global_conf.get("core:non_interactive", check_type=bool))
         input_user, input_password = ui.request_login(remote, user)
         return input_user, input_password
 

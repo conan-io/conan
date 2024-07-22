@@ -24,7 +24,10 @@ DEFAULT_TIMEOUT = (30, 60)  # connect, read timeouts
 INFINITE_TIMEOUT = -1
 
 
-class URLCredentials:
+class _SourceURLCredentials:
+    """
+    Only for sources download (get(), download(), conan config install
+    """
     def __init__(self, cache_folder):
         self._urls = {}
         if not cache_folder:
@@ -32,9 +35,6 @@ class URLCredentials:
         creds_path = os.path.join(cache_folder, "source_credentials.json")
         if not os.path.exists(creds_path):
             return
-        template = Template(load(creds_path))
-        content = template.render({"platform": platform, "os": os})
-        content = json.loads(content)
 
         def _get_auth(credentials):
             result = {}
@@ -52,10 +52,13 @@ class URLCredentials:
                 raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
 
         try:
+            template = Template(load(creds_path))
+            content = template.render({"platform": platform, "os": os})
+            content = json.loads(content)
             self._urls = {credentials["url"]: _get_auth(credentials)
                           for credentials in content["credentials"]}
-        except KeyError as e:
-            raise ConanException(f"Authentication error, wrong source_credentials.json layout: {e}")
+        except Exception as e:
+            raise ConanException(f"Error loading 'source_credentials.json' {creds_path}: {repr(e)}")
 
     def add_auth(self, url, kwargs):
         for u, creds in self._urls.items():
@@ -70,7 +73,7 @@ class URLCredentials:
                 break
 
 
-class ConanRequester(object):
+class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
         # TODO: Make all this lazy, to avoid fully configuring Requester, for every api call
@@ -81,8 +84,10 @@ class ConanRequester(object):
             adapter = HTTPAdapter(max_retries=self._get_retries(config))
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
+        else:
+            self._http_requester = requests
 
-        self._url_creds = URLCredentials(cache_folder)
+        self._url_creds = _SourceURLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
@@ -90,6 +95,10 @@ class ConanRequester(object):
         self._client_certificates = config.get("core.net.http:client_cert")
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)
+        platform_info = "; ".join([" ".join([platform.system(), platform.release()]),
+                                   "Python " + platform.python_version(),
+                                   platform.machine()])
+        self._user_agent = "Conan/%s (%s)" % (client_version, platform_info)
 
     @staticmethod
     def _get_retries(config):
@@ -121,6 +130,7 @@ class ConanRequester(object):
     def _add_kwargs(self, url, kwargs):
         # verify is the kwargs that comes from caller, RestAPI, it is defined in
         # Conan remote "verify_ssl"
+        source_credentials = kwargs.pop("source_credentials", None)
         if kwargs.get("verify", None) is not False:  # False means de-activate
             if self._cacert_path is not None:
                 kwargs["verify"] = self._cacert_path
@@ -133,16 +143,12 @@ class ConanRequester(object):
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
 
-        self._url_creds.add_auth(url, kwargs)
+        if source_credentials:
+            self._url_creds.add_auth(url, kwargs)
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):
-            platform_info = "; ".join([
-                " ".join([platform.system(), platform.release()]),
-                "Python "+platform.python_version(),
-                platform.machine()])
-            user_agent = "Conan/%s (%s)" % (client_version, platform_info)
-            kwargs["headers"]["User-Agent"] = user_agent
+            kwargs["headers"]["User-Agent"] = self._user_agent
 
         return kwargs
 
@@ -171,7 +177,7 @@ class ConanRequester(object):
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(requests, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             return tmp
         finally:
             if popped:

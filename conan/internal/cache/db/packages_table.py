@@ -4,6 +4,7 @@ from conan.internal.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 
 
 class PackagesDBTable(BaseDbTable):
@@ -14,7 +15,8 @@ class PackagesDBTable(BaseDbTable):
                            ('prev', str, True),
                            ('path', str, False, None, True),
                            ('timestamp', float),
-                           ('build_id', str, True)]
+                           ('build_id', str, True),
+                           ('lru', int)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     @staticmethod
@@ -26,6 +28,7 @@ class PackagesDBTable(BaseDbTable):
             "pref": pref,
             "build_id": row.build_id,
             "path": row.path,
+            "lru": row.lru
         }
 
     def _where_clause(self, pref: PkgReference):
@@ -36,7 +39,7 @@ class PackagesDBTable(BaseDbTable):
             self.columns.prev: pref.revision,
         }
         where_expr = ' AND '.join(
-            [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+            [f"{k}='{v}' " if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
     def _set_clause(self, pref: PkgReference, path=None, build_id=None):
@@ -49,7 +52,7 @@ class PackagesDBTable(BaseDbTable):
             self.columns.timestamp: pref.timestamp,
             self.columns.build_id: build_id,
         }
-        set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
+        set_expr = ', '.join([f"{k} = '{v}'" for k, v in set_dict.items() if v is not None])
         return set_expr
 
     def get(self, pref: PkgReference):
@@ -73,12 +76,13 @@ class PackagesDBTable(BaseDbTable):
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        lru = timestamp_now()
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
-                                   f'VALUES ({placeholders})',
-                                   [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
-                                    path, pref.timestamp, build_id])
+                             f'VALUES ({placeholders})',
+                             [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
+                              path, pref.timestamp, build_id, lru])
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
@@ -96,10 +100,22 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
+    def update_lru(self, pref):
+        assert pref.revision is not None
+        # TODO: InstallGraph is dropping the pref.timestamp, cannot be checked here yet
+        # assert pref.timestamp is not None, f"PREF _TIMESSTAMP IS NONE {repr(pref)}"
+        where_clause = self._where_clause(pref)
+        lru = timestamp_now()
+        query = f"UPDATE {self.table_name} " \
+                f"SET {self.columns.lru} = '{lru}' " \
+                f"WHERE {where_clause};"
+        with self.db_connection() as conn:
+            conn.execute(query)
+
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.build_id} = "null" ' \
+                f"SET {self.columns.build_id} = 'null' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             try:
@@ -110,8 +126,8 @@ class PackagesDBTable(BaseDbTable):
     def remove_recipe(self, ref: RecipeReference):
         # can't use the _where_clause, because that is an exact match on the package_id, etc
         query = f"DELETE FROM {self.table_name} " \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
         with self.db_connection() as conn:
             conn.execute(query)
 
@@ -125,7 +141,7 @@ class PackagesDBTable(BaseDbTable):
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         assert pref.ref.revision, "To search package revisions you must provide a recipe revision."
         assert pref.package_id, "To search package revisions you must provide a package id."
-        check_prev = f'AND {self.columns.prev} = "{pref.revision}" ' if pref.revision else ''
+        check_prev = f"AND {self.columns.prev} = '{pref.revision}' " if pref.revision else ""
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -133,19 +149,20 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'MAX({self.columns.timestamp}), ' \
-                    f'{self.columns.build_id} ' \
+                    f'{self.columns.build_id}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{pref.ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(pref.ref)}" ' \
-                    f'AND {self.columns.pkgid} = "{pref.package_id}" ' \
+                    f"WHERE {self.columns.rrev} = '{pref.ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(pref.ref)}' " \
+                    f"AND {self.columns.pkgid} = '{pref.package_id}' " \
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{pref.ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(pref.ref)}" ' \
-                    f'AND {self.columns.pkgid} = "{pref.package_id}" ' \
+                    f"WHERE {self.columns.rrev} = '{pref.ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(pref.ref)}' " \
+                    f"AND {self.columns.pkgid} = '{pref.package_id}' " \
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
@@ -165,15 +182,16 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'MAX({self.columns.timestamp}), ' \
-                    f'{self.columns.build_id} ' \
+                    f'{self.columns.build_id}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(ref)}' " \
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
-                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                    f"AND {self.columns.reference} = '{str(ref)}' " \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:

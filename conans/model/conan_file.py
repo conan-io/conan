@@ -9,7 +9,6 @@ from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
-
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 
@@ -48,7 +47,8 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
-
+    vendor = False
+    languages = []
     implements = []
 
     provides = None
@@ -92,6 +92,8 @@ class ConanFile:
 
         if isinstance(self.generators, str):
             self.generators = [self.generators]
+        if isinstance(self.languages, str):
+            self.languages = [self.languages]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
@@ -135,6 +137,7 @@ class ConanFile:
         result["version"] = str(self.version) if self.version is not None else None
         result["topics"] = list(self.topics) if self.topics is not None else None
         result["package_type"] = str(self.package_type)
+        result["languages"] = self.languages
 
         settings = self.settings
         if settings is not None:
@@ -165,6 +168,9 @@ class ConanFile:
         result["cpp_info"] = self.cpp_info.serialize()
         result["conf_info"] = self.conf_info.serialize()
         result["label"] = self.display_name
+        if self.info is not None:
+            result["info"] = self.info.serialize()
+        result["vendor"] = self.vendor
         return result
 
     @property
@@ -237,6 +243,8 @@ class ConanFile:
 
     @property
     def source_path(self) -> Path:
+        self.output.warning(f"Use of 'source_path' is deprecated, please use 'source_folder' instead",
+                            warn_tag="deprecated")
         assert self.source_folder is not None, "`source_folder` is `None`"
         return Path(self.source_folder)
 
@@ -257,6 +265,8 @@ class ConanFile:
 
     @property
     def export_sources_path(self) -> Path:
+        self.output.warning(f"Use of 'export_sources_path' is deprecated, please use "
+                            f"'export_sources_folder' instead", warn_tag="deprecated")
         assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
         return Path(self.export_sources_folder)
 
@@ -266,6 +276,9 @@ class ConanFile:
 
     @property
     def export_path(self) -> Path:
+        self.output.warning(f"Use of 'export_path' is deprecated, please use 'export_folder' instead",
+                            warn_tag="deprecated")
+
         assert self.export_folder is not None, "`export_folder` is `None`"
         return Path(self.export_folder)
 
@@ -290,6 +303,8 @@ class ConanFile:
 
     @property
     def build_path(self) -> Path:
+        self.output.warning(f"Use of 'build_path' is deprecated, please use 'build_folder' instead",
+                            warn_tag="deprecated")
         assert self.build_folder is not None, "`build_folder` is `None`"
         return Path(self.build_folder)
 
@@ -309,16 +324,21 @@ class ConanFile:
 
     @property
     def package_path(self) -> Path:
+        self.output.warning(f"Use of 'package_path' is deprecated, please use 'package_folder' instead",
+                            warn_tag="deprecated")
+
         assert self.package_folder is not None, "`package_folder` is `None`"
         return Path(self.package_folder)
 
     @property
     def generators_path(self) -> Path:
+        self.output.warning(f"Use of 'generators_path' is deprecated, please use "
+                            f"'generators_folder' instead", warn_tag="deprecated")
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
     def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
-            shell=True, scope="build"):
+            shell=True, scope="build", stderr=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command, conanfile=self)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
@@ -332,8 +352,10 @@ class ConanFile:
         from conans.util.runners import conan_run
         if not quiet:
             ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
-        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
-        ConanOutput().writeln("")
+        ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
+        if not quiet:
+            ConanOutput().writeln("")
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing" % retcode)

@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from collections import OrderedDict
@@ -6,6 +7,7 @@ from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.model.version_range import VersionRange
 from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
@@ -64,6 +66,38 @@ class _LockRequires:
                 raise ConanException(f"Cannot add {ref} to lockfile, already exists")
             self._requires[ref] = package_ids
 
+    def remove(self, pattern):
+        ref = RecipeReference.loads(pattern)
+        version = str(ref.version)
+        remove = []
+        if version.startswith("[") and version.endswith("]"):
+            version_range = VersionRange(version[1:-1])
+            for k, v in self._requires.items():
+                if fnmatch.fnmatch(k.name, ref.name) and version_range.contains(k.version, None):
+                    new_pattern = f"{k.name}/*@{ref.user or ''}"
+                    new_pattern += f"/{ref.channel}" if ref.channel else ""
+                    if k.matches(new_pattern, False):
+                        remove.append(k)
+        else:
+            remove = [k for k in self._requires if k.matches(pattern, False)]
+        self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
+        return remove
+
+    def update(self, refs, name):
+        if not refs:
+            return
+        for r in refs:
+            r = RecipeReference.loads(r)
+            new_reqs = {}
+            for k, v in self._requires.items():
+                if r.name == k.name:
+                    ConanOutput().info(f"Replacing {name}: {k.repr_notime()} -> {repr(r)}")
+                else:
+                    new_reqs[k] = v
+            self._requires = new_reqs
+            self._requires[r] = None  # No package-id at the moment
+        self.sort()
+
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
 
@@ -87,6 +121,7 @@ class Lockfile(object):
         self._requires = _LockRequires()
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
+        self._conf_requires = _LockRequires()
         self._alias = {}
         self._overrides = Overrides()
         self.partial = False
@@ -119,6 +154,7 @@ class Lockfile(object):
         self._requires.sort()
         self._build_requires.sort()
         self._python_requires.sort()
+        self._conf_requires.sort()
 
     @staticmethod
     def load(path):
@@ -149,10 +185,11 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+        self._conf_requires.merge(other._conf_requires)
         self._alias.update(other._alias)
         self._overrides.update(other._overrides)
 
-    def add(self, requires=None, build_requires=None, python_requires=None):
+    def add(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
         alwasys keep the ordered lists. This means that for some especial edge cases it might
         be necessary to allow removing from a lockfile, for example to test an older version
@@ -170,6 +207,30 @@ class Lockfile(object):
             for r in python_requires:
                 self._python_requires.add(r)
             self._python_requires.sort()
+        if config_requires:
+            for r in config_requires:
+                self._conf_requires.add(r)
+            self._conf_requires.sort()
+
+    def remove(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
+        def _remove(reqs, self_reqs, name):
+            if reqs:
+                removed = []
+                for r in reqs:
+                    removed.extend(self_reqs.remove(r))
+                for d in removed:
+                    ConanOutput().info(f"Removed locked {name}: {d.repr_notime()}")
+
+        _remove(requires, self._requires, "require")
+        _remove(build_requires, self._build_requires, "build_require")
+        _remove(python_requires, self._python_requires, "python_require")
+        _remove(config_requires, self._conf_requires, "config_requires")
+
+    def update(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
+        self._requires.update(requires, "require")
+        self._build_requires.update(build_requires, "build_requires")
+        self._python_requires.update(python_requires, "python_requires")
+        self._conf_requires.update(config_requires, "config_requires")
 
     @staticmethod
     def deserialize(data):
@@ -191,6 +252,8 @@ class Lockfile(object):
                                  for k, v in data["alias"].items()}
         if "overrides" in data:
             graph_lock._overrides = Overrides.deserialize(data["overrides"])
+        if "config_requires" in data:
+            graph_lock._conf_requires = _LockRequires.deserialize(data["config_requires"])
         return graph_lock
 
     def serialize(self):
@@ -208,14 +271,17 @@ class Lockfile(object):
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         if self._overrides:
             result["overrides"] = self._overrides.serialize()
+        if self._conf_requires:
+            result["config_requires"] = self._conf_requires.serialize()
         return result
 
     def resolve_locked(self, node, require, resolve_prereleases):
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self._build_requires.refs()
+        elif node.is_conf:
+            locked_refs = self._conf_requires.refs()
         else:
             locked_refs = self._requires.refs()
-        self._resolve_overrides(require)
         try:
             self._resolve(require, locked_refs, resolve_prereleases)
         except ConanException:
@@ -224,16 +290,22 @@ class Lockfile(object):
                 msg = f"Override defined for {require.ref}, but multiple possible overrides" \
                       f" {overrides}. You might need to apply the 'conan graph build-order'" \
                       f" overrides for correctly building this package with this lockfile"
-                ConanOutput().error(msg)
+                ConanOutput().error(msg, error_type="exception")
             raise
 
-    def _resolve_overrides(self, require):
-        existing = self._overrides.get(require.ref)
-        if existing is not None and len(existing) == 1:
-            require.overriden_ref = require.ref  # Store that the require has been overriden
-            ref = next(iter(existing))
-            require.ref = ref
-            require.override_ref = ref
+    def resolve_overrides(self, require):
+        """ The lockfile contains the overrides to be able to inject them when the lockfile is
+        applied to upstream dependencies, that have the overrides downstream
+        """
+        if not self._overrides:
+            return
+
+        overriden = self._overrides.get(require.ref)
+        if overriden and len(overriden) == 1:
+            override_ref = next(iter(overriden))
+            require.overriden_ref = require.overriden_ref or require.ref.copy()
+            require.override_ref = override_ref
+            require.ref = override_ref
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:

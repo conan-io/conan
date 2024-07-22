@@ -1,4 +1,3 @@
-from conan.tools.apple.apple import _to_apple_arch
 from conans.model.version import Version
 
 
@@ -7,6 +6,7 @@ def architecture_flag(settings):
     returns flags specific to the target architecture and compiler
     Used by CMakeToolchain and AutotoolsToolchain
     """
+    from conan.tools.apple.apple import _to_apple_arch
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
@@ -165,10 +165,23 @@ def build_type_flags(settings):
     return []
 
 
-def cppstd_flag(settings):
-    compiler = settings.get_safe("compiler")
-    compiler_version = settings.get_safe("compiler.version")
-    cppstd = settings.get_safe("compiler.cppstd")
+def cppstd_flag(conanfile) -> str:
+    """
+    Returns flags specific to the C++ standard based on the ``conanfile.settings.compiler``,
+    ``conanfile.settings.compiler.version`` and ``conanfile.settings.compiler.cppstd``.
+
+    It also considers when using GNU extension in ``settings.compiler.cppstd``, reflecting it in the
+    compiler flag. Currently, it supports GCC, Clang, AppleClang, MSVC, Intel, MCST-LCC.
+
+    In case there is no ``settings.compiler`` or ``settings.cppstd`` in the profile, the result will
+    be an **empty string**.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return: ``str`` with the standard C++ flag used by the compiler. e.g. "-std=c++11", "/std:c++latest"
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    cppstd = conanfile.settings.get_safe("compiler.cppstd")
 
     if not compiler or not compiler_version or not cppstd:
         return ""
@@ -308,6 +321,10 @@ def _cppstd_clang(clang_version, cppstd):
 
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
+
+    if clang_version >= "17":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
@@ -465,3 +482,76 @@ def _cppstd_intel_cc(_, cppstd):
             "20": v20, "gnu20": vgnu20,
             "23": v23, "gnu23": vgnu23}.get(cppstd)
     return f'-std={flag}' if flag else None
+
+
+def cstd_flag(conanfile) -> str:
+    """
+    Returns flags specific to the C+standard based on the ``conanfile.settings.compiler``,
+    ``conanfile.settings.compiler.version`` and ``conanfile.settings.compiler.cstd``.
+
+    It also considers when using GNU extension in ``settings.compiler.cstd``, reflecting it in the
+    compiler flag. Currently, it supports GCC, Clang, AppleClang, MSVC, Intel, MCST-LCC.
+
+    In case there is no ``settings.compiler`` or ``settings.cstd`` in the profile, the result will
+    be an **empty string**.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return: ``str`` with the standard C flag used by the compiler.
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    cstd = conanfile.settings.get_safe("compiler.cstd")
+
+    if not compiler or not compiler_version or not cstd:
+        return ""
+
+    func = {"gcc": _cstd_gcc,
+            "clang": _cstd_clang,
+            "apple-clang": _cstd_apple_clang,
+            "msvc": _cstd_msvc}.get(compiler)
+    flag = None
+    if func:
+        flag = func(Version(compiler_version), str(cstd))
+    return flag
+
+
+def _cstd_gcc(gcc_version, cstd):
+    # TODO: Verify flags per version
+    flag = {"99": "c99",
+            "11": "c11",
+            "17": "c17",
+            "23": "c23"}.get(cstd, cstd)
+    return f'-std={flag}' if flag else None
+
+
+def _cstd_clang(gcc_version, cstd):
+    # TODO: Verify flags per version
+    flag = {"99": "c99",
+            "11": "c11",
+            "17": "c17",
+            "23": "c23"}.get(cstd, cstd)
+    return f'-std={flag}' if flag else None
+
+
+def _cstd_apple_clang(gcc_version, cstd):
+    # TODO: Verify flags per version
+    flag = {"99": "c99",
+            "11": "c11",
+            "17": "c17",
+            "23": "c23"}.get(cstd, cstd)
+    return f'-std={flag}' if flag else None
+
+
+def cstd_msvc_flag(visual_version, cstd):
+    if cstd == "17":
+        if visual_version >= "192":
+            return "c17"
+    elif cstd == "11":
+        if visual_version >= "192":
+            return "c11"
+    return None
+
+
+def _cstd_msvc(visual_version, cstd):
+    flag = cstd_msvc_flag(visual_version, cstd)
+    return f'/std:{flag}' if flag else None

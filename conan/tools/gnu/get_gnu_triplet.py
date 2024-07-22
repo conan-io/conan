@@ -1,21 +1,9 @@
 from conan.errors import ConanException
 
 
-def _get_gnu_triplet(os_, arch, compiler=None):
-    """
-    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
-
-    :param os_: os to be used to create the triplet
-    :param arch: arch to be used to create the triplet
-    :param compiler: compiler used to create the triplet (only needed fo windows)
-    """
-
-    if os_ == "Windows" and compiler is None:
-        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
-                             "needed for os=Windows")
-
+def _get_gnu_arch(os_, arch):
     # Calculate the arch
-    machine = {"x86": "i686" if os_ != "Linux" else "x86",
+    machine = {"x86": "i686",
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
@@ -58,12 +46,19 @@ def _get_gnu_triplet(os_, arch, compiler=None):
         elif "e2k" in arch:
             # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
             machine = "e2k-unknown"
+        elif "riscv64" in arch:
+            machine = 'riscv64'
+        elif 'riscv32' in arch:
+            machine = "riscv32"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
                              "translate it to the GNU triplet, please report at "
                              " https://github.com/conan-io/conan/issues" % arch)
+    return machine
 
+
+def _get_gnu_os(os_, arch, compiler=None):
     # Calculate the OS
     if compiler == "gcc":
         windows_op = "w64-mingw32"
@@ -94,5 +89,24 @@ def _get_gnu_triplet(os_, arch, compiler=None):
 
         if arch == "armv8_32" and os_ == "Linux":
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
+    return op_system
 
-    return "%s-%s" % (machine, op_system)
+
+def _get_gnu_triplet(os_, arch, compiler=None):
+    """
+    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
+
+    :param os_: os to be used to create the triplet
+    :param arch: arch to be used to create the triplet
+    :param compiler: compiler used to create the triplet (only needed fo windows)
+    """
+    if os_ == "Windows" and compiler is None:
+        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
+                             "needed for os=Windows")
+    machine = _get_gnu_arch(os_, arch)
+    op_system = _get_gnu_os(os_, arch, compiler=compiler)
+    return {
+        'machine': machine,
+        'system': op_system,
+        'triplet': f"{machine}-{op_system}"
+    }
