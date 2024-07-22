@@ -7,7 +7,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save
 
 conanfile_dep = textwrap.dedent("""
     import os
@@ -120,8 +120,19 @@ class TestBasicLocalFlows:
         # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
         pass
 
-    def test_check_integrity(self):
-        pass
+    def test_check_integrity(self, client):
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run(f"cache check-integrity {dep_layout.reference}")
+        assert "There are corrupted artifacts" not in client.out
+        # Even if we re-change the install folder contents, it should still be fine
+        save(os.path.join(dep_layout.install(), "installed.txt"), "Modified!")
+        client.run(f"cache check-integrity {dep_layout.reference}")
+        assert "There are corrupted artifacts" not in client.out
+        # But as soon as we change the package, it should still fail like a normal package would
+        save(os.path.join(dep_layout.package(), "file.txt"), "Modified!")
+        client.run(f"cache check-integrity {dep_layout.reference}", assert_error=True)
+        assert "There are corrupted artifacts" in client.out
 
     def test_access_invariant_from_consumer(self):
         pass
