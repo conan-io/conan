@@ -97,9 +97,6 @@ class TestBasicLocalFlows:
     def test_check_integrity(self):
         pass
 
-    def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
-        pass
-
 
 class TestToolRequiresFlows:
     def test_tool_requires(self):
@@ -152,6 +149,9 @@ class TestToolRequiresFlows:
     def test_update_recipe(self):
         pass
 
+    def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
+        pass
+
 
 class TestRemoteFlows:
 
@@ -191,3 +191,6 @@ class TestRemoteFlows:
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
         assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
+
+    def test_graph_info_of_remote_downloaded(self):
+        pass
