@@ -104,6 +104,12 @@ class TestBasicLocalFlows:
         # The install() folder does not exist as restoring is not considered usage, so it never runs
         # so this is just the immutable package_folder
         assert "installed.txt" not in os.listdir(package_folder)
+        # But as soon as you call conan install, install() is called and so it's used,
+        # so package_folder will be the install folder
+        client.run("install --requires=dep/1.0")
+        client.run(f"cache path {dep_layout.reference}")
+        package_folder = client.out.strip()
+        assert "installed.txt" in os.listdir(package_folder)
 
     def test_lockfile_interaction(self):
         pass
