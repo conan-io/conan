@@ -155,8 +155,8 @@ class Folders(object):
         return self.install
 
     @property
-    def invariant_package_folder(self):
-        return self._invariant_package_folder
+    def original_package_folder(self):
+        return self._original_package_folder
 
     @property
     def generators_folder(self):
