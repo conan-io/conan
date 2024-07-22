@@ -464,5 +464,4 @@ class BinaryInstaller:
                 mkdir(install_folder)
                 with conanfile_exception_formatter(conanfile, "install"):
                     conanfile.install()
-            # TODO: Keep the orignal info in something like "invariante_package_folder"
             conanfile.folders.set_base_package(install_folder)
