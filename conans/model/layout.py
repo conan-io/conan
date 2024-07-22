@@ -45,7 +45,7 @@ class Folders(object):
 
         self._base_recipe_metadata = None
         self._base_pkg_metadata = None
-        self._original_package_folder = None
+        self._immutable_package_folder = None
 
         self.source = ""
         self.build = ""
@@ -145,7 +145,7 @@ class Folders(object):
         return self._base_package
 
     def set_install_folder(self, folder):
-        self._original_package_folder = self.package_folder
+        self._immutable_package_folder = self.package_folder
         self.install = folder
 
     @property
@@ -153,8 +153,8 @@ class Folders(object):
         return self.install
 
     @property
-    def original_package_folder(self):
-        return self._original_package_folder
+    def immutable_package_folder(self):
+        return self._immutable_package_folder or self.package_folder
 
     @property
     def generators_folder(self):
