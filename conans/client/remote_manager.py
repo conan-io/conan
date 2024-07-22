@@ -284,7 +284,6 @@ def uncompress_file(src_path, dest_folder, scope=None):
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
-
         with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder,
                         is_tar_zst=src_path.endswith(".tar.zst"))

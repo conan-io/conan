@@ -189,7 +189,7 @@ class PackagePreparator:
             raise ConanException(f"Unsupported compression format '{compression_format}'")
 
         if is_dirty(package_file):
-            output.warning("Removing %s, marked as dirty" % PACKAGE_TGZ_NAME)
+            output.warning(f"Removing {package_file_name}, marked as dirty")
             os.remove(package_file)
             clean_dirty(package_file)
 
@@ -213,10 +213,10 @@ class PackagePreparator:
         files.pop(CONAN_MANIFEST)
 
         if os.path.isfile(package_file):
-            output.info(f"Not writing '{package_file}' because it already exists.")
+            output.info(f"Not writing '{package_file_name}' because it already exists.")
         else:
             source_files = {f: path for f, path in files.items()}
-            compresslevel = self._app.cache.new_config.get(compress_level_config, check_type=int)
+            compresslevel = self._global_conf.get(compress_level_config, check_type=int)
             compressed_path = compress_files(source_files, package_file_name, download_pkg_folder,
                                              compresslevel=compresslevel, compressformat=compression_format,
                                              ref=pref)

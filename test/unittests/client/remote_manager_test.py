@@ -35,12 +35,12 @@ class RemoteManagerTest(unittest.TestCase):
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        path = compress_files(files, PACKAGE_TZSTD_NAME, dest_dir=folder, compressformat='zstd')
+        path = compress_files(files, PACKAGE_TZSTD_NAME, dest_dir=folder, compressformat="zstd")
         self.assertTrue(os.path.exists(path))
         expected_path = os.path.join(folder, PACKAGE_TZSTD_NAME)
         self.assertEqual(path, expected_path)
 
-        extract_dir = os.path.join(folder, 'extracted')
+        extract_dir = os.path.join(folder, "extracted")
         uncompress_file(path, extract_dir)
 
         extract_files = list(sorted(os.listdir(extract_dir)))
@@ -49,5 +49,5 @@ class RemoteManagerTest(unittest.TestCase):
 
         for name, path in sorted(files.items()):
             extract_path = os.path.join(extract_dir, name)
-            with open(path, 'r') as f1, open(extract_path, 'r') as f2:
+            with open(path, "r") as f1, open(extract_path, "r") as f2:
                 self.assertEqual(f1.read(), f2.read())

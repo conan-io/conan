@@ -286,7 +286,7 @@ def tar_extract(fileobj, destination_dir, is_tar_zst=False):
     if is_tar_zst:
         dctx = zstandard.ZstdDecompressor()
         stream_reader = dctx.stream_reader(fileobj)
-        with tarfile.open(fileobj=stream_reader, bufsize=512000, mode='r|') as the_tar:
+        with tarfile.open(fileobj=stream_reader, bufsize=512000, mode="r|") as the_tar:
             the_tar.extractall(path=destination_dir)
     else:
         with tarfile.open(fileobj=fileobj) as the_tar:
