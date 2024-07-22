@@ -161,9 +161,8 @@ class TestToolRequiresFlows:
                 .with_import("from conan.tools.files import save")
                 .with_import("import os")
                 .with_test_reference_as_build_require()
-                .with_test(
-                     "bindir = self.dependencies.build[self.tested_reference_str].cpp_info.bindir",
-                     "save(self, os.path.join(bindir, 'test.txt'), 'Test file')")})
+                .with_test("bindir = self.dependencies.build[self.tested_reference_str].cpp_info.bindir")
+                .with_test("save(self, os.path.join(bindir, '__pycache__.pyc'), 'Test file')")})
         tc.run("create . --build-require")
         created_ref = tc.created_package_reference("app/1.0")
         tc.run(f"cache check-integrity {created_ref}")
