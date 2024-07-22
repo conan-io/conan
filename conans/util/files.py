@@ -7,6 +7,7 @@ import shutil
 import stat
 import tarfile
 import time
+import zstandard
 
 from contextlib import contextmanager
 
@@ -278,13 +279,18 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     return t
 
 
-def tar_extract(fileobj, destination_dir):
-    the_tar = tarfile.open(fileobj=fileobj)
-    # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
-    # "could not change modification time", with time=0
-    # the_tar.errorlevel = 2  # raise exception if any error
-    the_tar.extractall(path=destination_dir)
-    the_tar.close()
+def tar_extract(fileobj, destination_dir, is_tar_zst=False):
+    if is_tar_zst:
+        dctx = zstandard.ZstdDecompressor()
+        stream_reader = dctx.stream_reader(fileobj)
+        with tarfile.open(fileobj=stream_reader, bufsize=512000, mode='r|') as the_tar:
+            the_tar.extractall(path=destination_dir)
+    else:
+        with tarfile.open(fileobj=fileobj) as the_tar:
+            # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
+            # "could not change modification time", with time=0
+            # the_tar.errorlevel = 2  # raise exception if any error
+            the_tar.extractall(path=destination_dir)
 
 
 def exception_message_safe(exc):

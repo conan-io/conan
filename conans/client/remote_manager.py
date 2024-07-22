@@ -2,7 +2,6 @@ import os
 import shutil
 import tarfile
 import time
-import zstandard
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -267,13 +266,8 @@ def uncompress_file(src_path, dest_folder, scope=None):
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
 
         with open(src_path, mode='rb') as file_handler:
-            if src_path.endswith(".tar.zst"):
-                dctx = zstandard.ZstdDecompressor()
-                stream_reader = dctx.stream_reader(file_handler)
-                with tarfile.open(fileobj=stream_reader, mode='r|') as the_tar:
-                    the_tar.extractall(dest_folder)
-            else:
-                tar_extract(file_handler, dest_folder)
+            tar_extract(file_handler, dest_folder,
+                        is_tar_zstd=src_path.endswith(".tar.zst"))
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))

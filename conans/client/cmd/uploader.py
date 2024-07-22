@@ -167,7 +167,8 @@ class PackagePreparator:
 
     def _compress_package_files(self, layout, pref):
         download_pkg_folder = layout.download_package()
-        compression_format = self._app.cache.new_config.get("core.upload:compression_format") or "gzip"
+        compression_format = self._app.cache.new_config.get("core.upload:compression_format",
+                                                            default="gzip")
         if compression_format == "gzip":
             compress_level_config = "core.gzip:compresslevel"
             package_file_name = PACKAGE_TGZ_NAME
@@ -177,10 +178,10 @@ class PackagePreparator:
             package_file_name = PACKAGE_TZSTD_NAME
             package_file = os.path.join(download_pkg_folder, PACKAGE_TZSTD_NAME)
         else:
-            raise ConanException(f"Unsupported compression level '{compression_format}'")
+            raise ConanException(f"Unsupported compression format '{compression_format}'")
 
         if is_dirty(package_file):
-            self._output.warning("%s: Removing %s, marked as dirty" % (str(pref), package_file_name))
+            self._output.warning(f"{pref}: Removing {package_file_name}, marked as dirty")
             os.remove(package_file)
             clean_dirty(package_file)
 
@@ -272,31 +273,28 @@ def compress_files(files, name, dest_dir, compressformat=None, compresslevel=Non
 
     if compressformat == "zstd":
         with open(tar_path, "wb") as tarfile_obj:
-            def reset_tarinfo(tarinfo):
-                """
-                Resets mtime in the tarinfo for consistency with
-                gzopen_without_timestamps()
-                """
-                tarinfo.mtime = 0
-                return tarinfo
-
             # Only provide level if it was overridden by config.
             zstd_kwargs = {}
             if compresslevel is not None:
                 zstd_kwargs["level"] = compresslevel
 
-            dctx = zstandard.ZstdCompressor(**zstd_kwargs)
+            dctx = zstandard.ZstdCompressor(write_checksum=True, threads=-1, **zstd_kwargs)
 
             # Create a zstd stream writer so tarfile writes uncompressed data to
             # the zstd stream writer, which in turn writes compressed data to the
             # output tar.zst file.
             with dctx.stream_writer(tarfile_obj) as stream_writer:
-                with tarfile.open(mode="w|", fileobj=stream_writer,
+                with tarfile.open(mode="w|", fileobj=stream_writer, bufsize=524288,
                                   format=tarfile.PAX_FORMAT) as tar:
+                    unflushed_bytes = 0
                     for filename, abs_path in sorted(files.items()):
-                        tar.add(abs_path, filename, recursive=False, filter=reset_tarinfo)
+                        tar.add(abs_path, filename, recursive=False)
+
+                        unflushed_bytes += os.path.getsize(abs_path)
+                        if unflushed_bytes >= 2097152:
+                            stream_writer.flush()  # Flush the current zstd block.
+                            unflushed_bytes = 0
     else:
-        # FIXME, better write to disk sequentially and not keep tgz contents in memory
         with set_dirty_context_manager(tar_path), open(tar_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
                                             compresslevel=compresslevel)
