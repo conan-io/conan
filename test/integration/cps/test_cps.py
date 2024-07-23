@@ -65,7 +65,7 @@ def test_cps_in_pkg():
                     "includes": [
                         "@prefix@/include"
                     ],
-                    "location": "@prefix@/lib/pkg.a"
+                    "location": "@prefix@/lib/zlib.a"
                 }
             }
         }

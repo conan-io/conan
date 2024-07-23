@@ -235,11 +235,21 @@ class CPS:
         return cps
 
     def to_conan(self):
+        def strip_prefix(dirs):
+            return [d.replace("@prefix@/", "") for d in dirs]
+
         cpp_info = CppInfo()
         if len(self.components) == 1:
             comp = next(iter(self.components.values()))
-            cpp_info.includedirs = comp.includes
+            cpp_info.includedirs = strip_prefix(comp.includes)
             cpp_info.defines = comp.definitions
+            if comp.type is CPSComponentType.ARCHIVE:
+                location = comp.location
+                location = location.replace("@prefix@/", "")
+                cpp_info.libdirs = [os.path.dirname(location)]
+                filename = os.path.basename(location)
+                basefile = os.path.splitext(filename)[0]
+                cpp_info.libs = [basefile]
         else:
             for comp_name, comp in self.components.items():
                 cpp_info.components[comp_name] = comp.to_conan()
