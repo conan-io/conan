@@ -467,3 +467,4 @@ class BinaryInstaller:
                     with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'install'):
                         conanfile.install()
             conanfile.folders.set_base_package(install_folder)
+            conanfile.output.success(f"Install folder {install_folder}")

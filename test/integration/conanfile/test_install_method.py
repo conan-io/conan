@@ -309,6 +309,7 @@ class TestRemoteFlows:
 
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
+        assert "dep/1.0: Calling install()"
         assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
 
     def test_graph_info_of_remote_downloaded(self):
