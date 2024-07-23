@@ -315,5 +315,9 @@ class TestRemoteFlows:
     def test_graph_info_of_remote_downloaded(self):
         pass
 
-    def test_upload_verify_integrity(self):
-        pass
+    def test_upload_verify_integrity(self, client):
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("upload * -r=default -c --check")
+        assert f"dep/1.0:{dep_layout.reference.package_id}: Integrity checked: ok" in client.out
+        assert "There are corrupted artifacts" not in client.out
