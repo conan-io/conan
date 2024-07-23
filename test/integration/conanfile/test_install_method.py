@@ -186,7 +186,7 @@ class TestBasicLocalFlows:
                 .with_package_id("del self.info.options.myoption")
                 .with_install("save(self, os.path.join(self.install_folder, 'file.txt'), 'Hello World!')",
                               "save(self, os.path.join(self.install_folder, 'os.conf'), str(self.info.settings.os))",
-                              "save(self, os.path.join(self.install_folder, 'option.conf'), str(self.info,options.get_safe('myoption')))",
+                              "save(self, os.path.join(self.install_folder, 'option.conf'), str(self.info.options.get_safe('myoption')))",
                               "save(self, os.path.join(self.install_folder, 'otheroption.conf'), str(self.info.options.otheroption))")})
         tc.run("create . -s=os=Linux -o=&:myoption=True -o=&:otheroption=True")
         layout = tc.created_layout()
