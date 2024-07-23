@@ -44,7 +44,7 @@ def deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type):
     libdirs = [x.replace("\\", "/") for x in cpp_info.libdirs]
     bindirs = [x.replace("\\", "/") for x in cpp_info.bindirs]
 
-    static_patterns = [f"{libname}.lib", f"{libname}.a"]
+    static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
     shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
                        f"lib{libname}.*dylib"]
     dll_patterns = [f"{libname}.dll"]
@@ -85,8 +85,8 @@ def deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type):
         # Only .dll but no link library
         full_lib["location"] = dll_location
         full_lib["type"] = PackageType.SHARED
-    if full_lib["type"] != pkg_type:
-        ConanOutput().warning(f"Lib {libname} deduced as '{full_lib['type']}, "
+    if full_lib.get("type") != pkg_type:
+        ConanOutput().warning(f"Lib {libname} deduced as '{full_lib.get('type')}, "
                               f"but 'package_type={pkg_type}'")
 
 
@@ -267,6 +267,8 @@ class CPS:
                 cpp_info.libdirs = [os.path.dirname(location)]
                 filename = os.path.basename(location)
                 basefile = os.path.splitext(filename)[0]
+                if basefile.startswith("lib"):
+                    basefile = basefile[3:]
                 cpp_info.libs = [basefile]
                 # FIXME: Missing requires
             cpp_info.system_libs = comp.link_libraries
@@ -281,6 +283,8 @@ class CPS:
                     cpp_comp.libdirs = [os.path.dirname(location)]
                     filename = os.path.basename(location)
                     basefile = os.path.splitext(filename)[0]
+                    if basefile.startswith("lib"):
+                        basefile = basefile[3:]
                     cpp_comp.libs = [basefile]
                 for r in comp.requires:
                     cpp_comp.requires.append(r[1:] if r.startswith(":") else r)
