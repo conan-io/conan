@@ -98,26 +98,34 @@ class CPSComponent:
         self.requires = []
         self.location = None
         self.link_location = None
+        self.link_libraries = None  # system libraries
 
     def serialize(self):
-        component = {"type": self.type,
-                     "includes": [x.replace("\\", "/") for x in self.includes]}
+        component = {"type": self.type}
+        if self.requires:
+            component["requires"] = self.requires
+        if self.includes:
+            component["includes"] = [x.replace("\\", "/") for x in self.includes]
         if self.definitions:
             component["definitions"] = self.definitions
         if self.location:  # TODO: @prefix@
             component["location"] = self.location
         if self.link_location:
             component["link_location"] = self.link_location
+        if self.link_libraries:
+            component["link_libraries"] = self.link_libraries
         return component
 
     @staticmethod
     def deserialize(data):
         comp = CPSComponent()
         comp.type = CPSComponentType(data.get("type"))
+        comp.requires = data.get("requires")
         comp.includes = data.get("includes")
         comp.definitions = data.get("definitions")
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
+        comp.link_libraries = data.get("link_libraries")
         return comp
 
     @staticmethod
@@ -140,6 +148,9 @@ class CPSComponent:
         cps_comp.type = CPSComponentType.from_conan(full_lib.get("type"))
         cps_comp.location = full_lib.get("location")
         cps_comp.link_location = full_lib.get("link_location")
+        cps_comp.link_libraries = cpp_info.system_libs
+        required = cpp_info.requires
+        cps_comp.requires = [f":{c}" if "::" not in c else c for c in required]
         return cps_comp
 
 
@@ -152,6 +163,7 @@ class CPS:
         self.default_components = []
         self.components = {}
         self.configurations = []
+        self.requires = []
         # Supplemental
         self.description = None
         self.license = None
@@ -166,6 +178,9 @@ class CPS:
         for data in "license", "description", "website":
             if getattr(self, data, None):
                 cps[data] = getattr(self, data)
+
+        if self.requires:
+            cps["requires"] = self.requires
 
         if self.configurations:
             cps["configurations"] = self.configurations
@@ -185,6 +200,7 @@ class CPS:
         cps.license = data.get("license")
         cps.description = data.get("description")
         cps.website = data.get("website")
+        cps.requires = data.get("requires")
         cps.configurations = data.get("configurations")
         cps.default_components = data.get("default_components")
         cps.components = {k: CPSComponent.deserialize(v)
@@ -198,6 +214,8 @@ class CPS:
         cps.license = dep.license
         cps.description = dep.description
         cps.website = dep.homepage
+
+        cps.requires = {d.ref.name: None for d in dep.dependencies.host.values()}
         if dep.settings.get_safe("build_type"):
             cps.configurations = [str(dep.settings.build_type).lower()]
 
@@ -250,9 +268,24 @@ class CPS:
                 filename = os.path.basename(location)
                 basefile = os.path.splitext(filename)[0]
                 cpp_info.libs = [basefile]
+                # FIXME: Missing requires
+            cpp_info.system_libs = comp.link_libraries
         else:
             for comp_name, comp in self.components.items():
-                cpp_info.components[comp_name] = comp.to_conan()
+                cpp_comp = cpp_info.components[comp_name]
+                cpp_comp.includedirs = strip_prefix(comp.includes)
+                cpp_comp.defines = comp.definitions
+                if comp.type is CPSComponentType.ARCHIVE:
+                    location = comp.location
+                    location = location.replace("@prefix@/", "")
+                    cpp_comp.libdirs = [os.path.dirname(location)]
+                    filename = os.path.basename(location)
+                    basefile = os.path.splitext(filename)[0]
+                    cpp_comp.libs = [basefile]
+                for r in comp.requires:
+                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r)
+                cpp_comp.system_libs = comp.link_libraries
+
         return cpp_info
 
     def save(self, folder):
