@@ -102,7 +102,8 @@ class TestBasicLocalFlows:
         client.run("cache save *:* -f=json", redirect_stdout="saved.json")
         saved = json.loads(client.load("saved.json"))
         pref = dep_layout.reference
-        assert saved["Local Cache"]["dep/1.0"]["revisions"][pref.ref.revision]["packages"][pref.package_id]["revisions"][pref.revision]["package_folder"] in dep_layout.package()
+        saved_pkg_folder = saved["Local Cache"]["dep/1.0"]["revisions"][pref.ref.revision]["packages"][pref.package_id]["revisions"][pref.revision]["package_folder"]
+        assert saved_pkg_folder in dep_layout.package().replace("\\", "/")
         client.run("remove * -c")
         assert not os.path.exists(dep_layout.package())
         assert not os.path.exists(dep_layout.install())
