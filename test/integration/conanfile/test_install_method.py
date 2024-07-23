@@ -72,12 +72,12 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.package()}" not in client.out
         assert f"Dep package folder: {dep_layout.install()}" in client.out
 
-    def test_no_info_access(self):
+    def test_no_non_info_access(self):
         client = TestClient(light=True)
         client.save({"conanfile.py": GenConanfile("dep", "1.0")
-                     .with_install("self.output.info('Info.settings.os: ' + self.info.settings.os)")})
+                     .with_install("self.output.info('settings.os: ' + self.settings.os)")})
         client.run("create .", assert_error=True)
-        assert "'self.info' access in 'install()' method is forbidden" in client.out
+        assert "'self.settings' access in 'install()' method is forbidden" in client.out
 
     def test_cache_path_command(self, client):
         client.run("create dep")
@@ -185,9 +185,9 @@ class TestBasicLocalFlows:
                 .with_setting("os")
                 .with_package_id("del self.info.options.myoption")
                 .with_install("save(self, os.path.join(self.install_folder, 'file.txt'), 'Hello World!')",
-                              "save(self, os.path.join(self.install_folder, 'os.conf'), str(self.settings.os))",
-                              "save(self, os.path.join(self.install_folder, 'option.conf'), str(self.options.get_safe('myoption')))",
-                              "save(self, os.path.join(self.install_folder, 'otheroption.conf'), str(self.options.otheroption))")})
+                              "save(self, os.path.join(self.install_folder, 'os.conf'), str(self.info.settings.os))",
+                              "save(self, os.path.join(self.install_folder, 'option.conf'), str(self.info,options.get_safe('myoption')))",
+                              "save(self, os.path.join(self.install_folder, 'otheroption.conf'), str(self.info.options.otheroption))")})
         tc.run("create . -s=os=Linux -o=&:myoption=True -o=&:otheroption=True")
         layout = tc.created_layout()
         assert "file.txt" in os.listdir(layout.install())
