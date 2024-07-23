@@ -22,7 +22,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.paths import get_conan_user_home
+from conan.internal.paths import get_conan_user_home
 
 
 class ConanAPI(object):

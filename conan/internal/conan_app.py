@@ -12,7 +12,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 
 
 class CmdWrapper:

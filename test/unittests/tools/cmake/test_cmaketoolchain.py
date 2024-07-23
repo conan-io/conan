@@ -58,10 +58,16 @@ def test_remove(conanfile):
     assert "_CMAKE_IN_TRY_COMPILE" in content
 
 
-def test_filter(conanfile):
+def test_select_blocks(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.select("generic_system")
     content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" not in content
+    assert "########## 'libcxx' block #############" not in content
+    # These are not removed by default, to not break behavior
+    assert "########## 'variables' block #############" in content
+    assert "########## 'preprocessor' block #############" in content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" not in content
     assert "_CMAKE_IN_TRY_COMPILE" not in content
@@ -70,9 +76,51 @@ def test_filter(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.select("generic_system", "cmake_flags_init")
     content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" in content
+    assert "########## 'libcxx' block #############" not in content
+    # These are not removed by default, to not break behavior
+    assert "########## 'variables' block #############" in content
+    assert "########## 'preprocessor' block #############" in content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" in content
     assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.enabled("generic_system")
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+
+def test_enabled_blocks_conf(conanfile):
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["generic_system"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" not in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    # remove multiple
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks",
+                          ["generic_system", "cmake_flags_init"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["potato"])
+    toolchain = CMakeToolchain(conanfile)
+    with pytest.raises(ConanException) as e:
+        _ = toolchain.content
+    assert "Block 'potato' defined in tools.cmake.cmaketoolchain:enabled_blocks doesn't" in str(e)
 
 
 def test_dict_keys(conanfile):

@@ -10,7 +10,7 @@ from mock import patch
 from conan.api.model import Remote
 from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.paths import DEFAULT_CONAN_HOME
+from conan.internal.paths import DEFAULT_CONAN_HOME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents

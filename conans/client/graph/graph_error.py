@@ -70,7 +70,7 @@ class GraphProvidesError(GraphError):
 
     def __str__(self):
         return f"Provide Conflict: Both '{self.node.ref}' and '{self.conflicting_node.ref}' " \
-               f"provide '{self.node.conanfile.provides}'."
+               f"provide '{self.node.conanfile.provides or self.conflicting_node.conanfile.provides}'."
 
 
 class GraphRuntimeError(GraphError):

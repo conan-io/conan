@@ -1278,6 +1278,32 @@ def test_build_folder_vars_self_name_version():
     assert "conan-windows-pkg-0.1-debug" in presets
 
 
+def test_build_folder_vars_constants_user():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "dep"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"const.myvalue\"]'"
+    settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
+    c.run("install . -c={} {}".format(conf, settings))
+    assert "cmake --preset conan-myvalue-debug" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "build", "myvalue", "Debug"))
+    presets = load(os.path.join(c.current_folder,
+                                "build/myvalue/Debug/generators/CMakePresets.json"))
+    assert "conan-myvalue-debug" in presets
+
+
 def test_extra_flags():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -1610,20 +1636,31 @@ def test_toolchain_extra_variables():
 
 
     client.run(textwrap.dedent("""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': 'true'}}"
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': 'true'}}"
     """) , assert_error=True)
-    assert 'tools.cmake.cmaketoolchain:extra_variables "cache" must be a boolean (True/False)' in client.out
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "cache" must be a boolean' in client.out
+
+    # Test invalid force
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'force': True}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "force" is only allowed for cache variables' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'force': 'true'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "force" must be a boolean' in client.out
 
     # Test invalid cache variable
     client.run(textwrap.dedent("""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True}}"
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True}}"
     """) , assert_error=True)
-    assert 'tools.cmake.cmaketoolchain:extra_variables needs "type" defined for cache variable "invalid"' in client.out
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" needs "type" defined for cache variable' in client.out
 
     client.run(textwrap.dedent("""
-        install . -c tools.cmake.cmaketoolchain:extra_variables="{'invalid': {'value': 'hello world', 'cache': True, 'type': 'INVALID_TYPE'}}"
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'type': 'INVALID_TYPE'}}"
     """) , assert_error=True)
-    assert 'tools.cmake.cmaketoolchain:extra_variables invalid type "INVALID_TYPE" for cache variable "invalid". Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" invalid type "INVALID_TYPE" for cache variable. Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
 
     client.run(textwrap.dedent("""
         install . -c tools.cmake.cmaketoolchain:extra_variables="{'CACHE_VAR_DEFAULT_DOC': {'value': 'hello world', 'cache': True, 'type': 'PATH'}}"
@@ -1631,6 +1668,11 @@ def test_toolchain_extra_variables():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in toolchain
 
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'type': 'PATH', 'docstring': 'My cache variable', 'force': True}}"
+    """))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(myVar "hello world" CACHE PATH "My cache variable" FORCE)' in toolchain
 
 def test_variables_wrong_scaping():
     # https://github.com/conan-io/conan/issues/16432

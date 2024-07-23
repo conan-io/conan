@@ -41,6 +41,7 @@ def profile_plugin(profile):
     _check_correct_cppstd(settings)
     _check_correct_cstd(settings)
 
+
 def _check_correct_cppstd(settings):
     from conan.tools.scm import Version
     def _error(compiler, cppstd, min_version, version):
@@ -263,7 +264,6 @@ class _ProfileValueParser(object):
                                                          "options", "conf", "buildenv", "runenv",
                                                          "replace_requires", "replace_tool_requires",
                                                          "runner"])
-
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
@@ -334,7 +334,6 @@ class _ProfileValueParser(object):
             base_profile.buildenv.update_profile_env(buildenv)
         if runenv is not None:
             base_profile.runenv.update_profile_env(runenv)
-
 
         runner = _ProfileValueParser._parse_key_value(doc.runner) if doc.runner else {}
         base_profile.runner.update(runner)

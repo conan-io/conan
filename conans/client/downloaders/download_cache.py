@@ -6,7 +6,7 @@ from threading import Lock
 from conans.errors import ConanException
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save, remove_if_dirty
-from conans.util.locks import SimpleLock
+from conans.util.locks import simple_lock
 from conans.util.sha import sha256 as compute_sha256
 
 
@@ -35,7 +35,7 @@ class DownloadCache:
     @contextmanager
     def lock(self, lock_id):
         lock = os.path.join(self._path, self._LOCKS, lock_id)
-        with SimpleLock(lock):
+        with simple_lock(lock):
             # Once the process has access, make sure multithread is locked too
             # as SimpleLock doesn't work multithread
             thread_lock = self._thread_locks.setdefault(lock, Lock())

@@ -259,6 +259,15 @@ class TestPkgListMerge:
         settings = rev["packages"]["9e186f6d94c008b544af1569d1a6368d8339efc5"]["info"]["settings"]
         assert settings == {"build_type": "Debug"}
 
+    def test_pkglist_file_error(self):
+        # This can happen when reusing the same file in input and output
+        c = TestClient(light=True)
+        c.run("pkglist merge -l mylist.json", assert_error=True)
+        assert "ERROR: Package list file missing or broken:" in c.out
+        c.save({"mylist.json": ""})
+        c.run("pkglist merge -l mylist.json", assert_error=True)
+        assert "ERROR: Package list file invalid JSON:" in c.out
+
 
 class TestDownloadUpload:
     @pytest.fixture()

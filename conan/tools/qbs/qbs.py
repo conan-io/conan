@@ -44,7 +44,30 @@ class Qbs(object):
             '--file', self._project_file,
         ]
 
+    def resolve(self, parallel=True):
+        args = self._get_common_arguments()
+
+        if parallel:
+            args.extend(['--jobs', '%s' % self.jobs])
+        else:
+            args.extend(['--jobs', '1'])
+
+        if self.profile:
+            args.append('profile:%s' % self.profile)
+
+        generators_folder = self._conanfile.generators_folder
+        if os.path.exists(os.path.join(generators_folder, 'conan-qbs-deps')):
+            args.append('moduleProviders.conan.installDirectory:' + generators_folder)
+
+        for name in self._configuration:
+            config = self._configuration[name]
+            args.extend(_configuration_dict_to_commandlist(name, config))
+
+        cmd = 'qbs resolve %s' % cmd_args_to_string(args)
+        self._conanfile.run(cmd)
+
     def _build(self, products, all_products):
+
         args = self._get_common_arguments()
         args.append('--no-install')
 
@@ -55,12 +78,8 @@ class Qbs(object):
 
         args.extend(['--jobs', '%s' % self.jobs])
 
-        if self.profile:
-            args.append('profile:%s' % self.profile)
-
         for name in self._configuration:
-            config = self._configuration[name]
-            args.extend(_configuration_dict_to_commandlist(name, config))
+            args.append('config:%s' % name)
 
         cmd = 'qbs build %s' % cmd_args_to_string(args)
         self._conanfile.run(cmd)

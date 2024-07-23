@@ -281,6 +281,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     """
 
     output = conanfile.output
+    output.info(f"Unzipping {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
