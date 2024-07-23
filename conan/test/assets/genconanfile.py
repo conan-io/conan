@@ -162,9 +162,10 @@ class GenConanfile(object):
         self._tool_requirements.append((ref_str, kwargs))
         return self
 
-    def with_import(self, i):
-        if i not in self._imports:
-            self._imports.append(i)
+    def with_import(self, *imports):
+        for i in imports:
+            if i not in self._imports:
+                self._imports.append(i)
         return self
 
     def with_setting(self, setting):
@@ -235,9 +236,10 @@ class GenConanfile(object):
             self._package_info["env_info"] = env_info
         return self
 
-    def with_package_id(self, line):
+    def with_package_id(self, *lines):
         self._package_id_lines = self._package_id_lines or []
-        self._package_id_lines.append(line)
+        for line in lines:
+            self._package_id_lines.append(line)
         return self
 
     def with_test(self, *lines):
@@ -410,13 +412,13 @@ class GenConanfile(object):
     def _install_method_render(self):
         lines = []
         if self._install_lines:
-            lines.extend("    {}".format(line) for line in self._install_lines)
+            lines.extend("        {}".format(line) for line in self._install_lines)
 
         if not lines:
             return ""
         return """
     def install(self):
-    {}
+{}
         """.format("\n".join(lines))
 
     @property

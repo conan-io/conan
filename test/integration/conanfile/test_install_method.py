@@ -72,6 +72,13 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.package()}" not in client.out
         assert f"Dep package folder: {dep_layout.install()}" in client.out
 
+    def test_no_info_access(self):
+        client = TestClient(light=True)
+        client.save({"conanfile.py": GenConanfile("dep", "1.0")
+                     .with_install("self.output.info('Info.settings.os: ' + self.info.settings.os)")})
+        client.run("create .", assert_error=True)
+        assert "'self.info' access in 'install()' method is forbidden" in client.out
+
     def test_cache_path_command(self, client):
         client.run("create dep")
         dep_layout = client.created_layout()
@@ -88,6 +95,7 @@ class TestBasicLocalFlows:
         client.run("cache save *:*")
         client.run("remove * -c")
         client.run("cache restore conan_cache_save.tgz")
+
         # Now create the package and then save/restore
         client.run("create dep")
         dep_layout = client.created_layout()
@@ -101,9 +109,11 @@ class TestBasicLocalFlows:
         client.run("cache restore conan_cache_save.tgz")
         client.run(f"cache path {dep_layout.reference}")
         package_folder = client.out.strip()
+
         # The install() folder does not exist as restoring is not considered usage, so it never runs
         # so this is just the immutable package_folder
         assert "installed.txt" not in os.listdir(package_folder)
+
         # But as soon as you call conan install, install() is called and so it's used,
         # so package_folder will be the install folder
         client.run("install --requires=dep/1.0")
@@ -119,8 +129,10 @@ class TestBasicLocalFlows:
         # but maybe also the install one?
         pass
 
-    def test_create_pkglist_output(self):
-        pass
+    def test_create_pkglist_output(self, client):
+        client.run("create dep -f=json", redirect_stdout="created.json")
+        client.run("list --graph=created.json --graph-binaries=build")
+        print()
 
     def test_vendorized(self):
         # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
@@ -160,6 +172,29 @@ class TestBasicLocalFlows:
             assert f"app/1.0: Package: {dep_layout.install()}" in client.out
         else:
             assert f"app/1.0: Package: {dep_layout.package()}" in client.out
+
+    def test_cache_modification_of_custom_conf_based_on_settings(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("dep", "1.0")
+                .with_import("from conan.tools.files import save",
+                             "import os")
+                .with_option("myoption", [True, False])
+                .with_option("otheroption", [True, False])
+                .with_default_option("myoption", False)
+                .with_default_option("otheroption", False)
+                .with_setting("os")
+                .with_package_id("del self.info.options.myoption")
+                .with_install("save(self, os.path.join(self.install_folder, 'file.txt'), 'Hello World!')",
+                              "save(self, os.path.join(self.install_folder, 'os.conf'), str(self.settings.os))",
+                              "save(self, os.path.join(self.install_folder, 'option.conf'), str(self.options.get_safe('myoption')))",
+                              "save(self, os.path.join(self.install_folder, 'otheroption.conf'), str(self.options.otheroption))")})
+        tc.run("create . -s=os=Linux -o=&:myoption=True -o=&:otheroption=True")
+        layout = tc.created_layout()
+        assert "file.txt" in os.listdir(layout.install())
+        assert tc.load(os.path.join(layout.install(), "os.conf")) == "Linux"
+        # This is problematic, it means that the mapping for install() and package_id would not be 1:1 and could be outdated
+        assert tc.load(os.path.join(layout.install(), "option.conf")) == "None"
+        assert tc.load(os.path.join(layout.install(), "otheroption.conf")) == "True"
 
 
 class TestToolRequiresFlows:
@@ -222,14 +257,16 @@ class TestToolRequiresFlows:
                 .with_package_info({"bindirs": ["bin"]}, {})
                 .with_install("save(self, 'installed.txt', 'Installed file')"),
                  "test_package/conanfile.py": GenConanfile()
-                .with_import("from conan.tools.files import save")
-                .with_import("import os")
+                .with_import("from conan.tools.files import save",
+                             "import os")
                 .with_test_reference_as_build_require()
                 .with_test("bindir = self.dependencies.build[self.tested_reference_str].cpp_info.bindir",
+                           "self.output.info(f'Bindir: {bindir}')",
                            "save(self, os.path.join(bindir, '__pycache__.pyc'), 'Test file')")})
         tc.run("create . --build-require")
-        created_ref = tc.created_package_reference("app/1.0")
-        tc.run(f"cache check-integrity {created_ref}")
+        app_layout = tc.created_layout()
+        assert f"Bindir: {os.path.join(app_layout.install(), 'bin')}" in tc.out
+        tc.run(f"cache check-integrity {app_layout.reference}")
         assert "There are corrupted artifacts" not in tc.out
 
 
@@ -274,4 +311,7 @@ class TestRemoteFlows:
         assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
 
     def test_graph_info_of_remote_downloaded(self):
+        pass
+
+    def test_upload_verify_integrity(self):
         pass

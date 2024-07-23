@@ -462,6 +462,8 @@ class BinaryInstaller:
             conanfile.folders.set_install_folder(install_folder)
             if not os.path.exists(install_folder):
                 mkdir(install_folder)
+                conanfile.output.highlight("Calling install()")
                 with conanfile_exception_formatter(conanfile, "install"):
-                    conanfile.install()
+                    with conanfile_remove_attr(conanfile, ['info'], 'install'):
+                        conanfile.install()
             conanfile.folders.set_base_package(install_folder)
