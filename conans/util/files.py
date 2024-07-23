@@ -285,9 +285,11 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 def tar_extract(fileobj, destination_dir, is_tar_zst=False):
     if is_tar_zst:
         dctx = zstandard.ZstdDecompressor()
-        stream_reader = dctx.stream_reader(fileobj)
-        with tarfile.open(fileobj=stream_reader, bufsize=512000, mode="r|") as the_tar:
-            the_tar.extractall(path=destination_dir)
+        with dctx.stream_reader(fileobj) as stream_reader:
+            # The choice of bufsize=32768 comes from profiling decompression at various
+            # values and finding that bufsize value consistently performs well.
+            with tarfile.open(fileobj=stream_reader, bufsize=32768, mode="r|") as the_tar:
+                the_tar.extractall(path=destination_dir)
     else:
         with tarfile.open(fileobj=fileobj) as the_tar:
             # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to

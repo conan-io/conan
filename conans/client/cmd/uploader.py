@@ -290,7 +290,11 @@ def compress_files(files, name, dest_dir, compressformat=None, compresslevel=Non
             # the zstd stream writer, which in turn writes compressed data to the
             # output tar.zst file.
             with dctx.stream_writer(tarfile_obj) as stream_writer:
-                with tarfile.open(mode="w|", fileobj=stream_writer, bufsize=524288,
+                # The choice of bufsize=32768 comes from profiling compression at various
+                # values and finding that bufsize value consistently performs well.
+                # The variance in compression times at bufsize<=64KB is small. It is only
+                # when bufsize>=128KB that compression times start increasing.
+                with tarfile.open(mode="w|", fileobj=stream_writer, bufsize=32768,
                                   format=tarfile.PAX_FORMAT) as tar:
                     unflushed_bytes = 0
                     for filename, abs_path in sorted(files.items()):
