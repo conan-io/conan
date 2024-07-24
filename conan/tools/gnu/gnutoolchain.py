@@ -121,9 +121,19 @@ class GnuToolchain:
         extra_env_vars = dict()
         # Normally, these are the most common default flags used by MSVC in Windows
         if is_msvc(self._conanfile):
-            extra_env_vars = {"CC": "cl -nologo",
-                              "CXX": "cl -nologo",
+            compile_wrapper = unix_path(self._conanfile,
+                                        self._conanfile.conf.get("user.automake:compile-wrapper",
+                                                                 check_type=str))
+            ar_wrapper = unix_path(self._conanfile,
+                                   self._conanfile.conf.get("user.automake:lib-wrapper",
+                                                            check_type=str))
+            compile_wrapper = unix_path(self._conanfile, r"C:\ws\msys64\usr\share\automake-1.15\compile")
+            ar_wrapper = unix_path(self._conanfile, r"C:\ws\msys64\usr\share\automake-1.15\ar-lib")
+            extra_env_vars = {"CC": f"{compile_wrapper} cl -nologo",
+                              "CXX": f"{compile_wrapper} cl -nologo",
                               "NM": "dumpbin -symbols",
+                              "LD": f"{ar_wrapper} link -nologo",
+                              "AR": "lib -nologo",
                               "OBJDUMP": ":",
                               "RANLIB": ":",
                               "STRIP": ":"}
