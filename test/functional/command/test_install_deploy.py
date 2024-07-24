@@ -443,8 +443,10 @@ def test_deploy_incorrect_folder():
     c.save({"conanfile.txt": ""})
     c.run('install . --deployer=full_deploy --deployer-folder="mydep fold"')
     assert os.path.exists(os.path.join(c.current_folder, "mydep fold"))
-    c.run(r'install . --deployer=full_deploy --deployer-folder="\"mydep fold\""', assert_error=True)
-    assert "ERROR: Deployer folder cannot be created" in c.out
+    if platform.system() == "Windows":  # This only fails in Windows
+        c.run(r'install . --deployer=full_deploy --deployer-folder="\"mydep fold\""',
+              assert_error=True)
+        assert "ERROR: Deployer folder cannot be created" in c.out
 
 
 class TestRuntimeDeployer:
