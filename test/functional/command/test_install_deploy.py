@@ -444,6 +444,7 @@ class TestRuntimeDeployer:
            from conan import ConanFile
            from conan.tools.files import copy
            class Pkg(ConanFile):
+               package_type = "shared-library"
                def package(self):
                    copy(self, "*.so", src=self.build_folder, dst=self.package_folder)
                    copy(self, "*.dll", src=self.build_folder, dst=self.package_folder)
@@ -461,6 +462,25 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
+    def test_runtime_not_deploy(self):
+        # https://github.com/conan-io/conan/issues/16712
+        # If no run=False (no package-type), then no runtime is deployed
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           class Pkg(ConanFile):
+               def package(self):
+                   copy(self, "*.so", src=self.build_folder, dst=self.package_folder)
+                   copy(self, "*.dll", src=self.build_folder, dst=self.package_folder)
+           """)
+        c.save({"pkga/conanfile.py": conanfile,
+                "pkga/lib/pkga.so": "",
+                "pkga/bin/pkga.dll": ""})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("install --requires=pkga/1.0 --deployer=runtime_deploy --deployer-folder=myruntime")
+        assert os.listdir(os.path.join(c.current_folder, "myruntime")) == []
+
     def test_runtime_deploy_components(self):
         c = TestClient()
         conanfile = textwrap.dedent("""
@@ -468,6 +488,7 @@ class TestRuntimeDeployer:
             from conan import ConanFile
             from conan.tools.files import copy
             class Pkg(ConanFile):
+               package_type = "shared-library"
                def package(self):
                    copy(self, "*.so", src=self.build_folder,
                         dst=os.path.join(self.package_folder, "a"))
