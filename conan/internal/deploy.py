@@ -40,7 +40,10 @@ def _find_deployer(d, cache_deploy_folder):
 
 
 def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
-    mkdir(deploy_folder)
+    try:
+        mkdir(deploy_folder)
+    except Exception as e:
+        raise ConanException(f"Deployer folder cannot be created '{deploy_folder}':\n{e}")
     # handle the recipe deploy()
     if deploy_package:
         # Similar processing as BuildMode class
