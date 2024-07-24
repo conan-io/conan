@@ -437,6 +437,18 @@ def test_not_deploy_absolute_paths():
     assert f'export MYPATH="{some_abs_path}/mypath"' in env
 
 
+def test_deploy_incorrect_folder():
+    # https://github.com/conan-io/cmake-conan/issues/658
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    c.run('install . --deployer=full_deploy --deployer-folder="mydep fold"')
+    assert os.path.exists(os.path.join(c.current_folder, "mydep fold"))
+    if platform.system() == "Windows":  # This only fails in Windows
+        c.run(r'install . --deployer=full_deploy --deployer-folder="\"mydep fold\""',
+              assert_error=True)
+        assert "ERROR: Deployer folder cannot be created" in c.out
+
+
 class TestRuntimeDeployer:
     def test_runtime_deploy(self):
         c = TestClient()
