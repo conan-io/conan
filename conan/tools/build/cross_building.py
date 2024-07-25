@@ -1,5 +1,8 @@
 
 def cross_building(conanfile=None, skip_x64_x86=False):
+    cross_build = conanfile.conf.get("tools.build.cross_building:cross_build", check_type=bool)
+    if cross_build is not None:
+        return cross_build
 
     build_os, build_arch, host_os, host_arch = get_cross_building_settings(conanfile)
 
