@@ -103,7 +103,9 @@ def runtime_deploy(graph, output_folder):
                    "Please give feedback at https://github.com/conan-io/conan/issues")
     mkdir(output_folder)
     symlinks = conanfile.conf.get("tools.deployer:symlinks", check_type=bool, default=True)
-    for _, dep in conanfile.dependencies.host.items():
+    for req, dep in conanfile.dependencies.host.items():
+        if not req.run:  # Avoid deploying unused binaries at runtime
+            continue
         if dep.package_folder is None:
             output.warning(f"{dep.ref} does not have any package folder, skipping binary")
             continue
