@@ -591,8 +591,14 @@ class ConanInfo(object):
         version = compatible.settings.compiler.version
         runtime = compatible.settings.compiler.runtime
         runtime_type = compatible.settings.compiler.runtime_type
+        cppstd = compatible.settings.compiler.get_safe("cppstd")
 
         compatible.settings.compiler = "Visual Studio"
+
+        if cppstd is not None:
+            # Restore cppstd, as switching to 'Visual Studio' clears it
+            compatible.settings.compiler.cppstd = cppstd
+
         from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
         visual_version = msvc_version_to_vs_ide_version(version)
         compatible.settings.compiler.version = visual_version
@@ -600,6 +606,13 @@ class ConanInfo(object):
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         compatible.settings.compiler.runtime = runtime
+
+        # Some 'final adjustment'
+        # In case the cppstd is the 'default' for the compiler, it will actually be erased
+        default_cppstd = cppstd_default(compatible.settings)
+        if default_cppstd is not None and compatible.settings.compiler.get_safe("cppstd") == default_cppstd:
+            del compatible.settings.compiler.cppstd
+
         return compatible
 
     def apple_clang_compatible(self):

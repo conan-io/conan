@@ -604,7 +604,27 @@ class CompatibleIDsTest(unittest.TestCase):
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
     client = TestClient()
-    profile = textwrap.dedent("""
+    # First we need to make sure to test that a 'non-default' cppstd is actually preserved
+    # and we can match that
+    profile1 = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
+        compiler.cppstd=17
+        build_type=Release
+        arch=x86_64
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile1": profile1})
+    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+               '-s compiler.cppstd=17 -s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
+    client.run("install pkg/0.1@ -pr=profile1")
+    assert "Using compatible package" in client.out
+
+    # Now we need to test the 'default' cppstd case, in this case, this will be lost in the package id
+    profile2 = textwrap.dedent("""
         [settings]
         os=Windows
         compiler=msvc
@@ -614,15 +634,15 @@ def test_msvc_visual_incompatible():
         build_type=Release
         arch=x86_64
         """)
-    client.save({"conanfile.py": conanfile,
-                 "profile": profile})
-    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+    client.save({"profile2": profile2})
+    client.run('create . pkg/0.2@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
-    client.run("install pkg/0.1@ -pr=profile")
+    client.run("install pkg/0.2@ -pr=profile2")
     assert "Using compatible package" in client.out
+
     new_config = "core.package_id:msvc_visual_incompatible=1"
     save(client.cache.new_config_path, new_config)
-    client.run("install pkg/0.1@ -pr=profile", assert_error=True)
+    client.run("install pkg/0.1@ -pr=profile1", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
 
 
