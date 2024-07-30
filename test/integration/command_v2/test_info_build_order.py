@@ -665,12 +665,10 @@ def test_build_order_space_in_options():
 
              [options]
              dep/*:flags=define=FOO define=BAR define=BAZ
-             dep/*:extras=cxx="yes" gnuext="no"
+             dep/*:extras=cxx="yes" gnuext='no'
              """)})
 
     tc.run("create dep")
     tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
     order = json.loads(tc.load("order.json"))
-    assert order["order"][0][0]["build_args"] == ''''--requires=dep/1.0 --build=dep/1.0 -o dep/*:extras="cxx=\\"yes\\" gnuext=\\"no\\"" -o dep/*:flags="define=FOO define=BAR define=BAZ"'''
-
-# '--requires=dep/1.0 --build=dep/1.0 -o dep/*:extras="\\"cxx=yes gnuext=no\\"" -o dep/*:flags="define=FOO define=BAR define=BAZ"'
+    assert order["order"][0][0]["build_args"] == """--requires=dep/1.0 --build=dep/1.0 -o='dep/*:extras=cxx="yes" gnuext='"'"'no'"'"'' -o='dep/*:flags=define=FOO define=BAR define=BAZ'"""
