@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 
 def test_info_build_order():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
@@ -75,7 +75,7 @@ def test_info_build_order():
 
 
 def test_info_build_order_configuration():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
@@ -129,7 +129,7 @@ def test_info_build_order_configuration():
 
 
 def test_info_build_order_configuration_text_formatter():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
@@ -144,7 +144,7 @@ def test_info_build_order_configuration_text_formatter():
 
 
 def test_info_build_order_build_require():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_tool_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
@@ -199,7 +199,7 @@ def test_info_build_order_build_require():
 
 
 def test_info_build_order_options():
-    c = TestClient(light=True)
+    c = TestClient()
     # The normal default_options do NOT propagate to build_requires, it is necessary to use
     # self.requires(..., options=xxx)
     c.save({"tool/conanfile.py": GenConanfile().with_option("myopt", [1, 2, 3]),
@@ -253,7 +253,7 @@ def test_info_build_order_options():
 
 
 def test_info_build_order_merge_multi_product():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
             "consumer1/conanfile.txt": "[requires]\npkg/0.1",
@@ -334,7 +334,7 @@ def test_info_build_order_merge_multi_product():
 
 
 def test_info_build_order_merge_multi_product_configurations():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
             "consumer1/conanfile.txt": "[requires]\npkg/0.1",
@@ -517,7 +517,7 @@ def test_info_build_order_lockfile_location():
     """ the lockfile should be in the caller cwd
     https://github.com/conan-io/conan/issues/13850
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
     c.run("create dep")
@@ -529,7 +529,7 @@ def test_info_build_order_lockfile_location():
 
 def test_info_build_order_broken_recipe():
     # https://github.com/conan-io/conan/issues/14104
-    c = TestClient(light=True)
+    c = TestClient()
     dep = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import replace_in_file
@@ -549,7 +549,7 @@ def test_info_build_order_broken_recipe():
 class TestBuildOrderReduce:
     @pytest.mark.parametrize("order", ["recipe", "configuration"])
     def test_build_order_reduce(self, order):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
                 "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1"),
@@ -625,7 +625,7 @@ class TestBuildOrderReduce:
             assert level1[1]["depends"] == [liba2]
 
     def test_error_reduced(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile("liba", "0.1")})
         c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
         c.run("graph build-order . --order-by=recipe --reduce --format=json",
@@ -637,7 +637,7 @@ class TestBuildOrderReduce:
         assert "ERROR: Reduced build-order file cannot be merged: bo2.json"
 
     def test_error_different_orders(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile("liba", "0.1")})
         c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
         c.run("graph build-order . --order-by=recipe --format=json", redirect_stdout="bo2.json")
