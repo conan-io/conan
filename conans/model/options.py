@@ -20,7 +20,7 @@ class _PackageOption:
         self.important = False
         # possible_values only possible origin is recipes
         self._possible_values = None
-        self.constrain_possible_values(possible_values)
+        self._constrain_possible_values(possible_values)
 
     def dumps(self, scope=None):
         if self._value is None:
@@ -92,7 +92,7 @@ class _PackageOption:
         if None not in self._possible_values:
             raise ConanException("'options.%s' value not defined" % self._name)
 
-    def constrain_possible_values(self, possible_values):
+    def _constrain_possible_values(self, possible_values):
         if possible_values is None:
             self._possible_values = None
         else:
@@ -223,7 +223,7 @@ class _PackageOptions:
         if self._freeze:
             raise ConanException(f"Cannot constrain option '{field}' possible values after it has "
                                  f"been set to '{self._data[field].value}'")
-        self._data[field].constrain_possible_values(possible_values)
+        self._data[field]._constrain_possible_values(possible_values)
 
 
 class Options:
