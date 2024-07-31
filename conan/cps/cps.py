@@ -222,11 +222,11 @@ class CPS:
         if not dep.cpp_info.has_components:
             if dep.cpp_info.libs and len(dep.cpp_info.libs) > 1:
                 comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)  # base
-                base_name = cps.name
+                base_name = f"_{cps.name}"
                 cps.components[base_name] = comp
                 for lib in dep.cpp_info.libs:
                     comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type, lib)
-                    comp.requires.insert(0, base_name)  # dep to the common one
+                    comp.requires.insert(0, f":{base_name}")  # dep to the common one
                     cps.components[lib] = comp
                 cps.default_components = dep.cpp_info.libs
                 # FIXME: What if one lib is named equal to the package?
