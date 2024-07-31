@@ -50,7 +50,7 @@ class ClientMigrator(Migrator):
         from conans.client.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
-        from conans.client.profile_loader import migrate_profile_plugin
+        from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
 
         if old_version and old_version < "2.0.14-":

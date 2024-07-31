@@ -2,7 +2,7 @@ from mock import mock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 def test_package_revision_latest():
