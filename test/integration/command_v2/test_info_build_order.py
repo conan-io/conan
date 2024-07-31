@@ -76,9 +76,9 @@ def test_info_build_order():
     # test html format
     c.run("graph build-order consumer --build=missing --format=html")
     assert "<body>" in c.stdout
-    c.run("graph build-order consumer --order-by=recipe --format=html")
+    c.run("graph build-order consumer --order-by=recipe --format=html", assert_error=True)
     assert "<body>" in c.stdout
-    c.run("graph build-order consumer --order-by=configuration --format=html")
+    c.run("graph build-order consumer --order-by=configuration --format=html", assert_error=True)
     assert "<body>" in c.stdout
 
 
