@@ -16,7 +16,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
-from conans.client.generators import relativize_path
+from conan.internal.api.install.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conans.model.version import Version
@@ -724,7 +724,7 @@ class ExtraFlagsBlock(Block):
         {% if defines %}
         {% if config %}
         {% for define in defines %}
-        add_compile_definitions($<$<CONFIG:{{config}}>:"{{ define }}">)
+        add_compile_definitions("$<$<CONFIG:{{config}}>:{{ define }}>")
         {% endfor %}
         {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})

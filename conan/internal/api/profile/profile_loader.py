@@ -319,7 +319,10 @@ class _ProfileValueParser(object):
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
-            base_profile.package_settings[pkg_name].update(values_dict)
+            existing = base_profile.package_settings[pkg_name]
+            existing.update(values_dict)
+            # Make sure they are ordered, so `compiler=xxx` goes before `compiler.cppstd` always
+            base_profile.package_settings[pkg_name] = OrderedDict(sorted(existing.items()))
         for pattern, refs in tool_requires.items():
             # If the same package, different version is added, the latest version prevail
             current = base_profile.tool_requires.setdefault(pattern, [])
@@ -334,7 +337,6 @@ class _ProfileValueParser(object):
             base_profile.buildenv.update_profile_env(buildenv)
         if runenv is not None:
             base_profile.runenv.update_profile_env(runenv)
-
 
         runner = _ProfileValueParser._parse_key_value(doc.runner) if doc.runner else {}
         base_profile.runner.update(runner)

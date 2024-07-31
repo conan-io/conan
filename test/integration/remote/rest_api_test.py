@@ -10,7 +10,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.client.userio import UserInput
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference

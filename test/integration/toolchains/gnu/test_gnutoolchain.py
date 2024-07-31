@@ -384,8 +384,6 @@ def test_msvc_profile_defaults():
             # Default values and conf ones
             assert r'set "CC=clang"' in content  # conf value has precedence
             assert r'set "CXX=clang++"' in content  # conf value has precedence
-            assert 'set "LD=link -nologo"' in content
-            assert r'set "AR=lib"' in content
             assert 'set "NM=dumpbin -symbols"' in content
             assert 'set "OBJDUMP=:"' in content
             assert 'set "RANLIB=:"' in content
@@ -415,8 +413,6 @@ def test_msvc_profile_defaults():
             # Prepending compiler wrappers
             tc.extra_env.prepend("CC", "compile")
             tc.extra_env.prepend("CXX", "compile")
-            tc.extra_env.prepend("AR", "ar-lib")
-            tc.extra_env.append("LD", "-fixed")
             tc.extra_env.define("OBJDUMP", "other-value")
             tc.extra_env.unset("RANLIB")
             tc.generate()
@@ -427,8 +423,6 @@ def test_msvc_profile_defaults():
             # Default values
             assert r'set "CC=compile clang"' in content
             assert r'set "CXX=compile clang++"' in content
-            assert 'set "LD=link -nologo -fixed"' in content  # appended new value
-            assert r'set "AR=ar-lib lib"' in content
             assert 'set "NM=dumpbin -symbols"' in content
             assert 'set "OBJDUMP=other-value"' in content  # redefined
             assert 'set "RANLIB=:"' not in content  # removed

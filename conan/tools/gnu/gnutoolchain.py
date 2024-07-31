@@ -173,7 +173,7 @@ class GnuToolchain:
         ret = {}
         # Configuration map
         compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
-                             "rc": "RC", "ld": "LD", "ar": "AR", "nm": "NM", "ranlib": "RANLIB",
+                             "rc": "RC", "nm": "NM", "ranlib": "RANLIB",
                              "objdump": "OBJDUMP", "strip": "STRIP"}
         # Compiler definitions by conf
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",

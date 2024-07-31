@@ -148,3 +148,35 @@ def test_per_package_settings_build():
     c.run("install --tool-requires=cmake/0.1 -s:b build_type=Release -s:b cmake*:build_type=Debug "
           "--build=missing")
     assert "cmake/0.1: Building myself with Debug!!" in c.out
+
+
+def test_package_settings_mixed_patterns():
+    # https://github.com/conan-io/conan/issues/16606
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        *@test/*:build_type=Release
+
+        os=Linux
+        compiler=gcc
+        &:compiler.version=12
+        compiler.libcxx = libstdc++
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def build(self):
+                self.output.info(f"BUILD_TYPE={self.settings.build_type}!")
+                self.output.info(f"COMPILER_VERSION={self.settings.compiler.version}!")
+                self.output.info(f"COMPILER_LIBCXX={self.settings.compiler.libcxx}!")
+            """)
+    c.save({"profile": profile,
+            "conanfile.py": conanfile})
+    c.run("create . -pr=profile --user=test --channel=test")
+    assert "mypkg/0.1@test/test: BUILD_TYPE=Release!" in c.out
+    assert "mypkg/0.1@test/test: COMPILER_VERSION=12!" in c.out
+    assert "mypkg/0.1@test/test: COMPILER_LIBCXX=libstdc++!" in c.out
