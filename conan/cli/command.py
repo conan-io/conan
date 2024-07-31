@@ -100,9 +100,9 @@ class BaseConanCommand:
 
     def _dispatch_errors(self, info):
         if info and isinstance(info, dict):
-            if "conan_error" in info and info["conan_error"]:
+            if info.get("conan_error"):
                 raise ConanException(info["conan_error"])
-            if "conan_warning" in info and info["conan_warning"]:
+            if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
 
 class ConanArgumentParser(argparse.ArgumentParser):
