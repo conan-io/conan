@@ -442,3 +442,28 @@ def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
     else:
         c.run("export . --version=1.0")
         assert c.exported_recipe_revision() == "a9ec2e5fbb166568d4670a9cd1ef4b26"
+
+
+def test_trim_conandata_anchors():
+    """Anchors load correctly, because trim_conandata loads the yaml instead of replacing in place"""
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+     from conan import ConanFile
+     from conan.tools.files import trim_conandata
+
+     class Pkg(ConanFile):
+        name = "pkg"
+        def export(self):
+            trim_conandata(self)
+
+        def generate(self):
+            self.output.info("x: {}".format(self.conan_data["mapping"][self.version]["x"]))
+    """),
+             "conandata.yml": textwrap.dedent("""
+             mapping:
+                "1.0": &anchor
+                    "x": "foo"
+                "2.0": *anchor
+             """)})
+    tc.run("create . --version=2.0")
+    assert "x: foo" in tc.out
