@@ -3,8 +3,8 @@ import sqlite3
 from contextlib import contextmanager
 from sqlite3 import OperationalError
 
-from conans.errors import ConanException
-from conans.util import encrypt
+from conan.errors import ConanException
+from conan.internal.api.remotes import encrypt
 
 REMOTES_USER_TABLE = "users_remotes"
 LOCALDB = ".conan.db"

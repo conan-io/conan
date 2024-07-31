@@ -253,7 +253,7 @@ class ConanFileLoader:
 
         if tool_requires:
             for reference in tool_requires:
-                conanfile.requires.build_require(repr(reference))
+                conanfile.requires.tool_require(repr(reference))
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))

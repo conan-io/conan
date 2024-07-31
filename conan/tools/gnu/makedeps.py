@@ -30,7 +30,9 @@ import re
 import textwrap
 
 from jinja2 import Template, StrictUndefined
+from typing import Optional
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.files import save
 
@@ -47,6 +49,9 @@ def _get_formatted_dirs(folders: list, prefix_path_: str, name: str) -> list:
     """
     ret = []
     for directory in folders:
+        if directory.startswith("$(CONAN"):  # already a variable
+            ret.append(directory)
+            continue
         directory = os.path.normpath(directory).replace("\\", "/")
         prefix = ""
         if not os.path.isabs(directory):
@@ -65,6 +70,32 @@ def _makefy(name: str) -> str:
     :return: Safe makefile variable, not including bad characters that are not parsed correctly
     """
     return re.sub(r'[^0-9A-Z_]', '_', name.upper())
+
+
+def _makefy_properties(properties: Optional[dict]) -> dict:
+    """
+    Convert property dictionary keys to Make-variable-friendly syntax
+    :param properties: The property dictionary to be converted (None is also accepted)
+    :return: Modified property dictionary with keys not including bad characters that are not parsed correctly
+    """
+    return {_makefy(name): value for name, value in properties.items()} if properties else {}
+
+
+def _check_property_value(name, value, output):
+    if "\n" in value:
+        output.warning(f"Skipping propery '{name}' because it contains newline")
+        return False
+    else:
+        return True
+
+
+def _filter_properties(properties: Optional[dict], output) -> dict:
+    """
+    Filter out properties whose values contain newlines, because they would break the generated makefile
+    :param properties: A property dictionary (None is also accepted)
+    :return: A property dictionary without the properties containing newlines
+    """
+    return {name: value for name, value in properties.items() if _check_property_value(name, value, output)} if properties else {}
 
 
 def _conan_prefix_flag(variable: str) -> str:
@@ -129,6 +160,12 @@ def _jinja_format_list_values() -> str:
             {%- if attribute in object -%}
             {{ define_variable_value("{}".format(var), object[attribute]) }}
             {%- endif -%}
+            {%- endmacro %}
+
+            {%- macro define_multiple_variable_value(var, values) -%}
+            {% for property_name, value in values.items() %}
+            {{ var }}_{{ property_name }} = {{ value }}
+            {% endfor %}
             {%- endmacro %}
 
             {%- macro define_variable_value(var, values) -%}
@@ -332,9 +369,10 @@ class DepComponentContentGenerator:
         {{- define_variable_value_safe("CONAN_FRAMEWORKS_{}_{}".format(dep_name, name), cpp_info_flags, 'frameworks') -}}
         {{- define_variable_value_safe("CONAN_REQUIRES_{}_{}".format(dep_name, name), cpp_info_flags, 'requires') -}}
         {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), cpp_info_flags, 'system_libs') -}}
+        {{- define_multiple_variable_value("CONAN_PROPERTY_{}_{}".format(dep_name, name), properties) -}}
         """)
 
-    def __init__(self, dependency, component_name: str, dirs: dict, flags: dict):
+    def __init__(self, dependency, component_name: str, dirs: dict, flags: dict, output):
         """
         :param dependency: The dependency object that owns the component
         :param component_name: component raw name e.g. poco::poco_json
@@ -345,6 +383,7 @@ class DepComponentContentGenerator:
         self._name = component_name
         self._dirs = dirs or {}
         self._flags = flags or {}
+        self._output = output
 
     def content(self) -> str:
         """
@@ -356,7 +395,8 @@ class DepComponentContentGenerator:
             "dep_name": _makefy(self._dep.ref.name),
             "name": _makefy(self._name),
             "cpp_info_dirs": self._dirs,
-            "cpp_info_flags": self._flags
+            "cpp_info_flags": self._flags,
+            "properties": _makefy_properties(_filter_properties(self._dep.cpp_info.components[self._name]._properties, self._output)),
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
@@ -397,15 +437,17 @@ class DepContentGenerator:
         {{- define_variable_value_safe("CONAN_REQUIRES_{}".format(name), cpp_info_flags, 'requires') -}}
         {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}".format(name), cpp_info_flags, 'system_libs') -}}
         {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
+        {{- define_multiple_variable_value("CONAN_PROPERTY_{}".format(name), properties) -}}
         """)
 
-    def __init__(self, dependency, require, root: str, sysroot, dirs: dict, flags: dict):
+    def __init__(self, dependency, require, root: str, sysroot, dirs: dict, flags: dict, output):
         self._dep = dependency
         self._req = require
         self._root = root
         self._sysroot = sysroot
         self._dirs = dirs or {}
         self._flags = flags or {}
+        self._output = output
 
     def content(self) -> str:
         """
@@ -420,6 +462,7 @@ class DepContentGenerator:
             "components": list(self._dep.cpp_info.get_sorted_components().keys()),
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
+            "properties": _makefy_properties(_filter_properties(self._dep.cpp_info._properties, self._output)),
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
@@ -431,7 +474,7 @@ class DepComponentGenerator:
     Generates Makefile content for a dependency component
     """
 
-    def __init__(self, dependency, makeinfo: MakeInfo, component_name: str, component, root: str):
+    def __init__(self, dependency, makeinfo: MakeInfo, component_name: str, component, root: str, output):
         """
         :param dependency: The dependency object that owns the component
         :param makeinfo: Makeinfo to store component variables
@@ -444,6 +487,7 @@ class DepComponentGenerator:
         self._comp = component
         self._root = root
         self._makeinfo = makeinfo
+        self._output = output
 
     def _get_component_dirs(self) -> dict:
         """
@@ -500,7 +544,7 @@ class DepComponentGenerator:
         """
         dirs = self._get_component_dirs()
         flags = self._get_component_flags()
-        comp_content_gen = DepComponentContentGenerator(self._dep, self._name, dirs, flags)
+        comp_content_gen = DepComponentContentGenerator(self._dep, self._name, dirs, flags, self._output)
         comp_content = comp_content_gen.content()
         return comp_content
 
@@ -510,10 +554,11 @@ class DepGenerator:
     Process a dependency cpp_info variables and generate its Makefile content
     """
 
-    def __init__(self, dependency, require):
+    def __init__(self, dependency, require, output):
         self._dep = dependency
         self._req = require
         self._info = MakeInfo(self._dep.ref.name, [], [])
+        self._output = output
 
     @property
     def makeinfo(self) -> MakeInfo:
@@ -532,6 +577,10 @@ class DepGenerator:
         dirs = {}
         for var, prefix in _common_cppinfo_dirs().items():
             cppinfo_value = getattr(dependency.cpp_info, var)
+            if not cppinfo_value:  # The root value is not defined, there might be components
+                cppinfo_value = [f"$(CONAN_{var.replace('dirs', '_dirs').upper()}_{_makefy(dependency.ref.name)}_{_makefy(name)})"
+                                 for name, obj in dependency.cpp_info.components.items() if getattr(obj, var.lower())]
+                prefix = ""
             formatted_dirs = _get_formatted_dirs(cppinfo_value, root, _makefy(dependency.ref.name))
             if formatted_dirs:
                 self._info.dirs_append(var)
@@ -585,11 +634,11 @@ class DepGenerator:
         sysroot = self._get_sysroot(root)
         dirs = self._get_dependency_dirs(root, self._dep)
         flags = self._get_dependency_flags(self._dep)
-        dep_content_gen = DepContentGenerator(self._dep, self._req, root, sysroot, dirs, flags)
+        dep_content_gen = DepContentGenerator(self._dep, self._req, root, sysroot, dirs, flags, self._output)
         content = dep_content_gen.content()
 
         for comp_name, comp in self._dep.cpp_info.get_sorted_components().items():
-            component_gen = DepComponentGenerator(self._dep, self._info, comp_name, comp, root)
+            component_gen = DepComponentGenerator(self._dep, self._info, comp_name, comp, root, self._output)
             content += component_gen.generate()
 
         return content
@@ -615,23 +664,19 @@ class MakeDeps:
         check_duplicated_generator(self, self._conanfile)
 
         host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
         content_buffer = f"{self._title}\n"
         deps_buffer = ""
 
         # Filter the build_requires not activated for any requirement
-        dependencies = [tup for tup in list(host_req.items()) + list(build_req.items()) + list(test_req.items()) if not tup[0].build]
+        dependencies = list(host_req.items()) + list(test_req.items())
 
         make_infos = []
 
         for require, dep in dependencies:
-            # Require is not used at the moment, but its information could be used, and will be used in Conan 2.0
-            if require.build:
-                continue
-
-            dep_gen = DepGenerator(dep, require)
+            output = ConanOutput(scope=f"{self._conanfile} MakeDeps: {dep}:")
+            dep_gen = DepGenerator(dep, require, output)
             make_infos.append(dep_gen.makeinfo)
             deps_buffer += dep_gen.generate()
 

@@ -239,9 +239,12 @@ class Cli:
 def _warn_python_version():
     version = sys.version_info
     if version.minor == 6:
+        ConanOutput().writeln("")
+        ConanOutput().warning("*"*80, warn_tag="deprecated")
         ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
                               "Conan future versions will drop support for it, "
                               "please upgrade Python", warn_tag="deprecated")
+        ConanOutput().warning("*" * 80, warn_tag="deprecated")
 
 
 def main(args):

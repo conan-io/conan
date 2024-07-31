@@ -5,7 +5,7 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
-from conans.client.generators import write_generators
+from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
