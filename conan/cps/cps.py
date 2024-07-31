@@ -228,7 +228,7 @@ class CPS:
                     comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type, lib)
                     comp.requires.insert(0, base_name)  # dep to the common one
                     cps.components[lib] = comp
-                cps.default_components = [dep.cpp_info.libs]
+                cps.default_components = dep.cpp_info.libs
                 # FIXME: What if one lib is named equal to the package?
             else:
                 # single component, called same as library
@@ -294,7 +294,7 @@ class CPS:
 
     def save(self, folder):
         filename = os.path.join(folder, f"{self.name}.cps")
-        save(filename, json.dumps(self.serialize(), indent=4))
+        save(filename, json.dumps(self.serialize(), indent=2))
         return filename
 
     @staticmethod
