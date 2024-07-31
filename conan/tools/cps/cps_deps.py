@@ -30,7 +30,7 @@ class CPSDeps:
         return "-".join(ret)
 
     def generate(self):
-        cps_folder = os.path.join(self._conanfile.recipe_folder, "build", "cps")
+        cps_folder = os.path.join(self._conanfile.folders.base_build, "build", "cps")
         config_name = self._config_name()
         folder = os.path.join(cps_folder, config_name)
         self._conanfile.output.info(f"[CPSDeps] folder {cps_folder}")

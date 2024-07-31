@@ -12,9 +12,9 @@ def test_cps():
                                                           .with_class_attribute("license='MIT'")})
     c.run("create pkg")
 
-    c.run("install --requires=pkg/0.1 -s arch=x86_64 -g CPSDeps")
-    pkg = json.loads(c.load("pkg.cps"))
-    print(json.dumps(pkg, indent=2))
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+    c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["license"] == "MIT"
@@ -22,7 +22,7 @@ def test_cps():
     assert pkg["default_components"] == ["pkg"]
     pkg_comp = pkg["components"]["pkg"]
     assert pkg_comp["type"] == "interface"
-    mapping = json.loads(c.load("cpsmap-x86_64-Release.json"))
+    mapping = json.loads(c.load("build/cps/cpsmap-msvc-191-x86_64-release.json"))
     for _, path_cps in mapping.items():
         assert os.path.exists(path_cps)
 
@@ -34,9 +34,9 @@ def test_cps_static_lib():
             .with_package_info(cpp_info={"libs": ["pkg"]}, env_info={})})
     c.run("create pkg")
 
-    c.run("install --requires=pkg/0.1 -s arch=x86_64 -g CPSDeps")
-    pkg = json.loads(c.load("pkg.cps"))
-    print(json.dumps(pkg, indent=2))
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+    c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["configurations"] == ["release"]
@@ -91,17 +91,18 @@ def test_cps_in_pkg():
     c.save({"pkg/conanfile.py": conanfile})
     c.run("create pkg")
 
-    c.run("install --requires=zlib/1.3.1 -s arch=x86_64 -g CPSDeps")
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+    c.run(f"install --requires=zlib/1.3.1 {settings} -g CPSDeps")
     print(c.out)
 
-    mapping = json.loads(c.load("cpsmap-x86_64-Release.json"))
+    mapping = json.loads(c.load("build/cps/cpsmap-msvc-191-x86_64-release.json"))
     print(json.dumps(mapping, indent=2))
     for _, path_cps in mapping.items():
         assert os.path.exists(path_cps)
 
     assert not os.path.exists(os.path.join(c.current_folder, "zlib.cps"))
 
-    c.run("install --requires=zlib/1.3.1 -s arch=x86_64 -g CMakeDeps")
+    c.run(f"install --requires=zlib/1.3.1 {settings} -g CMakeDeps")
     print(c.out)
     cmake = c.load("zlib-release-x86_64-data.cmake")
     print(cmake)
