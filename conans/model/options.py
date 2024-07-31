@@ -260,7 +260,8 @@ class OptionsValues(object):
             return False
         # It is possible that the entry in the dict is not defined
         for key, pkg_values in self._reqs_options.items():
-            other_values = other[key]
+            # We do a get so we don't artificially inject new keys in "other"
+            other_values = other._reqs_options.get(key, PackageOptionValues())
             if not pkg_values == other_values:
                 return False
         return True
