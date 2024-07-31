@@ -267,8 +267,8 @@ class CPS:
                 location = location.replace("@prefix@/", "")
                 cpp_info.libdirs = [os.path.dirname(location)]
                 filename = os.path.basename(location)
-                basefile = os.path.splitext(filename)[0]
-                if basefile.startswith("lib"):
+                basefile, ext = os.path.splitext(filename)
+                if basefile.startswith("lib") and ext != ".lib":
                     basefile = basefile[3:]
                 cpp_info.libs = [basefile]
                 # FIXME: Missing requires
@@ -283,12 +283,12 @@ class CPS:
                     location = location.replace("@prefix@/", "")
                     cpp_comp.libdirs = [os.path.dirname(location)]
                     filename = os.path.basename(location)
-                    basefile = os.path.splitext(filename)[0]
-                    if basefile.startswith("lib"):
+                    basefile, ext = os.path.splitext(filename)
+                    if basefile.startswith("lib") and ext != ".lib":
                         basefile = basefile[3:]
                     cpp_comp.libs = [basefile]
                 for r in comp.requires:
-                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r)
+                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
                 cpp_comp.system_libs = comp.link_libraries
 
         return cpp_info
