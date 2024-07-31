@@ -266,7 +266,8 @@ def _render_build_order(build_order, template):
     return template.render(context)
 
 
-def format_build_order_html(build_order):
+def format_build_order_html(result):
+    build_order = result["build_order"]
     build_order = build_order["order"] if isinstance(build_order, dict) else build_order
     template = Template(build_order_html, autoescape=select_autoescape(['html', 'xml']))
     cli_out_write(_render_build_order(build_order, template))

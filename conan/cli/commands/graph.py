@@ -45,8 +45,9 @@ def graph(conan_api, parser, *args):
     """
 
 
-def cli_build_order(build_order):
+def cli_build_order(result):
     # TODO: Very simple cli output, probably needs to be improved
+    build_order = result["build_order"]
     build_order = build_order["order"] if isinstance(build_order, dict) else build_order
     for level in build_order:
         for item in level:
@@ -59,8 +60,8 @@ def cli_build_order(build_order):
                 cli_out_write(f"{item['ref']}:{item['package_id']} - {item['binary']}")
 
 
-def json_build_order(build_order):
-    cli_out_write(json.dumps(build_order, indent=4))
+def json_build_order(result):
+    cli_out_write(json.dumps(result["build_order"], indent=4))
 
 
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
@@ -128,7 +129,9 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
-    return install_order_serialized
+    return {"build_order": install_order_serialized,
+            "conan_error": install_graph.get_errors()}
+
 
 
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
@@ -159,7 +162,9 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     install_order_serialized = result.install_build_order()
     if getattr(result, "legacy"):
         install_order_serialized = install_order_serialized["order"]
-    return install_order_serialized
+
+    return {"build_order": install_order_serialized,
+            "conan_error": result.get_errors()}
 
 
 @conan_subcommand(formatters={"text": format_graph_info,
@@ -237,7 +242,10 @@ def graph_info(conan_api, parser, subparser, *args):
     return {"graph": deps_graph,
             "field_filter": args.filter,
             "package_filter": args.package_filter,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": str(deps_graph.error) if deps_graph.error else None,
+            # Do not compute graph errors if there are dependency errors
+            "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
 
 
 @conan_subcommand(formatters={"text": explain_formatter_text,
