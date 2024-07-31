@@ -467,3 +467,10 @@ def test_trim_conandata_anchors():
              """)})
     tc.run("create . --version=2.0")
     assert "x: foo" in tc.out
+    pkg_layout = tc.exported_layout()
+    conandata = tc.load(pkg_layout.conandata())
+    assert conandata == textwrap.dedent("""\
+        mapping:
+          '2.0':
+            x: foo
+        """)
