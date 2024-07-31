@@ -54,7 +54,6 @@ def deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type):
         for pattern in patterns:
             for d in dirs:
                 matches.update(glob.glob(f"{d}/{pattern}"))
-        matches = [m for m in matches if not os.path.islink(m)]
         if len(matches) == 1:
             return next(iter(matches))
 
