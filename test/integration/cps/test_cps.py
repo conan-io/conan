@@ -21,7 +21,7 @@ def test_cps():
     assert pkg["configurations"] == ["release"]
     assert pkg["default_components"] == ["pkg"]
     pkg_comp = pkg["components"]["pkg"]
-    assert pkg_comp["type"] == "unknown"
+    assert pkg_comp["type"] == "interface"
     mapping = json.loads(c.load("cpsmap-x86_64-Release.json"))
     for _, path_cps in mapping.items():
         assert os.path.exists(path_cps)

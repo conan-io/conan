@@ -32,7 +32,7 @@ class CPSComponentType(Enum):
             "header-library": "interface",
             "application": "executable"
         }
-        return _package_type_map.get(str(pkg_type), "unknown")
+        return CPSComponentType(_package_type_map.get(str(pkg_type), "unknown"))
 
 
 def deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type):
@@ -101,7 +101,7 @@ class CPSComponent:
         self.link_libraries = None  # system libraries
 
     def serialize(self):
-        component = {"type": self.type}
+        component = {"type": str(self.type)}
         if self.requires:
             component["requires"] = self.requires
         if self.includes:
@@ -133,13 +133,14 @@ class CPSComponent:
         cps_comp = CPSComponent()
         if not libname:
             cps_comp.definitions = cpp_info.defines
-            # TODO: @prefix@
             cps_comp.includes = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:
+            cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
         if len(cpp_info.libs) > 1 and not libname:  # Multi-lib pkg without components defined
+            cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
         libname = libname or cpp_info.libs[0]
@@ -150,7 +151,7 @@ class CPSComponent:
         cps_comp.link_location = full_lib.get("link_location")
         cps_comp.link_libraries = cpp_info.system_libs
         required = cpp_info.requires
-        cps_comp.requires = [f":{c}" if "::" not in c else c for c in required]
+        cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
         return cps_comp
 
 
