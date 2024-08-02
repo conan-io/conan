@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import platform
 import subprocess
@@ -12,7 +11,7 @@ from conans.model.layout import Infos
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
-from conans.util.env import get_env, environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
@@ -64,63 +63,6 @@ class ToolsTest(unittest.TestCase):
     def test_md5(self):
         result = md5(u"äüïöñç")
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
-
-    def test_get_env_unit(self):
-        """
-        Unit tests get_env
-        """
-        # Test default
-        self.assertIsNone(
-            get_env("NOT_DEFINED", environment={}),
-            None
-        )
-        # Test defined default
-        self.assertEqual(
-            get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
-            "random_default"
-        )
-        # Test return defined string
-        self.assertEqual(
-            get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
-            "test_string_value"
-        )
-        # Test boolean conversion
-        self.assertEqual(
-            get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
-            True
-        )
-        self.assertEqual(
-            get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
-            False
-        )
-        self.assertEqual(
-            get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
-            True
-        )
-        self.assertEqual(
-            get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
-            False
-        )
-        # Test int conversion
-        self.assertEqual(
-            get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
-            1
-        )
-        # Test float conversion
-        self.assertEqual(
-            get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
-            1.0
-        ),
-        # Test list conversion
-        self.assertEqual(
-            get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
-            ["1", "2", "3"]
-        )
-        self.assertEqual(
-            get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED":
-                                                                          " 1 , 2 , 3 "}),
-            ["1", "2", "3"]
-        )
 
     def test_environment_nested(self):
         with environment_update({"A": "1", "Z": "40"}):

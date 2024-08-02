@@ -400,3 +400,52 @@ class TestNewCompatibility:
 
         c.run("install --requires=pdfium/2020.9 -pr=myprofile -s build_type=Debug")
         assert "missing. Using compatible package" in c.out
+
+    def test_compatibility_erase_package_id(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PdfiumConan(ConanFile):
+                name = "diligent-core"
+                version = "1.0"
+                settings = "compiler"
+                options = {"foo": ["no"]}
+
+                def package_id(self):
+                    self.info.settings.compiler.runtime = "foobar"
+                    self.info.options.foo = "yes"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Windows
+            compiler=msvc
+            compiler.version=192
+            compiler.runtime=dynamic
+            build_type=Release
+            arch=x86_64
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+
+        c.run("create . -pr:a=myprofile -s compiler.cppstd=20")
+        c.run("install --requires=diligent-core/1.0 -pr:a=myprofile -s compiler.cppstd=17")
+        assert "ERROR: Invalid setting 'foobar' is not a valid 'settings.compiler.runtime' value." not in c.out
+
+    def test_compatibility_msvc_and_cppstd(self):
+        """msvc 194 would not find compatible packages built with same version but different cppstd
+        due to an issue in the msvc fallback compatibility rule."""
+        tc = TestClient()
+        profile = textwrap.dedent("""
+                   [settings]
+                   compiler=msvc
+                   compiler.version=194
+                   compiler.runtime=dynamic
+                   """)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
+                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0").with_setting("compiler"),
+                 "profile": profile})
+
+        tc.run("create dep -pr=profile -s compiler.cppstd=20")
+        tc.run("create . -pr=profile -s compiler.cppstd=17")
+        tc.assert_listed_binary({"dep/1.0": ("b6d26a6bc439b25b434113982791edf9cab4d004", "Cache")})

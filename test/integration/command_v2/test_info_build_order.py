@@ -73,6 +73,14 @@ def test_info_build_order():
     assert bo_json["order_by"] == "recipe"
     assert bo_json["order"] == result
 
+    # test html format
+    c.run("graph build-order consumer --build=missing --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=configuration --build=missing --format=html")
+    assert "<body>" in c.stdout
+
 
 def test_info_build_order_configuration():
     c = TestClient()
@@ -332,6 +340,11 @@ def test_info_build_order_merge_multi_product():
 
     assert bo_json == result
 
+    # test that html format for build-order-merge generates something
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=html")
+    assert "<body>" in c.stdout
+
+
 
 def test_info_build_order_merge_multi_product_configurations():
     c = TestClient()
@@ -525,6 +538,58 @@ def test_info_build_order_lockfile_location():
     assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
     c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
+
+
+def test_build_order_missing_package_check_error():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+
+    exit_code = c.run("graph build-order consumer --build='pkg/*' --order=configuration --format=json", assert_error=True)
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "configuration"
+    assert exit_code != 0
+    assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in c.out
+
+    result = [
+        [
+            {
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                "pref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "prev": None,
+                "context": "host",
+                "binary": "Missing",
+                "options": [],
+                "filenames": [],
+                "depends": [],
+                "overrides": {},
+                "build_args": None,
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [],
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "overrides": {},
+                "build_args": "--requires=pkg/0.1 --build=pkg/0.1",
+            }
+        ],
+    ]
+
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_broken_recipe():

@@ -44,6 +44,9 @@ class ConfigParser(object):
                 if self._allowed_fields and field not in self._allowed_fields:
                     raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
                 current_lines = []
+                # Duplicated section
+                if field in self._sections:
+                    raise ConanException(f"ConfigParser: Duplicated section: [{field}]")
                 self._sections[field] = current_lines
             else:
                 if current_lines is None:

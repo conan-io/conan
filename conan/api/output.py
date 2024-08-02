@@ -1,4 +1,5 @@
 import fnmatch
+import os
 import sys
 import time
 from threading import Lock
@@ -7,7 +8,6 @@ from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
 from conans.errors import ConanException
-from conans.util.env import get_env
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
@@ -40,7 +40,7 @@ class Color(object):
     BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA  # @UndefinedVariable
 
 
-if get_env("CONAN_COLOR_DARK", 0):
+if os.environ.get("CONAN_COLOR_DARK"):
     Color.WHITE = Fore.BLACK
     Color.CYAN = Fore.BLUE
     Color.YELLOW = Fore.MAGENTA

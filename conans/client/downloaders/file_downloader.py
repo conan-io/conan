@@ -13,9 +13,10 @@ from conans.util.sha import check_with_algorithm_sum
 
 class FileDownloader:
 
-    def __init__(self, requester, scope=None):
+    def __init__(self, requester, scope=None, source_credentials=None):
         self._output = ConanOutput(scope=scope)
         self._requester = requester
+        self._source_credentials = source_credentials
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
@@ -74,7 +75,8 @@ class FileDownloader:
 
         try:
             response = self._requester.get(url, stream=True, verify=verify_ssl, auth=auth,
-                                           headers=headers)
+                                           headers=headers,
+                                           source_credentials=self._source_credentials)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 

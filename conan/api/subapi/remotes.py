@@ -9,7 +9,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 from conans.errors import ConanException
 from conans.util.files import save, load
 

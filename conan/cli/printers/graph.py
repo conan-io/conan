@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
+from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_PLATFORM
 
 
@@ -122,13 +122,18 @@ def print_graph_packages(graph):
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
             name = pref.repr_notime() if status != BINARY_PLATFORM else str(pref.ref)
-            msg = f"{tab}{name} - {status}"
-            if remote is not None and status != BINARY_SKIP:
-                msg += f" ({remote.name})"
+            msg = f"{tab}{name} - "
             if status == BINARY_SKIP:
                 skipped_requires.append(str(pref.ref))
-                output.verbose(msg, Color.BRIGHT_CYAN)
+                output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
+            elif status == BINARY_MISSING or status == BINARY_INVALID:
+                output.write(msg, Color.BRIGHT_CYAN)
+                output.writeln(status, Color.BRIGHT_RED)
             else:
+                # Support python36
+                msg += status
+                if remote:
+                    msg += f" ({remote.name})"
                 output.info(msg, Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)

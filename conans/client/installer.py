@@ -5,7 +5,7 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
-from conans.client.generators import write_generators
+from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
@@ -13,7 +13,7 @@ from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
-from conans.paths import CONANINFO
+from conan.internal.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
 

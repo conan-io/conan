@@ -11,7 +11,7 @@ import pytest
 from conans.errors import ConanException, ConanConnectionError
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import load, save
 
 
@@ -812,6 +812,24 @@ class TestListCompact:
 
         assert expected == expected_output
 
+    @pytest.mark.parametrize("pattern", [
+        "pkg/*",
+        "pkg/1.0",
+        "pkg/1.0#*",
+        "pkg/1.0#*:*",
+        "pkg/1.0#*:*#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#*",
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e"
+    ])
+    def test_list_compact_patterns(self, pattern):
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create pkg")
+        c.run(f"list {pattern} --format=compact")
+
 
 class TestListBinaryFilter:
 
@@ -876,5 +894,15 @@ class TestListBinaryFilter:
         assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
         pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
         assert len(pkg["packages"]) == 1
+        settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
+        assert settings == {"arch": "x86", "os": "Windows"}
+
+        # &: will also match every package being listed, as if it was a consumer
+        c.run(f"list *:* -fo &:shared=False --format=json {r}")
+        result = json.loads(c.stdout)
+        header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 2
         settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
         assert settings == {"arch": "x86", "os": "Windows"}

@@ -4,7 +4,7 @@ import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
