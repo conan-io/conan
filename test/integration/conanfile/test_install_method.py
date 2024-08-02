@@ -186,9 +186,6 @@ class TestBasicLocalFlows:
         assert "installed.txt" in os.listdir(vendor_layout.package())
         assert "file2.txt" in os.listdir(vendor_layout.package())
 
-        client.save("app/conanfile.py", GenConanfile("app", "1.0")
-                    .with_requires("vendor/1.0"))
-
     def test_check_integrity(self, client):
         client.run("create dep")
         dep_layout = client.created_layout()
