@@ -84,22 +84,31 @@ def msvc_version_to_toolset_version(version):
 
 class VCVars:
     """
-    VCVars class generator
+    VCVars class generator to generate a ``conanvcvars.bat`` script that activates the correct
+    Visual Studio prompt.
+
+    This generator will be automatically called by other generators such as ``CMakeToolchain``
+    when considered necessary, for example if building with Visual Studio compiler using the
+    CMake ``Ninja`` generator, which needs an active Visual Studio prompt.
+    Then, it is not necessary to explicitly instantiate this generator in most cases.
     """
 
     def __init__(self, conanfile):
         """
-        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        :param conanfile: ``ConanFile object`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
 
     def generate(self, scope="build"):
         """
-        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
-        variables to configure the command line for native 32-bit or 64-bit compilation.
+        Creates a ``conanvcvars.bat`` file that calls Visual ``vcvars`` with the necessary
+        args to activate the correct Visual Studio prompt matching the Conan settings.
 
-        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
-                      if ``build``, then it'll be used the ``conanbuild`` launcher.
+        :param scope: ``str`` activation scope, by default "build". It means it will add a
+                      call to this ``conanvcvars.bat`` from the aggregating general
+                      ``conanbuild.bat``, which is the script that will be called by default
+                      in ``self.run()`` calls and build helpers such as ``cmake.configure()``
+                      and ``cmake.build()``.
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
