@@ -492,7 +492,7 @@ def test_create_docker_runner_from_configfile_with_args():
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h 'host' -pr:b 'build'")
 
-    assert "test/integration/command/dockerfiles/Dockerfile_args" in client.out
+    assert "command/dockerfiles/Dockerfile_args" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
