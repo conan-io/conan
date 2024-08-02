@@ -92,18 +92,23 @@ class TestBasicLocalFlows:
                      .with_install("rename(self, os.path.join(self.package_folder, 'file.txt'), os.path.join(self.install_folder, 'file.txt')) if self.info.options.move else None")})
         client.run("create . -o=dep/*:move=True")
         dep_moved_layout = client.created_layout()
-        dep_moved_pkgid = client.created_package_id("dep/1.0")
         assert "file.txt" in os.listdir(dep_moved_layout.install())
         assert "file.txt" not in os.listdir(dep_moved_layout.package())
 
         client.run("create . -o=dep/*:move=False")
         dep_kept_layout = client.created_layout()
-        dep_kept_pkgid = client.created_package_id("dep/1.0")
         assert "file.txt" not in os.listdir(dep_kept_layout.install())
         assert "file.txt" in os.listdir(dep_kept_layout.package())
 
         # Now we can check that the package_id is the same for both
-        assert dep_moved_pkgid != dep_kept_pkgid
+        assert dep_moved_layout.reference.package_id != dep_kept_layout.reference.package_id
+
+        # This now breaks if we try to cache check-integrity the moved package
+        client.run(f"cache check-integrity {dep_moved_layout.reference}", assert_error=True)
+        assert "There are corrupted artifacts" in client.out
+
+        client.run(f"cache check-integrity {dep_kept_layout.reference}")
+        assert "There are corrupted artifacts" not in client.out
 
     def test_cache_path_command(self, client):
         client.run("create dep")
