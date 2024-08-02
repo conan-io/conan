@@ -164,6 +164,7 @@ class ConanFile:
         result["build_folder"] = self.build_folder
         result["generators_folder"] = self.generators_folder
         result["package_folder"] = self.package_folder
+        result["immutable_package_folder"] = self.immutable_package_folder
 
         result["cpp_info"] = self.cpp_info.serialize()
         result["conf_info"] = self.conf_info.serialize()

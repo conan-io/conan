@@ -19,6 +19,7 @@ conanfile_dep = textwrap.dedent("""
         version = "1.0"
         def package(self):
             save(self, os.path.join(self.package_folder, "file.txt"), "Hello World!")
+            save(self, os.path.join(self.package_folder, "file2.txt"), "Hello World 2!")
 
         def install(self):
             self.output.info(f"Running install method in {self.install_folder}")
@@ -79,6 +80,31 @@ class TestBasicLocalFlows:
         client.run("create .", assert_error=True)
         assert "'self.settings' access in 'install()' method is forbidden" in client.out
 
+    def test_install_moves_from_package(self):
+        client = TestClient(light=True)
+        client.save({"conanfile.py": GenConanfile("dep", "1.0")
+                     .with_import("from conan.tools.files import save, rename",
+                                  "import os")
+                     .with_option("move", [True, False])
+                     .with_package('save(self, os.path.join(self.package_folder, "file.txt"), "Hello World!")',
+                                   "save(self, os.path.join(self.package_folder, 'file2.txt'), 'Hello World 2!')")
+                     # This is NOT allowed, moving from package to install is forbidden, only as test to ensure consistency
+                     .with_install("rename(self, os.path.join(self.package_folder, 'file.txt'), os.path.join(self.install_folder, 'file.txt')) if self.info.options.move else None")})
+        client.run("create . -o=dep/*:move=True")
+        dep_moved_layout = client.created_layout()
+        dep_moved_pkgid = client.created_package_id("dep/1.0")
+        assert "file.txt" in os.listdir(dep_moved_layout.install())
+        assert "file.txt" not in os.listdir(dep_moved_layout.package())
+
+        client.run("create . -o=dep/*:move=False")
+        dep_kept_layout = client.created_layout()
+        dep_kept_pkgid = client.created_package_id("dep/1.0")
+        assert "file.txt" not in os.listdir(dep_kept_layout.install())
+        assert "file.txt" in os.listdir(dep_kept_layout.package())
+
+        # Now we can check that the package_id is the same for both
+        assert dep_moved_pkgid != dep_kept_pkgid
+
     def test_cache_path_command(self, client):
         client.run("create dep")
         dep_layout = client.created_layout()
@@ -87,8 +113,12 @@ class TestBasicLocalFlows:
         assert dep_layout.package() not in client.out
         assert dep_layout.install() in client.out
 
-    def test_remove_deletes_correct_folders(self):
-        pass
+    def test_remove_deletes_correct_folders(self, client):
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("remove * -c")
+        assert not os.path.exists(dep_layout.package())
+        assert not os.path.exists(dep_layout.install())
 
     def test_save_restore_cache(self, client):
         # Not created in the cache, just exported, nothing breaks because there is not even a package there
@@ -122,22 +152,37 @@ class TestBasicLocalFlows:
         package_folder = client.out.strip()
         assert "installed.txt" in os.listdir(package_folder)
 
-    def test_lockfile_interaction(self):
-        pass
-
-    def test_graph_info_output(self):
-        # The output should serialize the orignal package folder path to give users the info,
-        # but maybe also the install one?
-        pass
+    def test_graph_info_output(self, client):
+        client.run("create dep")
+        dep_layout = client.created_layout()
+        client.run("install --requires=dep/1.0 -f=json", redirect_stdout="install.json")
+        install_output = json.loads(client.load("install.json"))
+        assert install_output["graph"]["nodes"]["1"]["package_folder"] == dep_layout.install()
+        assert install_output["graph"]["nodes"]["1"]["immutable_package_folder"] == dep_layout.package()
 
     def test_create_pkglist_output(self, client):
         client.run("create dep -f=json", redirect_stdout="created.json")
+        created_pkgid = client.created_package_id("dep/1.0")
         client.run("list --graph=created.json --graph-binaries=build")
-        print()
+        assert created_pkgid in client.out
 
-    def test_vendorized(self):
-        # TODO: Should this be handled? Or are vendoring packages meant to know if they are dealing with localized versions?
-        pass
+    def test_vendorized_basic(self, client):
+        client.run("create dep")
+        client.save({"vendor/conanfile.py": GenConanfile("vendor", "1.0")
+                     .with_import("from conan.tools.files import copy")
+                     .with_class_attribute("vendor=True")
+                     .with_requires("dep/1.0")
+                     .with_package("copy(self, 'file.txt', src=self.dependencies['dep'].package_folder, dst=self.package_folder)",
+                                   "copy(self, 'installed.txt', src=self.dependencies['dep'].package_folder, dst=self.package_folder)",
+                                   "copy(self, 'file2.txt', src=self.dependencies['dep'].immutable_package_folder, dst=self.package_folder)")})
+        client.run("create vendor")
+        vendor_layout = client.created_layout()
+        assert "file.txt" in os.listdir(vendor_layout.package())
+        assert "installed.txt" in os.listdir(vendor_layout.package())
+        assert "file2.txt" in os.listdir(vendor_layout.package())
+
+        client.save("app/conanfile.py", GenConanfile("app", "1.0")
+                    .with_requires("vendor/1.0"))
 
     def test_check_integrity(self, client):
         client.run("create dep")
@@ -246,9 +291,6 @@ class TestToolRequiresFlows:
         assert f"Dep bindir: {dep_layout.install()}" in tc.out
         assert "app/1.0: Is installed? True" in tc.out
 
-    def test_update_recipe(self):
-        pass
-
     def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile("app", "1.0")
@@ -311,9 +353,6 @@ class TestRemoteFlows:
         client.run("install --requires=dep/1.0 -r=default")
         assert "dep/1.0: Calling install()"
         assert f"Running install method in {downloaded_pref_layout.install()}" in client.out
-
-    def test_graph_info_of_remote_downloaded(self):
-        pass
 
     def test_upload_verify_integrity(self, client):
         client.run("create dep")
