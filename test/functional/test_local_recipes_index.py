@@ -177,10 +177,10 @@ class TestInRepo:
             """)
 
         save_files(repo2_folder, {"recipes/pkg/config.yml": config_yml,
-                                 "recipes/pkg/all/conanfile.py": conanfile,
-                                 "CMakeLists.txt": cmake,
-                                 "pkg.h": gen_function_h(name="pkg"),
-                                 "pkg.cpp": gen_function_cpp(name="pkg")})
+                                  "recipes/pkg/all/conanfile.py": conanfile,
+                                  "CMakeLists.txt": cmake,
+                                  "pkg.h": gen_function_h(name="pkg"),
+                                  "pkg.cpp": gen_function_cpp(name="pkg")})
 
         c = TestClient()
         c.run(f"remote add local1 '{repo1_folder}'")
