@@ -84,16 +84,18 @@ class _LinkerFlagsParser:
 
 
 class QbsProfile:
-    '''
+    """
     Qbs profiles generator.
+
     This class generates file with the toolchain information that can be imported by Qbs.
-    '''
+    """
 
     def __init__(self, conanfile, profile='conan', default_profile='conan'):
         """
         :param conanfile: The current recipe object. Always use ``self``.
         :param profile: The name of the profile in settings. Defaults to ``"conan"``.
-        :param default_profile: The name of the default profile. Defaults to ``"conan"`.
+        :param default_profile: The name of the default profile. Defaults to ``"conan"``.
+
         """
         self._conanfile = conanfile
         self._profile = profile
@@ -102,16 +104,16 @@ class QbsProfile:
 
     @property
     def filename(self):
-        '''
+        """
         The name of the generated file. Returns ``qbs_settings.txt``.
-        '''
+        """
         return 'qbs_settings.txt'
 
     @property
     def content(self):
-        '''
+        """
         Returns the content of the settings file as dict of Qbs properties.
-        '''
+        """
         result = self._toolchain_properties()
         result.update(self._properties_from_settings())
         result.update(self._properties_from_options())
@@ -119,9 +121,9 @@ class QbsProfile:
         return result
 
     def render(self):
-        '''
+        """
         Returns the content of the settings file as string.
-        '''
+        """
         template = textwrap.dedent('''\
             {%- for key, value in profile_values.items() %}
             profiles.{{profile}}.{{ key }}:{{ value }}
@@ -138,11 +140,12 @@ class QbsProfile:
         return result
 
     def generate(self):
-        '''
+        """
         This method will save the generated files to the conanfile.generators_folder.
+
         Generates the "qbs_settings.txt" file. This file contains Qbs settings such as toolchain
         properties and can be imported using ``qbs config --import``.
-        '''
+        """
         check_duplicated_generator(self, self._conanfile)
         self._check_for_compiler()
         save(self.filename, self.render())
