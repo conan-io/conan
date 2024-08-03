@@ -156,14 +156,23 @@ class _QbsDepGenerator:
 
 
 class QbsDeps:
-    """ Main Qbs Dependencies generator, will generate a file for each dependency
-    inside the "conan-qbs-deps" folder
+    """
+    This class will generate a JSON file for each dependency inside the "conan-qbs-deps" folder.
+    Each JSON file contains information necesary for Qbs ``"conan" module provider`` to be
+    able to generate Qbs module files.
     """
     def __init__(self, conanfile):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
 
     @property
     def content(self):
+        """
+        Returns all dependency information as a Python dict object where key is the dependency
+        name and value is a dict with dependency properties.
+        """
         qbs_files = {}
 
         build_bindirs = {
@@ -181,5 +190,10 @@ class QbsDeps:
         return qbs_files
 
     def generate(self):
+        """
+        This method will save the generated files to the "conan-qbs-deps" directory inside the
+        ``conanfile.generators_folder`` directory.
+        Generates a single JSON file per dependency or component.
+        """
         for file_name, qbs_deps_file in self.content.items():
             save(self._conanfile, os.path.join('conan-qbs-deps', file_name), qbs_deps_file.render())
