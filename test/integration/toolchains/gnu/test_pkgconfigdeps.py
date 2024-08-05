@@ -1027,22 +1027,29 @@ class TestPCGenerationBuildContext:
     def test_pkg_config_deps_set_in_build_context_folder(self, build_folder_name):
         c = TestClient()
         tool = textwrap.dedent("""
-               import os
-               from conan import ConanFile
-               from conan.tools.gnu import PkgConfigDeps
+                    import os
+                    from conan import ConanFile
+                    from conan.tools.gnu import PkgConfigDeps
 
-               class Example(ConanFile):
-                   name = "tool"
-                   version = "1.0"
-                   requires = "wayland/1.0"
-                   tool_requires = "wayland/1.0"
+                    class Example(ConanFile):
+                       name = "tool"
+                       version = "1.0"
+                       requires = "wayland/1.0"
+                       tool_requires = "wayland/1.0"
 
-                   def generate(self):
+                    def generate(self):
                        deps = PkgConfigDeps(self)
                        deps.set_property("wayland", "pkg_config_name", "waylandx264")
                        deps.build_context_activated = ["wayland", "dep"]
                        deps.build_context_folder = "{build_folder_name}"
                        deps.generate()
+
+                    def build(self):
+                        assert os.path.exists("waylandx264.pc")
+                        assert not os.path.exists("wayland.pc")
+                        if "{build_folder_name}":
+                            assert os.path.exists("{build_folder_name}/waylandx264.pc")
+                            assert not os.path.exists("{build_folder_name}/wayland.pc")
                    """.format(build_folder_name=build_folder_name))
         wayland = textwrap.dedent("""
                from conan import ConanFile
@@ -1190,6 +1197,13 @@ def test_pkg_config_deps_set_property():
     c.run("create dep")
     c.run("create other")
     c.run("install app")
+    try:
+        # This file shouldn't exist
+        c.load("app/dep.pc")
+        assert False
+    except FileNotFoundError:
+        pass
+
     dep = c.load("app/depx264.pc")
     assert 'Name: depx264' in dep
     other = c.load("app/other.pc")
