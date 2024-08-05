@@ -124,8 +124,6 @@ class TestInRepo:
         """
         repo1_folder = temp_folder()
         repo2_folder = temp_folder()
-        cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
-                               public_header="pkg.h")
         config_yml = textwrap.dedent("""\
             versions:
               "0.1":
@@ -134,57 +132,21 @@ class TestInRepo:
         conanfile = textwrap.dedent("""\
             import os
             from conan import ConanFile
-            from conan.tools.cmake import CMake, cmake_layout
             from conan.tools.files import copy
 
             class PkgRecipe(ConanFile):
                 name = "pkg"
-                package_type = "library"
-
-                # Binary configuration
-                settings = "os", "compiler", "build_type", "arch"
-                options = {"shared": [True, False], "fPIC": [True, False]}
-                default_options = {"shared": False, "fPIC": True}
-
-                generators = "CMakeToolchain"
 
                 def export_sources(self):
-                    src = os.path.dirname(os.path.dirname(os.path.dirname(self.recipe_folder)))
-                    copy(self, "*", src=src, dst=self.export_sources_folder, excludes=["recipes*"])
-
-                def config_options(self):
-                    if self.settings.os == "Windows":
-                        self.options.rm_safe("fPIC")
-
-                def configure(self):
-                    if self.options.shared:
-                        self.options.rm_safe("fPIC")
-
-                def layout(self):
-                    cmake_layout(self)
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-
-                def package(self):
-                    cmake = CMake(self)
-                    cmake.install()
-
-                def package_info(self):
-                    self.cpp_info.libs = [self.name]
+                    copy(self, "*", src=self.recipe_folder, dst=self.export_sources_folder)
             """)
 
         save_files(repo2_folder, {"recipes/pkg/config.yml": config_yml,
                                   "recipes/pkg/all/conanfile.py": conanfile,
-                                  "CMakeLists.txt": cmake,
-                                  "pkg.h": gen_function_h(name="pkg"),
-                                  "pkg.cpp": gen_function_cpp(name="pkg")})
+                                  "recipes/pkg/all/pkg.h": gen_function_h(name="pkg")})
 
         c = TestClient()
         c.run(f"remote add local1 '{repo1_folder}'")
         c.run(f"remote add local2 '{repo2_folder}'")
-        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
-        c.run("create . --build=missing")
-        assert "pkg: Release!" in c.out
+        c.run("install --requires=pkg/0.1 --build=missing")
+        assert "Install finished successfully" in c.out
