@@ -1118,3 +1118,37 @@ def test_using_deployer_folder():
     assert "libdir=${prefix}/lib" in content
     assert "includedir=${prefix}/include" in content
     assert "bindir=${prefix}/bin" in content
+
+
+def test_pkg_config_deps_set_property():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.gnu import PkgConfigDeps
+        class Pkg(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1", "other/0.1"
+            def generate(self):
+                pc = PkgConfigDeps(self)
+                pc.set_property("dep", "pkg_config_name", "depx264")
+                pc.set_property("other::mycomp1", "nosoname", True)
+                pc.generate()
+            """)
+
+    pkg_info = {"components": {"mycomp1": {"libs": ["mylib"]}}}
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
+            "other/conanfile.py": GenConanfile("other", "0.1").with_package_type("shared-library")
+                                                              .with_package_info(pkg_info, {}),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create other")
+    c.run("install app")
+    dep = c.load("app/depx264.pc")
+    assert 'Name: depx264' in dep
+    other = c.load("app/other.pc")
+    assert 'Name: other' in other
+    other_mycomp1 = c.load("app/other-mycomp1.pc")
+    assert 'Name: other-mycomp1' in other_mycomp1
+    assert other.split("\n")[0] == other_mycomp1.split("\n")[0]
+
