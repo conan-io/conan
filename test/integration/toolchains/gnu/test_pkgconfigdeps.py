@@ -1023,6 +1023,52 @@ class TestPCGenerationBuildContext:
         c.run("install app -s:h build_type=Debug --build=missing")
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
 
+    @pytest.mark.parametrize("build_folder_name", ["build", ""])
+    def test_pkg_config_deps_set_in_build_context_folder(self, build_folder_name):
+        c = TestClient()
+        tool = textwrap.dedent("""
+               import os
+               from conan import ConanFile
+               from conan.tools.gnu import PkgConfigDeps
+
+               class Example(ConanFile):
+                   name = "tool"
+                   version = "1.0"
+                   requires = "wayland/1.0"
+                   tool_requires = "wayland/1.0"
+
+                   def generate(self):
+                       deps = PkgConfigDeps(self)
+                       deps.set_property("wayland", "pkg_config_name", "waylandx264")
+                       deps.build_context_activated = ["wayland", "dep"]
+                       deps.build_context_folder = "{build_folder_name}"
+                       deps.generate()
+                   """.format(build_folder_name=build_folder_name))
+        wayland = textwrap.dedent("""
+               from conan import ConanFile
+
+               class Pkg(ConanFile):
+                   name = "wayland"
+                   version = "1.0"
+                   requires = "dep/1.0"
+
+                   def package_info(self):
+                       self.cpp_info.components["client"].libs = []
+                       self.cpp_info.components["server"].libs = []
+               """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("create dep")
+        c.run("create wayland")
+        c.run("create tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
     def test_tool_requires_error_if_folder_and_suffix(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
