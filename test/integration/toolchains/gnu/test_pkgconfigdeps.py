@@ -1197,12 +1197,7 @@ def test_pkg_config_deps_set_property():
     c.run("create dep")
     c.run("create other")
     c.run("install app")
-    try:
-        # This file shouldn't exist
-        c.load("app/dep.pc")
-        assert False
-    except FileNotFoundError:
-        pass
+    assert not os.path.exists(os.path.join(c.current_folder, "app", "dep.pc"))
 
     dep = c.load("app/depx264.pc")
     assert 'Name: depx264' in dep
