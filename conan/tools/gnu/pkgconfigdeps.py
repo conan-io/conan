@@ -398,9 +398,8 @@ class PkgConfigDeps:
             # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
             if require.build and dep.ref.name not in self.build_context_activated:
                 continue
-            if dep.ref.name in self._properties:
-                for prop, value in self._properties[dep.ref.name].items():
-                    dep.cpp_info.set_property(prop, value)
+            for prop, value in self._properties.get(dep.ref.name, {}).items():
+                dep.cpp_info.set_property(prop, value)
 
             # Save all the *.pc files and their contents
             pc_files.update(_PCGenerator(self, require, dep).pc_files)
