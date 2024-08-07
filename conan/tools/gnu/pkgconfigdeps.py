@@ -417,13 +417,13 @@ class PkgConfigDeps:
 
     def set_property(self, dep, prop, value):
         """
-        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
+        Using this method you can overwrite the :ref:`property<PkgConfigDeps Properties>` values set by
         the Conan recipes from the consumer. This can be done for `pkg_config_name`,
         `pkg_config_aliases` and `pkg_config_custom_content` properties.
 
-        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
+        :param dep: Name of the dependency to set the :ref:`property<PkgConfigDeps Properties>`. For
          components use the syntax: ``dep_name::component_name``.
-        :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
+        :param prop: Name of the :ref:`property<PkgConfigDeps Properties>`.
         :param value: Value of the property. Use ``None`` to invalidate any value set by the
          upstream recipe.
         """
