@@ -13,6 +13,7 @@ from conan.tools.microsoft.visual import vs_installation_path, _vcvars_path, _vc
 from conan.tools.qbs import common
 from conans.util.files import save
 
+
 def _find_msvc(conanfile):
     vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
     vs_version, vcvars_ver = _vcvars_versions(conanfile)
@@ -65,7 +66,7 @@ def _find_clangcl(conanfile):
     vs_path = vs_install_path or vs_installation_path(vs_version)
 
     compiler_path = os.path.join(vs_path, 'VC', 'Tools', 'Llvm', 'bin', 'clang-cl.exe')
-    vcvars_path =_vcvars_path(vs_version, vs_install_path)
+    vcvars_path = _vcvars_path(vs_version, vs_install_path)
     if not os.path.exists(compiler_path):
         return None
     return compiler_path, vcvars_path
@@ -116,8 +117,9 @@ class QbsProfile:
         """
         result = self._toolchain_properties()
         result.update(self._properties_from_settings())
+        result.update(self._properties_from_conf())
         result.update(self._properties_from_options())
-        result.update(self._properties_from_env(self._build_env))
+        # result.update(self._properties_from_env(self._build_env))
         return result
 
     def render(self):
@@ -266,32 +268,33 @@ class QbsProfile:
         fpic = maybe_bool_str(self._conanfile.options.get_safe('fPIC'))
         if fpic:
             result["cpp.positionIndependentCode"] = fpic
+
         return result
 
-    def _properties_from_env(self, build_env):
-        def _env_var_to_list(var):
-            return shlex.split(var)
-
+    def _properties_from_conf(self):
         result = {}
 
-        def map_list_property(env_key, qbs_property):
-            value = build_env.get(env_key)
-            if value is not None:
-                result[qbs_property] = str(_env_var_to_list(value))
+        def map_list_property(key, qbs_property):
+            value = self._conanfile.conf.get(key, default=[], check_type=list)
+            if len(value) > 0:
+                result[qbs_property] = value
 
-        sysroot = build_env.get('SYSROOT')
-        if sysroot:
-            result["qbs.sysroot"] = sysroot
+        map_list_property("tools.build:cxxflags", "cpp.cxxFlags")
+        map_list_property("tools.build:cflags", "cpp.cFlags")
+        map_list_property("tools.build:defines", "cpp.defines")
 
-        map_list_property('ASFLAGS', 'cpp.assemblerFlags')
-        map_list_property('CFLAGS', 'cpp.cFlags')
-        map_list_property('CPPFLAGS', 'cpp.cppFlags')
-        map_list_property('CXXFLAGS', 'cpp.cxxFlags')
+        def ldflags():
+            conf = self._conanfile.conf
+            result = conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+            result.extend(conf.get("tools.build:exelinkflags", default=[], check_type=list))
+            linker_scripts = conf.get("tools.build:linker_scripts", default=[], check_type=list)
+            result.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
+            return result
 
-        ld_flags = build_env.get('LDFLAGS')
-        if ld_flags:
-            parser = _LinkerFlagsParser(_env_var_to_list(ld_flags))
-            result['cpp.linkerFlags'] = str(parser.linker_flags)
-            result['cpp.driverLinkerFlags'] = str(
-                parser.driver_linker_flags)
+        ld_flags = ldflags()
+        if len(ld_flags) > 0:
+            parser = _LinkerFlagsParser(ld_flags)
+            result['cpp.linkerFlags'] = parser.linker_flags
+            result['cpp.driverLinkerFlags'] = parser.driver_linker_flags
+
         return result

@@ -11,7 +11,7 @@ def exe_suffix():
     return '.exe' if platform.system() == 'Windows' else ''
 
 
-COMPILER_MAP={
+COMPILER_MAP = {
     'gcc': ('gcc', 'g++'),
     'clang': ('clang', 'clang++')
 }
@@ -23,7 +23,7 @@ COMPILER_MAP={
 ])
 def test_toolchain_from_path(compiler, version, system):
     client = TestClient()
-    path=client.current_folder
+    path = client.current_folder
 
     profile = textwrap.dedent(f'''
     [settings]
@@ -191,7 +191,7 @@ def test_options_from_settings(system, compiler, version, build_type, arch, cpps
     # TODO: cpp.runtimeLibrary (MSVC only)
 
 
-def test_options_from_env():
+def test_options_from_conf():
     client = TestClient()
 
     profile = textwrap.dedent('''
@@ -205,12 +205,10 @@ def test_options_from_env():
     os=Linux
     [conf]
     tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
-    [buildenv]
-    ASFLAGS=--cpu cortex-m0
-    CFLAGS=-Dfoo -Dbar
-    CPPFLAGS=-Dfoo -Dbaz
-    CXXFLAGS=-Dfoo -Dqux
-    LDFLAGS=-s -Wl,-s
+    tools.build:cflags=['-Dfoo', '-Dbar']
+    tools.build:cxxflags=['-Dfoo', '-Dbaz']
+    tools.build:sharedlinkflags=['-s']
+    tools.build:exelinkflags=['-Wl,-s']
     ''')
 
     conanfile = textwrap.dedent('''
@@ -229,9 +227,7 @@ def test_options_from_env():
     assert os.path.exists(settings_path)
     settings_content = load(settings_path)
 
-    assert "cpp.assemblerFlags:['--cpu', 'cortex-m0']" in settings_content
     assert "cpp.cFlags:['-Dfoo', '-Dbar']" in settings_content
-    assert "cpp.cppFlags:['-Dfoo', '-Dbaz']" in settings_content
-    assert "cpp.cxxFlags:['-Dfoo', '-Dqux']" in settings_content
+    assert "cpp.cxxFlags:['-Dfoo', '-Dbaz']" in settings_content
     assert "cpp.linkerFlags:['-s']" in settings_content
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
