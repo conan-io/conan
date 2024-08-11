@@ -280,3 +280,39 @@ def test_options_extra():
     assert "cpp.defines:['FOO', 'QUX']" in settings_content
     assert "cpp.linkerFlags:['-s']" in settings_content
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
+
+
+def test_sysroot():
+    client = TestClient()
+
+    profile = textwrap.dedent('''
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.version=13
+    compiler.libcxx=libstdc++
+    compiler.cppstd=17
+    os=Linux
+    [conf]
+    tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
+    tools.build:sysroot=\\opt\\usr\\local
+    ''')
+
+    conanfile = textwrap.dedent('''
+    from conan import ConanFile
+    class Recipe(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        name = "mylib"
+        version = "0.1"
+    ''')
+
+    client.save({'profile': profile})
+    client.save({'conanfile.py': conanfile})
+    client.run('install . -pr:a=profile -g QbsProfile')
+
+    settings_path = os.path.join(client.current_folder, 'qbs_settings.txt')
+    assert os.path.exists(settings_path)
+    settings_content = load(settings_path)
+
+    assert "qbs.sysroot:/opt/usr/local" in settings_content

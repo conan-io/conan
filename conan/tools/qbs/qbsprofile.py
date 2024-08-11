@@ -307,4 +307,9 @@ class QbsProfile:
             result['cpp.linkerFlags'] = parser.linker_flags
             result['cpp.driverLinkerFlags'] = parser.driver_linker_flags
 
+        sysroot = self._conanfile.conf.get("tools.build:sysroot")
+        if sysroot is not None:
+            sysroot = sysroot.replace("\\", "/")
+            result['qbs.sysroot'] = sysroot
+
         return result
