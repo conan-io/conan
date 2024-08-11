@@ -101,6 +101,13 @@ class QbsProfile:
         self._conanfile = conanfile
         self._profile = profile
         self._default_profile = default_profile
+
+        self.extra_cflags = []
+        self.extra_cxxflags = []
+        self.extra_defines = []
+        self.extra_sharedlinkflags = []
+        self.extra_exelinkflags = []
+
         self._build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
 
     @property
@@ -274,19 +281,22 @@ class QbsProfile:
     def _properties_from_conf(self):
         result = {}
 
-        def map_list_property(key, qbs_property):
+        def map_list_property(key, qbs_property, extra):
             value = self._conanfile.conf.get(key, default=[], check_type=list)
+            value.extend(extra)
             if len(value) > 0:
                 result[qbs_property] = value
 
-        map_list_property("tools.build:cxxflags", "cpp.cxxFlags")
-        map_list_property("tools.build:cflags", "cpp.cFlags")
-        map_list_property("tools.build:defines", "cpp.defines")
+        map_list_property("tools.build:cflags", "cpp.cFlags", self.extra_cflags)
+        map_list_property("tools.build:cxxflags", "cpp.cxxFlags", self.extra_cxxflags)
+        map_list_property("tools.build:defines", "cpp.defines", self.extra_defines)
 
         def ldflags():
             conf = self._conanfile.conf
             result = conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+            result.extend(self.extra_sharedlinkflags)
             result.extend(conf.get("tools.build:exelinkflags", default=[], check_type=list))
+            result.extend(self.extra_exelinkflags)
             linker_scripts = conf.get("tools.build:linker_scripts", default=[], check_type=list)
             result.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
             return result

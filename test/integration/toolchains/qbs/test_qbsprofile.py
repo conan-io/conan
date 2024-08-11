@@ -231,3 +231,52 @@ def test_options_from_conf():
     assert "cpp.cxxFlags:['-Dfoo', '-Dbaz']" in settings_content
     assert "cpp.linkerFlags:['-s']" in settings_content
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
+
+
+def test_options_extra():
+    client = TestClient()
+
+    profile = textwrap.dedent('''
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.version=13
+    compiler.libcxx=libstdc++
+    compiler.cppstd=17
+    os=Linux
+    [conf]
+    tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
+    ''')
+
+    conanfile = textwrap.dedent('''
+    from conan import ConanFile
+    from conan.tools.qbs import QbsProfile
+    class Recipe(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        name = "mylib"
+        version = "0.1"
+
+        def generate(self):
+            profile = QbsProfile(self)
+            profile.extra_cflags=['-Dfoo', '-Dbar']
+            profile.extra_cxxflags=['-Dfoo', '-Dbaz']
+            profile.extra_defines=['FOO', 'QUX']
+            profile.extra_sharedlinkflags=['-s']
+            profile.extra_exelinkflags=['-Wl,-s']
+            profile.generate()
+    ''')
+
+    client.save({'profile': profile})
+    client.save({'conanfile.py': conanfile})
+    client.run('install . -pr:a=profile')
+
+    settings_path = os.path.join(client.current_folder, 'qbs_settings.txt')
+    assert os.path.exists(settings_path)
+    settings_content = load(settings_path)
+
+    assert "cpp.cFlags:['-Dfoo', '-Dbar']" in settings_content
+    assert "cpp.cxxFlags:['-Dfoo', '-Dbaz']" in settings_content
+    assert "cpp.defines:['FOO', 'QUX']" in settings_content
+    assert "cpp.linkerFlags:['-s']" in settings_content
+    assert "cpp.driverLinkerFlags:['-s']" in settings_content
