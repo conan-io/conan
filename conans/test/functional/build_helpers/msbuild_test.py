@@ -54,10 +54,10 @@ class HelloConan(ConanFile):
 
         client.save(files)
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
-                   'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
+                   'compiler="Visual Studio" -s compiler.version=15', assert_error=True)
 
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
-                   '-s compiler="Visual Studio" -s compiler.version=14')
+                   '-s compiler="Visual Studio" -s compiler.version=15')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()
