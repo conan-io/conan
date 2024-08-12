@@ -233,7 +233,7 @@ class CPS:
             else:
                 # single component, called same as library
                 component = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)
-                if dep.dependencies:
+                if not component.requires and dep.dependencies:
                     for transitive_dep in dep.dependencies.host.items():
                         dep_name = transitive_dep[0].ref.name
                         component.requires.append(f"{dep_name}:{dep_name}")
