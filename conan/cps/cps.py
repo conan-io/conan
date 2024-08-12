@@ -233,11 +233,10 @@ class CPS:
             else:
                 # single component, called same as library
                 component = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)
-                # self._component(dep.package_type, dep.cpp_info, build_type)
                 if dep.dependencies:
-                    for transitive_dep in dep.dependencies.items():
+                    for transitive_dep in dep.dependencies.host.items():
                         dep_name = transitive_dep[0].ref.name
-                        component.requires = [f"{dep_name}:{dep_name}"]
+                        component.requires.append(f"{dep_name}:{dep_name}")
 
                 # the component will be just the package name
                 cps.default_components = [f"{dep.ref.name}"]
