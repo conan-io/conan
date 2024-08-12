@@ -771,3 +771,27 @@ class TestNewCompatibility:
         client.run("install . -o pkg/*:optimized=3")
         assert "pkg/0.1@user/stable: Already installed!" in client.out
         assert f"pkg/0.1@user/stable:{package_id} - Cache" in client.out
+
+
+def test_crash():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+
+       class Pkg(ConanFile):
+           settings = "os", "compiler"
+           def package_id(self):
+               del self.info.settings.compiler.version
+       """)
+    profile = textwrap.dedent("""
+       [settings]
+       os = Windows
+       compiler=msvc
+       compiler.version=192
+       compiler.runtime=dynamic
+       compiler.cppstd=14
+       build_type=Release
+       """)
+    client.save({"conanfile.py": conanfile,
+                 "myprofile": profile})
+    client.run("create . pkg/0.1@ -pr=myprofile")
