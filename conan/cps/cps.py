@@ -142,7 +142,7 @@ class CPSComponent:
             cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
-        libname = libname or cpp_info.libs[0]
+        libname = libname or next(iter(cpp_info.full_libs))
         full_lib = cpp_info.full_libs[libname]
         deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type)
         cps_comp.type = CPSComponentType.from_conan(full_lib.get("type"))

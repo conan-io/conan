@@ -46,6 +46,23 @@ def test_cps_static_lib():
     assert pkg_comp["location"] is not None
 
 
+def test_cps_header():
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_package_type("header-library")})
+    c.run("create pkg")
+
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+    c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    assert pkg["name"] == "pkg"
+    assert pkg["version"] == "0.1"
+    assert "configurations" not in "pkg"
+    assert pkg["default_components"] == ["pkg"]
+    pkg_comp = pkg["components"]["pkg"]
+    assert pkg_comp["type"] == "interface"
+    assert "location" not in pkg_comp
+
+
 def test_cps_in_pkg():
     c = TestClient()
     cps = textwrap.dedent("""\
