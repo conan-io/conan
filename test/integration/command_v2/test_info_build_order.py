@@ -717,3 +717,14 @@ class TestBuildOrderReduce:
         # different order
         c.run(f"graph build-order-merge --file=bo3.json --file=bo2.json", assert_error=True)
         assert "ERROR: Cannot merge build-orders of configuration!=recipe" in c.out
+
+    def test_merge_same_no_stacktrace(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0")})
+        tc.run("export dep")
+        tc.run("export pkg")
+        tc.run("graph build-order --order=recipe --requires=pkg/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
+        tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
+        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in tc.out
+        assert "IndexError: list index out of range" not in tc.out

@@ -492,7 +492,7 @@ class InstallGraph:
                     binary, reason = "Invalid", node.conanfile.info.invalid
                 errors.append(f"{tab}- {node.ref}: {binary}: {reason}")
         if missing:
-            missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
+            missing_prefs = set(n.nodes[0].pref if n.nodes else n.pref for n in missing)  # avoid duplicated
             for pref in list(sorted([str(pref) for pref in missing_prefs])):
                 errors.append(f"{tab}- {pref}: Missing binary")
         if errors:
