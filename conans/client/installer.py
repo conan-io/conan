@@ -338,7 +338,7 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_install_method(conanfile, package_layout.install())
+            self._call_localize_method(conanfile, package_layout.localize())
             # Use package_folder which has been updated previously by install_method if necessary
             self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
@@ -457,14 +457,15 @@ class BinaryInstaller:
 
         conanfile.cpp_info.check_component_requires(conanfile)
 
-    def _call_install_method(self, conanfile, install_folder):
-        if hasattr(conanfile, "install"):
-            conanfile.folders.set_install_folder(install_folder)
-            if not os.path.exists(install_folder):
-                mkdir(install_folder)
-                conanfile.output.highlight("Calling install()")
-                with conanfile_exception_formatter(conanfile, "install"):
-                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'install'):
-                        conanfile.install()
-            conanfile.folders.set_base_package(install_folder)
-            conanfile.output.success(f"Install folder {install_folder}")
+    def _call_localize_method(self, conanfile, localize_folder):
+        if hasattr(conanfile, "localize"):
+            conanfile.folders.set_localize_folder(localize_folder)
+            conanfile.folders.set_base_package(localize_folder)
+            if not os.path.exists(localize_folder):
+                mkdir(localize_folder)
+                conanfile.output.highlight("Calling localize()")
+                with conanfile_exception_formatter(conanfile, "localize_folder"):
+                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'localize'):
+                        conanfile.localize()
+
+            conanfile.output.success(f"Localize folder {localize_folder}")

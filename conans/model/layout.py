@@ -50,7 +50,7 @@ class Folders(object):
         self.source = ""
         self.build = ""
         self.package = ""
-        self.install = ""
+        self.localize = ""
         self.generators = ""
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
@@ -144,13 +144,13 @@ class Folders(object):
         """For the cache, the package folder is only the base"""
         return self._base_package
 
-    def set_install_folder(self, folder):
+    def set_localize_folder(self, folder):
         self._immutable_package_folder = self.package_folder
-        self.install = folder
+        self.localize = folder
 
     @property
-    def install_folder(self):
-        return self.install
+    def localize_folder(self):
+        return self.localize
 
     @property
     def immutable_package_folder(self):

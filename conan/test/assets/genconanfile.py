@@ -27,7 +27,7 @@ class GenConanfile(object):
         self._provides = None
         self._deprecated = None
         self._package_lines = None
-        self._install_lines = None
+        self._localize_lines = None
         self._package_files = None
         self._package_files_env = None
         self._package_files_link = None
@@ -215,10 +215,10 @@ class GenConanfile(object):
             self._package_lines.append(line)
         return self
 
-    def with_install(self, *lines):
-        self._install_lines = self._install_lines or []
+    def with_localize(self, *lines):
+        self._localize_lines = self._localize_lines or []
         for line in lines:
-            self._install_lines.append(line)
+            self._localize_lines.append(line)
         return self
 
     def with_build_msg(self, msg):
@@ -377,8 +377,8 @@ class GenConanfile(object):
                 self._package_files_link)
 
     @property
-    def _install_method(self):
-        return self._install_lines
+    def _localize_method(self):
+        return self._localize_lines
 
     @property
     def _package_method_render(self):
@@ -409,15 +409,15 @@ class GenConanfile(object):
     """.format("\n".join(lines))
 
     @property
-    def _install_method_render(self):
+    def _localize_method_render(self):
         lines = []
-        if self._install_lines:
-            lines.extend("        {}".format(line) for line in self._install_lines)
+        if self._localize_lines:
+            lines.extend("        {}".format(line) for line in self._localize_lines)
 
         if not lines:
             return ""
         return """
-    def install(self):
+    def localize(self):
 {}
         """.format("\n".join(lines))
 
@@ -506,7 +506,7 @@ class GenConanfile(object):
                        "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines",
-                       "install_method"
+                       "localize_method"
                        ):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?

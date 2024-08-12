@@ -63,8 +63,8 @@ class CacheAPI:
         app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
-        if os.path.exists(ref_layout.install()):
-            return ref_layout.install()
+        if os.path.exists(ref_layout.localize()):
+            return ref_layout.localize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
     def check_integrity(self, package_list):
