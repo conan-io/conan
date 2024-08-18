@@ -91,7 +91,6 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
-# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -105,6 +104,17 @@ def _generic_algorithm_sum(file_path, algorithm_name):
                 break
             m.update(data)
         return m.hexdigest()
+
+
+def check_with_algorithm_sum(algorithm_name, file_path, signature):
+    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_signature != signature.lower():
+        raise ConanException("%s signature failed for '%s' file. \n"
+                             " Provided signature: %s  \n"
+                             " Computed signature: %s" % (algorithm_name,
+                                                          os.path.basename(file_path),
+                                                          signature,
+                                                          real_signature))
 
 
 def save(path, content, encoding="utf-8"):
