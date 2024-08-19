@@ -2018,13 +2018,15 @@ def test_cmake_toolchain_ninja_multi_config():
     assert 'DEFINE conan_test_complex="1 2"!' in c.out
 
 
-def test_cxx_version_not_overriden_if_foced():
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only needs to run once, no need for extra platforms")
+def test_cxx_version_not_overriden_if_hardcoded():
     """Any C++ standard set in the CMakeLists.txt will have priority even if the
     compiler.cppstd is set in the profile"""
     tc = TestClient()
     tc.run("new cmake_exe -dname=foo -dversion=1.0")
 
-    cml_contents = tc.load("CMakelists.txt")
+    cml_contents = tc.load("CMakeLists.txt")
     cml_contents = cml_contents.replace("project(foo CXX)\n", "project(foo CXX)\nset(CMAKE_CXX_STANDARD 17)\n")
     tc.save({"CMakeLists.txt": cml_contents})
 
