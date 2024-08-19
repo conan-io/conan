@@ -2016,3 +2016,16 @@ def test_cmake_toolchain_ninja_multi_config():
     assert 'DEFINE conan_test_answer=456!' in c.out
     assert 'DEFINE conan_test_other=abc!' in c.out
     assert 'DEFINE conan_test_complex="1 2"!' in c.out
+
+
+def test_cxx_version_not_overriden_if_foced():
+    tc = TestClient()
+    tc.run("new cmake_exe -dname=foo -dversion=1.0")
+    cml_contents = tc.load("CMakelists.txt")
+    cml_contents = cml_contents.replace("project(foo CXX)\n", "project(foo CXX)\nset(CMAKE_CXX_STANDARD 17)\n")
+    tc.save({"CMakeLists.txt": cml_contents})
+
+    tc.run("create . -s=compiler.cppstd=11")
+    assert "Conan toolchain: C++ Standard 11 with extensions OFF" in tc.out
+    ## Conan says yes! But alas
+    assert "foo/1.0: __cplusplus2017" in tc.out
