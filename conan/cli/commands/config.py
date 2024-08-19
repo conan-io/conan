@@ -1,7 +1,7 @@
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters import default_json_formatter
-from conans.util.config_parser import get_bool_from_text
+from conan.errors import ConanException
 
 
 @conan_command(group='Consumer')
@@ -39,6 +39,14 @@ def config_install(conan_api, parser, subparser, *args):
                            help='Install to that path in the conan cache')
 
     args = parser.parse_args(*args)
+
+    def get_bool_from_text(value):  # TODO: deprecate this
+        value = value.lower()
+        if value in ["1", "yes", "y", "true"]:
+            return True
+        if value in ["0", "no", "n", "false"]:
+            return False
+        raise ConanException("Unrecognized boolean value '%s'" % value)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) \
         else get_bool_from_text(args.verify_ssl)
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
