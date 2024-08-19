@@ -384,5 +384,7 @@ def msvs_toolset(conanfile):
         if subs_toolset:
             return subs_toolset
         return msvc_version_to_toolset_version(compiler_version)
+    if compiler == "clang":
+        return "ClangCl"
     if compiler == "intel-cc":
         return IntelCC(conanfile).ms_toolset

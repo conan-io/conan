@@ -81,3 +81,10 @@ def test_intel_cc_default(compiler_version, compiler_mode, expected_toolset):
                                        "compiler.version": compiler_version,
                                        "compiler.mode": compiler_mode})
     assert msvs_toolset(conanfile) == expected_toolset
+
+def test_clang_platform_toolset():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"compiler": "clang",
+                             "compiler.version": "17",
+                             "compiler.runtime": "dynamic"})
+    assert msvs_toolset(conanfile) == "ClangCl"
