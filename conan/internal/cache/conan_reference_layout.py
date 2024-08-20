@@ -10,7 +10,7 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 SRC_FOLDER = "s"
 BUILD_FOLDER = "b"
 PACKAGES_FOLDER = "p"
-LOCALIZE_FOLDER = "l"
+FINALIZE_FOLDER = "f"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
@@ -100,8 +100,8 @@ class PackageLayout(LayoutBase):
     def package(self):
         return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
-    def localize(self):
-        return os.path.join(self._base_folder, LOCALIZE_FOLDER)
+    def finalize(self):
+        return os.path.join(self._base_folder, FINALIZE_FOLDER)
 
     def download_package(self):
         return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)

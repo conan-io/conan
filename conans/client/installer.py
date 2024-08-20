@@ -338,7 +338,7 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_localize_method(conanfile, package_layout.localize())
+            self._call_finalize_method(conanfile, package_layout.finalize())
             # Use package_folder which has been updated previously by install_method if necessary
             self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
@@ -457,15 +457,15 @@ class BinaryInstaller:
 
         conanfile.cpp_info.check_component_requires(conanfile)
 
-    def _call_localize_method(self, conanfile, localize_folder):
-        if hasattr(conanfile, "localize"):
-            conanfile.folders.set_localize_folder(localize_folder)
-            conanfile.folders.set_base_package(localize_folder)
-            if not os.path.exists(localize_folder):
-                mkdir(localize_folder)
-                conanfile.output.highlight("Calling localize()")
-                with conanfile_exception_formatter(conanfile, "localize_folder"):
-                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'localize'):
-                        conanfile.localize()
+    def _call_finalize_method(self, conanfile, finalize_folder):
+        if hasattr(conanfile, "finalize"):
+            conanfile.folders.set_finalize_folder(finalize_folder)
+            conanfile.folders.set_base_package(finalize_folder)
+            if not os.path.exists(finalize_folder):
+                mkdir(finalize_folder)
+                conanfile.output.highlight("Calling finalize()")
+                with conanfile_exception_formatter(conanfile, "finalize"):
+                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'finalize'):
+                        conanfile.finalize()
 
-            conanfile.output.success(f"Localize folder {localize_folder}")
+            conanfile.output.success(f"Finalized folder {finalize_folder}")
