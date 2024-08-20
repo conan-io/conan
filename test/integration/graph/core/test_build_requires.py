@@ -639,7 +639,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(lib, [(cmake, False, False, True, True)])
         _check_transitive(app, [(lib, True, True, False, False),
-                                (cmake, False, False, True, False)])
+                                (cmake, False, False, True, True)])
 
     def test_deep_dependency_tree(self):
         # app -> liba -> libb-(br public) -> sfun -> libsfun -> libx -> liby -> libz
@@ -777,7 +777,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
 
     def test_tool_requires_override(self):
         # app -> libb -(br public)-> protobuf/0.1
@@ -808,7 +808,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
         _check_transitive(libb, [(protobuf_host, True, True, False, False),
                                  (protobuf_build, False, False, True, True)])
 
