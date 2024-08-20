@@ -460,7 +460,6 @@ class BinaryInstaller:
     def _call_finalize_method(self, conanfile, finalize_folder):
         if hasattr(conanfile, "finalize"):
             conanfile.folders.set_finalize_folder(finalize_folder)
-            conanfile.folders.set_base_package(finalize_folder)
             if not os.path.exists(finalize_folder):
                 mkdir(finalize_folder)
                 conanfile.output.highlight("Calling finalize()")
