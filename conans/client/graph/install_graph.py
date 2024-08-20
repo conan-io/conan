@@ -485,14 +485,9 @@ class InstallGraph:
             errors.append("There are some error(s) in the graph:")
         if invalid:
             for package in invalid:
-                node = package.nodes[0]
-                if node.cant_build and node.should_build:
-                    binary, reason = "Cannot build for this configuration", node.cant_build
-                else:
-                    binary, reason = "Invalid", node.conanfile.info.invalid
-                errors.append(f"{tab}- {node.ref}: {binary}: {reason}")
+                errors.append(f"{tab}- {package.pref}: Invalid configuration")
         if missing:
-            missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
+            missing_prefs = set(n.pref for n in missing)  # avoid duplicated
             for pref in list(sorted([str(pref) for pref in missing_prefs])):
                 errors.append(f"{tab}- {pref}: Missing binary")
         if errors:

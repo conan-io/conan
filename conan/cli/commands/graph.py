@@ -133,7 +133,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
             "conan_error": install_graph.get_errors()}
 
 
-
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
                               "html": format_build_order_html})
 def graph_build_order_merge(conan_api, parser, subparser, *args):

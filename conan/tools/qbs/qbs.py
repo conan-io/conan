@@ -27,7 +27,7 @@ class Qbs(object):
         """
         :param conanfile: The current recipe object. Always use ``self``.
         :param project_file: The name to the main project file. If not set, Qbs will try to
-        autodetect the project file.
+            autodetect the project file.
         """
         self.profile = None
         self._conanfile = conanfile
@@ -50,8 +50,9 @@ class Qbs(object):
         This Qbs feature is rarely needed since each conan package can contain only one
         configuration, however might be useful when creating multiple versions of the same product
         that should be put in the same Conan package.
+
         :param name: the name of the configuration. This corresponds to the ``config`` parameter
-        of ``qbs resolve``, ``qbs build`` and ``qbs install`` commands.
+            of ``qbs resolve``, ``qbs build`` and ``qbs install`` commands.
         :param values: the dict containing Qbs properties and their values for this configuration.
         """
         self._configuration[name] = values
@@ -64,7 +65,7 @@ class Qbs(object):
 
     def resolve(self, parallel=True):
         """
-        Wraps the ``qbs revolve`` call.
+        Wraps the ``qbs resolve`` call.
         If QbsDeps generator is used, this will also set the necessary properites of the Qbs
         "conan" module provider automatically adding dependencies to the project.
         :param parallel: Whether to use multi-threaded resolving. Defaults to ``True``.
@@ -111,9 +112,11 @@ class Qbs(object):
     def build(self, products=None):
         """
         Wraps the ``qbs build`` call.
+
         :param products: The list of product names to build. If not set, builds all products that
-        have builtByDefault set to true. This parameter corresponds to the ``--products`` option
-        of the ``qbs build`` command.
+            have builtByDefault set to true. This parameter corresponds to the ``--products``
+            option of the ``qbs build`` command.
+
         The resolve() method should be called before calling this method.
         """
         return self._build(products=products, all_products=False)
