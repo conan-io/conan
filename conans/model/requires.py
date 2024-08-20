@@ -271,14 +271,14 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=False, direct=False)
+                                                 run=require.run, visible=self.visible, direct=False)
                 return downstream_require
             return
 
