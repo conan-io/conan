@@ -146,7 +146,6 @@ class Folders(object):
 
     def set_finalize_folder(self, folder):
         self._immutable_package_folder = self.package_folder
-        self.finalize = folder
         self.set_base_package(folder)
 
     @property
