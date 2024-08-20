@@ -3,7 +3,6 @@ import unittest
 
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
