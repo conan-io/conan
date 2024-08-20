@@ -53,3 +53,18 @@ def test_component_error():
     arch = c.get_default_host_profile().settings['arch']
     assert 'list(APPEND t2_FIND_DEPENDENCY_NAMES )' in c.load(f"t3/t2-release-{arch}-data.cmake")
     assert not os.path.exists(os.path.join(c.current_folder, "t3/t1-config.cmake"))
+
+def test_verify_get_property_check_type():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("test_property", "foo")
+                self.cpp_info.get_property("test_property", check_type=list)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert 'The expected type for test_property is "list", but "str" was found' in c.out
