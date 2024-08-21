@@ -498,8 +498,8 @@ class InstallGraph:
         msg = ["There are invalid packages:"]
         for package in invalid:
             node = package.nodes[0]
-            if node.cant_build and node.should_build:
-                binary, reason = "Cannot build for this configuration", node.cant_build
+            if node.conanfile.info.cant_build and node.should_build:
+                binary, reason = "Cannot build for this configuration", node.conanfile.info.cant_build
             else:
                 binary, reason = "Invalid", node.conanfile.info.invalid
             msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
