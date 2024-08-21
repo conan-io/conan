@@ -185,6 +185,27 @@ class GraphBinariesAnalyzer(object):
             node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
+        if node.binary == BINARY_INVALID and True:
+            conanfile = node.conanfile
+            original_binary = node.binary
+            original_package_id = node.package_id
+            # FIXME: THis might be the second time to call compatibles
+            compatibles = self._compatibility.compatibles(conanfile)
+            compatibles.pop(original_package_id, None)  # Skip main package_id
+            if compatibles:
+                compatible_pkg = next(iter(compatibles.values()))
+                conanfile.info = compatible_pkg  # Redefine current
+
+                # TODO: Improve this interface
+                # The package_id method might have modified the settings to erase information,
+                # ensure we allow those new values
+                conanfile.settings = conanfile.settings.copy_conaninfo_settings()
+                conanfile.settings.update_values(compatible_pkg.settings.values_list)
+                # Trick to allow mutating the options (they were freeze=True)
+                conanfile.options = conanfile.options.copy_conaninfo_options()
+                conanfile.options.update_options(compatible_pkg.options)
+                node.binary = BINARY_BUILD
+
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
             if conanfile.vendor and not conanfile.conf.get("tools.graph:vendor", choices=("build",)):

@@ -449,3 +449,26 @@ class TestNewCompatibility:
         tc.run("create dep -pr=profile -s compiler.cppstd=20")
         tc.run("create . -pr=profile -s compiler.cppstd=17")
         tc.assert_listed_binary({"dep/1.0": ("b6d26a6bc439b25b434113982791edf9cab4d004", "Cache")})
+
+
+def test_build_compatible():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.build import check_min_cppstd
+
+       class Pkg(ConanFile):
+           name = "pkg"
+           version = "0.1"
+           settings = "os", "compiler"
+
+           def validate(self):
+               check_min_cppstd(self, 14)
+
+           def build(self):
+               self.output.info(f"Building with {self.settings.compiler.cppstd}!!!")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
+          "-s compiler.cppstd=11")
+    print(c.out)
