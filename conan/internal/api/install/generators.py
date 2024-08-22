@@ -116,6 +116,9 @@ def write_generators(conanfile, app):
             with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
+    assert conanfile.virtualbuildenv is not None
+    assert conanfile.virtualrunenv is not None
+
     if conanfile.virtualbuildenv:
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):

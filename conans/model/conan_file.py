@@ -111,10 +111,12 @@ class ConanFile:
         self.env_info = MockInfoProperty("env_info")
         self._conan_dependencies = None
 
-        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
-            self.virtualbuildenv = True
-        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
-            self.virtualrunenv = True
+        # Allow the user to override them with True or False
+        # If not, value will be given in profile_node_definer based on confs
+        if not hasattr(self, "virtualbuildenv"):
+            self.virtualbuildenv = None
+        if not hasattr(self, "virtualrunenv"):
+            self.virtualrunenv = None
 
         self.env_scripts = {}  # Accumulate the env scripts generated in order
         self.system_requires = {}  # Read only, internal {"apt": []}
