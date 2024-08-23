@@ -767,12 +767,15 @@ class TestLoops(GraphManagerTest):
         assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
-        self.assertEqual(2, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         tool = app.dependencies[0].dst
+        tool2 = tool.dependencies[0].dst
+        tool3 = tool2.dependencies[0].dst
 
         self._check_node(app, "app/0.1", deps=[tool], dependents=[])
-        self._check_node(tool, "cmake/0.1#123", deps=[], dependents=[app])
+        self._check_node(tool, "cmake/0.1#123", deps=[tool2], dependents=[app])
+        self._check_node(tool2, "cmake/0.1#123", deps=[tool3], dependents=[tool])
 
     def test_indirect_loop_error(self):
         # app -(br)-> gtest/0.1 -(br)-> cmake/0.1 -(br)->gtest/0.1 ....
@@ -786,14 +789,16 @@ class TestLoops(GraphManagerTest):
         assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
-        self.assertEqual(4, len(deps_graph.nodes))
+        self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
         cmake = app.dependencies[0].dst
         gtest = cmake.dependencies[0].dst
         cmake2 = gtest.dependencies[0].dst
+        gtest2 = cmake2.dependencies[0].dst
+        cmake3 = gtest2.dependencies[0].dst
 
         assert deps_graph.error.ancestor == cmake
-        assert deps_graph.error.node == cmake2
+        assert deps_graph.error.node == cmake3
 
     def test_infinite_recursion_test(self):
         """Ensure that direct conflicts in a node are properly reported and Conan does not loop"""
