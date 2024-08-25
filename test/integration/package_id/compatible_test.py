@@ -466,13 +466,13 @@ class TestCompatible:
                    check_min_cppstd(self, 14)
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
-              "-s compiler.cppstd=11", assert_error=True)
+        settings = "-s os=Windows -s compiler=gcc -s compiler.version=11 " \
+                   "-s compiler.libcxx=libstdc++11 -s compiler.cppstd=11"
+        c.run(f"create . {settings}", assert_error=True)
         c.assert_listed_binary({"pkg/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid")})
         assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
-        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
-              "-s compiler.cppstd=11 --build=compatible:&")
+        c.run(f"create . {settings} --build=compatible:&")
         # the one for cppstd=14 is built!!
         c.assert_listed_binary({"pkg/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Build")})
         c.run("list *:*")
@@ -497,13 +497,13 @@ class TestCompatible:
                    check_min_cppstd(self, 17)
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
-              "-s compiler.cppstd=11", assert_error=True)
+        settings = "-s os=Windows -s compiler=gcc -s compiler.version=11 " \
+                   "-s compiler.libcxx=libstdc++11  -s compiler.cppstd=11"
+        c.run(f"create . {settings}", assert_error=True)
         c.assert_listed_binary({"pkg/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid")})
         assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
-        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
-              "-s compiler.cppstd=11 --build=compatible:&")
+        c.run(f"create . {settings} --build=compatible:&")
         # the one for cppstd=14 is built!!
         c.assert_listed_binary({"pkg/0.1": ("58fb8ac6c2dc3e3f837253ce1a6ea59011525866", "Build")})
         c.run("list *:*")
