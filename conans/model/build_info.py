@@ -194,22 +194,28 @@ class _Component:
     @property
     def bindir(self):
         bindirs = self.bindirs
-        assert bindirs
-        assert len(bindirs) == 1
+        if not bindirs or len(bindirs) != 1:
+            raise ConanException(f"The bindir property is undefined because bindirs "
+                                 f"{'is empty' if not bindirs else 'has more than one element'}."
+                                 f" Consider using the bindirs property.")
         return bindirs[0]
 
     @property
     def libdir(self):
         libdirs = self.libdirs
-        assert libdirs
-        assert len(libdirs) == 1
+        if not libdirs or len(libdirs) != 1:
+            raise ConanException(f"The libdir property is undefined because libdirs "
+                                 f"{'is empty' if not libdirs else 'has more than one element'}."
+                                 f" Consider using the libdirs property.")
         return libdirs[0]
 
     @property
     def includedir(self):
         includedirs = self.includedirs
-        assert includedirs
-        assert len(includedirs) == 1
+        if not includedirs or len(includedirs) != 1:
+            raise ConanException(f"The includedir property is undefined because includedirs "
+                                 f"{'is empty' if not includedirs else 'has more than one element'}."
+                                 f" Consider using the includedirs property.")
         return includedirs[0]
 
     @property
@@ -344,11 +350,15 @@ class _Component:
             self._properties = {}
         self._properties[property_name] = value
 
-    def get_property(self, property_name):
+    def get_property(self, property_name, check_type=None):
         if self._properties is None:
             return None
         try:
-            return self._properties[property_name]
+            value = self._properties[property_name]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {property_name} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             pass
 

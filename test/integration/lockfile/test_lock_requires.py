@@ -102,7 +102,8 @@ def test_conanfile_txt_strict(requires):
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/[>1.0]@user/testing"})
 
     client.run("install consumer/conanfile.txt", assert_error=True)
-    assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
+    kind = "build_requires" if requires == "tool_requires" else "requires"
+    assert f"Requirement 'pkg/[>1.0]@user/testing' not in lockfile '{kind}'" in client.out
 
     client.run("install consumer/conanfile.txt --lockfile-partial")
     assert "pkg/1.2@user/testing" in client.out
