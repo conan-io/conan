@@ -450,24 +450,61 @@ class TestNewCompatibility:
         tc.assert_listed_binary({"dep/1.0": ("b6d26a6bc439b25b434113982791edf9cab4d004", "Cache")})
 
 
-def test_build_compatible():
-    c = TestClient()
-    conanfile = textwrap.dedent("""
-       from conan import ConanFile
-       from conan.tools.build import check_min_cppstd
+class TestCompatible:
+    def test_build_compatible(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.build import check_min_cppstd
 
-       class Pkg(ConanFile):
-           name = "pkg"
-           version = "0.1"
-           settings = "os", "compiler"
+           class Pkg(ConanFile):
+               name = "pkg"
+               version = "0.1"
+               settings = "os", "compiler"
 
-           def validate(self):
-               check_min_cppstd(self, 14)
+               def validate(self):
+                   check_min_cppstd(self, 14)
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
+              "-s compiler.cppstd=11", assert_error=True)
+        c.assert_listed_binary({"pkg/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid")})
+        assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
-           def build(self):
-               self.output.info(f"Building with {self.settings.compiler.cppstd}!!!")
-        """)
-    c.save({"conanfile.py": conanfile})
-    c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
-          "-s compiler.cppstd=11")
-    print(c.out)
+        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
+              "-s compiler.cppstd=11 --build=compatible:&")
+        # the one for cppstd=14 is built!!
+        c.assert_listed_binary({"pkg/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Build")})
+        c.run("list *:*")
+        assert "compiler.cppstd: 14" in c.out
+
+    def test_build_compatible_cant_build(self):
+        # requires c++17 to build, can be consumed with c++14
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.build import check_min_cppstd
+
+           class Pkg(ConanFile):
+               name = "pkg"
+               version = "0.1"
+               settings = "os", "compiler"
+
+               def validate(self):
+                   check_min_cppstd(self, 14)
+
+               def validate_build(self):
+                   check_min_cppstd(self, 17)
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
+              "-s compiler.cppstd=11", assert_error=True)
+        c.assert_listed_binary({"pkg/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid")})
+        assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
+
+        c.run("create . -s compiler=gcc -s compiler.version=11 -s compiler.libcxx=libstdc++11 "
+              "-s compiler.cppstd=11 --build=compatible:&")
+        # the one for cppstd=14 is built!!
+        c.assert_listed_binary({"pkg/0.1": ("58fb8ac6c2dc3e3f837253ce1a6ea59011525866", "Build")})
+        c.run("list *:*")
+        assert "compiler.cppstd: 17" in c.out

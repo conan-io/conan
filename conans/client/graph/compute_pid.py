@@ -58,15 +58,6 @@ def compute_package_id(node, new_config, config_version):
                                config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
 
-    if hasattr(conanfile, "validate_build"):
-        with conanfile_exception_formatter(conanfile, "validate_build"):
-            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
-                try:
-                    conanfile.validate_build()
-                except ConanInvalidConfiguration as e:
-                    # This 'cant_build' will be ignored if we don't have to build the node.
-                    conanfile.info.cant_build = str(e)
-
     run_validate_package_id(conanfile)
 
     if conanfile.info.settings_target:
@@ -79,6 +70,15 @@ def compute_package_id(node, new_config, config_version):
 
 def run_validate_package_id(conanfile):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
+    if hasattr(conanfile, "validate_build"):
+        with conanfile_exception_formatter(conanfile, "validate_build"):
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    conanfile.info.cant_build = str(e)
+
     if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
