@@ -70,18 +70,12 @@ def test_cps_in_pkg():
             "cps_version": "0.12.0",
             "name": "zlib",
             "version": "1.3.1",
-            "configurations": [
-                "release"
-            ],
-            "default_components": [
-                "zlib"
-            ],
+            "configurations": ["release"],
+            "default_components": ["zlib"],
             "components": {
                 "zlib": {
                     "type": "archive",
-                    "includes": [
-                        "@prefix@/include"
-                    ],
+                    "includes": ["@prefix@/include"],
                     "location": "@prefix@/lib/zlib.a"
                 }
             }
@@ -102,7 +96,7 @@ def test_cps_in_pkg():
                 save(self, cps_path, cps)
 
             def package_info(self):
-                from conan.cps.cps import CPS
+                from conan.cps import CPS
                 self.cpp_info = CPS.load("zlib.cps").to_conan()
         """)
     c.save({"pkg/conanfile.py": conanfile})
@@ -110,19 +104,16 @@ def test_cps_in_pkg():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=zlib/1.3.1 {settings} -g CPSDeps")
-    print(c.out)
 
     mapping = json.loads(c.load("build/cps/cpsmap-msvc-191-x86_64-release.json"))
-    print(json.dumps(mapping, indent=2))
     for _, path_cps in mapping.items():
         assert os.path.exists(path_cps)
 
     assert not os.path.exists(os.path.join(c.current_folder, "zlib.cps"))
+    assert not os.path.exists(os.path.join(c.current_folder, "build", "cps", "zlib.cps"))
 
     c.run(f"install --requires=zlib/1.3.1 {settings} -g CMakeDeps")
-    print(c.out)
     cmake = c.load("zlib-release-x86_64-data.cmake")
-    print(cmake)
     assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
     assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
