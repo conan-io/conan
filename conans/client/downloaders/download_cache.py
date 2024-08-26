@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from contextlib import contextmanager
@@ -7,7 +8,6 @@ from conans.errors import ConanException
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save, remove_if_dirty
 from conans.util.locks import simple_lock
-from conans.util.sha import sha256 as compute_sha256
 
 
 class DownloadCache:
@@ -27,7 +27,9 @@ class DownloadCache:
         return os.path.join(self._path, self._SOURCE_BACKUP, sha256)
 
     def cached_path(self, url):
-        h = compute_sha256(url.encode())
+        md = hashlib.sha256()
+        md.update(url.encode())
+        h = md.hexdigest()
         return os.path.join(self._path, self._CONAN_CACHE, h), h
 
     _thread_locks = {}  # Needs to be shared among all instances
