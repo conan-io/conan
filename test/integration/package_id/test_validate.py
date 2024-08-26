@@ -139,22 +139,19 @@ class TestValidate(unittest.TestCase):
         self.assertIn("Windows not supported", client.out)
 
         client.run("install --requires=pkg/0.1@ -s os=Windows")
-        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
-                      f"missing. Using compatible package '{package_id}'",
-                      client.out)
+        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' missing", client.out)
+        self.assertIn(f"Found compatible package '{package_id}'", client.out)
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 
         # --build=missing means "use existing binary if possible", and compatibles are valid binaries
         client.run("install --requires=pkg/0.1@ -s os=Windows --build=missing")
-        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
-                      f"missing. Using compatible package '{package_id}'",
-                      client.out)
+        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' missing", client.out)
+        self.assertIn(f"Found compatible package '{package_id}'", client.out)
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
-        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
-                      f"missing. Using compatible package '{package_id}'",
-                      client.out)
+        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' missing", client.out)
+        self.assertIn(f"Found compatible package '{package_id}'", client.out)
         self.assertIn(f"package_id: {package_id}", client.out)
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows --build=pkg*")
@@ -743,7 +740,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
 
         client.save({"conanfile.py": app_conanfile})
         client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7")
-        assert f"Using compatible package '{package_id}'" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
 
     def test_settings_target_in_compatibility_in_global_compatibility_py(self):
         client = TestClient()
@@ -787,7 +784,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
 
         client.save({"conanfile.py": app_conanfile})
         client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7")
-        assert f"Using compatible package '{package_id}'" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
 
     def test_no_settings_target_in_recipe_but_in_compatibility_method(self):
         client = TestClient()
@@ -922,7 +919,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
 
         client.save({"conanfile.py": app_conanfile})
         client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7 -s:b arch=x86_64")
-        assert f"Using compatible package '{package_id_tool_a}'" in client.out
+        assert f"Found compatible package '{package_id_tool_a}'" in client.out
         assert package_id_tool_b in client.out
 
     def test_settings_target_in_compatibility_method_within_recipe_package_info(self):
@@ -949,4 +946,4 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
 
         client.run("install --tool-requires=tool/0.1 -s os=Linux -s:b arch=armv7")
         # This used to crash, not anymore
-        assert f"Using compatible package '{package_id}'" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out

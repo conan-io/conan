@@ -126,8 +126,6 @@ def format_graph_html(result):
         error["type"] = "conflict"
         error["should_highlight_node"] = lambda node: node.id == graph.error.node.id
     cli_out_write(_render_graph(graph, error, template, template_folder))
-    if graph.error:
-        raise graph.error
 
 
 def format_graph_dot(result):
@@ -138,8 +136,6 @@ def format_graph_dot(result):
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
     cli_out_write(_render_graph(graph, None, template, template_folder))
-    if graph.error:
-        raise graph.error
 
 
 def format_graph_json(result):
@@ -150,5 +146,3 @@ def format_graph_json(result):
     serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
     json_result = json.dumps({"graph": serial}, indent=4)
     cli_out_write(json_result)
-    if graph.error:
-        raise graph.error

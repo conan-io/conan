@@ -76,9 +76,9 @@ def test_info_build_order():
     # test html format
     c.run("graph build-order consumer --build=missing --format=html")
     assert "<body>" in c.stdout
-    c.run("graph build-order consumer --order-by=recipe --format=html")
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=html")
     assert "<body>" in c.stdout
-    c.run("graph build-order consumer --order-by=configuration --format=html")
+    c.run("graph build-order consumer --order-by=configuration --build=missing --format=html")
     assert "<body>" in c.stdout
 
 
@@ -540,6 +540,58 @@ def test_info_build_order_lockfile_location():
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
 
 
+def test_build_order_missing_package_check_error():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+
+    exit_code = c.run("graph build-order consumer --build='pkg/*' --order=configuration --format=json", assert_error=True)
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "configuration"
+    assert exit_code != 0
+    assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in c.out
+
+    result = [
+        [
+            {
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                "pref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "prev": None,
+                "context": "host",
+                "binary": "Missing",
+                "options": [],
+                "filenames": [],
+                "depends": [],
+                "overrides": {},
+                "build_args": None,
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [],
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "overrides": {},
+                "build_args": "--requires=pkg/0.1 --build=pkg/0.1",
+            }
+        ],
+    ]
+
+    assert bo_json["order"] == result
+
+
 def test_info_build_order_broken_recipe():
     # https://github.com/conan-io/conan/issues/14104
     c = TestClient()
@@ -665,3 +717,30 @@ class TestBuildOrderReduce:
         # different order
         c.run(f"graph build-order-merge --file=bo3.json --file=bo2.json", assert_error=True)
         assert "ERROR: Cannot merge build-orders of configuration!=recipe" in c.out
+
+    def test_merge_missing_error(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")})
+        tc.run("export dep")
+        tc.run("graph build-order --order=recipe --requires=dep/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
+        tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
+        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in tc.out
+        assert "IndexError: list index out of range" not in tc.out
+
+    def test_merge_invalid_error(self):
+        tc = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            def validate(self):
+                raise ConanInvalidConfiguration("This configuration is not valid")
+        """)
+        tc.save({"dep/conanfile.py": conanfile})
+        tc.run("export dep")
+        tc.run("graph build-order --order=recipe --requires=dep/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
+        tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
+        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
+        assert "IndexError: list index out of range" not in tc.out
