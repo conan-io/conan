@@ -340,7 +340,7 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
-@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+#@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
     def test_msys2_autotools_windows(self):
@@ -352,7 +352,6 @@ class TestAutotoolsTemplateWindows:
             [conf]
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path=bash
-            tools.build:compiler_executables={"c": "cl", "cpp": "cl"}
             """)
         c.save({"msys2": msys2})
         # FIXME: Need to deactivate test_package because AutotoolsDeps doesn't work in Win
@@ -369,7 +368,6 @@ class TestAutotoolsTemplateWindows:
             [conf]
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path=bash
-            tools.build:compiler_executables={"c": "cl", "cpp": "cl"}
             """)
         c.save({"msys2": msys2})
         c.run("create . -pr=msys2")

@@ -229,6 +229,8 @@ def test_cmake_toolchain_cmake_vs_debugger_environment():
                            f"$<$<CONFIG:Release>:{release_bindir}>" \
                            f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
     assert debugger_environment in toolchain
+
+
 @pytest.mark.tool("cmake")
 def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
     client = TestClient()
@@ -240,7 +242,6 @@ def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
     client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
-
 
 
 @pytest.mark.tool("cmake")
