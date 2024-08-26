@@ -235,8 +235,8 @@ class AutotoolsToolchain:
             if compiler_setting == "msvc":
                 # None of them defined, if one is defined by user, user should define the other too
                 if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
-                    env.define("C", "cl.exe")
-                    env.define("CXX", "cl.exe")
+                    env.define("CC", "cl")
+                    env.define("CXX", "cl")
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
