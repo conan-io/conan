@@ -192,3 +192,27 @@ def test_requirements_change_options():
     c.save({"conanfile.py": conanfile})
     c.run("create .", assert_error=True)
     assert "ERROR: hello/0.1: Dependencies options were defined incorrectly." in c.out
+
+
+@pytest.mark.parametrize("property_name", ["libdir", "bindir", "includedir"])
+@pytest.mark.parametrize("property_content", [[], ["mydir1", "mydir2"]])
+def test_shorthand_bad_interface(property_name, property_content):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.{property_name}s = {property_content}
+                self.output.info(self.cpp_info.{property_name})
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    if property_content:
+        assert f"The {property_name} property is undefined because {property_name}s has more than one element." in c.out
+    else:
+        assert f"The {property_name} property is undefined because {property_name}s is empty." in c.out
+
