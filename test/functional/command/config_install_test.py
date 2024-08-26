@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import stat
@@ -736,5 +737,24 @@ class TestConfigInstallPkg:
         c.run("remove * -c")
 
         c.run("config install-pkg myconf/[*]")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+    def test_without_initial_remote(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "global.conf": "user.myteam:myconf=myvalue"})
+        c.run("export-pkg .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("remote list --format=json")
+        list_remotes = json.loads(c.stdout)
+        remote_url = list_remotes[0]["url"]
+
+        # This uses the same server and URL, because the TestClient+TestServer
+        # does not allow atm to test this, as it requires the remote to be defined
+        c.run(f"config install-pkg myconf/[*] --url={remote_url}")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
