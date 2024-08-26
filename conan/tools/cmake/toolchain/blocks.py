@@ -858,7 +858,7 @@ class CompilersBlock(Block):
     def get_compilers(conanfile):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
         compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
+                                               check_type=dict)
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)

@@ -1051,9 +1051,9 @@ def test_cmake_presets_compiler():
     [settings]
     os=Windows
     arch=x86_64
-    compiler=clang
-    compiler.version=15
-    compiler.libcxx=libstdc++11
+    compiler=msvc
+    compiler.version=193
+    compiler.runtime=dynamic
     [conf]
     tools.build:compiler_executables={"c": "cl", "cpp": "cl.exe", "rc": "C:\\local\\rc.exe"}
     """)
