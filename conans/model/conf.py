@@ -117,8 +117,8 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers if os=Windows",
-    "tools.env.virtualrunenv:autogenerate": "Whether to autogenerate virtualrunenv launchers (True by default)",
-    "tools.env.virtualbuildenv:autogenerate": "Whether to autogenerate virtualbuildenv launchers (True by default)",
+    "tools.env.virtualrunenv:autogenerate": "Whether to autogenerate virtualrunenv launchers for consumer recipes (True by default)",
+    "tools.env.virtualbuildenv:autogenerate": "Whether to autogenerate virtualbuildenv launchers for consumer recipes (True by default)",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",

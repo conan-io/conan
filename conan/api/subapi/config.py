@@ -51,8 +51,8 @@ class ConfigAPI:
 
         # Computation of a very simple graph that requires "ref"
         conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
-        consumer_definer(conanfile, profile_build, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        consumer_definer(conanfile, profile_build, profile_host)
         root_node.is_conf = True
         update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,

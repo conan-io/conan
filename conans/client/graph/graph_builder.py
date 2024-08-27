@@ -357,13 +357,13 @@ class DepsGraphBuilder(object):
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
             dep_conanfile._conan_is_consumer = True
-        initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
-                                     require.build, new_ref, parent=node.conanfile)
 
         context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
+                                     require.build, new_ref, parent=node.conanfile)
 
         down_options = self._compute_down_options(node, require, new_ref)
 

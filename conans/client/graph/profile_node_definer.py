@@ -73,12 +73,14 @@ def _per_package_settings(conanfile, profile, ref):
 def _initialize_virtualenv_generation(conanfile):
     # This only applies to consumers and editable recipes, else builds would break by disabling
     # generation for build tools like cmake, etc for example
-    if conanfile._conan_node.recipe not in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-        return
+    try:
+        is_consumer = conanfile._conan_node.recipe not in (RECIPE_CONSUMER, RECIPE_EDITABLE)
+    except Exception as e:
+        raise e
     if conanfile.virtualbuildenv is None:  # Allow the user to override it with True or False
-        conanfile.virtualbuildenv = conanfile.conf.get("tools.env.virtualbuildenv:autogenerate", True, check_type=bool)
+        conanfile.virtualbuildenv = True if not is_consumer else conanfile.conf.get("tools.env.virtualbuildenv:autogenerate", True, check_type=bool)
     if conanfile.virtualrunenv is None:  # Allow the user to override it with True or False
-        conanfile.virtualrunenv = conanfile.conf.get("tools.env.virtualrunenv:autogenerate", True, check_type=bool)
+        conanfile.virtualrunenv = True if not is_consumer else conanfile.conf.get("tools.env.virtualrunenv:autogenerate", True, check_type=bool)
 
 
 def _initialize_conanfile(conanfile, profile, settings, ref):
@@ -93,6 +95,7 @@ def _initialize_conanfile(conanfile, profile, settings, ref):
     conanfile._conan_runenv = profile.runenv
     conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
     _initialize_virtualenv_generation(conanfile)
+
 
 def consumer_definer(conanfile, profile_host, profile_build):
     """ conanfile.txt does not declare settings, but it assumes it uses all the profile settings
