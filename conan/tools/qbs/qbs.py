@@ -1,8 +1,8 @@
 import os
+import shutil
 
 from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.errors import ConanException
-
 
 def _configuration_dict_to_commandlist(name, config_dict):
     command_list = ['config:%s' % name]
@@ -57,11 +57,23 @@ class Qbs(object):
         """
         self._configuration[name] = values
 
+    def _qbs_settings_paths(self):
+        generators_folder = self._conanfile.generators_folder
+        qbs_settings_path = os.path.join(generators_folder, 'qbs_settings.txt')
+        if not os.path.exists(qbs_settings_path):
+            return None, None
+        return os.path.join(generators_folder, 'conan-qbs-settings-dir'), qbs_settings_path
+
     def _get_common_arguments(self):
-        return [
+        args = []
+        settings_dir, _ = self._qbs_settings_paths()
+        if settings_dir is not None:
+            args.extend(['--settings-dir', settings_dir])
+        args.extend([
             '--build-directory', self._conanfile.build_folder,
             '--file', self._project_file,
-        ]
+        ])
+        return args
 
     def resolve(self, parallel=True):
         """
@@ -70,6 +82,14 @@ class Qbs(object):
         "conan" module provider automatically adding dependencies to the project.
         :param parallel: Whether to use multi-threaded resolving. Defaults to ``True``.
         """
+        generators_folder = self._conanfile.generators_folder
+        settings_dir, settings_path = self._qbs_settings_paths()
+        if settings_dir is not None:
+            shutil.rmtree(settings_dir, ignore_errors=True)
+            import_args = ['--settings-dir', settings_dir, '--import', settings_path]
+            import_cmd = 'qbs config  %s' % cmd_args_to_string(import_args)
+            self._conanfile.run(import_cmd)
+
         args = self._get_common_arguments()
 
         if parallel:
@@ -80,7 +100,6 @@ class Qbs(object):
         if self.profile:
             args.append('profile:%s' % self.profile)
 
-        generators_folder = self._conanfile.generators_folder
         if os.path.exists(os.path.join(generators_folder, 'conan-qbs-deps')):
             args.append('moduleProviders.conan.installDirectory:' + generators_folder)
 
