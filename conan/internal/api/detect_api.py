@@ -571,7 +571,7 @@ def default_compiler_version(compiler, version):
     output = ConanOutput(scope="detect_api")
     if not version:
         raise ConanException(
-            f"No version provided to default_compiler_version for {compiler} compiler")
+            f"No version provided to 'detect_api.default_compiler_version()' for {compiler} compiler")
     tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0
