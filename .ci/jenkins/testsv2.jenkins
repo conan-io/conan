@@ -18,20 +18,20 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
     // TODO: handle revision cases
     def configs = []
     if (moduleName=="test/unittests" || moduleName=="test/integration") {
-        configs.add([node: "Linux", pyvers: ["PY312"]])
+        configs.add([node: "LinuxFunctional", pyvers: ["PY312"]])
     }
     if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: "Linux", pyvers: ["PY38"]])
+        configs.add([node: "LinuxFunctional", pyvers: ["PY38"]])
         configs.add([node: "Windows", pyvers: ["PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY38"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
-        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "LinuxFunctional", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
-        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "LinuxFunctional", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
@@ -89,29 +89,24 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     launchTests = launchTests + ' && ' + conanServerToolInstall
                 }
 
-                if (nodeName=="Linux") {
+                if (nodeName=="LinuxFunctional") {
                     try {
-                        def dockerImage = getDockerImage(module)
-                        docker.image(dockerImage).pull()
-                        docker.image(dockerImage).inside("--entrypoint=") {
+                        // we only test scons in Linux
+                        pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
 
-                            // we only test scons in Linux
-                            pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
+                        def sourcedir = "/home/conan/"
+                        def pyenvdir = "${sourcedir}.pyenv"
+                        sh(script: "cp -R ./ ${sourcedir}")
 
-                            def sourcedir = "/home/conan/"
-                            def pyenvdir = "${sourcedir}.pyenv"
-                            sh(script: "cp -R ./ ${sourcedir}")
+                        def launchCommand = "su - conan -c \"" \
+                                        + "export PYENV_ROOT=${pyenvdir} && " \
+                                        + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
+                                        + "pyenv global \$${pythonVersion} && " \
+                                        + pipInstalls \
+                                        + conanToolInstall \
+                                        + launchTests + '\"'
 
-                            def launchCommand = "su - conan -c \"" \
-                                            + "export PYENV_ROOT=${pyenvdir} && " \
-                                            + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
-                                            + "pyenv global \$${pythonVersion} && " \
-                                            + pipInstalls \
-                                            + conanToolInstall \
-                                            + launchTests + '\"'
-
-                            sh(script: launchCommand)
-                        }
+                        sh(script: launchCommand)
                     }
                     finally {}
                 }
@@ -170,7 +165,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
 def testModules = ["test/unittests", "test/integration", "test/functional"]
 
 void deployToPypiTest() {
-    node("Linux") {
+    node("LinuxFunctional") {
         try {
             def scmVars = checkout scm
             checkout scm
