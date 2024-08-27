@@ -5,7 +5,7 @@ import textwrap
 
 from conan.api.output import ConanOutput, Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars
-from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
+from conan.tools.cmake.toolchain.blocks import GenericSystemBlock, CompilersBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
@@ -157,6 +157,13 @@ class _CMakePresets:
                     "value": arch,
                     "strategy": "external"
                 }
+
+        # Set the compiler like in the toolchain. Some IDEs like VS or VSCode require the compiler
+        # being set to cl.exe in order to activate the environment using vcvarsall.bat according to
+        # the toolset and architecture settings.
+        compilers = CompilersBlock.get_compilers(conanfile)
+        for lang, compiler in compilers.items():
+            ret["cacheVariables"][f"CMAKE_{lang}_COMPILER"] = compiler.replace("\\", "/")
 
         ret["toolchainFile"] = toolchain_file
         if conanfile.build_folder:
