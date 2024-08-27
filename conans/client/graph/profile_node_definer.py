@@ -73,7 +73,7 @@ def _per_package_settings(conanfile, profile, ref):
 def _initialize_virtualenv_generation(conanfile):
     # This only applies to consumers and editable recipes, else builds would break by disabling
     # generation for build tools like cmake, etc for example
-    is_consumer = conanfile._conan_node.recipe not in (RECIPE_CONSUMER, RECIPE_EDITABLE)
+    is_consumer = conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
     if conanfile.virtualbuildenv is None:  # Allow the user to override it with True or False
         conanfile.virtualbuildenv = True if not is_consumer else conanfile.conf.get("tools.env.virtualbuildenv:autogenerate", True, check_type=bool)
     if conanfile.virtualrunenv is None:  # Allow the user to override it with True or False
