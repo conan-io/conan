@@ -1698,6 +1698,7 @@ def test_toolchain_extra_variables():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(myVar "hello world" CACHE PATH "My cache variable" FORCE)' in toolchain
 
+
 def test_variables_wrong_scaping():
     # https://github.com/conan-io/conan/issues/16432
     c = TestClient()
@@ -1712,3 +1713,17 @@ def test_variables_wrong_scaping():
     c.run("install pkg --deployer=full_deploy")
     toolchain = c.load("pkg/conan_toolchain.cmake")
     assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain
+
+
+def test_tricore():
+    # making sure the arch ``tc131`` is there
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    c.run("install . -s os=baremetal -s compiler=gcc -s arch=tc131")
+    content = c.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_SYSTEM_NAME Generic-ELF)' in content
+    assert 'set(CMAKE_SYSTEM_PROCESSOR tricore)' in content
+    assert 'string(APPEND CONAN_CXX_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_C_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " -mtc131")' in content
