@@ -16,24 +16,28 @@ String getTempFolder(String nodeName) {
 
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     def configs = []
+
+    String LinuxNode
     if (moduleName == "test/unittests" || moduleName == "test/integration") {
-        configs.add([node: "LinuxUnittests", pyvers: ["PY312"]])
+        LinuxNode = "LinuxUnittests"
+    } else if (moduleName == "test/functional") {
+        LinuxNode = "LinuxFunctional"
     }
-    if (moduleName == "test/functional") {
-        configs.add([node: "LinuxFunctional", pyvers: ["PY312"]])
-    }
+
+    configs.add([node: LinuxNode, pyvers: ["PY312"]])
+
     if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: "LinuxFunctional", pyvers: ["PY38"]])
+        configs.add([node: LinuxNode, pyvers: ["PY38"]])
         configs.add([node: "Windows", pyvers: ["PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY38"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
-        configs.add([node: "LinuxFunctional", pyvers: ["PY36", "PY38"]])
+        configs.add([node: LinuxNode, pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
-        configs.add([node: "LinuxFunctional", pyvers: ["PY36", "PY38"]])
+        configs.add([node: LinuxNode, pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
