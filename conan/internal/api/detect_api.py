@@ -5,7 +5,7 @@ import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import load, save
 from conans.util.runners import check_output_runner, detect_runner
