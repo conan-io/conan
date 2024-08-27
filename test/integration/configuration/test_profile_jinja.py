@@ -208,7 +208,7 @@ class TestProfileDetectAPI:
 
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1", assert_error=True)
-        assert "No version provided to default_compiler_version for None compiler" in client.out
+        assert "No version provided to 'detect_api.default_compiler_version' for None compiler" in client.out
 
 
 def test_profile_jinja_error():
