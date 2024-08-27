@@ -273,9 +273,13 @@ class CppStdBlock(Block):
     template = textwrap.dedent("""\
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
-        function(conan_modify_std_watch variable access value current_list_file original_value)
-            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${original_value})
-                message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${original_value} has been modified to ${value} by ${current_list_file}")
+        function(conan_modify_std_watch variable access value current_list_file stack)
+            set(watched_variable {{ cppstd }})
+            if (${variable} STREQUAL "CMAKE_C_STANDARD")
+                set(watched_variable {{ cstd }})
+            endif()
+            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${watched_variable})
+                message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${watched_variable} has been modified to ${value} by ${current_list_file}")
             endif()
         endfunction()
 
@@ -284,22 +288,14 @@ class CppStdBlock(Block):
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-        function(conan_modify_cppstd_watch variable access value current_list_file stack)
-            conan_modify_std_watch(${variable} ${access} ${value} ${current_list_file} {{ cppstd }})
-        endfunction()
-        variable_watch(CMAKE_CXX_STANDARD conan_modify_cppstd_watch)
+        variable_watch(CMAKE_CXX_STANDARD conan_modify_std_watch)
         {% endif %}
         {% if cstd %}
         message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
         set(CMAKE_C_STANDARD {{ cstd }})
         set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
         set(CMAKE_C_STANDARD_REQUIRED ON)
-
-        function(conan_modify_cstd_watch variable access value current_list_file stack)
-            conan_modify_std_watch(${variable} ${access} ${value} ${current_list_file} {{ cstd }})
-        endfunction()
-        variable_watch(CMAKE_C_STANDARD conan_modify_cstd_watch)
+        variable_watch(CMAKE_C_STANDARD conan_modify_std_watch)
         {% endif %}
         """)
 
