@@ -32,13 +32,13 @@ class GraphAPI:
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             context = CONTEXT_BUILD if is_build_require else CONTEXT_HOST
-            if ref.name:
-                profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=context, recipe=RECIPE_CONSUMER, path=path)
             root_node.should_build = True  # It is a consumer, this is something we are building
             # Here, it is always the "host" context because it is the base, not the current node one
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require, ref)
+            if ref.name:
+                profile_host.options.scope(ref)
         else:
             conanfile = app.loader.load_conanfile_txt(path)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
