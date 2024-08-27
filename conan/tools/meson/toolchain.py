@@ -336,8 +336,9 @@ class MesonToolchain(object):
         #: Defines the Meson ``objcpp_link_args`` variable. Defaulted to ``LDFLAGS`` build environment value
         self.objcpp_link_args = []
 
-        self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
-        if native is False:
+        if self._is_apple_system:
+            self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
+        if native is False and self.cross_build and self.cross_build["host"]["system"] == "android":
             self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
@@ -377,8 +378,6 @@ class MesonToolchain(object):
         return ret
 
     def _resolve_apple_flags_and_variables(self, build_env, compilers_by_conf):
-        if not self._is_apple_system:
-            return
         # Calculating the main Apple flags
         min_flag, arch_flag, isysroot_flag = (
             resolve_apple_flags(self._conanfile, is_cross_building=self.cross_build))
@@ -394,9 +393,6 @@ class MesonToolchain(object):
         self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
     def _resolve_android_cross_compilation(self):
-        if not self.cross_build or not self.cross_build["host"]["system"] == "android":
-            return
-
         ndk_path = self._conanfile_conf.get("tools.android:ndk_path")
         if not ndk_path:
             raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
