@@ -1,4 +1,4 @@
-from conans.client.graph.graph import CONTEXT_BUILD
+from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_EDITABLE
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
@@ -71,6 +71,10 @@ def _per_package_settings(conanfile, profile, ref):
 
 
 def _initialize_virtualenv_generation(conanfile):
+    # This only applies to consumers and editable recipes, else builds would break by disabling
+    # generation for build tools like cmake, etc for example
+    if conanfile._conan_node.recipe not in (RECIPE_CONSUMER, RECIPE_EDITABLE):
+        return
     if conanfile.virtualbuildenv is None:  # Allow the user to override it with True or False
         conanfile.virtualbuildenv = conanfile.conf.get("tools.env.virtualbuildenv:autogenerate", True, check_type=bool)
     if conanfile.virtualrunenv is None:  # Allow the user to override it with True or False
