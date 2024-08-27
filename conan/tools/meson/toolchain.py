@@ -338,7 +338,7 @@ class MesonToolchain(object):
 
         if self._is_apple_system:
             self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
-        if native is False and self.cross_build and self.cross_build["host"]["system"] == "android":
+        if native is False and self.cross_build and self.cross_build["host"].get("system") == "android":
             self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
