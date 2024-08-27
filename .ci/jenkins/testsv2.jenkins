@@ -98,13 +98,12 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                         def pyenvdir = "${sourcedir}.pyenv"
                         sh(script: "cp -R ./ ${sourcedir}")
 
-                        def launchCommand = "su - conan -c \"" \
-                                        + "export PYENV_ROOT=${pyenvdir} && " \
-                                        + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
-                                        + "pyenv global \$${pythonVersion} && " \
-                                        + pipInstalls \
-                                        + conanToolInstall \
-                                        + launchTests + '\"'
+                        def launchCommand = "export PYENV_ROOT=${pyenvdir} && " \
+                                          + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
+                                          + "pyenv global \$${pythonVersion} && " \
+                                          + pipInstalls \
+                                          + conanToolInstall \
+                                          + launchTests
 
                         sh(script: launchCommand)
                     }
