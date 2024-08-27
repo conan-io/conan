@@ -199,6 +199,17 @@ class TestProfileDetectAPI:
             """)
         assert expected in client.out
 
+    def test_profile_detect_compiler_missing_error(self):
+        client = TestClient(light=True)
+        tpl1 = textwrap.dedent("""
+                    {% set compiler, version, compiler_exe = detect_api.detect_clang_compiler(compiler_exe="not-existing-compiler") %}
+                    {% set version = detect_api.default_compiler_version(compiler, version) %}
+                    """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1", assert_error=True)
+        assert "No version provided to default_compiler_version for None compiler" in client.out
+
 
 def test_profile_jinja_error():
     c = TestClient(light=True)
