@@ -254,7 +254,7 @@ class LinkerScriptsBlock(Block):
         # Add linker flags from tools.build:linker_scripts conf
 
         message(STATUS "Conan toolchain: Defining linker script flag: {{ linker_script_flags }}")
-        string(APPEND CONAN_EXE_LINKER_FLAGS {{ linker_script_flags }})
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ linker_script_flags }}")
         """)
 
     def context(self):
