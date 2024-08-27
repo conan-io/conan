@@ -75,7 +75,7 @@ def to_meson_machine(machine_os, machine_arch):
     :param machine_arch: ``str`` OS arch.
     :return: ``dict`` Meson machine context.
     """
-    system = _meson_system_map.get(machine_os, machine_os.lower())
+    system = _meson_system_map.get(machine_os, 'none' if machine_os is None else machine_os.lower())
     default_cpu_tuple = (machine_arch.lower(), machine_arch.lower(), 'little')
     cpu_tuple = _meson_cpu_family_map.get(machine_arch, default_cpu_tuple)
     cpu_family, cpu, endian = cpu_tuple[0], cpu_tuple[1], cpu_tuple[2]
