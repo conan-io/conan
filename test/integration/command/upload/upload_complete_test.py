@@ -231,6 +231,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --name foo --version 1.0")
 
         client.run("upload foo/1.0 -r default")
+        print(client.out)
         self.assertIn("foo/1.0: Compressing conan_sources.tgz", client.out)
         self.assertIn("foo/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: "
                       "Compressing conan_package.tgz", client.out)

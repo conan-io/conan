@@ -83,7 +83,22 @@ class FileUploader(object):
                     time.sleep(retry_wait)
 
     def _upload_file(self, url, abs_path,  headers, auth):
-        with open(abs_path, mode='rb') as file_handler:
+
+        class StreamingBody:
+            def __init__(self, mypath):
+                self.f = open(mypath, "rb")
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.f.close()
+
+            def read(self, n=-1):
+                # custom read implementation
+                return self.f.read(n)
+
+        with StreamingBody(abs_path) as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth,
