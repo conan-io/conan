@@ -18,7 +18,7 @@ def _find_msvc(conanfile):
     vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
     vs_version, vcvars_ver = _vcvars_versions(conanfile)
     vs_path = vs_install_path or vs_installation_path(vs_version)
-    if vs_path is None:
+    if vs_path is None or vs_version is None:
         return None
 
     vc_install_dir = os.path.join(vs_path, 'VC', 'Tools', 'MSVC')

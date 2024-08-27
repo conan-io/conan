@@ -128,6 +128,8 @@ class VCVars:
             return
 
         vs_version, vcvars_ver = _vcvars_versions(conanfile)
+        if vs_version is None:
+            return
 
         vcvarsarch = _vcvars_arch(conanfile)
 
@@ -283,7 +285,7 @@ def _vcvars_versions(conanfile):
         # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
         if not conanfile.settings.get_safe("compiler.runtime"):
             # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
-            return
+            return None, None
         toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
         vs_version = {"v140": "14",
                         "v141": "15",
