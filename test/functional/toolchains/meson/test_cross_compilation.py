@@ -248,7 +248,6 @@ def test_use_meson_toolchain():
 
 @pytest.mark.tool("meson")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-@pytest.mark.xfail(reason="baremetal is not yet handled correctly")
 def test_baremetal_cross_compiling():
     meson_build = textwrap.dedent("""
         project('tutorial', 'cpp')
