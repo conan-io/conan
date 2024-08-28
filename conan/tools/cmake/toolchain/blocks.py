@@ -265,7 +265,7 @@ class LinkerScriptsBlock(Block):
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
         linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                           for p in linker_scripts]
-        linker_script_flags = ['-T' + linker_script for linker_script in linker_scripts]
+        linker_script_flags = [r'-T\"' + linker_script + r'\"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
 
