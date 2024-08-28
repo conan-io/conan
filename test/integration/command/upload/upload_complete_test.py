@@ -6,7 +6,7 @@ from requests import ConnectionError
 from conan.internal.paths import CONAN_MANIFEST
 from conan.test.utils.tools import (TestClient, TestRequester, TestServer,
                                      GenConanfile)
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class BadConnectionUploader(TestRequester):

@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class UserTest(unittest.TestCase):
@@ -418,7 +418,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=1)
+        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=2)
         c = TestClient(servers={"default": server}, inputs=["myuser", "password",
                                                             "myotheruser", "otherpass",
                                                             "user", "pass", "user", "pass",
@@ -429,10 +429,10 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # Token should expire
-        time.sleep(2)
+        time.sleep(3)
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Token should expire
-        time.sleep(2)
+        time.sleep(3)
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out

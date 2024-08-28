@@ -16,7 +16,6 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "NMakeToolchain": "conan.tools.microsoft",
                "NMakeDeps": "conan.tools.microsoft",
                "VCVars": "conan.tools.microsoft",
-               "QbsProfile": "conan.tools.qbs.qbsprofile",
                "VirtualRunEnv": "conan.tools.env.virtualrunenv",
                "VirtualBuildEnv": "conan.tools.env.virtualbuildenv",
                "AutotoolsDeps": "conan.tools.gnu",
@@ -31,15 +30,12 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "PremakeDeps": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
-               "QbsDeps": "conan.tools.qbs"
+               "QbsDeps": "conan.tools.qbs",
+               "QbsProfile": "conan.tools.qbs"
                }
 
 
 def _get_generator_class(generator_name):
-    # QbsToolchain is an alias for QbsProfile
-    if generator_name == "QbsToolchain":
-        generator_name = "QbsProfile"
-
     try:
         generator_class = _generators[generator_name]
         # This is identical to import ... form ... in terms of cacheing

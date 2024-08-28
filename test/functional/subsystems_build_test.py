@@ -8,7 +8,7 @@ from conan.test.assets.autotools import gen_makefile
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")

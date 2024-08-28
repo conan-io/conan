@@ -1913,3 +1913,125 @@ def test_cmake_toolchain_cxxflags_multi_config():
     assert 'DEFINE conan_test_answer=123' in c.out
     assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
+
+
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_toolchain_ninja_multi_config():
+    c = TestClient()
+    profile_release = textwrap.dedent(r"""
+        include(default)
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=42", "conan_test_other=24"]
+        """)
+    profile_debug = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=Debug
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=123"]
+        """)
+    profile_relwithdebinfo = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=RelWithDebInfo
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja Multi-Config
+        tools.build:defines=["conan_test_answer=456", "conan_test_other=abc", 'conan_test_complex="1 2"']
+        """)
+
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent(r"""
+        #include <iostream>
+        #include <stdio.h>
+
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("DEFINE %s=%s!\n", #x, STR(x))
+
+        int main() {
+            SHOW_DEFINE(conan_test_answer);
+            #ifdef conan_test_other
+            SHOW_DEFINE(conan_test_other);
+            #endif
+            #ifdef conan_test_complex
+            SHOW_DEFINE(conan_test_complex);
+            #endif
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        add_executable(example src/main.cpp)
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "profile_release": profile_release,
+            "profile_debug": profile_debug,
+            "profile_relwithdebinfo": profile_relwithdebinfo,
+            "src/main.cpp": main,
+            "CMakeLists.txt": cmakelists})
+    c.run("install . -pr=./profile_release")
+    c.run("install . -pr=./profile_debug")
+    c.run("install . -pr=./profile_relwithdebinfo")
+
+    with c.chdir("build"):
+        env = r".\generators\conanbuild.bat &&" if platform.system() == "Windows" else ""
+        c.run_command(f"{env} cmake .. -G \"Ninja Multi-Config\" "
+                      "-DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
+        c.run_command(f"{env} cmake --build . --config Release")
+        c.run_command(f"{env} cmake --build . --config Debug")
+        c.run_command(f"{env} cmake --build . --config RelWithDebInfo")
+
+    c.run_command(os.sep.join([".", "build", "Release", "example"]))
+    assert 'DEFINE conan_test_answer=42!' in c.out
+    assert 'DEFINE conan_test_other=24!' in c.out
+    assert 'complex=' not in c.out
+
+    c.run_command(os.sep.join([".", "build", "Debug", "example"]))
+    assert 'DEFINE conan_test_answer=123' in c.out
+    assert 'other=' not in c.out
+    assert 'complex=' not in c.out
+
+    c.run_command(os.sep.join([".", "build", "RelWithDebInfo", "example"]))
+    assert 'DEFINE conan_test_answer=456!' in c.out
+    assert 'DEFINE conan_test_other=abc!' in c.out
+    assert 'DEFINE conan_test_complex="1 2"!' in c.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only needs to run once, no need for extra platforms")
+def test_cxx_version_not_overriden_if_hardcoded():
+    """Any C++ standard set in the CMakeLists.txt will have priority even if the
+    compiler.cppstd is set in the profile"""
+    tc = TestClient()
+    tc.run("new cmake_exe -dname=foo -dversion=1.0")
+
+    cml_contents = tc.load("CMakeLists.txt")
+    cml_contents = cml_contents.replace("project(foo CXX)\n", "project(foo CXX)\nset(CMAKE_CXX_STANDARD 17)\n")
+    tc.save({"CMakeLists.txt": cml_contents})
+
+    # The compiler.cppstd will not override the CXX_STANDARD variable
+    tc.run("create . -s=compiler.cppstd=11")
+    assert "Conan toolchain: C++ Standard 11 with extensions OFF" in tc.out
+    # Conan says yes! But alas, the compiled code is C++17
+    assert "foo/1.0: __cplusplus2017" in tc.out

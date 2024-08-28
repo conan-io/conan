@@ -302,23 +302,24 @@ class Settings(object):
     def items(self):
         return self.values_list
 
-    def update_values(self, vals):
-        """ receives a list of tuples (compiler.version, value)
-        This is more an updated than a setter
+    def update_values(self, values, raise_undefined=True):
+        """
+        Receives a list of tuples (compiler.version, value)
+        This is more an updater than a setter.
         """
         self._frozen = False  # Could be restored at the end, but not really necessary
-        assert isinstance(vals, (list, tuple)), vals
-        for (name, value) in vals:
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
             list_settings = name.split(".")
             attr = self
             try:
                 for setting in list_settings[:-1]:
                     attr = getattr(attr, setting)
-            except ConanException:  # fails if receiving settings doesn't have it defined
-                pass
-            else:
                 value = str(value) if value is not None else None
                 setattr(attr, list_settings[-1], value)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                if raise_undefined:
+                    raise
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

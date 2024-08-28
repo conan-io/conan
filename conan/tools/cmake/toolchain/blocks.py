@@ -724,7 +724,7 @@ class ExtraFlagsBlock(Block):
         {% if defines %}
         {% if config %}
         {% for define in defines %}
-        add_compile_definitions($<$<CONFIG:{{config}}>:"{{ define }}">)
+        add_compile_definitions("$<$<CONFIG:{{config}}>:{{ define }}>")
         {% endfor %}
         {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
@@ -852,9 +852,13 @@ class CompilersBlock(Block):
     """)
 
     def context(self):
+        return {"compilers": self.get_compilers(self._conanfile)}
+
+    @staticmethod
+    def get_compilers(conanfile):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
+        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={},
+                                               check_type=dict)
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
@@ -865,7 +869,7 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-        return {"compilers": compilers}
+        return compilers
 
 
 class GenericSystemBlock(Block):
@@ -973,6 +977,11 @@ class GenericSystemBlock(Block):
                                  "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
+            # os_host would be 'baremetal' for tricore, but it's ideal to use the Generic-ELF
+            # system name instead of just "Generic" because it matches how Aurix Dev Studio
+            # generated makefiles behave by generating binaries with the '.elf' extension.
+            if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                return "Generic-ELF"
             return cmake_system_name_map.get(os_host, os_host)
         elif arch_host is not None and arch_host != arch_build:
             if not ((arch_build == "x86_64") and (arch_host == "x86") or
@@ -1049,8 +1058,12 @@ class GenericSystemBlock(Block):
                     _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
+                    if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                        _system_processor = "tricore"
+                    else:
+                        _system_processor = arch_host
                     _system_version = os_host_version
-                    _system_processor = arch_host
+
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version

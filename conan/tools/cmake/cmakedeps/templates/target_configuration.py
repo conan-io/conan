@@ -28,7 +28,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                self.conanfile)
+                                                self.conanfile, check_type=bool)
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,

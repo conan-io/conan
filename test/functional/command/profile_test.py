@@ -8,7 +8,7 @@ import pytest
 from conans.client.conf.detect import detect_defaults_settings
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import TestClient, redirect_output
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
 from conans.util.runners import detect_runner
 from conan.tools.microsoft.visual import vcvars_command

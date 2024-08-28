@@ -331,3 +331,32 @@ class TestErrorsUx:
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
+
+
+class TestPythonRequires:
+    @pytest.fixture(scope="class")
+    def c3i_pyrequires_folder(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        config = textwrap.dedent("""
+            versions:
+              "1.0":
+                folder: all
+            """)
+        pkg = str(GenConanfile("pkg").with_python_requires("pyreq/1.0"))
+        save_files(recipes_folder,
+                   {"pkg/config.yml": config,
+                    "pkg/all/conanfile.py": pkg,
+                    "pyreq/config.yml": config,
+                    "pyreq/all/conanfile.py": str(GenConanfile("pyreq", "1.0"))})
+        return folder
+
+    def test_install(self, c3i_pyrequires_folder):
+        c = TestClient(light=True)
+        c.run(f"remote add local '{c3i_pyrequires_folder}'")
+        c.run("list * -r=local")
+        assert "pyreq/1.0" in c.out
+        assert "pkg/1.0" in c.out
+        c.run("install --requires=pkg/1.0 --build missing -vvv")
+        assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
+        assert "pkg/1.0: Created package" in c.out
