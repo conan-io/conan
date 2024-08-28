@@ -5,6 +5,7 @@ import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
+from conan.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import load, save
 from conans.util.runners import check_output_runner, detect_runner
@@ -568,6 +569,9 @@ def default_compiler_version(compiler, version):
     of the minor or patch digits, that do not affect binary compatibility
     """
     output = ConanOutput(scope="detect_api")
+    if not version:
+        raise ConanException(
+            f"No version provided to 'detect_api.default_compiler_version()' for {compiler} compiler")
     tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0

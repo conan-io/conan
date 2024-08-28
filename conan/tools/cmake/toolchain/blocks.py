@@ -273,17 +273,30 @@ class CppStdBlock(Block):
     template = textwrap.dedent("""\
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
+        function(conan_modify_std_watch variable access value current_list_file stack)
+            set(conan_watched_std_variable {{ cppstd }})
+            if (${variable} STREQUAL "CMAKE_C_STANDARD")
+                set(conan_watched_std_variable {{ cstd }})
+            endif()
+            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${conan_watched_std_variable})
+                message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${conan_watched_std_variable} has been modified to ${value} by ${current_list_file}")
+            endif()
+            unset(conan_watched_std_variable)
+        endfunction()
+
         {% if cppstd %}
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_CXX_STANDARD conan_modify_std_watch)
         {% endif %}
         {% if cstd %}
         message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
         set(CMAKE_C_STANDARD {{ cstd }})
         set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
         set(CMAKE_C_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_C_STANDARD conan_modify_std_watch)
         {% endif %}
         """)
 
