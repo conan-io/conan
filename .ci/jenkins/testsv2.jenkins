@@ -79,7 +79,6 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                         pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
                         def sourcedir = "/home/conan/"
                         def pyenvdir = "${sourcedir}.pyenv"
-                        sh(script: "cp -R ./ ${sourcedir}")
                         def launchCommand = "export PYENV_ROOT=${pyenvdir} && " +
                                             "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " +
                                             "pyenv global \$${pythonVersion} && " +
