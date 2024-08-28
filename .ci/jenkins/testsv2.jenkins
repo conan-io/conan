@@ -65,7 +65,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                   "python -m pip install -r conans/requirements_server.txt ${pipArguments} && " +
                                   "python -m pip install -r conans/requirements_dev.txt ${pipArguments} && " +
                                   "python -m pip install meson ${pipArguments} && "
-                def conanToolInstall = "python -m pip install . && conan --version && conan --help && "
+                def conanToolInstall = "python -m pip install . && conan --version && conan --help && python --version  && "
                 def launchTests = "python -m pytest ${module} -n=4 --durations=20 -rs"
                 if (shouldTestServer(module)) {
                     def rm = (nodeName == "Windows") ? "del" : "rm"
