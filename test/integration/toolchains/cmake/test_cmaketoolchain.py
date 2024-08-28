@@ -1046,6 +1046,30 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
 
 
+def test_cmake_presets_compiler():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=msvc
+    compiler.version=193
+    compiler.runtime=dynamic
+    [conf]
+    tools.build:compiler_executables={"c": "cl", "cpp": "cl.exe", "rc": "C:\\local\\rc.exe"}
+    """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["CMAKE_C_COMPILER"] == "cl"
+    assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
+    assert cache_variables["CMAKE_RC_COMPILER"] == "C:/local/rc.exe"
+
+
 def test_cmake_layout_toolchain_folder():
     """ in single-config generators, the toolchain is a different file per configuration
     https://github.com/conan-io/conan/issues/12827
@@ -1674,6 +1698,7 @@ def test_toolchain_extra_variables():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(myVar "hello world" CACHE PATH "My cache variable" FORCE)' in toolchain
 
+
 def test_variables_wrong_scaping():
     # https://github.com/conan-io/conan/issues/16432
     c = TestClient()
@@ -1688,3 +1713,17 @@ def test_variables_wrong_scaping():
     c.run("install pkg --deployer=full_deploy")
     toolchain = c.load("pkg/conan_toolchain.cmake")
     assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain
+
+
+def test_tricore():
+    # making sure the arch ``tc131`` is there
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    c.run("install . -s os=baremetal -s compiler=gcc -s arch=tc131")
+    content = c.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_SYSTEM_NAME Generic-ELF)' in content
+    assert 'set(CMAKE_SYSTEM_PROCESSOR tricore)' in content
+    assert 'string(APPEND CONAN_CXX_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_C_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " -mtc131")' in content

@@ -30,7 +30,8 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "PremakeDeps": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
-               "QbsDeps": "conan.tools.qbs"
+               "QbsDeps": "conan.tools.qbs",
+               "QbsProfile": "conan.tools.qbs"
                }
 
 
