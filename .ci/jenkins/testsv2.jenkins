@@ -73,7 +73,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     def conanServerToolInstall = "${rm} setup.py && ${mv} setup_server.py setup.py && python -m pip install . && conan_server --help"
                     launchTests = launchTests + ' && ' + conanServerToolInstall
                 }
-                if (nodeName == "LinuxFunctional") {
+                if (nodeName.indexOf("Linux") >= 0) {
                     try {
                         // we only test scons in Linux
                         pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
