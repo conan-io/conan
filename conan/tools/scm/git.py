@@ -126,6 +126,8 @@ class Git:
         The ``Git(..., excluded=[])`` argument and the ``core.scm:excluded`` configuration will
         define file patterns to be skipped from this check.
 
+        :param repository: By default checks if the current folder is dirty. If repository=True
+                     it will check the root repository folder instead, not the current one.
         :return: True, if the current folder is dirty. Otherwise, False.
         """
         path = '' if repository else '.'
