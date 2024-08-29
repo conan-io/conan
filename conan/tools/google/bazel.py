@@ -69,7 +69,7 @@ class Bazel(object):
         command += f" {target}"
         if clean:
             self._safe_run_command("bazel clean")
-        self._safe_run_command(command + " --verbose_failures")
+        self._safe_run_command(command + " --verbose_failures --sandbox_debug")
 
     def test(self, target=None):
         """
@@ -77,4 +77,4 @@ class Bazel(object):
         """
         if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
             return
-        self._safe_run_command(f'bazel test {target} --verbose_failures')
+        self._safe_run_command(f'bazel test {target} --verbose_failures --sandbox_debug')
