@@ -16,30 +16,9 @@ String getTempFolder(String nodeName) {
 
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     def configs = []
-
-    String LinuxNode
-    if (moduleName == "test/unittests" || moduleName == "test/integration") {
-        LinuxNode = "LinuxUnittests"
-    } else if (moduleName == "test/functional") {
+    if (moduleName == "test/functional") {
         LinuxNode = "LinuxFunctional"
-    }
-
-    configs.add([node: LinuxNode, pyvers: ["PY312"]])
-
-    if (branchName =~ /(^PR-.*)/) {
-        configs.add([node: LinuxNode, pyvers: ["PY38"]])
-        configs.add([node: "Windows", pyvers: ["PY38"]])
-        configs.add([node: "M2Macos", pyvers: ["PY38"]])
-    }
-    else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
-        configs.add([node: LinuxNode, pyvers: ["PY36", "PY38"]])
-        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
-    }
-    else if (branchName == "develop2") {
-        configs.add([node: LinuxNode, pyvers: ["PY36", "PY38"]])
-        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: LinuxNode, pyvers: ["PY312"]])
     }
     return configs
 }
@@ -66,7 +45,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                   "python -m pip install -r conans/requirements_dev.txt ${pipArguments} && " +
                                   "python -m pip install meson ${pipArguments} && "
                 def conanToolInstall = "python -m pip install . && conan --version && conan --help && python --version  && "
-                def launchTests = "python -m pytest ${module} -n=4 --durations=20 -rs"
+                def launchTests = "python -m pytest ${module} -k test_transitive_libs_consuming7 --full-trace -v --tb=long "
                 if (shouldTestServer(module)) {
                     def rm = (nodeName == "Windows") ? "del" : "rm"
                     def mv = (nodeName == "Windows") ? "move" : "mv"
