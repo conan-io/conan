@@ -120,15 +120,18 @@ class Git:
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
             return False
 
-    def is_dirty(self):
+    def is_dirty(self, repository=False):
         """
         Returns if the current folder is dirty, running ``git status -s``
         The ``Git(..., excluded=[])`` argument and the ``core.scm:excluded`` configuration will
         define file patterns to be skipped from this check.
 
+        :param repository: By default checks if the current folder is dirty. If repository=True
+                     it will check the root repository folder instead, not the current one.
         :return: True, if the current folder is dirty. Otherwise, False.
         """
-        status = self.run("status . --short --no-branch --untracked-files").strip()
+        path = '' if repository else '.'
+        status = self.run(f"status {path} --short --no-branch --untracked-files").strip()
         self._conanfile.output.debug(f"Git status:\n{status}")
         if not self._excluded:
             return bool(status)
@@ -168,7 +171,7 @@ class Git:
                      the commit of the repository instead.
         :return: (url, commit) tuple
         """
-        dirty = self.is_dirty()
+        dirty = self.is_dirty(repository=repository)
         if dirty:
             raise ConanException("Repo is dirty, cannot capture url and commit: "
                                  "{}".format(self.folder))

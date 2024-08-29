@@ -1152,7 +1152,8 @@ def test_set_linker_scripts():
                 "profile": profile})
     client.run("install . -pr:b profile -pr:h profile")
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS -T"/usr/local/src/flash.ld" -T"C:/local/extra_data.ld")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS ' \
+           r'" -T\"/usr/local/src/flash.ld\" -T\"C:/local/extra_data.ld\"")' in toolchain
 
 
 def test_test_package_layout():

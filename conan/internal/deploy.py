@@ -18,7 +18,10 @@ def _find_deployer(d, cache_deploy_folder):
     """
     def _load(path):
         mod, _ = load_python_file(path)
-        return mod.deploy
+        try:
+            return mod.deploy
+        except AttributeError:
+            raise ConanException(f"Deployer does not contain 'deploy()' function: {path}")
 
     if not d.endswith(".py"):
         d += ".py"  # Deployers must be python files
