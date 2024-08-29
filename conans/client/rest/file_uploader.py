@@ -1,7 +1,8 @@
+import os
 import time
 from copy import copy
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
@@ -82,23 +83,31 @@ class FileUploader(object):
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
-    def _upload_file(self, url, abs_path,  headers, auth):
+    def _upload_file(self, url, abs_path, headers, auth):
+        class FileProgress:
+            def __init__(self, f, total_size):
+                self.f = f
+                self._total = total_size
+                self.filename = os.path.basename(f.name)
+                self.t = TimedOutput(0)
+                self._counter = 0
 
-        class StreamingBody:
-            def __init__(self, mypath):
-                self.f = open(mypath, "rb")
+            def seek(self, *args, **kwargs):
+                return self.f.seek(*args, **kwargs)
 
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                self.f.close()
+            def tell(self):
+                return self.f.tell()
 
             def read(self, n=-1):
-                # custom read implementation
-                return self.f.read(n)
+                nread = self.f.read(n)
+                self._counter += len(nread)
+                self.t.info(f"{self.filename}: Uploading {int(self._counter*100/self._total)}%")
+                return nread
 
-        with StreamingBody(abs_path) as file_handler:
+        filesize = os.path.getsize(abs_path)
+        big_file = True # filesize > 10000000  # 10 MB
+        with open(abs_path, mode='rb') as file_handler:
+            file_handler = FileProgress(file_handler, filesize) if big_file else file_handler
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth,
