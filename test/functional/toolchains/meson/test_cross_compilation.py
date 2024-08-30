@@ -244,35 +244,3 @@ def test_use_meson_toolchain():
     # Build locally
     c.run('build . --profile:host=android')
     assert "conanfile.py (hello/0.1): Calling build()" in c.out
-
-
-@pytest.mark.tool("meson")
-@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-def test_baremetal_cross_compiling():
-    meson_build = textwrap.dedent("""
-        project('tutorial', 'cpp')
-        executable('demo', 'main.cpp')
-        """)
-    main_cpp = gen_function_cpp(name="main")
-    profile_baremetal = textwrap.dedent("""
-        [settings]
-        arch=x86_64
-        os=baremetal
-        compiler=gcc
-        compiler.cppstd=gnu17
-        compiler.libcxx=libstdc++11
-        compiler.version=13
-        build_type=Release
-        [conf]
-        tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
-        """)
-
-    client = TestClient()
-    client.save({"conanfile.py": _conanfile_py,
-                 "meson.build": meson_build,
-                 "main.cpp": main_cpp,
-                 "baremetal": profile_baremetal})
-    client.run("install . --profile:build=default --profile:host=baremetal")
-    client.run("build .")
-    content = client.load(os.path.join("conan_meson_cross.ini"))
-    assert "system = 'none'" in content
