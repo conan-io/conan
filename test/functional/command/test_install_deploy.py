@@ -522,3 +522,17 @@ class TestRuntimeDeployer:
 
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+
+
+def test_deployer_errors():
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "mydeploy.py": "",
+            "mydeploy2.py": "nonsense"})
+    c.run("install . --deployer=nonexisting.py", assert_error=True)
+    assert "ERROR: Cannot find deployer 'nonexisting.py'" in c.out
+    c.run("install . --deployer=mydeploy.py", assert_error=True)
+    assert "ERROR: Deployer does not contain 'deploy()' function" in c.out
+    c.run("install . --deployer=mydeploy2.py", assert_error=True)
+    # The error message says conanfile, not a big deal still path to file is shown
+    assert "ERROR: Unable to load conanfile" in c.out
