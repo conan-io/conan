@@ -153,6 +153,12 @@ class CPSComponent:
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
         return cps_comp
 
+    def update(self, conf, conf_def):
+        # TODO: conf not used at the moent
+        self.location = self.location or conf_def.get("location")
+        self.link_location = self.link_location or conf_def.get("link_location")
+        self.link_libraries = self.link_libraries or conf_def.get("link_libraries")
+
 
 class CPS:
     """ represents the CPS file for 1 package
@@ -299,4 +305,20 @@ class CPS:
     @staticmethod
     def load(file):
         contents = load(file)
-        return CPS.deserialize(json.loads(contents))
+        print("BASE FILE", contents)
+        base = CPS.deserialize(json.loads(contents))
+
+        path, name = os.path.split(file)
+        basename, ext = os.path.splitext(name)
+        for conf in "release", "debug":
+            full_conf = os.path.join(path, f"{basename}@{conf}{ext}")
+            if os.path.exists(full_conf):
+                conf_content = json.loads(load(full_conf))
+                print("CONF FILE", conf, json.dumps(conf_content, indent=2))
+                for comp, comp_def in conf_content.get("components", {}).items():
+                    existing = base.components.get(comp)
+                    if existing:
+                        existing.update(conf, comp_def)
+                    else:
+                        base.components[comp] = comp_def
+        return base

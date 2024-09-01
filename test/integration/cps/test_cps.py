@@ -2,8 +2,11 @@ import json
 import os
 import textwrap
 
+from conan.cps import CPS
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
+from conans.util.files import save_files
 
 
 def test_cps():
@@ -117,3 +120,37 @@ def test_cps_in_pkg():
     assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
     assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
+
+
+def test_cps_merge():
+    folder = temp_folder()
+    cps_base = textwrap.dedent("""
+        {
+          "components" : {
+            "mypkg" : {
+              "includes" : [ "@prefix@/include" ],
+              "type" : "archive"
+            }
+          },
+          "cps_version" : "0.12.0",
+          "name" : "mypkg",
+          "version" : "1.0"
+        }
+        """)
+    cps_conf = textwrap.dedent("""
+        {
+          "components" : {
+            "mypkg" : {
+              "link_languages" : [ "cpp" ],
+              "location" : "@prefix@/lib/mypkg.lib"
+            }
+          },
+          "configuration" : "Release",
+          "name" : "mypkg"
+        }
+        """)
+    save_files(folder, {"mypkg.cps": cps_base,
+                        "mypkg@release.cps": cps_conf})
+    cps = CPS.load(os.path.join(folder, "mypkg.cps"))
+    json_cps = cps.serialize()
+    print(json.dumps(json_cps, indent=2))
