@@ -15,7 +15,8 @@ def _get_local_infos_min(server_store, ref):
     result = {}
     new_ref = ref
     subdirs = list_folder_subdirs(server_store.packages(new_ref), level=1)
-    for package_id in subdirs:
+    # Seems that Python3.12 os.walk is retrieving a different order of folders
+    for package_id in sorted(subdirs):
         if package_id in result:
             continue
         # Read conaninfo
