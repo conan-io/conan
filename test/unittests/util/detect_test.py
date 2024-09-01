@@ -6,7 +6,7 @@ import pytest
 from parameterized import parameterized
 
 from conan.internal.api.detect_api import _cc_compiler
-from conans.client.conf.detect import detect_defaults_settings
+from conan.internal.api.profile.detect import detect_defaults_settings
 from conans.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import redirect_output
