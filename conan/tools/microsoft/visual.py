@@ -84,22 +84,31 @@ def msvc_version_to_toolset_version(version):
 
 class VCVars:
     """
-    VCVars class generator
+    VCVars class generator to generate a ``conanvcvars.bat`` script that activates the correct
+    Visual Studio prompt.
+
+    This generator will be automatically called by other generators such as ``CMakeToolchain``
+    when considered necessary, for example if building with Visual Studio compiler using the
+    CMake ``Ninja`` generator, which needs an active Visual Studio prompt.
+    Then, it is not necessary to explicitly instantiate this generator in most cases.
     """
 
     def __init__(self, conanfile):
         """
-        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        :param conanfile: ``ConanFile object`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
 
     def generate(self, scope="build"):
         """
-        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
-        variables to configure the command line for native 32-bit or 64-bit compilation.
+        Creates a ``conanvcvars.bat`` file that calls Visual ``vcvars`` with the necessary
+        args to activate the correct Visual Studio prompt matching the Conan settings.
 
-        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
-                      if ``build``, then it'll be used the ``conanbuild`` launcher.
+        :param scope: ``str`` activation scope, by default "build". It means it will add a
+                      call to this ``conanvcvars.bat`` from the aggregating general
+                      ``conanbuild.bat``, which is the script that will be called by default
+                      in ``self.run()`` calls and build helpers such as ``cmake.configure()``
+                      and ``cmake.build()``.
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
@@ -118,36 +127,9 @@ class VCVars:
         if vs_install_path == "":  # Empty string means "disable"
             return
 
-        msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
-        if compiler == "clang":
-            # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
-            if not conanfile.settings.get_safe("compiler.runtime"):
-                # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
-                return
-            toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
-            vs_version = {"v140": "14",
-                          "v141": "15",
-                          "v142": "16",
-                          "v143": "17",
-                          "v144": "17"}.get(toolset_version)
-            if vs_version is None:
-                raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
-            vcvars_ver = {"v140": "14.0",
-                          "v141": "14.1",
-                          "v142": "14.2",
-                          "v143": "14.3",
-                          "v144": "14.4"}.get(toolset_version)
-            if vcvars_ver and msvc_update is not None:
-                vcvars_ver += f"{msvc_update}"
-        else:
-            vs_version = vs_ide_version(conanfile)
-            if int(vs_version) <= 14:
-                vcvars_ver = None
-            else:
-                compiler_version = str(conanfile.settings.compiler.version)
-                compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update", "")
-                # The equivalent of compiler 19.26 is toolset 14.26
-                vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+        vs_version, vcvars_ver = _vcvars_versions(conanfile)
+        if vs_version is None:
+            return
 
         vcvarsarch = _vcvars_arch(conanfile)
 
@@ -296,6 +278,41 @@ def _vcvars_path(version, vs_install_path):
     return vcpath
 
 
+def _vcvars_versions(conanfile):
+    compiler = conanfile.settings.get_safe("compiler")
+    msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
+    if compiler == "clang":
+        # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
+        if not conanfile.settings.get_safe("compiler.runtime"):
+            # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
+            return None, None
+        toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
+        vs_version = {"v140": "14",
+                        "v141": "15",
+                        "v142": "16",
+                        "v143": "17",
+                        "v144": "17"}.get(toolset_version)
+        if vs_version is None:
+            raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
+        vcvars_ver = {"v140": "14.0",
+                        "v141": "14.1",
+                        "v142": "14.2",
+                        "v143": "14.3",
+                        "v144": "14.4"}.get(toolset_version)
+        if vcvars_ver and msvc_update is not None:
+            vcvars_ver += f"{msvc_update}"
+    else:
+        vs_version = vs_ide_version(conanfile)
+        if int(vs_version) <= 14:
+            vcvars_ver = None
+        else:
+            compiler_version = str(conanfile.settings.compiler.version)
+            compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update", "")
+            # The equivalent of compiler 19.26 is toolset 14.26
+            vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+    return vs_version, vcvars_ver
+
+
 def _vcvars_arch(conanfile):
     """
     Computes the vcvars command line architecture based on conanfile settings (host) and
@@ -358,11 +375,12 @@ def is_msvc_static_runtime(conanfile):
 
 def msvs_toolset(conanfile):
     """
-    Returns the corresponding platform toolset based on the compiler of the given conanfile.
+    Returns the corresponding platform toolset based on the compiler setting.
     In case no toolset is configured in the profile, it will return a toolset based on the
     compiler version, otherwise, it will return the toolset from the profile.
     When there is no compiler version neither toolset configured, it will return None
-    It supports Visual Studio, msvc and Intel.
+    It supports msvc, intel-cc and clang compilers. For clang, is assumes the ClangCl toolset,
+    as provided by the Visual Studio installer.
 
     :param conanfile: Conanfile instance to access settings.compiler
     :return: A toolset when compiler.version is valid or compiler.toolset is configured. Otherwise, None.
@@ -375,5 +393,7 @@ def msvs_toolset(conanfile):
         if subs_toolset:
             return subs_toolset
         return msvc_version_to_toolset_version(compiler_version)
+    if compiler == "clang":
+        return "ClangCl"
     if compiler == "intel-cc":
         return IntelCC(conanfile).ms_toolset

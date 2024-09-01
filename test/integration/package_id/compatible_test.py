@@ -137,16 +137,15 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}' created", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("install . -o pkg/*:optimized=2")
+        client.run("install . -o pkg/*:optimized=2 -vv")
         # Information messages
         missing_id = "0a8157f8083f5ece34828d27fb2bf5373ba26366"
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Option optimized 1!", client.out)
         self.assertIn("pkg/0.1@user/stable: Compatible package ID "
                       f"{missing_id} equal to the default package ID",
                       client.out)
-        self.assertIn("pkg/0.1@user/stable: Main binary package "
-                      f"'{missing_id}' missing. Using compatible package"
-                      f" '{package_id}'", client.out)
+        self.assertIn(f"pkg/0.1@user/stable: Main binary package '{missing_id}' missing", client.out)
+        self.assertIn(f"Found compatible package '{package_id}'", client.out)
         # checking the resulting dependencies
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
@@ -399,7 +398,7 @@ class TestNewCompatibility:
         c.run("list pdfium/2020.9:*")
 
         c.run("install --requires=pdfium/2020.9 -pr=myprofile -s build_type=Debug")
-        assert "missing. Using compatible package" in c.out
+        assert "Found compatible package" in c.out
 
     def test_compatibility_erase_package_id(self):
         c = TestClient()

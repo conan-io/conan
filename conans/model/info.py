@@ -1,9 +1,10 @@
+import hashlib
+
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
 from conans.util.config_parser import ConfigParser
-from conans.util.sha import sha1
 
 
 class _VersionRepr:
@@ -442,7 +443,9 @@ class ConanInfo:
         :return: `str` the `package_id`, e.g., `"040ce2bd0189e377b2d15eb7246a4274d1c63317"`
         """
         text = self.dumps()
-        package_id = sha1(text.encode())
+        md = hashlib.sha1()
+        md.update(text.encode())
+        package_id = md.hexdigest()
         return package_id
 
     def clear(self):

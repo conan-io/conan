@@ -900,7 +900,7 @@ def test_build_requires():
                 msbuild = MSBuild(self)
                 msbuild.build("hello.sln")
             """)
-    hello_vcxproj = textwrap.dedent( r"""<?xml version="1.0" encoding="utf-8"?>
+    hello_vcxproj = textwrap.dedent(r"""<?xml version="1.0" encoding="utf-8"?>
         <Project DefaultTargets="Build" ToolsVersion="15.0"
                xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <ItemGroup Label="ProjectConfigurations">

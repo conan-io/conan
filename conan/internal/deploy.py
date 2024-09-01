@@ -18,7 +18,10 @@ def _find_deployer(d, cache_deploy_folder):
     """
     def _load(path):
         mod, _ = load_python_file(path)
-        return mod.deploy
+        try:
+            return mod.deploy
+        except AttributeError:
+            raise ConanException(f"Deployer does not contain 'deploy()' function: {path}")
 
     if not d.endswith(".py"):
         d += ".py"  # Deployers must be python files
@@ -40,7 +43,10 @@ def _find_deployer(d, cache_deploy_folder):
 
 
 def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
-    mkdir(deploy_folder)
+    try:
+        mkdir(deploy_folder)
+    except Exception as e:
+        raise ConanException(f"Deployer folder cannot be created '{deploy_folder}':\n{e}")
     # handle the recipe deploy()
     if deploy_package:
         # Similar processing as BuildMode class
@@ -100,7 +106,9 @@ def runtime_deploy(graph, output_folder):
                    "Please give feedback at https://github.com/conan-io/conan/issues")
     mkdir(output_folder)
     symlinks = conanfile.conf.get("tools.deployer:symlinks", check_type=bool, default=True)
-    for _, dep in conanfile.dependencies.host.items():
+    for req, dep in conanfile.dependencies.host.items():
+        if not req.run:  # Avoid deploying unused binaries at runtime
+            continue
         if dep.package_folder is None:
             output.warning(f"{dep.ref} does not have any package folder, skipping binary")
             continue

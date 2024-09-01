@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import os
+from json import JSONDecodeError
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
@@ -73,7 +74,12 @@ class MultiPackagesList:
 
     @staticmethod
     def load(file):
-        content = json.loads(load(file))
+        try:
+            content = json.loads(load(file))
+        except JSONDecodeError as e:
+            raise ConanException(f"Package list file invalid JSON: {file}\n{e}")
+        except Exception as e:
+            raise ConanException(f"Package list file missing or broken: {file}\n{e}")
         result = {}
         for remote, pkglist in content.items():
             if "error" in pkglist:
