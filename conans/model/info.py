@@ -328,6 +328,7 @@ class ConanInfo:
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
                  python_requires=None, conf=None, config_version=None):
         self.invalid = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.settings = settings
         self.settings_target = None  # needs to be explicitly defined by recipe package_id()
         self.options = options
