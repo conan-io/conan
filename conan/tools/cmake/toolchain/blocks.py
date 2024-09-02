@@ -254,7 +254,7 @@ class LinkerScriptsBlock(Block):
         # Add linker flags from tools.build:linker_scripts conf
 
         message(STATUS "Conan toolchain: Defining linker script flag: {{ linker_script_flags }}")
-        string(APPEND CONAN_EXE_LINKER_FLAGS {{ linker_script_flags }})
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ linker_script_flags }}")
         """)
 
     def context(self):
@@ -265,7 +265,7 @@ class LinkerScriptsBlock(Block):
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
         linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                           for p in linker_scripts]
-        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        linker_script_flags = [r'-T\"' + linker_script + r'\"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
 
@@ -273,17 +273,30 @@ class CppStdBlock(Block):
     template = textwrap.dedent("""\
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
+        function(conan_modify_std_watch variable access value current_list_file stack)
+            set(conan_watched_std_variable {{ cppstd }})
+            if (${variable} STREQUAL "CMAKE_C_STANDARD")
+                set(conan_watched_std_variable {{ cstd }})
+            endif()
+            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${conan_watched_std_variable})
+                message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${conan_watched_std_variable} has been modified to ${value} by ${current_list_file}")
+            endif()
+            unset(conan_watched_std_variable)
+        endfunction()
+
         {% if cppstd %}
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_CXX_STANDARD conan_modify_std_watch)
         {% endif %}
         {% if cstd %}
         message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
         set(CMAKE_C_STANDARD {{ cstd }})
         set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
         set(CMAKE_C_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_C_STANDARD conan_modify_std_watch)
         {% endif %}
         """)
 
@@ -852,9 +865,13 @@ class CompilersBlock(Block):
     """)
 
     def context(self):
+        return {"compilers": self.get_compilers(self._conanfile)}
+
+    @staticmethod
+    def get_compilers(conanfile):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
+        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={},
+                                               check_type=dict)
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
@@ -865,7 +882,7 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-        return {"compilers": compilers}
+        return compilers
 
 
 class GenericSystemBlock(Block):
@@ -973,6 +990,11 @@ class GenericSystemBlock(Block):
                                  "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
+            # os_host would be 'baremetal' for tricore, but it's ideal to use the Generic-ELF
+            # system name instead of just "Generic" because it matches how Aurix Dev Studio
+            # generated makefiles behave by generating binaries with the '.elf' extension.
+            if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                return "Generic-ELF"
             return cmake_system_name_map.get(os_host, os_host)
         elif arch_host is not None and arch_host != arch_build:
             if not ((arch_build == "x86_64") and (arch_host == "x86") or
@@ -1049,8 +1071,12 @@ class GenericSystemBlock(Block):
                     _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
+                    if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                        _system_processor = "tricore"
+                    else:
+                        _system_processor = arch_host
                     _system_version = os_host_version
-                    _system_processor = arch_host
+
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version

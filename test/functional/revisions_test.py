@@ -658,6 +658,7 @@ def test_touching_other_server():
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out
 
 
+@pytest.mark.artifactory_ready
 def test_reupload_older_revision():
     """ upload maintains the server history
         https://github.com/conan-io/conan/issues/7331
@@ -698,3 +699,41 @@ def test_reupload_older_revision():
     c.run(f"remove pkg/0.1#{rrev1} -r=default -c")
     c.run("upload * -r=default -c --force")
     check_order(inverse=True)
+
+
+@pytest.mark.artifactory_ready
+def test_reupload_older_revision_new_binaries():
+    """ upload maintains the server history
+        https://github.com/conan-io/conan/pull/16621
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+    c.run("create . -s os=Linux")
+    rrev1 = c.exported_recipe_revision()
+    c.run("upload * -r=default -c")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")
+                                                      .with_class_attribute("potato = 42")})
+    c.run("create . -s os=Linux")
+    rrev2 = c.exported_recipe_revision()
+    c.run("upload * -r=default -c")
+
+    def check_order(inverse=False):
+        c.run("list pkg/0.1#* -r=default")
+        out = str(c.out)
+        assert rrev1 in out
+        assert rrev2 in out
+        if inverse:
+            assert out.find(rrev1) > out.find(rrev2)
+        else:
+            assert out.find(rrev1) < out.find(rrev2)
+
+    check_order()
+
+    # If we create the same older revision, and upload, still the same order
+    # c.run("remove * -c")  # Make sure no other revision
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+    c.run("create . -s os=Windows")
+    rrev3 = c.exported_recipe_revision()
+    assert rrev3 == rrev1
+    c.run(f"upload pkg*#{rrev3} -r=default -c --force")
+    check_order()

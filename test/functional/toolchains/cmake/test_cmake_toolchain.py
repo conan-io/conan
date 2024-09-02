@@ -2033,5 +2033,11 @@ def test_cxx_version_not_overriden_if_hardcoded():
     # The compiler.cppstd will not override the CXX_STANDARD variable
     tc.run("create . -s=compiler.cppstd=11")
     assert "Conan toolchain: C++ Standard 11 with extensions OFF" in tc.out
-    # Conan says yes! But alas, the compiled code is C++17
+    assert "Warning: Standard CMAKE_CXX_STANDARD value defined in conan_toolchain.cmake to 11 has been modified to 17" in tc.out
+
+    # Even though Conan warns, the compiled code is C++17
     assert "foo/1.0: __cplusplus2017" in tc.out
+
+    tc.run("create . -s=compiler.cppstd=17")
+    assert "Conan toolchain: C++ Standard 17 with extensions OFF" in tc.out
+    assert "Warning: Standard CMAKE_CXX_STANDARD value defined in conan_toolchain.cmake to 17 has been modified to 17" not in tc.out

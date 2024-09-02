@@ -211,3 +211,18 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     at.update_make_args({"--new-complex-flag": "new-value"})
     new_make_args = cmd_args_to_string(at.make_args)
     assert "--new-complex-flag=new-value" in new_make_args
+
+
+def test_tricore():
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "os": "baremetal",
+                             "arch": "tc131"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    env = autotoolschain.environment().vars(conanfile)
+    assert '-mtc131' in env["CFLAGS"]
+    assert '-mtc131' in env["CXXFLAGS"]
+    assert '-mtc131' in env["LDFLAGS"]
