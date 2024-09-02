@@ -620,6 +620,45 @@ def test_error_missing_build_type(matrix_client):
     assert "matrix/1.0: Hello World Release!" in client.out
 
 
+@pytest.mark.tool("cmake", "3.23")
+def test_imported_configurations(matrix_client):
+    # https://github.com/conan-io/conan/issues/11168
+    client = matrix_client
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        matrix/1.0
+        [generators]
+        CMakeDeps
+        CMakeToolchain
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app)
+        find_package(matrix REQUIRED)
+        # The matrix::matrix is not the target defining the data, it is a package interface
+        get_target_property(configs matrix::matrix IMPORTED_CONFIGURATIONS)
+        foreach(cfg ${configs})
+            message(STATUS "matrix::matrix configuration found: ${cfg}!!")
+        endforeach()
+        get_target_property(configs CONAN_LIB::matrix_matrix_RELEASE IMPORTED_CONFIGURATIONS)
+        foreach(cfg ${configs})
+            message(STATUS "CONAN_LIB::matrix configuration found: ${cfg}!!")
+        endforeach()
+    """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    # TODO: The matrix::matrix target does not contain the information
+    #  this will require the new CMakeDeps generator
+    assert "matrix::matrix configuration found: configs-NOTFOUND!!" in client.out
+    assert "CONAN_LIB::matrix configuration found: RELEASE!!" in client.out
+
+
 @pytest.mark.tool("cmake")
 def test_map_imported_config(matrix_client):
     # https://github.com/conan-io/conan/issues/12041
