@@ -143,7 +143,9 @@ class GraphBinariesAnalyzer(object):
 
     def _find_existing_compatible_binaries(self, node, compatibles, remotes, update):
         conanfile = node.conanfile
-
+        original_binary = node.binary
+        original_package_id = node.package_id
+        node.conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):
@@ -154,7 +156,7 @@ class GraphBinariesAnalyzer(object):
             self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
             if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
                 self._compatible_found(conanfile, package_id, compatible_package)
-                return True
+                return
         if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             for package_id, compatible_package in compatibles.items():
@@ -165,7 +167,24 @@ class GraphBinariesAnalyzer(object):
                 self._evaluate_download(node, remotes, update)
                 if node.binary == BINARY_DOWNLOAD:
                     self._compatible_found(conanfile, package_id, compatible_package)
-                    return True
+                    return
+
+        # If no compatible is found, restore original state
+        node.binary = original_binary
+        node._package_id = original_package_id
+
+    def _find_build_compatible_binary(self, node, compatibles):
+        original_binary = node.binary
+        original_package_id = node.package_id
+        for pkg_id, compatible in compatibles.items():
+            if not compatible.cant_build:
+                node._package_id = pkg_id  # Modifying package id un
+                self._compatible_found(node.conanfile, pkg_id, compatible)
+                node.binary = BINARY_BUILD
+                break
+        else:
+            node.binary = original_binary
+            node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"
@@ -174,16 +193,11 @@ class GraphBinariesAnalyzer(object):
 
         self._process_node(node, build_mode, remotes, update)
         compatibles = None
-        original_binary = node.binary
-        original_package_id = node.package_id
+
         if node.binary == BINARY_MISSING \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             compatibles = self._get_compatible_packages(node)
-            node.conanfile.output.info(f"Main binary package '{original_package_id}' missing")
-            if not self._find_existing_compatible_binaries(node, compatibles, remotes, update):
-                # If no compatible is found, restore original state
-                node.binary = original_binary
-                node._package_id = original_package_id
+            self._find_existing_compatible_binaries(node, compatibles, remotes, update)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
             node.should_build = True
@@ -193,15 +207,7 @@ class GraphBinariesAnalyzer(object):
         if node.binary == BINARY_INVALID and build_mode.allowed_compatible(node.conanfile):
             if compatibles is None:
                 compatibles = self._get_compatible_packages(node)
-            for pkg_id, compatible in compatibles.items():
-                if not compatible.cant_build:
-                    node._package_id = pkg_id  # Modifying package id un
-                    self._compatible_found(node.conanfile, pkg_id, compatible)
-                    node.binary = BINARY_BUILD
-                    break
-            else:
-                node.binary = original_binary
-                node._package_id = original_package_id
+            self._find_build_compatible_binary(node, compatibles)
 
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
