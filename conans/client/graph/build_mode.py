@@ -95,6 +95,8 @@ class BuildMode:
             return True
         if self.should_build_missing(conan_file):
             return True
+        if self.allowed_compatible(conan_file):
+            return True
         return False
 
     def allowed_compatible(self, conanfile):

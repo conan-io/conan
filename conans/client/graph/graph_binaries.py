@@ -178,13 +178,12 @@ class GraphBinariesAnalyzer(object):
         original_package_id = node.package_id
         for pkg_id, compatible in compatibles.items():
             if not compatible.cant_build:
-                node._package_id = pkg_id  # Modifying package id un
+                node._package_id = pkg_id  # Modifying package id under the hood, FIXME
                 self._compatible_found(node.conanfile, pkg_id, compatible)
                 node.binary = BINARY_BUILD
-                break
-        else:
-            node.binary = original_binary
-            node._package_id = original_package_id
+                return
+        node.binary = original_binary
+        node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"
