@@ -92,7 +92,7 @@ class ConanFileDependencies(UserRequirementsDict):
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         for old_req, new_req in node.replaced_requires.items():
-            existing = d.get(new_req)
+            existing = d.pop(new_req, None)
             if existing is not None:
                 added_req = new_req.copy_requirement()
                 added_req.ref = RecipeReference.loads(old_req)

@@ -3,7 +3,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conans.client.generators import relativize_paths
+from conan.internal.api.install.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches

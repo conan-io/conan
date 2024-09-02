@@ -122,24 +122,28 @@ class GraphBinariesAnalyzer(object):
         compatibles = self._compatibility.compatibles(conanfile)
         existing = compatibles.pop(original_package_id, None)   # Skip main package_id
         if existing:  # Skip the check if same package_id
-            conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
-                                  "the default package ID: Skipping it.")
+            conanfile.output.debug(f"Compatible package ID {original_package_id} equal to "
+                                   "the default package ID: Skipping it.")
 
         if not compatibles:
             return
 
         def _compatible_found(pkg_id, compatible_pkg):
             diff = conanfile.info.dump_diff(compatible_pkg)
-            conanfile.output.info(f"Main binary package '{original_package_id}' missing. Using "
-                                  f"compatible package '{pkg_id}': {diff}")
+            conanfile.output.success(f"Found compatible package '{pkg_id}': {diff}")
             # So they are available in package_info() method
             conanfile.info = compatible_pkg  # Redefine current
+
+            # TODO: Improve this interface
+            # The package_id method might have modified the settings to erase information,
+            # ensure we allow those new values
+            conanfile.settings = conanfile.settings.copy_conaninfo_settings()
             conanfile.settings.update_values(compatible_pkg.settings.values_list)
             # Trick to allow mutating the options (they were freeze=True)
-            # TODO: Improve this interface
             conanfile.options = conanfile.options.copy_conaninfo_options()
             conanfile.options.update_options(compatible_pkg.options)
 
+        conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):

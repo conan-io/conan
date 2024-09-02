@@ -8,6 +8,7 @@ from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
+from conan.internal.api.install.generators import relativize_path
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 
@@ -178,6 +179,9 @@ class MSBuildDeps(object):
 
         root_folder = dep.recipe_folder if dep.package_folder is None else dep.package_folder
         root_folder = escape_path(root_folder)
+        # Make the root_folder relative to the generated conan_vars_xxx.props file
+        relative_root_folder = relativize_path(root_folder, self._conanfile,
+                                               "$(MSBuildThisFileDirectory)")
 
         bin_dirs = join_paths(cpp_info.bindirs)
         res_dirs = join_paths(cpp_info.resdirs)
@@ -205,7 +209,7 @@ class MSBuildDeps(object):
 
         fields = {
             'name': name,
-            'root_folder': root_folder,
+            'root_folder': relative_root_folder,
             'bin_dirs': bin_dirs,
             'res_dirs': res_dirs,
             'include_dirs': include_dirs,

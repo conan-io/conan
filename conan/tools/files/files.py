@@ -11,8 +11,7 @@ from shutil import which
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.util.files import rmdir as _internal_rmdir, human_size
-from conans.util.sha import check_with_algorithm_sum
+from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -281,6 +280,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     """
 
     output = conanfile.output
+    output.info(f"Unzipping {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):

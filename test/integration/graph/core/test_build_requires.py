@@ -639,7 +639,89 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(lib, [(cmake, False, False, True, True)])
         _check_transitive(app, [(lib, True, True, False, False),
-                                (cmake, False, False, True, False)])
+                                (cmake, False, False, True, True)])
+
+    def test_deep_dependency_tree(self):
+        # app -> liba -> libb-(br public) -> sfun -> libsfun -> libx -> liby -> libz
+        #                    -(normal req) -> libsfun -> libx -> liby -> libz
+        self.recipe_conanfile("libz/0.1", GenConanfile())
+        self.recipe_conanfile("liby/0.1", GenConanfile().with_requirement("libz/0.1", run=True))
+        self.recipe_conanfile("libx/0.1", GenConanfile().with_requirement("liby/0.1", run=True))
+        self.recipe_conanfile("libsfun/0.1", GenConanfile().with_requirement("libx/0.1", run=True))
+        self.recipe_conanfile("sfun/0.1", GenConanfile().with_requirement("libsfun/0.1", run=True))
+        self.recipe_conanfile("libb/0.1", GenConanfile()
+                              .with_tool_requirement("sfun/0.1", visible=True)
+                              .with_requirement("libsfun/0.1", run=True))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_requirement("libb/0.1", run=True))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requirement("liba/0.1", run=True))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(8 + 4, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libsfun = libb.dependencies[0].dst
+        libx = libsfun.dependencies[0].dst
+        liby = libx.dependencies[0].dst
+        libz = liby.dependencies[0].dst
+        sfun = libb.dependencies[1].dst
+        libsfun_build = sfun.dependencies[0].dst
+        libx_build = libsfun_build.dependencies[0].dst
+        liby_build = libx_build.dependencies[0].dst
+        libz_build = liby_build.dependencies[0].dst
+
+        # TODO non-build-requires
+
+        self._check_node(app, "app/0.1@", deps=[liba], dependents=[])
+        self._check_node(liba, "liba/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[sfun, libsfun], dependents=[liba])
+        self._check_node(sfun, "sfun/0.1#123", deps=[libsfun_build], dependents=[libb])
+        self._check_node(libsfun_build, "libsfun/0.1#123", deps=[libx_build], dependents=[sfun])
+        self._check_node(libx_build, "libx/0.1#123", deps=[liby_build], dependents=[libsfun_build])
+        self._check_node(liby_build, "liby/0.1#123", deps=[libz_build], dependents=[libx_build])
+        self._check_node(libz_build, "libz/0.1#123", deps=[], dependents=[liby_build])
+
+        # node, include, link, build, run
+        _check_transitive(liby_build, [(libz_build, True, True, False, True)])
+        _check_transitive(libx_build, [(liby_build, True, True, False, True),
+                                       (libz_build, True, True, False, True)])
+        _check_transitive(libsfun_build, [(libx_build, True, True, False, True),
+                                          (liby_build, True, True, False, True),
+                                          (libz_build, True, True, False, True)])
+        _check_transitive(sfun, [(libsfun_build, True, True, False, True),
+                                 (libx_build, True, True, False, True),
+                                 (liby_build, True, True, False, True),
+                                 (libz_build, True, True, False, True)])
+        _check_transitive(libb, [(libsfun, True, True, False, True),
+                                 (libx, True, True, False, True),
+                                 (liby, True, True, False, True),
+                                 (libz, True, True, False, True),
+                                 (sfun, False, False, True, True),
+                                 (libsfun_build, False, False, True, True),
+                                 (libx_build, False, False, True, True),
+                                 (liby_build, False, False, True, True),
+                                 (libz_build, False, False, True, True)])
+        _check_transitive(liba, [(libb, True, True, False, True),
+                                 (libsfun, True, True, False, True),
+                                 (libx, True, True, False, True),
+                                 (liby, True, True, False, True),
+                                 (libz, True, True, False, True),
+                                 (sfun, False, False, True, True),
+                                 (libsfun_build, False, False, True, True),
+                                 (libx_build, False, False, True, True),
+                                 (liby_build, False, False, True, True),
+                                 (libz_build, False, False, True, True)])
+        _check_transitive(app, [(liba, True, True, False, True),
+                                (libb, True, True, False, True),
+                                (libsfun, True, True, False, True),
+                                (libx, True, True, False, True),
+                                (liby, True, True, False, True),
+                                (libz, True, True, False, True),
+                                (sfun, False, False, True, True),
+                                (libsfun_build, False, False, True, True),
+                                (libx_build, False, False, True, True),
+                                (liby_build, False, False, True, True),
+                                (libz_build, False, False, True, True)])
 
     def test_conflict_diamond(self):
         # app -> libb -(br public)-> cmake/0.1
@@ -666,6 +748,40 @@ class PublicBuildRequiresTest(GraphManagerTest):
 
         self._check_node(app, "app/0.1@", deps=[libb, libc], dependents=[])
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
+        self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
+
+    def test_conflict_diamond_two_levels(self):
+        # app -> libd -> libb -(br public)-> cmake/0.1
+        #   \--> libe -> libc -(br public)-> cmake/0.2
+        self.recipe_conanfile("cmake/0.1", GenConanfile())
+        self.recipe_conanfile("cmake/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("cmake/0.1", visible=True))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_tool_requirement("cmake/0.2", visible=True))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_requires("libb/0.1"))
+        self.recipe_conanfile("libe/0.1", GenConanfile().with_requires("libc/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libd/0.1",
+                                                                               "libe/0.1"),
+                                      install=False)
+
+        assert type(deps_graph.error) == GraphConflictError
+
+        # Build requires always apply to the consumer
+        self.assertEqual(6, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        libe = app.dependencies[1].dst
+        libb = libd.dependencies[0].dst
+        libc = libe.dependencies[0].dst
+        cmake1 = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[libd, libe], dependents=[])
+        self._check_node(libd, "libd/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libe, "libe/0.1#123", deps=[libc], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[libd])
+        self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libe])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
 
     def test_tool_requires(self):
@@ -695,7 +811,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
 
     def test_tool_requires_override(self):
         # app -> libb -(br public)-> protobuf/0.1
@@ -726,7 +842,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
                                 (protobuf_host, True, True, False, False),
-                                (protobuf_build, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
         _check_transitive(libb, [(protobuf_host, True, True, False, False),
                                  (protobuf_build, False, False, True, True)])
 
@@ -794,6 +910,15 @@ class TestLoops(GraphManagerTest):
 
         assert deps_graph.error.ancestor == cmake
         assert deps_graph.error.node == cmake2
+
+    def test_infinite_recursion_test(self):
+        """Ensure that direct conflicts in a node are properly reported and Conan does not loop"""
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("app").with_package_type("application")})
+        tc.run("create . --version=1.0 --build-require")
+        tc.run("create . --version=1.1 --build-require")
+        tc.run("graph info --tool-requires=app/1.1 --tool-requires=app/1.0", assert_error=True)
+        assert "Duplicated requirement: app/1.0" in tc.out
 
 
 def test_tool_requires():

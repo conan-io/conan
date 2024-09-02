@@ -10,7 +10,7 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import redirect_output
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class DetectTest(unittest.TestCase):

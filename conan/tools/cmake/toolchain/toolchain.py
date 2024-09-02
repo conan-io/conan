@@ -9,11 +9,12 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, GenericSystemBlock, \
+from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, \
+    GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
-    VSDebuggerEnvironment
+    VSDebuggerEnvironment, VariablesBlock, PreprocessorBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
@@ -56,39 +57,18 @@ class Variables(OrderedDict):
                     data[key] = str(var).replace('"', '\\"')
 
 
-class CMakeToolchain(object):
+class CMakeToolchain:
 
     filename = CONAN_TOOLCHAIN_FILENAME
 
-    # TODO: Clean this macro, do it explicitly for variables
-    _template = textwrap.dedent("""
-        {% macro iterate_configs(var_config, action) %}
-            {% for it, values in var_config.items() %}
-                {% set genexpr = namespace(str='') %}
-                {% for conf, value in values -%}
-                set(CONAN_DEF_{{ conf }}{{ it }} "{{ value }}")
-                {% endfor %}
-                {% for conf, value in values -%}
-                    {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + conf|string + it|string + '},' %}
-                    {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
-                {% endfor %}
-                {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
-                {% endfor %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
-                    "Variable {{ it }} conan-toolchain defined")
-            {% endfor %}
-        {% endmacro %}
-
+    _template = textwrap.dedent("""\
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
-
         message(STATUS "Using Conan toolchain: ${CMAKE_CURRENT_LIST_FILE}")
-
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
         endif()
@@ -96,41 +76,6 @@ class CMakeToolchain(object):
         {% for conan_block in conan_blocks %}
         {{ conan_block }}
         {% endfor %}
-
-        # Variables
-        {% for it, value in variables.items() %}
-        {% if value is boolean %}
-        set({{ it }} {{ "ON" if value else "OFF"}} CACHE BOOL "Variable {{ it }} conan-toolchain defined")
-        {% else %}
-        set({{ it }} "{{ value }}" CACHE STRING "Variable {{ it }} conan-toolchain defined")
-        {% endif %}
-        {% endfor %}
-        # Variables  per configuration
-        {{ iterate_configs(variables_config, action='set') }}
-
-        # Preprocessor definitions
-        {% for it, value in preprocessor_definitions.items() %}
-        {% if value is none %}
-        add_compile_definitions("{{ it }}")
-        {% else %}
-        add_compile_definitions("{{ it }}={{ value }}")
-        {% endif %}
-        {% endfor %}
-        # Preprocessor definitions per configuration
-        {% for name, values in preprocessor_definitions_config.items() %}
-        {%- for (conf, value) in values %}
-        {% if value is none %}
-        set(CONAN_DEF_{{conf}}_{{name}} "{{name}}")
-        {% else %}
-        set(CONAN_DEF_{{conf}}_{{name}} "{{name}}={{value}}")
-        {% endif %}
-        {% endfor %}
-        add_compile_definitions(
-        {%- for (conf, value) in values %}
-        $<$<CONFIG:{{conf}}>:${CONAN_DEF_{{conf}}_{{name}}}>
-        {%- endfor -%})
-        {% endfor %}
-
 
         if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
         endif()
@@ -171,7 +116,9 @@ class CMakeToolchain(object):
                                        ("pkg_config", PkgConfigBlock),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock),
-                                       ("output_dirs", OutputDirsBlock)])
+                                       ("output_dirs", OutputDirsBlock),
+                                       ("variables", VariablesBlock),
+                                       ("preprocessor", PreprocessorBlock)])
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
@@ -188,10 +135,7 @@ class CMakeToolchain(object):
 
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
-            "variables": self.variables,
-            "variables_config": self.variables.configuration_types,
-            "preprocessor_definitions": self.preprocessor_definitions,
-            "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
+
             "conan_blocks": blocks
         }
 

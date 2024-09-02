@@ -10,7 +10,7 @@ from parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conan.internal.paths import CONANFILE, CONAN_MANIFEST
 from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 

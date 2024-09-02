@@ -4,7 +4,7 @@ import unittest
 
 from conans.model.info import load_binary_info
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
 from conans.util.files import load, save
 

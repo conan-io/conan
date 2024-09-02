@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONANFILE, DATA_YML
+from conan.internal.paths import CONANFILE, DATA_YML
 from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 
 
@@ -10,6 +10,7 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 SRC_FOLDER = "s"
 BUILD_FOLDER = "b"
 PACKAGES_FOLDER = "p"
+FINALIZE_FOLDER = "f"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
@@ -55,7 +56,7 @@ class RecipeLayout(LayoutBase):
         return os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
 
     def metadata(self):
-        return os.path.join(self.download_export(), "metadata")
+        return os.path.join(self.download_export(), METADATA)
 
     def download_export(self):
         return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)
@@ -99,11 +100,14 @@ class PackageLayout(LayoutBase):
     def package(self):
         return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
+    def finalize(self):
+        return os.path.join(self._base_folder, FINALIZE_FOLDER)
+
     def download_package(self):
         return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)
 
     def metadata(self):
-        return os.path.join(self.download_package(), "metadata")
+        return os.path.join(self.download_package(), METADATA)
 
     def package_manifests(self):
         package_folder = self.package()

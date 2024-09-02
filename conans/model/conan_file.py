@@ -164,6 +164,7 @@ class ConanFile:
         result["build_folder"] = self.build_folder
         result["generators_folder"] = self.generators_folder
         result["package_folder"] = self.package_folder
+        result["immutable_package_folder"] = self.immutable_package_folder
 
         result["cpp_info"] = self.cpp_info.serialize()
         result["conf_info"] = self.conf_info.serialize()
@@ -319,6 +320,10 @@ class ConanFile:
         return self.folders.base_package
 
     @property
+    def immutable_package_folder(self):
+        return self.folders.immutable_package_folder
+
+    @property
     def generators_folder(self):
         return self.folders.generators_folder
 
@@ -352,6 +357,7 @@ class ConanFile:
         from conans.util.runners import conan_run
         if not quiet:
             ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
+        ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
         if not quiet:
             ConanOutput().writeln("")

@@ -5,16 +5,16 @@ import unittest
 
 from requests.models import Response
 
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.test.utils.tools import TestRequester
 from conan.test.utils.tools import TestServer
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
 
 conan_content = """

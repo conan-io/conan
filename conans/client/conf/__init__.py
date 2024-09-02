@@ -62,6 +62,7 @@ os:
                 ios_version: *ios_version
     Android:
         api_level: [ANY]
+        ndk_version: [null, ANY]
     FreeBSD:
     SunOS:
     AIX:
@@ -79,7 +80,8 @@ arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
        mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le,
        e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7,
        riscv64, riscv32,
-       xtensalx6, xtensalx106, xtensalx7]
+       xtensalx6, xtensalx106, xtensalx7,
+       tc131, tc16, tc161, tc162, tc18]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14", "5.15"]
@@ -94,9 +96,9 @@ compiler:
                     "9", "9.1", "9.2", "9.3", "9.4", "9.5",
                     "10", "10.1", "10.2", "10.3", "10.4", "10.5",
                     "11", "11.1", "11.2", "11.3", "11.4",
-                    "12", "12.1", "12.2", "12.3",
+                    "12", "12.1", "12.2", "12.3",  "12.4",
                     "13", "13.1", "13.2", "13.3",
-                    "14", "14.1"]
+                    "14", "14.1", "14.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW

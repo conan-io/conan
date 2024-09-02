@@ -4,7 +4,7 @@ from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter, conanfile_remove_attr
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
-from conans.paths import CONANINFO
+from conan.internal.paths import CONANINFO
 from conans.util.files import save, mkdir, chdir
 
 

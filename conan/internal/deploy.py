@@ -1,3 +1,4 @@
+import filecmp
 import os
 import shutil
 
@@ -17,7 +18,10 @@ def _find_deployer(d, cache_deploy_folder):
     """
     def _load(path):
         mod, _ = load_python_file(path)
-        return mod.deploy
+        try:
+            return mod.deploy
+        except AttributeError:
+            raise ConanException(f"Deployer does not contain 'deploy()' function: {path}")
 
     if not d.endswith(".py"):
         d += ".py"  # Deployers must be python files
@@ -31,14 +35,18 @@ def _find_deployer(d, cache_deploy_folder):
     if os.path.isfile(cache_path):
         return _load(cache_path)
     builtin_deploy = {"full_deploy.py": full_deploy,
-                      "direct_deploy.py": direct_deploy}.get(d)
+                      "direct_deploy.py": direct_deploy,
+                      "runtime_deploy.py": runtime_deploy}.get(d)
     if builtin_deploy is not None:
         return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
 def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
-    mkdir(deploy_folder)
+    try:
+        mkdir(deploy_folder)
+    except Exception as e:
+        raise ConanException(f"Deployer folder cannot be created '{deploy_folder}':\n{e}")
     # handle the recipe deploy()
     if deploy_package:
         # Similar processing as BuildMode class
@@ -85,6 +93,77 @@ def full_deploy(graph, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         _deploy_single(dep, conanfile, output_folder, folder_name)
+
+
+def runtime_deploy(graph, output_folder):
+    """
+    Deploy all the shared libraries and the executables of the dependencies in a flat directory.
+    """
+    conanfile = graph.root.conanfile
+    output = ConanOutput(scope="runtime_deploy")
+    output.info(f"Deploying dependencies runtime to folder: {output_folder}")
+    output.warning("This deployer is experimental and subject to change. "
+                   "Please give feedback at https://github.com/conan-io/conan/issues")
+    mkdir(output_folder)
+    symlinks = conanfile.conf.get("tools.deployer:symlinks", check_type=bool, default=True)
+    for req, dep in conanfile.dependencies.host.items():
+        if not req.run:  # Avoid deploying unused binaries at runtime
+            continue
+        if dep.package_folder is None:
+            output.warning(f"{dep.ref} does not have any package folder, skipping binary")
+            continue
+        count = 0
+        cpp_info = dep.cpp_info.aggregated_components()
+        for bindir in cpp_info.bindirs:
+            if not os.path.isdir(bindir):
+                output.warning(f"{dep.ref} {bindir} does not exist")
+                continue
+            count += _flatten_directory(dep, bindir, output_folder, symlinks)
+
+        for libdir in cpp_info.libdirs:
+            if not os.path.isdir(libdir):
+                output.warning(f"{dep.ref} {libdir} does not exist")
+                continue
+            count += _flatten_directory(dep, libdir, output_folder, symlinks, [".dylib", ".so"])
+
+        output.info(f"Copied {count} files from {dep.ref}")
+    conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
+
+
+def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None):
+    """
+    Copy all the files from the source directory in a flat output directory.
+    An optional string, named extension_filter, can be set to copy only the files with
+    the listed extensions.
+    """
+    file_count = 0
+
+    output = ConanOutput(scope="runtime_deploy")
+    for src_dirpath, _, src_filenames in os.walk(src_dir, followlinks=symlinks):
+        for src_filename in src_filenames:
+            if extension_filter and not any(src_filename.endswith(ext) for ext in extension_filter):
+                continue
+
+            src_filepath = os.path.join(src_dirpath, src_filename)
+            dest_filepath = os.path.join(output_dir, src_filename)
+            if os.path.exists(dest_filepath):
+                if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
+                    output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
+                    continue
+                else:
+                    output.warning(f"{dest_filepath} exists and will be overwritten")
+
+            try:
+                file_count += 1
+                shutil.copy2(src_filepath, dest_filepath, follow_symlinks=symlinks)
+                output.verbose(f"Copied {src_filepath} into {output_dir}")
+            except Exception as e:
+                if "WinError 1314" in str(e):
+                    ConanOutput().error("runtime_deploy: Windows symlinks require admin privileges "
+                                        "or 'Developer mode = ON'", error_type="exception")
+                raise ConanException(f"runtime_deploy: Copy of '{dep}' files failed: {e}.\nYou can "
+                                     f"use 'tools.deployer:symlinks' conf to disable symlinks")
+    return file_count
 
 
 def _deploy_single(dep, conanfile, output_folder, folder_name):
