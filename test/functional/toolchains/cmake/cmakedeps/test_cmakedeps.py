@@ -652,7 +652,8 @@ def test_imported_configurations(matrix_client):
                  "CMakeLists.txt": cmakelists}, clean_first=True)
 
     client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                       "-DCMAKE_BUILD_TYPE=Release")
     # TODO: The matrix::matrix target does not contain the information
     #  this will require the new CMakeDeps generator
     assert "matrix::matrix configuration found: configs-NOTFOUND!!" in client.out
