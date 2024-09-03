@@ -71,7 +71,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the re-installation of configuration")
     subparser.add_argument("--url", action=OnceArgument,
-                           help="Provide Conan repository URL (for first install without remotes)")
+                           help="(Experimental) Provide Conan repository URL "
+                                "(for first install without remotes)")
     args = parser.parse_args(*args)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
