@@ -18,7 +18,8 @@ _meson_system_map = {
     'SunOS': 'sunos',
     'Windows': 'windows',
     'WindowsCE': 'windows',
-    'WindowsStore': 'windows'
+    'WindowsStore': 'windows',
+    'baremetal': 'none'
 }
 
 # https://mesonbuild.com/Reference-tables.html#cpu-families
