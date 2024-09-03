@@ -41,6 +41,8 @@ class BuildMode:
                         self._build_missing_excluded.append(clean_pattern[1:])
                     else:
                         self.build_missing_patterns.append(clean_pattern)
+                elif param == "compatible":
+                    self._build_compatible_patterns = ["*"]
                 elif param.startswith("compatible:"):
                     clean_pattern = param[len("compatible:"):]
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:

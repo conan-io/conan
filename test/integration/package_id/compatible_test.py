@@ -582,3 +582,40 @@ class TestCompatibleBuild:
         c.assert_listed_binary({"pkg/0.1": ("58fb8ac6c2dc3e3f837253ce1a6ea59011525866", "Build")})
         c.run("list *:*")
         assert "compiler.cppstd: 17" in c.out
+
+    def test_multi_level_build_compatible(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.build import check_min_cppstd
+
+           class Pkg(ConanFile):
+               name = "{name}"
+               version = "0.1"
+               settings = "os", "compiler"
+               {requires}
+
+               def validate(self):
+                   check_min_cppstd(self, {cppstd})
+            """)
+        c.save({"liba/conanfile.py": conanfile.format(name="liba", cppstd=14, requires=""),
+                "libb/conanfile.py": conanfile.format(name="libb", cppstd=17,
+                                                      requires='requires="liba/0.1"')})
+        c.run("export liba")
+        c.run("export libb")
+        settings = "-s os=Windows -s compiler=gcc -s compiler.version=11 " \
+                   "-s compiler.libcxx=libstdc++11 -s compiler.cppstd=11"
+        c.run(f"install --requires=libb/0.1 {settings}", assert_error=True)
+        c.assert_listed_binary({"liba/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid"),
+                                "libb/0.1": ("144910d65b27bcbf7d544201f5578555bbd0376e", "Invalid")})
+        assert "liba/0.1: Invalid: Current cppstd (11)" in c.out
+        assert "libb/0.1: Invalid: Current cppstd (11)" in c.out
+
+        c.run(f"install --requires=libb/0.1 {settings} --build=compatible")
+        # the one for cppstd=14 is built!!
+        c.assert_listed_binary({"liba/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Build"),
+                                "libb/0.1": ("8f29f49be3ba2b6cbc9fa1e05432ce928b96ae5d", "Build")})
+        c.run("list liba:*")
+        assert "compiler.cppstd: 14" in c.out
+        c.run("list libb:*")
+        assert "compiler.cppstd: 17" in c.out
