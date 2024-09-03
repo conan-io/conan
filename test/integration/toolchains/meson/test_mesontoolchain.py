@@ -646,3 +646,23 @@ def test_meson_sysroot_app():
     assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
+
+
+def test_baremetal_cross_compiling():
+    profile_baremetal = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        os=baremetal
+        compiler=gcc
+        compiler.cppstd=gnu17
+        compiler.libcxx=libstdc++11
+        compiler.version=13
+        build_type=Release
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.txt": "",
+                 "baremetal": profile_baremetal})
+    client.run("install . --profile:build=default --profile:host=baremetal -g MesonToolchain")
+    content = client.load("conan_meson_cross.ini")
+    assert "system = 'none'" in content
