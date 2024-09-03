@@ -54,7 +54,7 @@ class FileUploader(object):
         return bool(response.ok)
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None):
+               headers=None, ref=None):
         retry = retry if retry is not None else self._config.get("core.upload:retry", default=1,
                                                                  check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
@@ -70,7 +70,7 @@ class FileUploader(object):
 
         for counter in range(retry + 1):
             try:
-                return self._upload_file(url, abs_path, headers, auth)
+                return self._upload_file(url, abs_path, headers, auth, ref)
             except (NotFoundException, ForbiddenException, AuthenticationException,
                     RequestErrorException):
                 raise
@@ -83,29 +83,29 @@ class FileUploader(object):
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
-    def _upload_file(self, url, abs_path, headers, auth):
-        class FileProgress:
+    def _upload_file(self, url, abs_path, headers, auth, ref):
+        class FileProgress:  # Wrapper just to provide an upload progress every 15 seconds
             def __init__(self, f, total_size):
-                self.f = f
+                self._f = f
                 self._total = total_size
-                self.filename = os.path.basename(f.name)
-                self.t = TimedOutput(0)
-                self._counter = 0
+                self._name = os.path.basename(f.name)
+                self._t = TimedOutput(interval=15)
+                self._bytes = 0
 
             def seek(self, *args, **kwargs):
-                return self.f.seek(*args, **kwargs)
+                return self._f.seek(*args, **kwargs)
 
             def tell(self):
-                return self.f.tell()
+                return self._f.tell()
 
             def read(self, n=-1):
-                nread = self.f.read(n)
-                self._counter += len(nread)
-                self.t.info(f"{self.filename}: Uploading {int(self._counter*100/self._total)}%")
-                return nread
+                read_bytes = self._f.read(n)
+                self._bytes += len(read_bytes)
+                self._t.info(f"{ref}: Uploading {self._name}: {int(self._bytes*100/self._total)}%")
+                return read_bytes
 
         filesize = os.path.getsize(abs_path)
-        big_file = True # filesize > 10000000  # 10 MB
+        big_file = filesize > 50000000  # 50 MB
         with open(abs_path, mode='rb') as file_handler:
             file_handler = FileProgress(file_handler, filesize) if big_file else file_handler
             try:
