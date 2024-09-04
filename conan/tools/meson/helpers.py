@@ -19,7 +19,6 @@ _meson_system_map = {
     'Windows': 'windows',
     'WindowsCE': 'windows',
     'WindowsStore': 'windows',
-    'baremetal': 'none'
 }
 
 # https://mesonbuild.com/Reference-tables.html#cpu-families
