@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from conans.client.conf.config_installer import tmp_config_install_folder
+from conan.internal.api.config.config_installer import tmp_config_install_folder
 from conan.test.utils.test_files import temp_folder
 
 

@@ -40,6 +40,10 @@ class ConanFileInterface:
         return self._conanfile.package_folder
 
     @property
+    def immutable_package_folder(self):
+        return self._conanfile.immutable_package_folder
+
+    @property
     def package_metadata_folder(self):
         return self._conanfile.package_metadata_folder
 
