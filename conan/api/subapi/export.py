@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conans.client.cmd.export import cmd_export
+from conan.internal.api.export import cmd_export
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE
 from conans.model.package_ref import PkgReference
