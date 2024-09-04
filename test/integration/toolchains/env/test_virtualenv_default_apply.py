@@ -22,14 +22,15 @@ def client():
     return client
 
 
+@pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
-def test_virtualenv_deactivated(client, default_virtualenv):
-    format_str = {True: "virtualbuildenv = True",
-                  False: "virtualbuildenv = False",
+@pytest.mark.parametrize("cli_value", ["auto", "never", "NotEmpty"])
+def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
+    format_str = {True: f"virtual{scope}env = True",
+                  False: f"virtual{scope}env = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conan import ConanFile
-    import platform
 
     class ConanFileToolsTest(ConanFile):
         {}
@@ -37,13 +38,16 @@ def test_virtualenv_deactivated(client, default_virtualenv):
     """).format(format_str)
 
     client.save({"conanfile.py": conanfile})
-    client.run("install . ")
+    cli_extra = f"--generate-virtualenvs={cli_value}" if cli_value is not None else ""
+    client.run(f"install . {cli_extra}")
     extension = "bat" if platform.system() == "Windows" else "sh"
-    exists_file = os.path.exists(os.path.join(client.current_folder,
-                                              "conanbuildenv.{}".format(extension)))
-    if default_virtualenv is True or default_virtualenv is None:
+    exists_file = os.path.exists(os.path.join(client.current_folder, f"conan{scope}env.{extension}"))
+
+    should_exist = (default_virtualenv is None and cli_value != "never") or default_virtualenv
+
+    if should_exist:
         assert exists_file
-    elif default_virtualenv is False:
+    else:
         assert not exists_file
 
 
