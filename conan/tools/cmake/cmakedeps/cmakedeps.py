@@ -101,6 +101,7 @@ class CMakeDeps(object):
         if direct_configs:
             # Some helpful verbose messages about generated files
             msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
+            ret["_conan_direct_list.cmake"] = "set (_conan_declared_names " + ' '.join(c.file_name for c in direct_configs) + ")"
             for config in direct_configs:
                 msg.append(f"    find_package({config.file_name})")
             targets = ' '.join(c.root_target_name for c in direct_configs)
