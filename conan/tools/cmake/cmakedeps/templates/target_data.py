@@ -115,7 +115,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               #############################################################################################
               set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
-              set({{ pkg_name }}_IS_CONAN_PROVIDED "1")
 
 
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
