@@ -24,7 +24,7 @@ def client():
 
 @pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
-@pytest.mark.parametrize("cli_value", ["auto", "never", "NotEmpty"])
+@pytest.mark.parametrize("cli_value", ["auto", "never"])
 def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     format_str = {True: f"virtual{scope}env = True",
                   False: f"virtual{scope}env = False",
@@ -43,7 +43,7 @@ def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     extension = "bat" if platform.system() == "Windows" else "sh"
     exists_file = os.path.exists(os.path.join(client.current_folder, f"conan{scope}env.{extension}"))
 
-    should_exist = (default_virtualenv is None and cli_value != "never") or default_virtualenv
+    should_exist = cli_value != "never" and (default_virtualenv is None or default_virtualenv)
 
     if should_exist:
         assert exists_file

@@ -116,21 +116,20 @@ def write_generators(conanfile, app, generate_virtualenvs="auto"):
             with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
-    if generate_virtualenvs != "never":
+    if generate_virtualenvs == "auto":
         if conanfile.virtualbuildenv:
             mkdir(new_gen_folder)
             with chdir(new_gen_folder):
                 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
                 env = VirtualBuildEnv(conanfile)
-                if generate_virtualenvs == "auto" or len(env.vars().keys()):
-                    env.generate()
+                # TODO: Check length of env.vars().keys() when adding NotEmpty
+                env.generate()
         if conanfile.virtualrunenv:
             mkdir(new_gen_folder)
             with chdir(new_gen_folder):
                 from conan.tools.env import VirtualRunEnv
                 env = VirtualRunEnv(conanfile)
-                if generate_virtualenvs == "auto" or len(env.vars().keys()):
-                    env.generate()
+                env.generate()
 
     _generate_aggregated_env(conanfile)
 
