@@ -39,7 +39,7 @@ def install(conan_api, parser, *args):
                              "the provided patterns")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
-    parser.add_argument("--generate-virtualenvs", default="auto", choices=["auto", "never", "NotEmpty"],
+    parser.add_argument("--generate-virtualenvs", default="auto", choices=["auto", "never"],
                         help="Generate virtual environment files for the root")
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
