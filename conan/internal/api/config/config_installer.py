@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
+from conans.client.userio import UserInput
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
@@ -99,6 +100,8 @@ def _process_file(directory, filename, config, cache_folder, folder):
     elif filename == "remotes.json":
         output.info("Defining remotes from remotes.json")
         _filecopy(directory, filename, cache_folder)
+    elif filename == "requirements.txt":
+        _process_requirements(os.path.join(directory, filename))
     else:
         relpath = os.path.relpath(directory, folder)
         if config.target_folder:
@@ -128,6 +131,25 @@ def _process_folder(config, folder, cache_folder, ignore=None):
             rel_path = os.path.relpath(os.path.join(root, f), folder)
             if not conanignore.matches(rel_path):
                 _process_file(root, f, config, cache_folder, folder)
+
+def _process_requirements(requirements_file):
+    import subprocess
+    import sys
+
+    output = ConanOutput()
+    ui = UserInput(non_interactive=False) # TODO: consider adding a -y option to conan config install
+
+    with open(requirements_file) as f:
+        requirements_str = "\n".join(f"  - {req.split('#')[0].strip() }" for req in f)
+        output.info(f"Found {requirements_file} with:\n{requirements_str}")
+        response = ui.request_boolean("Proceed to install requirements?")
+        if response:
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_file])
+            except subprocess.CalledProcessError as e:
+                output.error(f"Failed to install requirements: {e}")
+        else:
+            output.info("Skipping requirements installation")
 
 
 def _process_download(config, cache_folder, requester):
