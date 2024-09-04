@@ -1280,6 +1280,28 @@ class PreprocessorBlock(Block):
                     self._toolchain.preprocessor_definitions.configuration_types}
 
 
+class OverriddenFindPackageBlock(Block):
+    @property
+    def template(self):
+        return textwrap.dedent("""\
+            # Override find_package to warn users when find_package will resolve to non Conan provided package
+            macro(find_package _name)
+                _find_package(${_name} ${ARGN})
+                message(STATUS "Conan: ${_name}_IS_CONAN_PROVIDED ${${_name}_IS_CONAN_PROVIDED}")
+                if (${_name}_IS_CONAN_PROVIDED STREQUAL "1")
+                    message(STATUS "Conan: find_package called for a provided target: ${_name}")
+                else()
+                    message(STATUS "Conan: find_package called for a non provided target: ${_name}")
+                endif()
+            endmacro()
+            """)
+
+    def context(self):
+        return {"preprocessor_definitions": self._toolchain.preprocessor_definitions,
+                "preprocessor_definitions_config":
+                    self._toolchain.preprocessor_definitions.configuration_types}
+
+
 class ToolchainBlocks:
     def __init__(self, conanfile, toolchain, items=None):
         self._blocks = OrderedDict()

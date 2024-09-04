@@ -71,6 +71,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
+            set({{ root_target_name }}_IS_CONAN_PROVIDED "1")
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Target declared '{{ root_target_name }}'")
         endif()
 
@@ -78,6 +79,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
+            set({{ alias }}_IS_CONAN_PROVIDED "1")
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
         endif()
 

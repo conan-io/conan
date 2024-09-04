@@ -14,7 +14,7 @@ from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlo
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
-    VSDebuggerEnvironment, VariablesBlock, PreprocessorBlock
+    VSDebuggerEnvironment, VariablesBlock, PreprocessorBlock, OverriddenFindPackageBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
@@ -118,7 +118,8 @@ class CMakeToolchain:
                                        ("shared", SharedLibBock),
                                        ("output_dirs", OutputDirsBlock),
                                        ("variables", VariablesBlock),
-                                       ("preprocessor", PreprocessorBlock)])
+                                       ("preprocessor", PreprocessorBlock),
+                                       ("overridden_find_package", OverriddenFindPackageBlock)])
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
