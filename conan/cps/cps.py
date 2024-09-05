@@ -305,7 +305,6 @@ class CPS:
     @staticmethod
     def load(file):
         contents = load(file)
-        print("BASE FILE", contents)
         base = CPS.deserialize(json.loads(contents))
 
         path, name = os.path.split(file)
@@ -314,7 +313,6 @@ class CPS:
             full_conf = os.path.join(path, f"{basename}@{conf}{ext}")
             if os.path.exists(full_conf):
                 conf_content = json.loads(load(full_conf))
-                print("CONF FILE", conf, json.dumps(conf_content, indent=2))
                 for comp, comp_def in conf_content.get("components", {}).items():
                     existing = base.components.get(comp)
                     if existing:
