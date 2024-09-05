@@ -1284,7 +1284,7 @@ class OverriddenFindPackageBlock(Block):
     @property
     def template(self):
         return textwrap.dedent("""\
-            {{% if generate_block %}}
+            {% if generate_block %}
             # Override find_package to warn users when find_package will resolve to non Conan provided package
             include(_conan_direct_list OPTIONAL)
             macro(find_package _name)
@@ -1293,7 +1293,7 @@ class OverriddenFindPackageBlock(Block):
                     message(WARNING "Conan: find_package called for non Conan provided ${_name}")
                 endif()
             endmacro()
-            {{% endif %}}
+            {% endif %}
             """)
 
     def context(self):
