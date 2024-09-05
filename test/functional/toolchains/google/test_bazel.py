@@ -75,9 +75,6 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
 
 @pytest.mark.parametrize("shared", [False, True])
 @pytest.mark.tool("bazel", "6.3.2")
-@pytest.mark.skipif(platform.system() == "Linux",
-                    reason="Conan CI fails (likely related to parallel "
-                           "tests running??). Skipping it for now!")
 def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
     """
     Testing the next dependencies structure for shared/static libs
