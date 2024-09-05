@@ -145,7 +145,7 @@ class GraphBinariesAnalyzer(object):
         conanfile = node.conanfile
         original_binary = node.binary
         original_package_id = node.package_id
-        node.conanfile.output.info(f"Main binary package '{original_package_id}' missing")
+        conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             if should_update_reference(node.ref, update):
