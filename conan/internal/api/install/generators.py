@@ -70,7 +70,7 @@ def load_cache_generators(path):
     return result
 
 
-def write_generators(conanfile, app, generate_virtualenvs="auto"):
+def write_generators(conanfile, app, envs_generation=None):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
 
@@ -118,7 +118,10 @@ def write_generators(conanfile, app, generate_virtualenvs="auto"):
             with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
-    if generate_virtualenvs == "auto":
+    if envs_generation is None:
+        envs_generation = "auto"
+
+    if envs_generation == "auto":
         if conanfile.virtualbuildenv:
             mkdir(new_gen_folder)
             with chdir(new_gen_folder):

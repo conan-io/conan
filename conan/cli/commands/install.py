@@ -39,8 +39,8 @@ def install(conan_api, parser, *args):
                              "the provided patterns")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
-    parser.add_argument("--generate-virtualenvs", default="auto", choices=["auto", "never"],
-                        help="Generate virtual environment files for the root")
+    parser.add_argument("--envs-generation", default=None, choices=["auto", "never"],
+                        help="Generation strategy for virtual environment files for the root")
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
     # basic paths
@@ -77,7 +77,7 @@ def install(conan_api, parser, *args):
     conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
                                        deploy=args.deployer, deploy_package=args.deployer_package,
                                        deploy_folder=args.deployer_folder,
-                                       generate_virtualenvs=args.generate_virtualenvs)
+                                       envs_generation=args.envs_generation)
     ConanOutput().success("Install finished successfully")
 
     # Update lockfile if necessary
