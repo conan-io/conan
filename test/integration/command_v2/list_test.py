@@ -43,6 +43,20 @@ class TestParamErrors:
         c.run("list * -p os=Linux", assert_error=True)
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
 
+    def test_graph_file_error(self):
+        # This can happen when reusing the same file in input and output
+        c = TestClient(light=True)
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file not found" in c.out
+        c.save({"graph.json": ""})
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file invalid JSON:" in c.out
+        text = b'\x2b\x2f\x76\x38J\xe2nis\xa7'
+        with open(os.path.join(c.current_folder, "graph.json"), 'wb') as handle:
+            handle.write(text)
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file broken" in c.out
+
 
 @pytest.fixture(scope="module")
 def client():
