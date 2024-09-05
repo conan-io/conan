@@ -24,7 +24,7 @@ def client():
 
 @pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
-@pytest.mark.parametrize("cli_value", [None, "auto", "never"])
+@pytest.mark.parametrize("cli_value", [None, "never"])
 def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     format_str = {True: f"virtual{scope}env = True",
                   False: f"virtual{scope}env = False",
@@ -41,14 +41,19 @@ def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     cli_extra = f"--envs-generation={cli_value}" if cli_value is not None else ""
     client.run(f"install . {cli_extra}")
     extension = "bat" if platform.system() == "Windows" else "sh"
-    exists_file = os.path.exists(os.path.join(client.current_folder, f"conan{scope}env.{extension}"))
+
+    filename = f"conan{scope}env.{extension}"
+    filepath = os.path.join(client.current_folder, filename)
+
+    exists_file = os.path.exists(filepath)
 
     should_exist = cli_value != "never" and (default_virtualenv is None or default_virtualenv)
 
     if should_exist:
-        assert exists_file
+        assert exists_file, f"File {filename} should exist in {os.listdir(client.current_folder)}"
+        assert "Foo" in client.load(filepath)
     else:
-        assert not exists_file
+        assert not exists_file, f"File {filename} should not exist in {os.listdir(client.current_folder)}"
 
 
 def test_virtualrunenv_not_applied(client):

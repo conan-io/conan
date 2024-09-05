@@ -119,9 +119,6 @@ def write_generators(conanfile, app, envs_generation=None):
                 conanfile.generate()
 
     if envs_generation is None:
-        envs_generation = "auto"
-
-    if envs_generation == "auto":
         if conanfile.virtualbuildenv:
             mkdir(new_gen_folder)
             with chdir(new_gen_folder):

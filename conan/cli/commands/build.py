@@ -29,7 +29,7 @@ def build(conan_api, parser, *args):
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
-    parser.add_argument("--envs-generation", default=None, choices=["auto", "never"],
+    parser.add_argument("--envs-generation", default=None, choices=["never"],
                         help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(parser)
     add_lockfile_args(parser)
