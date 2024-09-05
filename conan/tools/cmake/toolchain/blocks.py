@@ -1284,6 +1284,7 @@ class OverriddenFindPackageBlock(Block):
     @property
     def template(self):
         return textwrap.dedent("""\
+            {{% if generate_block %}}
             # Override find_package to warn users when find_package will resolve to non Conan provided package
             include(_conan_direct_list OPTIONAL)
             macro(find_package _name)
@@ -1292,10 +1293,13 @@ class OverriddenFindPackageBlock(Block):
                     message(WARNING "Conan: find_package called for non Conan provided ${_name}")
                 endif()
             endmacro()
+            {{% endif %}}
             """)
 
     def context(self):
-        return {}
+        return {
+            "generate_block": self._conanfile.conf.get("tools.cmake.cmaketoolchain:experimental_find_package_traces", default=False, check_type=bool)
+        }
 
 
 class ToolchainBlocks:
