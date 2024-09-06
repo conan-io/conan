@@ -473,6 +473,7 @@ class TestCompatibleBuild:
         assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
         c.run(f"create . {settings} --build=compatible:&")
+        print(c.out)
         # the one for cppstd=14 is built!!
         c.assert_listed_binary({"pkg/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Build")})
         c.run("list *:*")

@@ -21,7 +21,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
 
-class GraphBinariesAnalyzer(object):
+class GraphBinariesAnalyzer:
 
     def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
@@ -176,6 +176,10 @@ class GraphBinariesAnalyzer(object):
     def _find_build_compatible_binary(self, node, compatibles):
         original_binary = node.binary
         original_package_id = node.package_id
+        output = node.conanfile.output
+        output.info(f"Requested binary package '{original_package_id}' invalid, can't be built")
+        output.info(f"Checking {len(compatibles)} configurations, to build a compatible one, "
+                    f"as requested by '--build=compatible'")
         for pkg_id, compatible in compatibles.items():
             if not compatible.cant_build:
                 node._package_id = pkg_id  # Modifying package id under the hood, FIXME
@@ -196,7 +200,8 @@ class GraphBinariesAnalyzer(object):
         if node.binary == BINARY_MISSING \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             compatibles = self._get_compatible_packages(node)
-            self._find_existing_compatible_binaries(node, compatibles, remotes, update)
+            if compatibles:
+                self._find_existing_compatible_binaries(node, compatibles, remotes, update)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
             node.should_build = True
@@ -206,7 +211,8 @@ class GraphBinariesAnalyzer(object):
         if node.binary == BINARY_INVALID and build_mode.allowed_compatible(node.conanfile):
             if compatibles is None:
                 compatibles = self._get_compatible_packages(node)
-            self._find_build_compatible_binary(node, compatibles)
+            if compatibles:
+                self._find_build_compatible_binary(node, compatibles)
 
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
