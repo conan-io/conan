@@ -1728,3 +1728,16 @@ def test_tricore():
     assert 'string(APPEND CONAN_C_FLAGS " -mtc131")' in content
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " -mtc131")' in content
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " -mtc131")' in content
+
+
+def test_declared_stdlib_and_passed():
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=Cstd")' in tc
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=stdcxx4")' in tc
