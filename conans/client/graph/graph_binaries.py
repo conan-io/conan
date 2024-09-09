@@ -202,13 +202,13 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_INVALID
 
         # Bundle-Lockfile
-        if node.binary == BINARY_BUILD and self._global_conf.get("core.graph:auto_lock",
+        if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
                                                                  check_type=bool):
             partial_lockfile = Lockfile(DepsGraph.from_node(node))
             metadata_folder = node.conanfile.recipe_metadata_folder
             bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
             if os.path.isfile(bundled_lockfile):
-                node.conanfile.output.info("Updating existing metadata lockfile with current"
+                node.conanfile.output.info("Updating existing metadata lockfile with current "
                                            "graph information")
                 exported_lockfile = Lockfile.load(bundled_lockfile)
                 exported_lockfile.partial = True

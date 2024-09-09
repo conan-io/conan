@@ -32,7 +32,7 @@ class DepsGraphBuilder(object):
         self._update = update
         self._check_update = check_update
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
-        self._auto_lock = global_conf.get("core.graph:auto_lock", check_type=bool)
+        self._auto_lock = global_conf.get("core.lockfile:auto", check_type=bool)
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -265,6 +265,7 @@ class DepsGraphBuilder(object):
                     # print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
                 else:
                     graph_lock = exported_lockfile
+                graph_lock.export = False
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
