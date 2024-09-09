@@ -263,7 +263,7 @@ class _Component:
     @property
     def exes(self):
         if self._exes is None:
-            self._exes = []
+            self._exes = {}
         return self._exes
 
     @exes.setter

@@ -7,7 +7,8 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.tool("cmake")
 def test_exes():
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(r"""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
@@ -32,7 +33,8 @@ def test_exes():
                 cmake.install()
 
             def package_info(self):
-                self.cpp_info.exes = {"mytool": {"location": "bin/mytool"}}
+                location =  os.path.join(self.package_folder, "bin/mytool.exe").replace("\\", "/")
+                self.cpp_info.exes = {"myexe": {"location": location}}
         """)
     main = textwrap.dedent("""
         #include <fstream>

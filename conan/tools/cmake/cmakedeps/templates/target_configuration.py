@@ -36,7 +36,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
-                "set_interface_link_directories": auto_link and is_win}
+                "set_interface_link_directories": auto_link and is_win,
+                "cpp_info": self.conanfile.cpp_info}
 
     @property
     def template(self):
@@ -128,6 +129,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                          $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'LIB_DIRS', config_suffix) }}>)
             {%- endif %}
 
+            # Exe information
+            {% for exe_name, exe_info in cpp_info.exes.items() %}
+            add_executable({{pkg_name}}::{{exe_name}} IMPORTED)
+            set_target_properties({{pkg_name}}::{{exe_name}} PROPERTIES IMPORTED_LOCATION${config_suffix} "{{exe_info["location"]}}")
+            {%- endfor %}
 
         {%- else %}
 
