@@ -9,8 +9,10 @@ import yaml
 from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.cmd.export import cmd_export
-from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
+from conan.internal.api.export import cmd_export
+from conans.client.loader import ConanFileLoader
+from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException, \
+    ConanReferenceDoesNotExistInDB, NotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save, rmdir, copytree_compat
@@ -54,9 +56,9 @@ class RestApiClientLocalRecipesIndex:
     a local folder assuming the conan-center-index repo layout
     """
 
-    def __init__(self, remote, cache):
+    def __init__(self, remote, home_folder):
         self._remote = remote
-        local_recipes_index_path = HomePaths(cache.cache_folder).local_recipes_index_path
+        local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
         local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
         local_recipes_index_path = os.path.join(local_recipes_index_path, ".conan")
         repo_folder = self._remote.url
@@ -75,7 +77,12 @@ class RestApiClientLocalRecipesIndex:
         return self._copy_files(export_folder, dest_folder)
 
     def get_recipe_sources(self, ref, dest_folder):
-        export_sources = self._app.cache.recipe_layout(ref).export_sources()
+        try:
+            export_sources = self._app.cache.recipe_layout(ref).export_sources()
+        except ConanReferenceDoesNotExistInDB as e:
+            # This can happen when there a local-recipes-index is being queried for sources it
+            # doesn't contain
+            raise NotFoundException(str(e))
         return self._copy_files(export_sources, dest_folder)
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
@@ -142,17 +149,16 @@ class RestApiClientLocalRecipesIndex:
         sys.stderr = StringIO()
         try:
             global_conf = ConfDefinition()
-            new_ref, _ = cmd_export(self._app, global_conf, conanfile_path,
-                                    ref.name, str(ref.version), None, None)
+            new_ref, _ = cmd_export(self._app, global_conf, conanfile_path, ref.name,
+                                    str(ref.version), None, None, remotes=[self._remote])
         except Exception as e:
             raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
                                  f"{str(e)}")
         finally:
-            export_stderr = sys.stderr.getvalue()
+            export_err = sys.stderr.getvalue()
             sys.stderr = original_stderr
-            ConanOutput().debug(f"Internal export for {ref}:\n"
-                                f"{textwrap.indent(export_stderr, '    ')}")
-
+            ConanOutput(scope="local-recipes-index").debug(f"Internal export for {ref}:\n"
+                                                           f"{textwrap.indent(export_err, '    ')}")
         return new_ref
 
     @staticmethod
@@ -190,7 +196,12 @@ class _LocalRecipesIndexLayout:
         recipes.sort()
         ret = []
         excluded = set()
+
+        loader = ConanFileLoader(None)
         for r in recipes:
+            if r.startswith("."):
+                # Skip hidden folders, no recipes should start with a dot
+                continue
             if not fnmatch(r, name_pattern):
                 continue
             folder = self._get_base_folder(r)
@@ -207,10 +218,18 @@ class _LocalRecipesIndexLayout:
                 # This check can be removed after compatibility with 2.0
                 conanfile = os.path.join(recipes_dir, r, subfolder, "conanfile.py")
                 conanfile_content = load(conanfile)
+
                 if "from conans" in conanfile_content or "import conans" in conanfile_content:
                     excluded.add(r)
                     continue
-                ret.append(RecipeReference.loads(ref))
+                ref = RecipeReference.loads(ref)
+                try:
+                    recipe = loader.load_basic(conanfile)
+                    ref.user = recipe.user
+                    ref.channel = recipe.channel
+                except Exception as e:
+                    ConanOutput().warning(f"Couldn't load recipe {conanfile}: {e}")
+                ret.append(ref)
         if excluded:
             ConanOutput().warning(f"Excluding recipes not Conan 2.0 ready: {', '.join(excluded)}")
         return ret

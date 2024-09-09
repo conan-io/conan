@@ -66,7 +66,7 @@ class _InstallPackageReference:
     def _build_args(self):
         if self.binary != BINARY_BUILD:
             return None
-        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -160,7 +160,7 @@ class _InstallRecipeReference:
             if dep.dst.binary != BINARY_SKIP:
                 if dep.dst.ref == node.ref:  # If the node is itself, then it is internal dep
                     install_pkg_ref.depends.append(dep.dst.pref.package_id)
-                else:
+                elif dep.dst.ref not in self.depends:
                     self.depends.append(dep.dst.ref)
 
     def _install_order(self):
@@ -272,7 +272,7 @@ class _InstallConfiguration:
     def _build_args(self):
         if self.binary != BINARY_BUILD:
             return None
-        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         cmd += f" --build={self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -454,27 +454,57 @@ class InstallGraph:
                   "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
-    def raise_errors(self):
+    def _get_missing_invalid_packages(self):
         missing, invalid = [], []
-        for ref, install_node in self._nodes.items():
-            for package in install_node.packages.values():
-                if package.binary == BINARY_MISSING:
-                    missing.append(package)
-                elif package.binary == BINARY_INVALID:
-                    invalid.append(package)
+        def analyze_package(package):
+            if package.binary == BINARY_MISSING:
+                missing.append(package)
+            elif package.binary == BINARY_INVALID:
+                invalid.append(package)
+        for _, install_node in self._nodes.items():
+            if self._order == "recipe":
+                for package in install_node.packages.values():
+                    analyze_package(package)
+            elif self._order == "configuration":
+                analyze_package(install_node)
 
+        return missing, invalid
+
+    def raise_errors(self):
+        missing, invalid = self._get_missing_invalid_packages()
         if invalid:
-            msg = ["There are invalid packages:"]
-            for package in invalid:
-                node = package.nodes[0]
-                if node.cant_build and node.should_build:
-                    binary, reason = "Cannot build for this configuration", node.cant_build
-                else:
-                    binary, reason = "Invalid", node.conanfile.info.invalid
-                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
-            raise ConanInvalidConfiguration("\n".join(msg))
+            self._raise_invalid(invalid)
         if missing:
             self._raise_missing(missing)
+
+    def get_errors(self):
+        missing, invalid = self._get_missing_invalid_packages()
+        errors = []
+        tab = "    "
+        if invalid or missing:
+            errors.append("There are some error(s) in the graph:")
+        if invalid:
+            for package in invalid:
+                errors.append(f"{tab}- {package.pref}: Invalid configuration")
+        if missing:
+            missing_prefs = set(n.pref for n in missing)  # avoid duplicated
+            for pref in list(sorted([str(pref) for pref in missing_prefs])):
+                errors.append(f"{tab}- {pref}: Missing binary")
+        if errors:
+            return "\n".join(errors)
+        return None
+
+    def _raise_invalid(self, invalid):
+        msg = ["There are invalid packages:"]
+        for package in invalid:
+            node = package.nodes[0]
+            if node.conanfile.info.cant_build and node.should_build:
+                binary, reason = "Cannot build for this configuration", node.conanfile.info.cant_build
+            else:
+                binary, reason = "Invalid", node.conanfile.info.invalid
+            msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
+        raise ConanInvalidConfiguration("\n".join(msg))
+
 
     def _raise_missing(self, missing):
         # TODO: Remove out argument
@@ -510,7 +540,7 @@ class InstallGraph:
 
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'. You can try:
-               - List all available packages using 'conan list {ref}:* -r=remote'
+               - List all available packages using 'conan list "{ref}:*" -r=remote'
                - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
                - {build_msg}
 

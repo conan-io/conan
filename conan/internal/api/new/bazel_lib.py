@@ -17,7 +17,7 @@ class {{package_name}}Recipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "main/*", "WORKSPACE"
+    exports_sources = "main/*", "WORKSPACE", ".bazelrc"
     generators = "BazelToolchain"
 
     def config_options(self):
@@ -32,6 +32,10 @@ class {{package_name}}Recipe(ConanFile):
         bazel_layout(self)
 
     def build(self):
+        from conan.api.output import ConanOutput
+        ConanOutput().warning("This is the template for Bazel 6.x version, "
+                              "but it will be overridden by the 'bazel_7_lib' template "
+                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
         bazel = Bazel(self)
         # On Linux platforms, Bazel creates both shared and static libraries by default, and
         # it is getting naming conflicts if we use the cc_shared_library rule
@@ -90,8 +94,6 @@ class {{package_name}}TestConan(ConanFile):
 
 
 _bazel_build_test = """\
-load("@rules_cc//cc:defs.bzl", "cc_binary")
-
 cc_binary(
     name = "example",
     srcs = ["example.cpp"],
@@ -102,8 +104,6 @@ cc_binary(
 """
 
 _bazel_build = """\
-load("@rules_cc//cc:defs.bzl", "cc_library")
-
 cc_library(
     name = "{{name}}",
     srcs = ["{{name}}.cpp"],
@@ -120,6 +120,9 @@ cc_shared_library(
 """
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
+_bazel_rc = """\
+{% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
+"""
 _test_bazel_workspace = """
 load("@//conan:dependencies.bzl", "load_conan_dependencies")
 load_conan_dependencies()
@@ -140,7 +143,9 @@ bazel_lib_files = {"conanfile.py": conanfile_sources_v2,
                    "main/{{name}}.h": source_h,
                    "main/BUILD": _get_bazel_build(),
                    "WORKSPACE": _bazel_workspace,
+                   ".bazelrc": _bazel_rc,
                    "test_package/conanfile.py": test_conanfile_v2,
                    "test_package/main/example.cpp": test_main,
                    "test_package/main/BUILD": _bazel_build_test,
-                   "test_package/WORKSPACE": _test_bazel_workspace}
+                   "test_package/WORKSPACE": _test_bazel_workspace,
+                   "test_package/.bazelrc": _bazel_rc}

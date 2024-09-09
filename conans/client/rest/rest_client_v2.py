@@ -11,7 +11,7 @@ from conans.client.rest.rest_client_common import RestCommonMethods, get_excepti
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.thread import ExceptionThread
 

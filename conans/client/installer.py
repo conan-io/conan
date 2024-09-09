@@ -5,7 +5,7 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
-from conans.client.generators import write_generators
+from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
@@ -13,7 +13,7 @@ from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
-from conans.paths import CONANINFO
+from conan.internal.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
 
@@ -176,11 +176,11 @@ class BinaryInstaller:
         self._hook_manager = app.hook_manager
         self._global_conf = global_conf
 
-    def _install_source(self, node, remotes):
+    def _install_source(self, node, remotes, need_conf=False):
         conanfile = node.conanfile
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
-        if not download_source and node.binary != BINARY_BUILD:
+        if not download_source and (need_conf or node.binary != BINARY_BUILD):
             return
 
         conanfile = node.conanfile
@@ -235,7 +235,7 @@ class BinaryInstaller:
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
-                    self._install_source(package.nodes[0], remotes)
+                    self._install_source(package.nodes[0], remotes, need_conf=True)
 
     def install(self, deps_graph, remotes, install_order=None):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
@@ -304,30 +304,29 @@ class BinaryInstaller:
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
 
-        if pref.revision is None:
-            assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_build_pkg_layout(pref)
-        else:
-            package_layout = self._cache.get_or_create_pkg_layout(pref)
-
         if package.binary == BINARY_BUILD:
+            assert pref.revision is None
             ConanOutput()\
                 .subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
             ConanOutput(scope=str(pref.ref))\
                 .highlight("Building from source")\
                 .info(f"Package {pref}")
+            package_layout = self._cache.create_build_pkg_layout(pref)
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
             package.prev = package.nodes[0].pref.revision
             package.binary = package.nodes[0].binary
             pref = PkgReference(install_reference.ref, package.package_id, package.prev)
-        elif package.binary == BINARY_CACHE:
-            node = package.nodes[0]
-            pref = node.pref
-            self._cache.update_package_lru(pref)
-            assert node.prev, "PREV for %s is None" % str(pref)
-            node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
+        else:
+            assert pref.revision is not None
+            package_layout = self._cache.pkg_layout(pref)
+            if package.binary == BINARY_CACHE:
+                node = package.nodes[0]
+                pref = node.pref
+                self._cache.update_package_lru(pref)
+                assert node.prev, "PREV for %s is None" % str(pref)
+                node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
@@ -339,7 +338,9 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_package_info(conanfile, pkg_folder, is_editable=False)
+            self._call_finalize_method(conanfile, package_layout.finalize())
+            # Use package_folder which has been updated previously by install_method if necessary
+            self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         # It will only run generation
@@ -455,3 +456,15 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+
+    def _call_finalize_method(self, conanfile, finalize_folder):
+        if hasattr(conanfile, "finalize"):
+            conanfile.folders.set_finalize_folder(finalize_folder)
+            if not os.path.exists(finalize_folder):
+                mkdir(finalize_folder)
+                conanfile.output.highlight("Calling finalize()")
+                with conanfile_exception_formatter(conanfile, "finalize"):
+                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'finalize'):
+                        conanfile.finalize()
+
+            conanfile.output.success(f"Finalized folder {finalize_folder}")

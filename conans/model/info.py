@@ -1,9 +1,10 @@
+import hashlib
+
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
 from conans.util.config_parser import ConfigParser
-from conans.util.sha import sha1
 
 
 class _VersionRepr:
@@ -149,6 +150,14 @@ class RequirementInfo:
         self.package_id = self._package_id
         self.recipe_revision = None
 
+    def revision_mode(self):
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
+        self.recipe_revision = self._ref.revision
+
     def full_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
@@ -223,6 +232,10 @@ class RequirementsInfo(UserRequirementsDict):
         for r in self._data.values():
             r.full_package_mode()
 
+    def revision_mode(self):
+        for r in self._data.values():
+            r.revision_mode()
+
     def full_mode(self):
         for r in self._data.values():
             r.full_mode()
@@ -285,6 +298,10 @@ class PythonRequiresInfo:
         for r in self._refs:
             r.full_recipe_mode()
 
+    def revision_mode(self):
+        for r in self._refs:
+            r.revision_mode()
+
     def full_mode(self):
         for r in self._refs:
             r.full_mode()
@@ -311,6 +328,7 @@ class ConanInfo:
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
                  python_requires=None, conf=None, config_version=None):
         self.invalid = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.settings = settings
         self.settings_target = None  # needs to be explicitly defined by recipe package_id()
         self.options = options
@@ -426,7 +444,9 @@ class ConanInfo:
         :return: `str` the `package_id`, e.g., `"040ce2bd0189e377b2d15eb7246a4274d1c63317"`
         """
         text = self.dumps()
-        package_id = sha1(text.encode())
+        md = hashlib.sha1()
+        md.update(text.encode())
+        package_id = md.hexdigest()
         return package_id
 
     def clear(self):

@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 import jinja2
@@ -15,7 +14,6 @@ from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetCon
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
-from conans.client.generators import relativize_generated_file
 from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
@@ -120,8 +118,7 @@ class CMakeDeps(object):
             ret[config_version.filename] = config_version.render()
 
         data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
-        data_content = relativize_generated_file(data_target.render(), self._conanfile,
-                                                 "${CMAKE_CURRENT_LIST_DIR}")
+        data_content = data_target.render()
         ret[data_target.filename] = data_content
 
         target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
@@ -131,11 +128,9 @@ class CMakeDeps(object):
         ret[targets.filename] = targets.render()
 
         config = ConfigTemplate(self, require, dep, find_module_mode)
-        # Check if the XXConfig.cmake exists to keep the first generated configuration
-        # to only include the build_modules from the first conan install. The rest of the
-        # file is common for the different configurations.
-        if not os.path.exists(config.filename):
-            ret[config.filename] = config.render()
+        # Only the latest configuration BUILD_MODULES and additional_variables will be used
+        # in multi-config they will be overwritten by the latest install
+        ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
         """
@@ -154,7 +149,7 @@ class CMakeDeps(object):
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 
-    def get_property(self, prop, dep, comp_name=None):
+    def get_property(self, prop, dep, comp_name=None, check_type=None):
         dep_name = dep.ref.name
         build_suffix = "&build" if str(
             dep_name) in self.build_context_activated and dep.context == "build" else ""
@@ -162,8 +157,8 @@ class CMakeDeps(object):
         try:
             return self._properties[f"{dep_comp}{build_suffix}"][prop]
         except KeyError:
-            return dep.cpp_info.get_property(prop) if not comp_name else dep.cpp_info.components[
-                comp_name].get_property(prop)
+            return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
+                else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
 
     def get_cmake_package_name(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""

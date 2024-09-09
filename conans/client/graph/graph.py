@@ -64,7 +64,6 @@ class Node(object):
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
-        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
         self.is_conf = False
@@ -97,12 +96,19 @@ class Node(object):
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 return True
             require.aggregate(existing.require)
+            # An override can be overriden by a downstream force/override
+            if existing.require.override and existing.require.ref != require.ref:
+                # If it is an override, but other value, it has been overriden too
+                existing.require.overriden_ref = existing.require.ref
+                existing.require.override_ref = require.ref
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
 
+        if self.conanfile.vendor:
+            return
         # Check if need to propagate downstream
         if not self.dependants:
             return
@@ -118,6 +124,7 @@ class Node(object):
         if down_require is None:
             return
 
+        down_require.defining_require = require.defining_require
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
@@ -128,6 +135,9 @@ class Node(object):
             if require.build and (self.context == CONTEXT_HOST or  # switch context
                                   require.ref.version != self.ref.version):  # or different version
                 pass
+            elif require.visible is False and require.ref.version != self.ref.version:
+                # Experimental, to support repackaging of openssl previous versions FIPS plugins
+                pass  # An invisible require doesn't conflict with itself
             else:
                 return None, self, self  # First is the require, as it is a loop => None
 
@@ -145,6 +155,8 @@ class Node(object):
         # Check if need to propagate downstream
         # Then propagate downstream
 
+        if self.conanfile.vendor:
+            return result
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:
@@ -161,6 +173,7 @@ class Node(object):
             # print("    No need to check downstream more")
             return result
 
+        down_require.defining_require = require.defining_require
         source_node = dependant.src
         return source_node.check_downstream_exists(down_require) or result
 
@@ -224,7 +237,7 @@ class Node(object):
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
-        result["invalid_build"] = self.cant_build
+        result["invalid_build"] = getattr(getattr(self.conanfile, "info", None), "cant_build", False)
         result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
@@ -275,9 +288,9 @@ class Overrides:
         overrides = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
-                if r.override:
+                if r.override and not r.overriden_ref:  # overrides are not real graph edges
                     continue
-                if r.overriden_ref and not r.force:
+                if r.overriden_ref:
                     overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)
@@ -327,6 +340,7 @@ class DepsGraph(object):
 
     @staticmethod
     def from_node(node):
+        # To compute a partial graph and lockfile to be added to metadata
         result = DepsGraph()
         opened = {node}
         while opened:

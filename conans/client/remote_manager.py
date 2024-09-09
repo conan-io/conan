@@ -16,20 +16,21 @@ from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir, human_size
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
 
 
 class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
-    def __init__(self, cache, auth_manager):
+    def __init__(self, cache, auth_manager, home_folder):
         self._cache = cache
         self._auth_manager = auth_manager
-        self._signer = PkgSignaturesPlugin(cache)
+        self._signer = PkgSignaturesPlugin(cache, home_folder)
+        self._home_folder = home_folder
 
     def _local_folder_remote(self, remote):
         if remote.remote_type == LOCAL_RECIPES_INDEX:
-            return RestApiClientLocalRecipesIndex(remote, self._cache)
+            return RestApiClientLocalRecipesIndex(remote, self._home_folder)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -48,8 +49,7 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        layout = self._cache.get_or_create_ref_layout(ref)
-        layout.export_remove()
+        layout = self._cache.create_ref_layout(ref)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
@@ -131,8 +131,7 @@ class RemoteManager:
 
         assert pref.revision is not None
 
-        pkg_layout = self._cache.get_or_create_pkg_layout(pref)
-        pkg_layout.package_remove()  # Remove first the destination folder
+        pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, output, metadata)
 

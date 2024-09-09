@@ -14,10 +14,7 @@ from os import path
 
 # The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
-excluded_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and
-                          d not in ("utils", "assets")]
+excluded_test_packages = ["test*"]
 
 
 def get_requires(filename):
@@ -48,6 +45,7 @@ def generate_long_description_file():
 
 project_requirements = get_requires("conans/requirements.txt")
 dev_requirements = get_requires("conans/requirements_dev.txt")
+runners_requirements = get_requires("conans/requirements_runner.txt")
 excluded_server_packages = ["conans.server*"]
 exclude = excluded_test_packages + excluded_server_packages
 
@@ -112,10 +110,11 @@ setup(
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[dev,test]
+    # $ pip install -e .[dev,test,runners]
     extras_require={
         'dev': dev_requirements,
         'test': dev_requirements,
+        'runners': runners_requirements
     },
 
     # If there are data files included in your packages that need to be

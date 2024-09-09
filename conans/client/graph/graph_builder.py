@@ -6,7 +6,7 @@ from collections import deque
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -32,6 +32,7 @@ class DepsGraphBuilder(object):
         self._update = update
         self._check_update = check_update
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
+        self._auto_lock = global_conf.get("core.graph:auto_lock", check_type=bool)
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -52,10 +53,13 @@ class DepsGraphBuilder(object):
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
-                result = self._expand_require(require, node, dep_graph, profile_host,
-                                              profile_build, graph_lock)
-                if result:
-                    new_node, graph_lock = result
+
+                new_node, graph_lock = self._expand_require(require, node, dep_graph, profile_host,
+                                                            profile_build, graph_lock)
+                if new_node and (not new_node.conanfile.vendor
+                                 or new_node.recipe == RECIPE_EDITABLE or
+                                 new_node.conanfile.conf.get("tools.graph:vendor",
+                                                             choices=("build",))):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
                     open_requires.extendleft((r, new_node)
@@ -84,9 +88,13 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                require.overriden_ref = require.ref  # Store that the require has been overriden
-                require.override_ref = prev_ref
-                require.ref = prev_ref
+                if prev_require.defining_require is not require:
+                    require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
+                    # require.override_ref can be !=None if lockfile-overrides defined
+                    require.override_ref = (require.override_ref or prev_require.override_ref
+                                            or prev_require.ref.copy())  # New one
+                    require.defining_require = prev_require.defining_require  # The overrider
+                require.ref = prev_ref  # New one, maybe resolved with revision
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous, self._resolve_prereleases)
@@ -104,6 +112,7 @@ class DepsGraphBuilder(object):
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
+            return None, None
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report
@@ -198,6 +207,8 @@ class DepsGraphBuilder(object):
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
+            if graph_lock:
+                graph_lock.resolve_overrides(require)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -234,25 +245,24 @@ class DepsGraphBuilder(object):
             graph.aliased[alias] = pointed_ref  # Caching the alias
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
+            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for compatibility and upgrade from Conan 1, but it is an undocumented and legacy feature. Please update to use standard versioning mechanisms", warn_tag="legacy")
 
-    def _resolve_recipe(self, ref, graph_lock, profile_conf):
+    def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         layout, recipe_status, remote = result
         conanfile_path = layout.conanfile()
         # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
-        exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
-        if os.path.isfile(exported_lock):
-            conf = profile_conf.get_conanfile_conf(ref, False)
-            if conf.get("tools.graph:auto_lock", check_type=bool):
+        if self._auto_lock and (graph_lock is None or graph_lock.export):
+            exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
+            if os.path.isfile(exported_lock):
                 exported_lockfile = Lockfile.load(exported_lock)
-                #print("EXPORTED LOCKFILE FOR ", ref, exported_lockfile.dumps())
                 exported_lockfile.partial = True
                 from conan.api.output import ConanOutput
-                ConanOutput().info(f"Using lockfile from {ref}")
+                ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
                 if graph_lock is not None:
-                    #print("DOWNSTREAM LOCKFILE FOR ", ref, graph_lock.dumps())
+                    # print("DOWNSTREAM LOCKFILE FOR ", ref, graph_lock.dumps())
                     graph_lock.merge(exported_lockfile)
-                    #print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
+                    # print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
                 else:
                     graph_lock = exported_lockfile
 
@@ -355,9 +365,7 @@ class DepsGraphBuilder(object):
                 # TODO: This range-resolve might resolve in a given remote or cache
                 # Make sure next _resolve_recipe use it
                 self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
-                conf = profile_build.conf if require.build or node.context == CONTEXT_BUILD \
-                    else profile_host.conf
-                resolved = self._resolve_recipe(require.ref, graph_lock, conf)
+                resolved = self._resolve_recipe(require.ref, graph_lock)
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
             layout, dep_conanfile, recipe_status, remote, graph_lock = resolved
@@ -402,6 +410,7 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _compute_down_options(node, require, new_ref):
         # The consumer "up_options" are the options that come from downstream to this node
+        visible = require.visible and not node.conanfile.vendor
         if require.options is not None:
             # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
@@ -411,11 +420,11 @@ class DepsGraphBuilder(object):
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is
             # now possible to do "self.build_requires(..., options={k:v})" to specify it
-            if require.visible:
+            if visible:
                 # Only visible requirements in the host context propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
-            if require.visible:
+            if visible:
                 down_options = node.conanfile.up_options
             elif not require.build:  # for requires in "host", like test_requires, pass myoptions
                 down_options = node.conanfile.private_up_options

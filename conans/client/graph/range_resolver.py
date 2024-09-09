@@ -2,7 +2,6 @@ from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
-from conans.search.search import search_recipes
 
 
 class RangeResolver:
@@ -17,7 +16,12 @@ class RangeResolver:
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
-        version_range = require.version_range
+        try:
+            version_range = require.version_range
+        except Exception as e:
+            base = base_conanref or "conanfile"
+            raise ConanException(f"\n    Recipe '{base}' requires '{require.ref}' "
+                                 f"version-range definition error:\n    {e}")
         if version_range is None:
             return
         assert isinstance(version_range, VersionRange)
@@ -52,7 +56,7 @@ class RangeResolver:
         local_found = self._cached_cache.get(pattern)
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
-            local_found = search_recipes(self._cache, pattern)
+            local_found = self._cache.search_recipes(pattern)
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]

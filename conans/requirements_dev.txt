@@ -6,3 +6,5 @@ WebTest>=2.0.18, <2.1.0
 bottle
 PyJWT
 pluginbase
+docker
+setuptools

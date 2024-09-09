@@ -15,6 +15,7 @@ class BuildMode:
         self.editable = False
         self.patterns = []
         self.build_missing_patterns = []
+        self._build_missing_excluded = []
         self._excluded_patterns = []
         if params is None:
             return
@@ -34,7 +35,10 @@ class BuildMode:
             else:
                 if param.startswith("missing:"):
                     clean_pattern = param[len("missing:"):]
-                    self.build_missing_patterns.append(clean_pattern)
+                    if clean_pattern and clean_pattern[0] in ["!", "~"]:
+                        self._build_missing_excluded.append(clean_pattern[1:])
+                    else:
+                        self.build_missing_patterns.append(clean_pattern)
                 else:
                     clean_pattern = param
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:
@@ -86,6 +90,12 @@ class BuildMode:
         return False
 
     def should_build_missing(self, conanfile):
+        if self._build_missing_excluded:
+            for pattern in self._build_missing_excluded:
+                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                    return False
+            return True  # If it has not been excluded by the negated patterns, it is included
+
         for pattern in self.build_missing_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=False):
+            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 return True

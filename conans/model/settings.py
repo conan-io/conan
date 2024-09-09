@@ -61,9 +61,9 @@ class SettingsItem:
         """ deepcopy, recursive
         This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
         values, but not all, just the "final" values without subsettings.
-        We cannot let usres manipulate to random strings
+        We cannot let users manipulate to random strings
         things that contain subsettings like ``compiler``, because that would leave the thing
-        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        in an undefined state, with some now inconsistent subsettings, that cannot be accessed
         anymore. So with this change the options are:
         - If you need more "binary-compatible" descriptions of a compiler, lets say like
         "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
@@ -205,7 +205,7 @@ class Settings(object):
 
     def get_safe(self, name, default=None):
         """
-        Get the setting value avoiding
+        Get the setting value avoiding throwing if it does not exist or has been removed
         :param name:
         :param default:
         :return:
@@ -232,7 +232,10 @@ class Settings(object):
             except KeyError:
                 pass
         else:
-            self._data.pop(name, None)
+            if name == "*":
+                self.clear()
+            else:
+                self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive
@@ -299,23 +302,24 @@ class Settings(object):
     def items(self):
         return self.values_list
 
-    def update_values(self, vals):
-        """ receives a list of tuples (compiler.version, value)
-        This is more an updated than a setter
+    def update_values(self, values, raise_undefined=True):
+        """
+        Receives a list of tuples (compiler.version, value)
+        This is more an updater than a setter.
         """
         self._frozen = False  # Could be restored at the end, but not really necessary
-        assert isinstance(vals, (list, tuple)), vals
-        for (name, value) in vals:
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
             list_settings = name.split(".")
             attr = self
             try:
                 for setting in list_settings[:-1]:
                     attr = getattr(attr, setting)
-            except ConanException:  # fails if receiving settings doesn't have it defined
-                pass
-            else:
                 value = str(value) if value is not None else None
                 setattr(attr, list_settings[-1], value)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                if raise_undefined:
+                    raise
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

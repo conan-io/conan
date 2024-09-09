@@ -10,9 +10,8 @@ def _metadata_files(folder, metadata):
         for f in files:
             abs_path = os.path.join(root, f)
             relpath = os.path.relpath(abs_path, folder)
-            if not relpath.startswith("conan"):
-                if metadata == [""] or (metadata and not any(fnmatch.fnmatch(relpath, m)
-                                                             for m in metadata)):
+            if metadata and not relpath.startswith("conan"):
+                if any(fnmatch.fnmatch(relpath, m) for m in metadata):
                     continue
             path = os.path.join("metadata", relpath).replace("\\", "/")
             result[path] = abs_path
