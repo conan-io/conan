@@ -103,16 +103,15 @@ def test_diamond():
 
     # First resolved wins, in this case dep/0.1
     c.run("install app --build=missing")
-    print(c.out)
     assert "pkga/0.1: Using lockfile from metadata" in c.out
-    assert "pkgb/0.1: Using lockfile from metadata" not in c.out
+    assert "pkgb/0.1: Using lockfile from metadata" in c.out
     assert "dep/0.1" in c.out
     assert "dep/0.2" not in c.out
 
     c.save({"app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgb/0.1", "pkga/0.1")})
-    # First resolved wins, in this case dep/0.1
+    # First resolved wins, in this case dep/0.2
     c.run("install app --build=missing")
-    assert "pkga/0.1: Using lockfile from metadata" not in c.out
+    assert "pkga/0.1: Using lockfile from metadata" in c.out
     assert "pkgb/0.1: Using lockfile from metadata" in c.out
     assert "dep/0.2" in c.out
     assert "dep/0.1" not in c.out
@@ -137,7 +136,6 @@ def test_tree():
     c.run("create depb --version=0.2")  # This should never be used
 
     c.run("install app --build=missing")
-    print(c.out)
     assert "pkga/0.1: Using lockfile from metadata" in c.out
     assert "pkgb/0.1: Using lockfile from metadata" in c.out
     assert "depa/0.1" in c.out

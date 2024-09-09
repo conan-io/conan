@@ -345,8 +345,7 @@ class DepsGraph(object):
         opened = {node}
         while opened:
             first = opened.pop()
-            if first is not node:
-                result.nodes.append(first)
+            result.nodes.append(first)
             for d in first.dependencies:
                 dst = d.dst
                 if dst not in result.nodes and dst not in opened:

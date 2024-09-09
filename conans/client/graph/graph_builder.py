@@ -46,23 +46,23 @@ class DepsGraphBuilder(object):
         self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
-        open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
+        open_requires = deque((r, root_node, graph_lock) for r in root_node.conanfile.requires.values())
         try:
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
-                (require, node) = open_requires.popleft()
+                (require, node, graph_lock) = open_requires.popleft()
                 if require.override:
                     continue
 
-                new_node, graph_lock = self._expand_require(require, node, dep_graph, profile_host,
-                                                            profile_build, graph_lock)
+                new_node, new_lock = self._expand_require(require, node, dep_graph, profile_host,
+                                                          profile_build, graph_lock)
                 if new_node and (not new_node.conanfile.vendor
                                  or new_node.recipe == RECIPE_EDITABLE or
                                  new_node.conanfile.conf.get("tools.graph:vendor",
                                                              choices=("build",))):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
-                    open_requires.extendleft((r, new_node)
+                    open_requires.extendleft((r, new_node, new_lock)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
@@ -259,10 +259,8 @@ class DepsGraphBuilder(object):
                 exported_lockfile.partial = True
                 from conan.api.output import ConanOutput
                 ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
-                if graph_lock is not None:
-                    # print("DOWNSTREAM LOCKFILE FOR ", ref, graph_lock.dumps())
+                if graph_lock is not None:  # For the export case only
                     graph_lock.merge(exported_lockfile)
-                    # print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
                 else:
                     graph_lock = exported_lockfile
                 graph_lock.export = False
