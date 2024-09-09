@@ -77,6 +77,7 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
+        self._exes = None  # application executables
 
         self._sysroot = None
         self._requires = None
@@ -111,7 +112,8 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._properties
+            "properties": self._properties,
+            "exes": self._exes,
         }
 
     @staticmethod
@@ -257,6 +259,16 @@ class _Component:
     @libs.setter
     def libs(self, value):
         self._libs = value
+
+    @property
+    def exes(self):
+        if self._exes is None:
+            self._exes = []
+        return self._exes
+
+    @exes.setter
+    def exes(self, value):
+        self._exes = value
 
     @property
     def defines(self):
