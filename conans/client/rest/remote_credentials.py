@@ -36,7 +36,7 @@ class RemoteCredentials:
             return user, password
 
         # First get the auth_plugin
-        auth_plugin = self._load_auth_plugin()
+        auth_plugin = _load_auth_plugin(self.auth_plugin_path)
         if auth_plugin is not None:
             try:
                 plugin_user, plugin_password = auth_plugin(remote, user=user, password=password)
@@ -82,8 +82,8 @@ class RemoteCredentials:
             ConanOutput().info("Got password '******' from environment")
         return user, passwd
 
-    def _load_auth_plugin(self):
-        if os.path.exists(self.auth_plugin_path):
-            mod, _ = load_python_file(self.auth_plugin_path)
-            if hasattr(mod, "auth_plugin"):
-                return mod.auth_plugin
+def _load_auth_plugin(auth_plugin_path):
+    if os.path.exists(auth_plugin_path):
+        mod, _ = load_python_file(auth_plugin_path)
+        if hasattr(mod, "auth_plugin"):
+            return mod.auth_plugin
