@@ -2100,7 +2100,8 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
                 cmake.build()
     """)
 
-    cmake = textwrap.dedent(f"""cmake_minimum_required(VERSION 3.25)
+    cmake = textwrap.dedent(f"""
+        cmake_minimum_required(VERSION 3.23)
         project(sdk VERSION ${{SDK_VERSION}}.0)
     """)
 
