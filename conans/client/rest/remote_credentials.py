@@ -48,7 +48,7 @@ class RemoteCredentials:
                 return plugin_user, plugin_password
 
         # Then prioritize the cache "credentials.json" file
-        creds = self._urls.get(remote)
+        creds = self._urls.get(remote.name)
         if creds is not None:
             try:
                 return creds["user"], creds["password"]
@@ -56,7 +56,7 @@ class RemoteCredentials:
                 raise ConanException(f"Authentication error, wrong credentials.json: {e}")
 
         # Then, check environment definition
-        env_user, env_passwd = self._get_env(remote, user)
+        env_user, env_passwd = self._get_env(remote.name, user)
         if env_passwd is not None:
             if env_user is None:
                 raise ConanException("Found password in env-var, but not defined user")
@@ -64,7 +64,7 @@ class RemoteCredentials:
 
         # If not found, then interactive prompt
         ui = UserInput(self._global_conf.get("core:non_interactive", check_type=bool))
-        input_user, input_password = ui.request_login(remote, user)
+        input_user, input_password = ui.request_login(remote.name, user)
         return input_user, input_password
 
     @staticmethod

@@ -196,14 +196,16 @@ def remote_login(conan_api, parser, subparser, *args):
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
     creds = RemoteCredentials(conan_api.cache_folder, conan_api.config.global_conf)
-    user, password = creds.auth(args.remote, args.username, args.password)
-    if args.username is not None and args.username != user:
-        raise ConanException(f"User '{args.username}' doesn't match user '{user}' in "
-                             f"credentials.json or environment variables")
 
     ret = OrderedDict()
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
+
+        user, password = creds.auth(r, args.username, args.password)
+        if args.username is not None and args.username != user:
+            raise ConanException(f"User '{args.username}' doesn't match user '{user}' in "
+                                 f"credentials.json or environment variables")
+
         conan_api.remotes.user_login(r, user, password)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
