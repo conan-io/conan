@@ -14,6 +14,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
+from test.conftest import tools_locations
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -2041,3 +2042,40 @@ def test_cxx_version_not_overriden_if_hardcoded():
     tc.run("create . -s=compiler.cppstd=17")
     assert "Conan toolchain: C++ Standard 17 with extensions OFF" in tc.out
     assert "Warning: Standard CMAKE_CXX_STANDARD value defined in conan_toolchain.cmake to 17 has been modified to 17" not in tc.out
+
+
+
+#@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
+#@pytest.mark.tool("android_ndk")
+#@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+def test_cmake_toolchain_crossbuild_set_cmake_compiler():
+    # To reproduce https://github.com/conan-io/conan/issues/16960
+    # the issue happens when you set CMAKE_CXX_COMPILER and CMAKE_C_COMPILER as cache variables
+    # and then cross-build
+    c = TestClient()
+    c.run("new cmake_lib -d name=hello -d version=0.1")
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
+    bin_path = ndk_path + (
+        "/toolchains/llvm/prebuilt/darwin-x86_64/bin" if platform.machine() == "x86_64" else
+        "/toolchains/llvm/prebuilt/darwin-arm64/bin"
+    )
+    android = textwrap.dedent(f"""
+       [settings]
+       os=Android
+       os.api_level=23
+       arch=x86_64
+       compiler=clang
+       compiler.version=12
+       compiler.libcxx=c++_shared
+       build_type=Release
+       [conf]
+       tools.android:ndk_path={ndk_path}
+       tools.build:compiler_executables = {{"c": "{bin_path}/x86_64-linux-android23-clang", "cpp": "{bin_path}/x86_64-linux-android23-clang++"}}
+       """)
+    c.save({"android": android})
+    # first run works ok
+    c.run('build . --profile:host=android')
+    # in second run CMake says that you have changed variables that require your cache to be deleted.
+    # and deletes the cache and fails
+    c.run('build . --profile:host=android')
+    assert "You have changed variables that require your cache to be deleted." not in c.out
