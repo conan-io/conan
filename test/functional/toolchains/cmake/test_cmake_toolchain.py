@@ -2045,20 +2045,21 @@ def test_cxx_version_not_overriden_if_hardcoded():
 
 
 
-#@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
-#@pytest.mark.tool("android_ndk")
-#@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_cmake_toolchain_crossbuild_set_cmake_compiler():
     # To reproduce https://github.com/conan-io/conan/issues/16960
     # the issue happens when you set CMAKE_CXX_COMPILER and CMAKE_C_COMPILER as cache variables
     # and then cross-build
     c = TestClient()
-    c.run("new cmake_lib -d name=hello -d version=0.1")
+
     ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
     bin_path = ndk_path + (
         "/toolchains/llvm/prebuilt/darwin-x86_64/bin" if platform.machine() == "x86_64" else
         "/toolchains/llvm/prebuilt/darwin-arm64/bin"
     )
+
     android = textwrap.dedent(f"""
        [settings]
        os=Android
@@ -2072,10 +2073,43 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
        tools.android:ndk_path={ndk_path}
        tools.build:compiler_executables = {{"c": "{bin_path}/x86_64-linux-android23-clang", "cpp": "{bin_path}/x86_64-linux-android23-clang++"}}
        """)
-    c.save({"android": android})
+
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+        from conan.tools.build import check_min_cppstd
+
+        class SDKConan(ConanFile):
+            name = "sdk"
+            version = "1.0.0"
+            generators = "CMakeDeps", "VirtualBuildEnv"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.cache_variables["SDK_VERSION"] = str(self.version)
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+    """)
+
+    cmake = textwrap.dedent(f"""cmake_minimum_required(VERSION 3.25)
+        project(sdk VERSION ${{SDK_VERSION}}.0)
+    """)
+
+    c.save({"android": android,
+            "conanfile.py": conanfile,
+            "CMakeLists.txt": cmake,})
     # first run works ok
     c.run('build . --profile:host=android')
     # in second run CMake says that you have changed variables that require your cache to be deleted.
     # and deletes the cache and fails
     c.run('build . --profile:host=android')
-    assert "You have changed variables that require your cache to be deleted." not in c.out
+    assert 'VERSION ".0" format invalid.' not in c.out
