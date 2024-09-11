@@ -320,9 +320,10 @@ class Conf:
             if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
-            if check_type is bool and not isinstance(v, bool):
-                # Perhaps, user has introduced a "false", "0" or even "off"
-                return str(v).lower() not in Conf.boolean_false_expressions
+            if check_type is bool and not (isinstance(v, bool) or str(v).lower() not in
+                                           Conf.boolean_false_expressions):
+                raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
+                                     f"(false, 0, off, etc) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif v is None:  # value was unset
