@@ -194,3 +194,21 @@ def test_skip_visible_build():
     c.run("create libc")
     c.run("install app --format=json")
     assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+
+
+def test_skip_tool_requires_context():
+    tc = TestClient()
+    tc.save({"cmake/conanfile.py": GenConanfile("cmake", "1.0").with_package_type("application"),
+             "lib/conanfile.py": GenConanfile("lib", "1.0").with_tool_requires("cmake/1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_tool_requires("cmake/1.0").with_requires("lib/1.0")})
+
+    tc.run("create cmake")
+    tc.run("export lib")
+
+    # Suprising behaviour if not passing the conf to the build context too, cmake CAN get skipped
+    tc.run("graph info app -c=t:tools.graph:skip_binaries=False")
+    assert "binary: Skip" in tc.out
+
+    # Fixing the behaviour by passing the conf to the build context
+    tc.run("graph info app -c:a=tools.graph:skip_binaries=False")
+    assert "binary: Skip" not in tc.out
