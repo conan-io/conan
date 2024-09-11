@@ -2044,9 +2044,9 @@ def test_cxx_version_not_overriden_if_hardcoded():
     assert "Warning: Standard CMAKE_CXX_STANDARD value defined in conan_toolchain.cmake to 17 has been modified to 17" not in tc.out
 
 
-#@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
-#@pytest.mark.tool("android_ndk")
-#@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_cmake_toolchain_crossbuild_set_cmake_compiler():
     # To reproduce https://github.com/conan-io/conan/issues/16960
     # the issue happens when you set CMAKE_CXX_COMPILER and CMAKE_C_COMPILER as cache variables
