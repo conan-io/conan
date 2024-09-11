@@ -206,7 +206,7 @@ def test_skip_tool_requires_context():
     tc.run("export lib")
 
     # Suprising behaviour if not passing the conf to the build context too, cmake CAN get skipped
-    tc.run("graph info app -c=t:tools.graph:skip_binaries=False")
+    tc.run("graph info app -c=tools.graph:skip_binaries=False")
     assert "binary: Skip" in tc.out
 
     # Fixing the behaviour by passing the conf to the build context
