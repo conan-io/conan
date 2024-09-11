@@ -272,6 +272,7 @@ class _ConfValue(object):
 class Conf:
     # Putting some default expressions to check that any value could be false
     boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
+    boolean_true_expressions = ("1", '"1"', "true", '"true"', "on")
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
@@ -320,10 +321,13 @@ class Conf:
             if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
-            if check_type is bool and not (isinstance(v, bool) or str(v).lower() not in
-                                           Conf.boolean_false_expressions):
+            if check_type is bool and not isinstance(v, bool):
+                if str(v).lower() in Conf.boolean_false_expressions:
+                    return False
+                if str(v).lower() in Conf.boolean_true_expressions:
+                    return True
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
-                                     f"(false, 0, off, etc) and value '{v}' does not match it.")
+                                     f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif v is None:  # value was unset
