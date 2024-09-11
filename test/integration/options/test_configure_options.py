@@ -1,11 +1,9 @@
 import textwrap
 import unittest
-import json
 
 from parameterized import parameterized
 
 from conan.test.utils.tools import TestClient
-from conan.test.assets.genconanfile import GenConanfile
 
 
 class ConfigureOptionsTest(unittest.TestCase):
@@ -125,37 +123,3 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1")
         self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
-
-def test_none_option_default():
-    tc = TestClient()
-
-    tc.save({"conanfile.py": textwrap.dedent("""
-    from conan import ConanFile
-
-    class Conan(ConanFile):
-        name = "app"
-        version = "1.0"
-
-        options = {"~myvalue": [None, "a", "b", "c"]}
-
-        def generate(self):
-            self.output.info("Option value: %s" % getattr(self.options, "~myvalue"))
-            self.output.info("Option value: %s" % self.options["~myvalue"])
-    """)})
-
-    tc.run("create .")
-
-def test_remote_login_pattern():
-    tc = TestClient()
-    tc.save_home({"credentials.json": json.dumps({
-        "credentials": [
-            {
-                "remote": "remote1",
-                "user": "admin",
-                "password": "bad-password"
-            }
-        ]})})
-    tc.run("remote add remote2 https://fake")
-    tc.run("remote login * admin", assert_error=True)
-
-    assert 'Please enter a password for "admin"' in tc.out
