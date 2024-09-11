@@ -160,6 +160,7 @@ class CMake:
         arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
+        self._conanfile.run(f"{self._cmake_program} --version", stdout=stdout, stderr=stderr)
         self._conanfile.run(command, env=env, stdout=stdout, stderr=stderr)
 
     def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None,

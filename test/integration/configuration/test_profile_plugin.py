@@ -1,6 +1,8 @@
+import json
 import os
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -26,6 +28,25 @@ class TestErrorsProfilePlugin:
         os.remove(os.path.join(c.cache.plugins_path, "profile.py"))
         c.run("profile show", assert_error=True)
         assert "ERROR: The 'profile.py' plugin file doesn't exist" in c.out
+
+    def test_remove_tools_host(self):
+        tc = TestClient(light=True)
+        profile_plugin = textwrap.dedent("""\
+            import subprocess
+            def profile_plugin(profile, **kwargs):
+                if kwargs.get("context") == "build":
+                    if subprocess.getstatusoutput("cmakee")[0] != 0:
+                        profile.tool_requires["!cmake/*"] = ["cmake/[*]"]
+                else:
+                    profile.tool_requires.clear()
+
+        """)
+        save(os.path.join(tc.cache.plugins_path, "profile.py"), profile_plugin)
+        tc.save({"profile": "[tool_requires]\nlib/1.0"})
+        tc.run("profile show -pr:a=profile -f=json", redirect_stdout="out.json")
+        profiles = json.loads(tc.load("out.json"))
+        assert len(profiles["host"]["tool_requires"]) == 0
+        assert profiles["build"]["tool_requires"] == {"!cmake/*": ["cmake/[*]"], "*": ["lib/1.0"]}
 
 
 def test_android_ndk_version():

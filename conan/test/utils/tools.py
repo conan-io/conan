@@ -32,6 +32,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
@@ -731,11 +732,11 @@ class TestClient:
 
     def get_default_host_profile(self):
         api = ConanAPI(cache_folder=self.cache_folder)
-        return api.profiles.get_profile([api.profiles.get_default_host()])
+        return api.profiles.get_profile([api.profiles.get_default_host()], context=CONTEXT_HOST)
 
     def get_default_build_profile(self):
         api = ConanAPI(cache_folder=self.cache_folder)
-        return api.profiles.get_profile([api.profiles.get_default_build()])
+        return api.profiles.get_profile([api.profiles.get_default_build()], context=CONTEXT_BUILD)
 
     def recipe_exists(self, ref):
         rrev = self.cache.get_recipe_revisions_references(ref)

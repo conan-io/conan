@@ -2,6 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 from conans.client.loader import load_python_file
 from conan.internal.api.profile.profile_loader import ProfileLoader
@@ -63,12 +64,12 @@ class ProfilesAPI:
         cwd = os.getcwd()
         profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
                                           args.conf_build, cwd, cache_settings,
-                                          profile_plugin, global_conf)
+                                          profile_plugin, global_conf, CONTEXT_BUILD)
         profile_host = self._get_profile(host_profiles, args.settings_host, args.options_host, args.conf_host,
-                                         cwd, cache_settings, profile_plugin, global_conf)
+                                         cwd, cache_settings, profile_plugin, global_conf, CONTEXT_HOST)
         return profile_host, profile_build
 
-    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None, context=None):
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
@@ -80,16 +81,21 @@ class ProfilesAPI:
         profile_plugin = self._load_profile_plugin()
 
         profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,
-                                    profile_plugin, global_conf)
+                                    profile_plugin, global_conf, context)
         return profile
 
     def _get_profile(self, profiles, settings, options, conf, cwd, cache_settings,
-                     profile_plugin, global_conf):
+                     profile_plugin, global_conf, context):
         loader = ProfileLoader(self._conan_api.cache_folder)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
         if profile_plugin is not None:
             try:
-                profile_plugin(profile)
+                import inspect
+                plugin_spec = inspect.getfullargspec(profile_plugin)
+                if plugin_spec.varkw is not None:
+                    profile_plugin(profile, context=context)
+                else:
+                    profile_plugin(profile)
             except Exception as e:
                 msg = f"Error while processing 'profile.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
