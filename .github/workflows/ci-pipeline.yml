@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository_owner }}/my-custom-image:latest
-      options: --user runner
+      options: --user conan
     strategy:
       matrix:
         python-version: [3.8]
@@ -64,14 +64,14 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: |
           pyenv global 3.8.6
-          /home/runner/.pyenv/shims/python -m pip install --upgrade pip
-          /home/runner/.pyenv/shims/python -m pip install -r conans/requirements.txt
-          /home/runner/.pyenv/shims/python -m pip install -r conans/requirements_dev.txt
-          /home/runner/.pyenv/shims/python -m pip install meson
+          python -m pip install --upgrade pip
+          python -m pip install -r conans/requirements.txt
+          python -m pip install -r conans/requirements_dev.txt
+          python -m pip install meson
 
       - name: Run tests
         run: |
-          /home/runner/.pyenv/shims/python -m pytest test/unittests --durations=20 -n 4
+          python -m pytest test/unittests --durations=20 -n 4
 
   # linux_functional:
   #   needs: cancel_previous
