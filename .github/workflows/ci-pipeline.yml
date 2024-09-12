@@ -1,0 +1,173 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build_container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Calculate Dockerfile checksum
+        id: dockerfile_hash
+        run: |
+          DOCKERFILE_HASH=$(find ./ci/Dockerfile -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          echo "Dockerfile hash: $DOCKERFILE_HASH"
+          echo "::set-output name=hash::$DOCKERFILE_HASH"
+
+      - name: Cache Docker image
+        id: cache_docker_image
+        uses: actions/cache@v3
+        with:
+          path: docker_image_cache
+          key: ${{ runner.os }}-docker-${{ steps.dockerfile_hash.outputs.hash }}
+
+      - name: Pull Docker image (if exists in cache or registry)
+        id: pull_image
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/my-custom-image:latest || echo "Image not found"
+
+      - name: Build Docker image (if not pulled or cache miss)
+        if: steps.pull_image.outcome == 'failure' || steps.cache_docker_image.outputs.cache-hit != 'true'
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/my-custom-image:latest -f ./ci/Dockerfile .
+          mkdir -p docker_image_cache && docker save ghcr.io/${{ github.repository_owner }}/my-custom-image:latest -o docker_image_cache/my-custom-image.tar
+
+      - name: Push Docker image to GHCR
+        if: steps.pull_image.outcome == 'failure' || steps.cache_docker_image.outputs.cache-hit != 'true'
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/my-custom-image:latest
+
+  linux_unittests:
+    needs: build_container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/my-custom-image:latest
+      options: --user runner
+    strategy:
+      matrix:
+        python-version: [3.8]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: |
+          pyenv global 3.8.6
+          /home/runner/.pyenv/shims/python -m pip install --upgrade pip
+          /home/runner/.pyenv/shims/python -m pip install -r conans/requirements.txt
+          /home/runner/.pyenv/shims/python -m pip install -r conans/requirements_dev.txt
+          /home/runner/.pyenv/shims/python -m pip install meson
+
+      - name: Run tests
+        run: |
+          /home/runner/.pyenv/shims/python -m pytest test/unittests --durations=20 -n 4
+
+  # linux_functional:
+  #   needs: cancel_previous
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: conanio/ci-functional
+  #   strategy:
+  #     matrix:
+  #       python-version: [3.8, 3.9, 3.12]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Python ${{ matrix.python-version }}
+  #       run: |
+  #         pip install --upgrade pip
+  #         pip install -r conans/requirements.txt
+  #         pip install -r conans/requirements_dev.txt
+  #         pip install meson
+
+  #     - name: Run tests
+  #       run: |
+  #         pytest test/functional --durations=20 -n 4
+
+  # windows_tests:
+  #   needs: cancel_previous
+  #   runs-on: windows-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [3.8, 3.9, 3.12]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Python ${{ matrix.python-version }}
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r conans/requirements.txt
+  #         pip install -r conans/requirements_dev.txt
+  #         pip install meson
+
+  #     - name: Run tests
+  #       run: |
+  #         pytest test/unittests --durations=20 -n 4
+
+  # macos_tests:
+  #   needs: cancel_previous
+  #   runs-on: macos-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [3.8, 3.9, 3.12]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Python ${{ matrix.python-version }}
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r conans/requirements.txt
+  #         pip install -r conans/requirements_dev.txt
+  #         pip install meson
+
+  #     - name: Run tests
+  #       run: |
+  #         pytest test/unittests --durations=20 -n 4
+
+  deploy_pypitest:
+    if: github.ref == 'refs/heads/develop2'
+    runs-on: ubuntu-latest
+    container:
+      image: conanio/ci-functional
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies for deployment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install twine
+          python .ci/bump_dev_version.py
+
+      - name: Build and deploy to TestPyPI
+#        env:
+#          TWINE_USERNAME: ${{ secrets.PYPITEST_CONAN_CREDENTIALS_USERNAME }}
+#          TWINE_PASSWORD: ${{ secrets.PYPITEST_CONAN_CREDENTIALS_PASSWORD }}
+        run: |
+          rm -rf dist/
+          python setup.py sdist
+#          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
