@@ -865,13 +865,9 @@ class CompilersBlock(Block):
     """)
 
     def context(self):
-        return {"compilers": self.get_compilers(self._conanfile)}
-
-    @staticmethod
-    def get_compilers(conanfile):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
-        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={},
-                                               check_type=dict)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
@@ -882,7 +878,7 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-        return compilers
+        return {"compilers": compilers}
 
 
 class GenericSystemBlock(Block):
