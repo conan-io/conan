@@ -31,10 +31,13 @@ USER conan
 WORKDIR /home/conan
 ENV PATH /home/conan/.pyenv/shims:/home/conan/.pyenv/bin:$PATH
 
-RUN curl https://pyenv.run | bash \
-      && pyenv init - \
-      && pyenv virtualenv-init - \
-      && pyenv update \
-      && pyenv install 3.8.6
+RUN curl https://pyenv.run | bash
+
+RUN echo 'export PATH="/home/conan/.pyenv/bin:$PATH"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv init --path)"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> /home/conan/.bashrc
+
+RUN /bin/bash -c "source /home/conan/.bashrc && pyenv install 3.8.6 && pyenv global 3.8.6"
 
 CMD ["/bin/bash"]

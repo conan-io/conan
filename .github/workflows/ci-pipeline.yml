@@ -56,14 +56,16 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.8.6]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
         run: |
-          pyenv global 3.8.6
+          eval "$(pyenv init --path)"
+          eval "$(pyenv init -)"
+          pyenv global ${{ matrix.python-version }}
           python -m pip install --upgrade pip
           python -m pip install -r conans/requirements.txt
           python -m pip install -r conans/requirements_dev.txt
