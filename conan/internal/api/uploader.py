@@ -256,7 +256,6 @@ class UploadExecutor:
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
-
         output.debug(f"Upload {pref} in {duration} time")
         self._cache_local(cache_files, remote, pref)
 

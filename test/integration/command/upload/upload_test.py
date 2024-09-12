@@ -239,7 +239,6 @@ class UploadTest(unittest.TestCase):
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
-        print(client.out)
         assert len(os.listdir(os.path.join(download_cache, "c"))) == 6
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
