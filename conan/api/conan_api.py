@@ -1,6 +1,7 @@
 import sys
 
 from conan.api.subapi.cache import CacheAPI
+from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
 from conans import __version__ as client_version
@@ -21,7 +22,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.paths import get_conan_user_home
+from conan.internal.paths import get_conan_user_home
 
 
 class ConanAPI(object):
@@ -39,6 +40,7 @@ class ConanAPI(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
 
+        self.command = CommandAPI(self)
         self.remotes = RemotesAPI(self)
         # Search recipes by wildcard and packages filtering by configuracion
         self.search = SearchAPI(self)

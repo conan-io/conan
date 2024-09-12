@@ -28,9 +28,9 @@ def _get_package_reference_name(dep):
     return dep.ref.name
 
 
-def _get_repository_name(dep):
+def _get_repository_name(dep, is_build_require=False):
     pkg_name = dep.cpp_info.get_property("bazel_repository_name") or _get_package_reference_name(dep)
-    return f"build-{pkg_name}" if dep.context == "build" else pkg_name
+    return f"build-{pkg_name}" if is_build_require else pkg_name
 
 
 def _get_target_name(dep):
@@ -94,11 +94,13 @@ def _get_libs(dep, cpp_info=None) -> list:
                 "static-library": False}.get(str(dep.package_type), default_value)
 
     def _save_lib_path(lib_, lib_path_):
-        _, ext_ = os.path.splitext(lib_path_)
+        """Add each lib with its full library path"""
+        formatted_path = lib_path_.replace("\\", "/")
+        _, ext_ = os.path.splitext(formatted_path)
         if is_shared and ext_ == ".lib":  # Windows interface library
-            interface_lib_paths[lib_] = lib_path_
+            interface_lib_paths[lib_] = formatted_path
         else:
-            lib_paths[lib_] = lib_path_
+            lib_paths[lib_] = formatted_path
 
     cpp_info = cpp_info or dep.cpp_info
     is_shared = _is_shared()
@@ -115,26 +117,25 @@ def _get_libs(dep, cpp_info=None) -> list:
             full_path = os.path.join(libdir, f)
             if not os.path.isfile(full_path):  # Make sure that directories are excluded
                 continue
-            # Users may not name their libraries in a conventional way. For example, directly
-            # use the basename of the lib file as lib name.
-            if f in libs:
-                lib = f
-                # libs.remove(f)
-                lib_path = full_path
-                _save_lib_path(lib, lib_path)
-                continue
             name, ext = os.path.splitext(f)
+            # Users may not name their libraries in a conventional way. For example, directly
+            # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+            # Issue related: https://github.com/conan-io/conan/issues/11331
+            if ext and f in libs:  # let's ensure that it has any extension
+                _save_lib_path(f, full_path)
+                continue
             if name not in libs and name.startswith("lib"):
-                name = name[3:]
-            if name in libs:
-                # FIXME: Should it read a conf variable to know unexpected extensions?
-                if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
-                   (not is_shared and ext in (".a", ".lib")):
-                    lib = name
-                    # libs.remove(name)
-                    lib_path = full_path
-                    _save_lib_path(lib, lib_path)
+                name = name[3:]  # libpkg -> pkg
+            # FIXME: Should it read a conf variable to know unexpected extensions?
+            if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
+               (not is_shared and ext in (".a", ".lib")):
+                if name in libs:
+                    _save_lib_path(name, full_path)
                     continue
+                else:  # last chance: some cases the name could be pkg.if instead of pkg
+                    name = name.split(".", maxsplit=1)[0]
+                    if name in libs:
+                        _save_lib_path(name, full_path)
 
     libraries = []
     for lib, lib_path in lib_paths.items():
@@ -204,16 +205,22 @@ def _relativize_path(path, pattern):
 
 class _BazelDependenciesBZLGenerator:
     """
-    Bazel needs to know all the dependencies for its current project. So, the only way
+    Bazel 6.0 needs to know all the dependencies for its current project. So, the only way
     to do that is to tell the WORKSPACE file how to load all the Conan ones. This is the goal
     of the function created by this class, the ``load_conan_dependencies`` one.
 
     More information:
         * https://bazel.build/reference/be/workspace#new_local_repository
+
+    Bazel >= 7.1 needs to know all the dependencies as well, but provided via the MODULE.bazel file.
+    Therefor we provide a static repository rule to load the dependencies. This rule is used by a
+    module extension, passing the package path and the BUILD file path to the repository rule.
     """
 
-    filename = "dependencies.bzl"
-    template = textwrap.dedent("""\
+    repository_filename = "dependencies.bzl"
+    modules_filename = "conan_deps_module_extension.bzl"
+    repository_rules_filename = "conan_deps_repo_rules.bzl"
+    repository_template = textwrap.dedent("""\
         # This Bazel module should be loaded by your WORKSPACE file.
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
@@ -228,19 +235,95 @@ class _BazelDependenciesBZLGenerator:
             )
         {% endfor %}
         """)
+    module_template = textwrap.dedent("""\
+        # This module provides a repo for each requires-dependency in your conanfile.
+        # It's generated by the BazelDeps, and should be used in your Module.bazel file.
+        load(":conan_deps_repo_rules.bzl", "conan_dependency_repo")
+
+        def _load_dependenies_impl(mctx):
+        {% for repository_name, pkg_folder, pkg_build_file_path in dependencies %}
+            conan_dependency_repo(
+                name = "{{repository_name}}",
+                package_path = "{{pkg_folder}}",
+                build_file_path = "{{pkg_build_file_path}}",
+            )
+        {% endfor %}
+
+            return mctx.extension_metadata(
+                # It will only warn you if any direct
+                # dependency is not imported by the 'use_repo' or even it is imported
+                # but not created. Notice that root_module_direct_dev_deps can not be None as we
+                # are giving 'all' value to root_module_direct_deps.
+                # Fix the 'use_repo' calls by running 'bazel mod tidy'
+                root_module_direct_deps = 'all',
+                root_module_direct_dev_deps = [],
+
+                # Prevent writing function content to lockfiles:
+                # - https://bazel.build/rules/lib/builtins/module_ctx#extension_metadata
+                # Important for remote build. Actually it's not reproducible, as local paths will
+                # be different on different machines. But we assume that conan works correctly here.
+                # IMPORTANT: Not compatible with bazel < 7.1
+                reproducible = True,
+            )
+
+        conan_extension = module_extension(
+            implementation = _load_dependenies_impl,
+            os_dependent = True,
+            arch_dependent = True,
+        )
+        """)
+    repository_rules_content = textwrap.dedent("""\
+        # This bazel repository rule is used to load Conan dependencies into the Bazel workspace.
+        # It's used by a generated module file that provides information about the conan packages.
+        # Each conan package is loaded into a bazel repository rule, with having the name of the
+        # package. The whole method is based on symlinks to not copy the whole package into the
+        # Bazel workspace, which is expensive.
+        def _conan_dependency_repo(rctx):
+            package_path = rctx.workspace_root.get_child(rctx.attr.package_path)
+
+            child_packages = package_path.readdir()
+            for child in child_packages:
+                rctx.symlink(child, child.basename)
+
+            rctx.symlink(rctx.attr.build_file_path, "BUILD.bazel")
+
+        conan_dependency_repo = repository_rule(
+            implementation = _conan_dependency_repo,
+            attrs = {
+                "package_path": attr.string(
+                    mandatory = True,
+                    doc = "The path to the Conan package in conan cache.",
+                ),
+                "build_file_path": attr.string(
+                    mandatory = True,
+                    doc = "The path to the BUILD file.",
+                ),
+            },
+        )
+        """)
 
     def __init__(self, conanfile, dependencies):
         self._conanfile = conanfile
         self._dependencies = dependencies
 
+    def _generate_6x_compatible(self):
+        repository_template = Template(self.repository_template, trim_blocks=True,
+                                       lstrip_blocks=True,
+                                       undefined=StrictUndefined)
+        content = repository_template.render(dependencies=self._dependencies)
+        # dependencies.bzl file (Bazel 6.x compatible)
+        save(self.repository_filename, content)
+
     def generate(self):
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
-        content = template.render(dependencies=self._dependencies)
-        # Saving the BUILD (empty) and dependencies.bzl files
-        save(self.filename, content)
-        save("BUILD.bazel", "# This is an empty BUILD file to be able to load the "
-                            "dependencies.bzl one.")
+        # Keeping available Bazel 6.x, but it'll likely be dropped soon
+        self._generate_6x_compatible()
+        # Bazel 7.x files
+        module_template = Template(self.module_template, trim_blocks=True, lstrip_blocks=True,
+                                   undefined=StrictUndefined)
+        content = module_template.render(dependencies=self._dependencies)
+        save(self.modules_filename, content)
+        save(self.repository_rules_filename, self.repository_rules_content)
+        save("BUILD.bazel", "# This is an empty BUILD file.")
 
 
 class _BazelBUILDGenerator:
@@ -335,8 +418,6 @@ class _BazelBUILDGenerator:
     )
     {% endif %}
     {% endmacro %}
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
     # Components precompiled libs
     {% for component in components %}
     {{ cc_import_macro(component["libs"]) }}
@@ -455,9 +536,11 @@ class _BazelBUILDGenerator:
 
 class _InfoGenerator:
 
-    def __init__(self, conanfile, dep):
+    def __init__(self, conanfile, dep, require):
         self._conanfile = conanfile
         self._dep = dep
+        self._req = require
+        self._is_build_require = require.build
         self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
 
     def _get_cpp_info_requires_names(self, cpp_info):
@@ -490,7 +573,7 @@ class _InfoGenerator:
                 try:
                     req_conanfile = self._transitive_reqs[pkg_ref_name]
                     # Requirements declared in another dependency BUILD file
-                    prefix = f"@{_get_repository_name(req_conanfile)}//:"
+                    prefix = f"@{_get_repository_name(req_conanfile, is_build_require=self._is_build_require)}//:"
                 except KeyError:
                     continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
@@ -526,7 +609,7 @@ class _InfoGenerator:
 
         :return: `_BazelTargetInfo` object with the package information
         """
-        repository_name = _get_repository_name(self._dep)
+        repository_name = _get_repository_name(self._dep, is_build_require=self._is_build_require)
         pkg_name = _get_target_name(self._dep)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
@@ -534,8 +617,10 @@ class _InfoGenerator:
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [f"@{_get_repository_name(req)}//:{_get_target_name(req)}"
-                        for req in self._transitive_reqs.values()]
+            requires = [
+                f"@{_get_repository_name(req, is_build_require=self._is_build_require)}//:{_get_target_name(req)}"
+                for req in self._transitive_reqs.values()
+            ]
         cpp_info = self._dep.cpp_info
         return _BazelTargetInfo(repository_name, pkg_name, requires, cpp_info)
 
@@ -552,21 +637,35 @@ class BazelDeps:
 
     def generate(self):
         """
-        Generates all the targets <DEP>/BUILD.bazel files and the dependencies.bzl one in the
-        build folder. It's important to highlight that the dependencies.bzl file should be loaded
-        by your WORKSPACE Bazel file:
+        Generates all the targets <DEP>/BUILD.bazel files, a dependencies.bzl (for bazel<7), a
+        conan_deps_repo_rules.bzl and a conan_deps_module_extension.bzl file (for bazel>=7.1) one in the
+        build folder.
+
+        In case of bazel < 7, it's important to highlight that the ``dependencies.bzl`` file should
+        be loaded by your WORKSPACE Bazel file:
 
         .. code-block:: python
 
             load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
             load_conan_dependencies()
+
+        In case of bazel >= 7.1, the ``conan_deps_module_extension.bzl`` file should be loaded by your
+        Module.bazel file, e.g. like this:
+
+        .. code-block:: python
+
+            load_conan_dependencies = use_extension(
+                "//build:conan_deps_module_extension.bzl",
+                "conan_extension"
+            )
+            use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
         """
         check_duplicated_generator(self, self._conanfile)
         requirements = _get_requirements(self._conanfile, self.build_context_activated)
         deps_info = []
         for require, dep in requirements:
             # Bazel info generator
-            info_generator = _InfoGenerator(self._conanfile, dep)
+            info_generator = _InfoGenerator(self._conanfile, dep, require)
             root_package_info = info_generator.root_package_info
             components_info = info_generator.components_info
             # Generating single BUILD files per dependency

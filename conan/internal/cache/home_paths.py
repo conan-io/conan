@@ -13,6 +13,10 @@ class HomePaths:
         self._home = home_folder
 
     @property
+    def local_recipes_index_path(self):
+        return os.path.join(self._home, ".local_recipes_index")
+
+    @property
     def global_conf_path(self):
         return os.path.join(self._home, "global.conf")
 
@@ -74,3 +78,7 @@ class HomePaths:
     @property
     def settings_path_user(self):
         return os.path.join(self._home, "settings_user.yml")
+
+    @property
+    def config_version_path(self):
+        return os.path.join(self._home, "config_version.json")

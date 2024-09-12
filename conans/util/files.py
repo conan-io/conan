@@ -5,6 +5,7 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tarfile
 import time
 
@@ -44,6 +45,8 @@ def remove_if_dirty(item):
             else:
                 rmdir(item)
         clean_dirty(item)
+        return True
+    return False
 
 
 @contextmanager
@@ -88,7 +91,6 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
-# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -102,6 +104,17 @@ def _generic_algorithm_sum(file_path, algorithm_name):
                 break
             m.update(data)
         return m.hexdigest()
+
+
+def check_with_algorithm_sum(algorithm_name, file_path, signature):
+    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_signature != signature.lower():
+        raise ConanException("%s signature failed for '%s' file. \n"
+                             " Provided signature: %s  \n"
+                             " Computed signature: %s" % (algorithm_name,
+                                                          os.path.basename(file_path),
+                                                          signature,
+                                                          real_signature))
 
 
 def save(path, content, encoding="utf-8"):
@@ -294,21 +307,24 @@ def exception_message_safe(exc):
         return repr(exc)
 
 
-def merge_directories(src, dst, excluded=None):
+def merge_directories(src, dst):
     from conan.tools.files import copy
-    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
+    copy(None, pattern="*", src=src, dst=dst)
 
 
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
     for root, dirs, files in os.walk(folder):
+        if root != folder and not dirs and not files:  # empty folder
+            rel_path = root[len(folder) + 1:].replace("\\", "/")
+            symlinked_folders[rel_path] = root
+            continue
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
                 rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
                 symlinked_folders[rel_path] = abs_path
-                continue
         for f in files:
             if f == ".DS_Store":
                 continue
@@ -371,3 +387,12 @@ def human_size(size_bytes):
         formatted_size = str(round(num, ndigits=the_precision))
 
     return "%s%s" % (formatted_size, the_suffix)
+
+
+# FIXME: completely remove disutils once we don't support <3.8 any more
+def copytree_compat(source_folder, dest_folder):
+    if sys.version_info >= (3, 8):
+        shutil.copytree(source_folder, dest_folder, dirs_exist_ok=True)
+    else:
+        from distutils.dir_util import copy_tree
+        copy_tree(source_folder, dest_folder)

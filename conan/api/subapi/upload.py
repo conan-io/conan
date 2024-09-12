@@ -1,11 +1,11 @@
 import os
+import time
+from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.upload_metadata import gather_metadata
-from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
-from conans.client.downloaders.download_cache import DownloadCache
+from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import ConanException, AuthenticationException, ForbiddenException
@@ -19,7 +19,7 @@ class UploadAPI:
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -42,31 +42,62 @@ class UploadAPI:
         string (""), it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
-        signer = PkgSignaturesPlugin(app.cache)
+        signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
 
     def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
+        executor = UploadExecutor(app, self.conan_api.config.global_conf)
         executor.upload(package_list, remote)
 
-    def get_backup_sources(self, package_list=None):
-        """Get list of backup source files currently present in the cache,
-        either all of them if no argument, else filter by those belonging to the references in the package_list"""
-        config = self.conan_api.config.global_conf
-        download_cache_path = config.get("core.sources:download_cache")
-        download_cache_path = download_cache_path or HomePaths(
-            self.conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
-        download_cache = DownloadCache(download_cache_path)
-        return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
+    def upload_full(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
+                    metadata=None, dry_run=False):
+        """ Does the whole process of uploading, including the possibility of parallelizing
+        per recipe based on `core.upload:parallel`:
+        - calls check_integrity
+        - checks which revision already exist in the server (not necessary to upload)
+        - prepare the artifacts to upload (compress .tgz)
+        - execute the actual upload
+        - upload potential sources backups
+        """
+
+        def _upload_pkglist(pkglist, subtitle=lambda _: None):
+            if check_integrity:
+                subtitle("Checking integrity of cache packages")
+                self.conan_api.cache.check_integrity(pkglist)
+            # Check if the recipes/packages are in the remote
+            subtitle("Checking server existing packages")
+            self.check_upstream(pkglist, remote, enabled_remotes, force)
+            subtitle("Preparing artifacts for upload")
+            self.prepare(pkglist, enabled_remotes, metadata)
+
+            if not dry_run:
+                subtitle("Uploading artifacts")
+                self.upload(pkglist, remote)
+                backup_files = self.conan_api.cache.get_backup_sources(pkglist)
+                self.upload_backup_sources(backup_files)
+
+        t = time.time()
+        ConanOutput().title(f"Uploading to remote {remote.name}")
+        parallel = self.conan_api.config.get("core.upload:parallel", default=1, check_type=int)
+        thread_pool = ThreadPool(parallel) if parallel > 1 else None
+        if not thread_pool or len(package_list.recipes) <= 1:
+            _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
+        else:
+            ConanOutput().subtitle(f"Uploading with {parallel} parallel threads")
+            thread_pool.map(_upload_pkglist, package_list.split())
+        if thread_pool:
+            thread_pool.close()
+            thread_pool.join()
+        elapsed = time.time() - t
+        ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
 
     def upload_backup_sources(self, files):
         config = self.conan_api.config.global_conf
@@ -81,25 +112,31 @@ class UploadAPI:
             output.info("No backup sources files to upload")
             return files
 
-        app = ConanApp(self.conan_api.cache_folder, config)
+        app = ConanApp(self.conan_api)
         # TODO: verify might need a config to force it to False
-        uploader = FileUploader(app.requester, verify=True, config=config)
+        uploader = FileUploader(app.requester, verify=True, config=config, source_credentials=True)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general
         for file in files:
             basename = os.path.basename(file)
             full_url = url + basename
+            is_summary = file.endswith(".json")
+            file_kind = "summary" if is_summary else "file"
             try:
-                # Always upload summary .json but only upload blob if it does not already exist
-                if file.endswith(".json") or not uploader.exists(full_url, auth=None):
-                    output.info(f"Uploading file '{basename}' to backup sources server")
+                if is_summary or not uploader.exists(full_url, auth=None):
+                    output.info(f"Uploading {file_kind} '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
                     output.info(f"File '{basename}' already in backup sources server, "
                                 "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(f"The source backup server '{url}' needs authentication"
-                                     f"/permissions, please provide 'source_credentials.json': {e}")
+                if is_summary:
+                    output.warning(f"Could not update summary '{basename}' in backup sources server. "
+                                   "Skipping updating file but continuing with upload. "
+                                   f"Missing permissions?: {e}")
+                else:
+                    raise ConanException(f"The source backup server '{url}' needs authentication"
+                                         f"/permissions, please provide 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
         return files

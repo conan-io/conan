@@ -10,11 +10,12 @@ from conans.util.files import sha1sum
 
 class FileUploader(object):
 
-    def __init__(self, requester, verify, config):
+    def __init__(self, requester, verify, config, source_credentials=None):
         self._output = ConanOutput()
         self._requester = requester
         self._config = config
         self._verify_ssl = verify
+        self._source_credentials = source_credentials
 
     @staticmethod
     def _handle_400_response(response, auth):
@@ -37,7 +38,7 @@ class FileUploader(object):
         if headers:
             dedup_headers.update(headers)
         response = self._requester.put(url, data="", verify=self._verify_ssl, headers=dedup_headers,
-                                       auth=auth)
+                                       auth=auth, source_credentials=self._source_credentials)
         if response.status_code == 500:
             raise InternalErrorException(response_to_str(response))
 
@@ -47,7 +48,8 @@ class FileUploader(object):
             return response
 
     def exists(self, url, auth):
-        response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
+        response = self._requester.head(url, verify=self._verify_ssl, auth=auth,
+                                        source_credentials=self._source_credentials)
         return bool(response.ok)
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
@@ -76,7 +78,7 @@ class FileUploader(object):
                     raise
                 else:
                     if self._output:
-                        self._output.error(exc)
+                        self._output.warning(exc, warn_tag="network")
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
@@ -84,7 +86,8 @@ class FileUploader(object):
         with open(abs_path, mode='rb') as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
-                                               headers=headers, auth=auth)
+                                               headers=headers, auth=auth,
+                                               source_credentials=self._source_credentials)
                 self._handle_400_response(response, auth)
                 response.raise_for_status()  # Raise HTTPError for bad http response status
                 return response

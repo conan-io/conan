@@ -27,6 +27,7 @@ class MSBuildToolchain(object):
               <PreprocessorDefinitions>{{ defines }}%(PreprocessorDefinitions)</PreprocessorDefinitions>
               <AdditionalOptions>{{ compiler_flags }} %(AdditionalOptions)</AdditionalOptions>
               <RuntimeLibrary>{{ runtime_library }}</RuntimeLibrary>
+              {% if cstd %}<LanguageStandard_C>{{ cstd }}</LanguageStandard_C>{% endif %}
               <LanguageStandard>{{ cppstd }}</LanguageStandard>{{ parallel }}{{ compile_options }}
             </ClCompile>
             <Link>
@@ -37,6 +38,9 @@ class MSBuildToolchain(object):
             </ResourceCompile>
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
+            {% if winsdk_version %}
+            <WindowsTargetPlatformVersion>{{ winsdk_version}}</WindowsTargetPlatformVersion>
+            {% endif %}
             <PlatformToolset>{{ toolset }}</PlatformToolset>
             {% for k, v in properties.items() %}
             <{{k}}>{{ v }}</{{k}}>
@@ -66,6 +70,7 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         #: cppstd value. By default, ``compiler.cppstd`` one.
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
+        self.cstd = conanfile.settings.get_safe("compiler.cstd")
         #: VS IDE Toolset, e.g., ``"v140"``. If ``compiler=msvc``, you can use ``compiler.toolset``
         #: setting, else, it'll be based on ``msvc`` version.
         self.toolset = msvs_toolset(conanfile)
@@ -136,6 +141,7 @@ class MSBuildToolchain(object):
         self.ldflags.extend(sharedlinkflags + exelinkflags)
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
+        cstd = f"stdc{self.cstd}" if self.cstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset or ""
         compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
@@ -149,16 +155,22 @@ class MSBuildToolchain(object):
                  "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
+
+        winsdk_version = self._conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        winsdk_version = winsdk_version or self._conanfile.settings.get_safe("os.version")
+
         return {
             'defines': defines,
             'compiler_flags': " ".join(self.cxxflags + self.cflags),
             'linker_flags': " ".join(self.ldflags),
             "cppstd": cppstd,
+            "cstd": cstd,
             "runtime_library": runtime_library,
             "toolset": toolset,
             "compile_options": compile_options,
             "parallel": parallel,
             "properties": self.properties,
+            "winsdk_version": winsdk_version
         }
 
     def _write_config_toolchain(self, config_filename):

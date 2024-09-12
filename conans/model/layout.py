@@ -45,6 +45,7 @@ class Folders(object):
 
         self._base_recipe_metadata = None
         self._base_pkg_metadata = None
+        self._immutable_package_folder = None
 
         self.source = ""
         self.build = ""
@@ -90,7 +91,7 @@ class Folders(object):
         if self._base_source is None:
             return None
         if not self.source:
-            return self._base_source
+            return os.path.normpath(self._base_source)
 
         return os.path.normpath(os.path.join(self._base_source, self.source))
 
@@ -106,7 +107,7 @@ class Folders(object):
         if self._base_build is None:
             return None
         if not self.build:
-            return self._base_build
+            return os.path.normpath(self._base_build)
         return os.path.normpath(os.path.join(self._base_build, self.build))
 
     @property
@@ -142,12 +143,20 @@ class Folders(object):
         """For the cache, the package folder is only the base"""
         return self._base_package
 
+    def set_finalize_folder(self, folder):
+        self._immutable_package_folder = self.package_folder
+        self.set_base_package(folder)
+
+    @property
+    def immutable_package_folder(self):
+        return self._immutable_package_folder or self.package_folder
+
     @property
     def generators_folder(self):
         if self._base_generators is None:
             return None
         if not self.generators:
-            return self._base_generators
+            return os.path.normpath(self._base_generators)
         return os.path.normpath(os.path.join(self._base_generators, self.generators))
 
     def set_base_generators(self, folder):

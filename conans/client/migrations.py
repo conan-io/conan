@@ -3,6 +3,7 @@ import sqlite3
 import textwrap
 
 from conan.api.output import ConanOutput
+from conan.api.subapi.config import ConfigAPI
 from conans.migrations import Migrator
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save
@@ -49,17 +50,39 @@ class ClientMigrator(Migrator):
         from conans.client.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
-        from conans.client.profile_loader import migrate_profile_plugin
+        from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
 
         if old_version and old_version < "2.0.14-":
             _migrate_pkg_db_lru(self.cache_folder, old_version)
 
+        # let the back migration files be stored
+        # if there was not a previous install (old_version==None)
+        if old_version is None or old_version < "2.4":
+            _migrate_default_compatibility(self.cache_folder)
+
+
+def _migrate_default_compatibility(cache_folder):
+    # just the back migration
+    undo = textwrap.dedent("""\
+        import os
+
+        def migrate(home_folder):
+            from conans.client.graph.compatibility import migrate_compatibility_files
+            migrate_compatibility_files(home_folder)
+        """)
+    path = os.path.join(cache_folder, "migrations", "2.4_1-migrate.py")
+    save(path, undo)
+
 
 def _migrate_pkg_db_lru(cache_folder, old_version):
+    config = ConfigAPI.load_config(cache_folder)
+    storage = config.get("core.cache:storage_path") or os.path.join(cache_folder, "p")
+    db_filename = os.path.join(storage, 'cache.sqlite3')
+    if not os.path.exists(db_filename):
+        return
     ConanOutput().warning(f"Upgrade cache from Conan version '{old_version}'")
     ConanOutput().warning("Running 2.0.14 Cache DB migration to add LRU column")
-    db_filename = os.path.join(cache_folder, 'p', 'cache.sqlite3')
     connection = sqlite3.connect(db_filename, isolation_level=None,
                                  timeout=1, check_same_thread=False)
     try:
@@ -69,14 +92,35 @@ def _migrate_pkg_db_lru(cache_folder, old_version):
                                f"INTEGER DEFAULT '{lru}' NOT NULL;")
     except Exception:
         ConanOutput().error(f"Could not complete the 2.0.14 DB migration."
-                            " Please manually remove your .conan2 cache and reinstall packages")
+                            " Please manually remove your .conan2 cache and reinstall packages",
+                            error_type="exception")
         raise
     else:  # generate the back-migration script
         undo_lru = textwrap.dedent("""\
-            import os
+            import os, platform
             import sqlite3
-            def migrate(cache_folder):
-                db = os.path.join(cache_folder, 'p', 'cache.sqlite3')
+            from jinja2 import Environment, FileSystemLoader
+
+            from conan import conan_version
+            from conan.internal.api import detect_api
+            from conans.model.conf import ConfDefinition
+
+            def migrate(home_folder):
+                config = os.path.join(home_folder, "global.conf")
+                global_conf = open(config, "r").read() if os.path.isfile(config) else ""
+                distro = None
+                if platform.system() in ["Linux", "FreeBSD"]:
+                    import distro
+                template = Environment(loader=FileSystemLoader(home_folder)).from_string(global_conf)
+                content = template.render({"platform": platform, "os": os, "distro": distro,
+                                           "conan_version": conan_version,
+                                           "conan_home_folder": home_folder,
+                                           "detect_api": detect_api})
+                conf = ConfDefinition()
+                conf.loads(content)
+                storage = conf.get("core.cache:storage_path") or os.path.join(home_folder, "p")
+
+                db = os.path.join(storage, 'cache.sqlite3')
                 connection = sqlite3.connect(db, isolation_level=None, timeout=1,
                                              check_same_thread=False)
                 rec_cols = 'reference, rrev, path, timestamp'

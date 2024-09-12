@@ -1,25 +1,53 @@
 import hashlib
 import os
+import re
 import shutil
 import uuid
+from fnmatch import translate
+from typing import List
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
-# TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
+from conans.errors import ConanReferenceAlreadyExistsInDB, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, renamedir
+from conans.util.files import rmdir, renamedir, mkdir
 
 
-class DataCache:
+class PkgCache:
+    """ Class to represent the recipes and packages storage in disk
+    """
 
-    def __init__(self, base_folder, db_filename):
-        self._base_folder = os.path.abspath(base_folder)
-        self._db = CacheDatabase(filename=db_filename)
+    def __init__(self, cache_folder, global_conf):
+        # paths
+        self._store_folder = global_conf.get("core.cache:storage_path") or \
+                             os.path.join(cache_folder, "p")
+
+        try:
+            mkdir(self._store_folder)
+            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            self._base_folder = os.path.abspath(self._store_folder)
+            self._db = CacheDatabase(filename=db_filename)
+        except Exception as e:
+            raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
+
+    @property
+    def store(self):
+        return self._base_folder
+
+    @property
+    def temp_folder(self):
+        """ temporary folder where Conan puts exports and packages before the final revision
+        is computed"""
+        # TODO: Improve the path definitions, this is very hardcoded
+        return os.path.join(self._base_folder, "t")
+
+    @property
+    def builds_folder(self):
+        return os.path.join(self._base_folder, "b")
 
     def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
@@ -33,10 +61,6 @@ class DataCache:
         path = os.path.realpath(os.path.join(self._base_folder, relative_path))
         return path
 
-    @property
-    def base_folder(self):
-        return self._base_folder
-
     @staticmethod
     def _short_hash_path(h):
         """:param h: Unicode text to reduce"""
@@ -49,34 +73,24 @@ class DataCache:
         return sha_bytes[0:13]
 
     @staticmethod
-    def _get_tmp_path(ref: RecipeReference):
-        # The reference will not have revision, but it will be always constant
-        h = ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
-        return os.path.join("t", h)
-
-    @staticmethod
-    def _get_tmp_path_pref(pref):
-        # The reference will not have revision, but it will be always constant
-        assert pref.revision is None
-        assert pref.timestamp is None
-        random_id = str(uuid.uuid4())
-        h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime() + random_id)
-        return os.path.join("b", h)
-
-    @staticmethod
-    def _get_path(ref: RecipeReference):
-        return ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
+    def _get_path(ref):
+        return ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
 
     @staticmethod
     def _get_path_pref(pref):
-        return pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime())
+        return pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime())
 
     def create_export_recipe_layout(self, ref: RecipeReference):
-        # This is a temporary layout while exporting a new recipe, because the revision is not
-        # computed yet, until it is. The entry is not added to DB, just a temp folder is created
+        """  This is a temporary layout while exporting a new recipe, because the revision is not
+        computed until later. The entry is not added to DB, just a temp folder is created
+
+        This temporary export folder will be moved to permanent when revision is computed by the
+        assign_rrev() method
+        """
         assert ref.revision is None, "Recipe revision should be None"
         assert ref.timestamp is None
-        reference_path = self._get_tmp_path(ref)
+        h = ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
+        reference_path = os.path.join("t", h)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
@@ -86,11 +100,14 @@ class DataCache:
         assert pref.package_id, "Package id must be known to get or create the package layout"
         assert pref.revision is None, "Package revision should be None"
         assert pref.timestamp is None
-        package_path = self._get_tmp_path_pref(pref)
+
+        random_id = str(uuid.uuid4())
+        h = pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime() + random_id)
+        package_path = os.path.join("b", h)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
-    def get_recipe_layout(self, ref: RecipeReference):
+    def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
         """
         if ref.revision is None:  # Latest one
@@ -101,10 +118,17 @@ class DataCache:
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
 
+    def get_latest_recipe_reference(self, ref: RecipeReference):
+        assert ref.revision is None
+        ref_data = self._db.get_latest_recipe(ref)
+        return ref_data.get("ref")
+
     def get_recipe_revisions_references(self, ref: RecipeReference):
+        # For listing multiple revisions only
+        assert ref.revision is None
         return self._db.get_recipe_revisions_references(ref)
 
-    def get_package_layout(self, pref: PkgReference):
+    def pkg_layout(self, pref: PkgReference):
         """ the revision must exists, the folder must exist
         """
         assert pref.ref.revision, "Recipe revision must be known to get the package layout"
@@ -115,47 +139,60 @@ class DataCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
-    def get_or_create_ref_layout(self, ref: RecipeReference):
-        """ called by RemoteManager.get_recipe()
+    def create_ref_layout(self, ref: RecipeReference):
+        """ called exclusively by:
+        - RemoteManager.get_recipe()
+        - cache restore
         """
-        try:
-            return self.get_recipe_layout(ref)
-        except ConanReferenceDoesNotExistInDB:
-            assert ref.revision, "Recipe revision must be known to create the package layout"
-            reference_path = self._get_path(ref)
-            self._db.create_recipe(reference_path, ref)
-            self._create_path(reference_path, remove_contents=False)
-            return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
+        assert ref.revision, "Recipe revision must be known to create the package layout"
+        reference_path = self._get_path(ref)
+        self._db.create_recipe(reference_path, ref)
+        self._create_path(reference_path, remove_contents=False)
+        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
-    def get_or_create_pkg_layout(self, pref: PkgReference):
-        """ called by RemoteManager.get_package() and  BinaryInstaller
+    def create_pkg_layout(self, pref: PkgReference):
+        """ called by:
+         - RemoteManager.get_package()
+         - cacje restpre
         """
-        try:
-            return self.get_package_layout(pref)
-        except ConanReferenceDoesNotExistInDB:
-            assert pref.ref.revision, "Recipe revision must be known to create the package layout"
-            assert pref.package_id, "Package id must be known to create the package layout"
-            assert pref.revision, "Package revision should be known to create the package layout"
-            package_path = self._get_path_pref(pref)
-            self._db.create_package(package_path, pref, None)
-            self._create_path(package_path, remove_contents=False)
-            return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
+        assert pref.package_id, "Package id must be known to create the package layout"
+        assert pref.revision, "Package revision should be known to create the package layout"
+        package_path = self._get_path_pref(pref)
+        self._db.create_package(package_path, pref, None)
+        self._create_path(package_path, remove_contents=False)
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: RecipeReference):
+        """ when the recipe already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
         assert ref.revision
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def list_references(self):
-        return self._db.list_references()
+    def search_recipes(self, pattern=None, ignorecase=True):
+        # Conan references in main storage
+        if pattern:
+            if isinstance(pattern, RecipeReference):
+                pattern = repr(pattern)
+            pattern = translate(pattern)
+            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+
+        refs = self._db.list_references()
+        if pattern:
+            refs = [r for r in refs if r.partial_match(pattern)]
+        return refs
 
     def exists_prev(self, pref):
+        # Used just by download to skip downloads if prev already exists in cache
         return self._db.exists_prev(pref)
 
     def get_latest_package_reference(self, pref):
         return self._db.get_latest_package_reference(pref)
 
-    def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
+    def get_package_references(self, ref: RecipeReference,
+                               only_latest_prev=True) -> List[PkgReference]:
+        """Get the latest package references"""
         return self._db.get_package_references(ref, only_latest_prev)
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
@@ -164,12 +201,12 @@ class DataCache:
     def get_matching_build_id(self, ref, build_id):
         return self._db.get_matching_build_id(ref, build_id)
 
-    def remove_recipe(self, layout: RecipeLayout):
+    def remove_recipe_layout(self, layout: RecipeLayout):
         layout.remove()
         # FIXME: This is clearing package binaries from DB, but not from disk/layout
         self._db.remove_recipe(layout.reference)
 
-    def remove_package(self, layout: PackageLayout):
+    def remove_package_layout(self, layout: PackageLayout):
         layout.remove()
         self._db.remove_package(layout.reference)
 
@@ -189,7 +226,7 @@ class DataCache:
         except ConanReferenceAlreadyExistsInDB:
             # TODO: Optimize this into 1 single UPSERT operation
             # There was a previous package folder for this same package reference (and prev)
-            pkg_layout = self.get_package_layout(pref)
+            pkg_layout = self.pkg_layout(pref)
             # We remove the old one and move the new one to the path of the previous one
             # this can be necessary in case of new metadata or build-folder because of "build_id()"
             pkg_layout.remove()

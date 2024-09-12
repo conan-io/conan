@@ -14,6 +14,7 @@ class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "application"
+    win_bash = True
 
     # Optional metadata
     license = "<Put the package license here>"

@@ -11,8 +11,7 @@ from shutil import which
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.util.files import rmdir as _internal_rmdir, human_size
-from conans.util.sha import check_with_algorithm_sum
+from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -66,7 +65,7 @@ def rmdir(conanfile, path):
     _internal_rmdir(path)
 
 
-def rm(conanfile, pattern, folder, recursive=False):
+def rm(conanfile, pattern, folder, recursive=False, excludes=None):
     """
     Utility functions to remove files matching a ``pattern`` in a ``folder``.
 
@@ -74,10 +73,17 @@ def rm(conanfile, pattern, folder, recursive=False):
     :param pattern: Pattern that the files to be removed have to match (fnmatch).
     :param folder: Folder to search/remove the files.
     :param recursive: If ``recursive`` is specified it will search in the subfolders.
+    :param excludes: (Optional, defaulted to None) A tuple/list of fnmatch patterns or even a
+                     single one to be excluded from the remove pattern.
     """
+    if excludes and not isinstance(excludes, (tuple, list)):
+        excludes = (excludes,)
+    elif not excludes:
+        excludes = []
+
     for root, _, filenames in os.walk(folder):
         for filename in filenames:
-            if fnmatch(filename, pattern):
+            if fnmatch(filename, pattern) and not any(fnmatch(filename, it) for it in excludes):
                 fullname = os.path.join(root, filename)
                 os.unlink(fullname)
         if not recursive:
@@ -128,14 +134,14 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
 
 def ftp_download(conanfile, host, filename, login='', password='', secure=False):
     """
-    Ftp download of a file. Retrieves a file from an FTP server. This doesn’t support SSL, but you
-    might implement it yourself using the standard Python FTP library.
+    Ftp download of a file. Retrieves a file from an FTP server.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param host: IP or host of the FTP server
-    :param filename: Path to the file to be downloaded
-    :param login: Authentication login
-    :param password: Authentication password
+    :param host: IP or host of the FTP server.
+    :param filename: Path to the file to be downloaded.
+    :param login: Authentication login.
+    :param password: Authentication password.
+    :param secure: Set to True to use FTP over TLS/SSL (FTPS). Defaults to False for regular FTP.
     """
     # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
     # this has been requested by some users, but the signature is a bit divergent
@@ -274,6 +280,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     """
 
     output = conanfile.output
+    output.info(f"Unzipping {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
@@ -339,7 +346,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
@@ -352,7 +359,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                         perm = file_.external_attr >> 16 & 0xFFF
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         output.writeln("")
 
 

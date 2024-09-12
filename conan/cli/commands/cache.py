@@ -1,12 +1,18 @@
+import json
+
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json
 from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+
+
+def json_export(data):
+    cli_out_write(json.dumps({"cache_path": data}))
 
 
 @conan_command(group="Consumer")
@@ -17,7 +23,7 @@ def cache(conan_api: ConanAPI, parser, *args):
     pass
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand(formatters={"text": cli_out_write, "json": json_export})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
     Show the path to the Conan cache for a given reference.
@@ -73,6 +79,8 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                            help="Clean download and metadata folders")
     subparser.add_argument("-t", "--temp", action='store_true', default=False,
                            help="Clean temporary folders")
+    subparser.add_argument("-bs", "--backup-sources", action='store_true', default=False,
+                           help="Clean backup sources")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Remove only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -80,9 +88,10 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
 
     ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    if args.build or args.source or args.download or args.temp:
+    if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
-                              download=args.download, temp=args.temp)
+                              download=args.download, temp=args.temp,
+                              backup_sources=args.backup_sources)
     else:
         conan_api.cache.clean(package_list)
 
@@ -101,6 +110,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
+    ConanOutput().success("Integrity check: ok")
 
 
 @conan_subcommand(formatters={"text": print_list_text,
@@ -152,5 +162,5 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
-    files = conan_api.upload.get_backup_sources()
+    files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

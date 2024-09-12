@@ -1,4 +1,3 @@
-from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
@@ -16,7 +15,7 @@ class BuildMode:
         self.editable = False
         self.patterns = []
         self.build_missing_patterns = []
-        self._unused_patterns = []
+        self._build_missing_excluded = []
         self._excluded_patterns = []
         if params is None:
             return
@@ -36,7 +35,10 @@ class BuildMode:
             else:
                 if param.startswith("missing:"):
                     clean_pattern = param[len("missing:"):]
-                    self.build_missing_patterns.append(clean_pattern)
+                    if clean_pattern and clean_pattern[0] in ["!", "~"]:
+                        self._build_missing_excluded.append(clean_pattern[1:])
+                    else:
+                        self.build_missing_patterns.append(clean_pattern)
                 else:
                     clean_pattern = param
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:
@@ -46,17 +48,12 @@ class BuildMode:
 
             if self.never and (self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
-        self._unused_patterns = list(self.patterns) + self._excluded_patterns
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
         # TODO: ref can be obtained from conan_file
 
         for pattern in self._excluded_patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
-                try:
-                    self._unused_patterns.remove(pattern)
-                except ValueError:
-                    pass
                 conan_file.output.info("Excluded build from source")
                 return False
 
@@ -76,10 +73,6 @@ class BuildMode:
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
-                try:
-                    self._unused_patterns.remove(pattern)
-                except ValueError:
-                    pass
                 return True
         return False
 
@@ -97,10 +90,12 @@ class BuildMode:
         return False
 
     def should_build_missing(self, conanfile):
-        for pattern in self.build_missing_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=False):
-                return True
+        if self._build_missing_excluded:
+            for pattern in self._build_missing_excluded:
+                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                    return False
+            return True  # If it has not been excluded by the negated patterns, it is included
 
-    def report_matches(self):
-        for pattern in self._unused_patterns:
-            ConanOutput().error("No package matching '%s' pattern found." % pattern)
+        for pattern in self.build_missing_patterns:
+            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):
+                return True

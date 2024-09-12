@@ -5,8 +5,7 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
-
+from conan.internal.api.install.generators import relativize_path
 
 """
 
@@ -58,6 +57,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
         root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        # it is the relative path of the caller, not the dependency
+        root_folder = relativize_path(root_folder, self.cmakedeps._conanfile,
+                                      "${CMAKE_CURRENT_LIST_DIR}")
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
@@ -84,6 +86,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def template(self):
         # This will be at: XXX-release-data.cmake
         ret = textwrap.dedent("""\
+              {%- macro comp_var(pkg_name, comp_name, var, config_suffix) -%}
+                 {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
+              {%- endmacro -%}
+              {%- macro pkg_var(pkg_name, var, config_suffix) -%}
+                 {{'${'+pkg_name+'_'+var+config_suffix+'}'}}
+              {%- endmacro -%}
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
@@ -93,12 +101,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               {% else %}
               set({{ pkg_name }}_COMPONENT_NAMES "")
               {% endif %}
-              {% if dependency_filenames %}
-              list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
-              list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
-              {% else %}
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES "")
-              {% endif %}
+              if(DEFINED {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+                list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
+                list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+              else()
+                set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
+              endif()
               {% for dep_name, mode in dependency_find_modes.items() %}
               set({{ dep_name }}_FIND_MODE "{{ mode }}")
               {% endfor %}
@@ -132,12 +140,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               # COMPOUND VARIABLES
               set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
-                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
+                  "$<$<COMPILE_LANGUAGE:CXX>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
+                  "$<$<COMPILE_LANGUAGE:C>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
               set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>")
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}>")
 
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
@@ -167,13 +175,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               # COMPOUND VARIABLES
               set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp_var(pkg_name, comp_variable_name, 'EXE_LINK_FLAGS', config_suffix) }}>
               )
               set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
-                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
+                  "$<$<COMPILE_LANGUAGE:CXX>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
+                  "$<$<COMPILE_LANGUAGE:C>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
 
               {%- endfor %}
           """)
@@ -196,7 +204,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        transitive_requires = self.cmakedeps.get_transitive_requires(self.conanfile)
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
@@ -230,7 +238,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.require.build:
             return []
 
-        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        transitive_reqs = self.cmakedeps.get_transitive_requires(self.conanfile)
         # Previously it was filtering here components, but not clear why the file dependency
         # should be skipped if components are not being required, why would it declare a
         # dependency to it?
@@ -242,7 +250,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = {}
         if self.require.build:
             return ret
-        deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        deps = self.cmakedeps.get_transitive_requires(self.conanfile)
         for dep in deps.values():
             dep_file_name = self.cmakedeps.get_cmake_package_name(dep, self.generating_module)
             find_mode = self.cmakedeps.get_find_mode(dep)
@@ -348,8 +356,8 @@ class _TargetDataContext(object):
         if require and not require.run:
             self.bin_paths = ""
 
-        build_modules = cmakedeps.get_property("cmake_build_modules", conanfile) or []
+        build_modules = cmakedeps.get_property("cmake_build_modules", conanfile, check_type=list) or []
         self.build_modules_paths = join_paths(build_modules)
         # SONAME flag only makes sense for SHARED libraries
-        nosoname = cmakedeps.get_property("nosoname", conanfile, comp_name)
+        nosoname = cmakedeps.get_property("nosoname", conanfile, comp_name, check_type=bool)
         self.no_soname = str((nosoname if self.library_type == "SHARED" else False) or False).upper()

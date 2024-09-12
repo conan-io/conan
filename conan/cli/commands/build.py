@@ -2,13 +2,14 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli import make_abs_path
 from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 
 
-@conan_command(group='Creator')
+@conan_command(group='Creator', formatters={"json": format_graph_json})
 def build(conan_api, parser, *args):
     """
     Install dependencies and call the build() method.
@@ -22,7 +23,8 @@ def build(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-d", "--deployer", action="append",
-                        help='Deploy using the provided deployer to the output folder')
+                        help="Deploy using the provided deployer to the output folder. "
+                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--build-require", action='store_true', default=False,
@@ -71,4 +73,4 @@ def build(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, source_folder)
-    return deps_graph
+    return {"graph": deps_graph}

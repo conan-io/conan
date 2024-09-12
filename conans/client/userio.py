@@ -129,5 +129,5 @@ class UserInput(object):
             elif s.lower() in ['no', 'n']:
                 ret = False
             else:
-                self._out.error("%s is not a valid answer" % s)
+                self._out.error(f"{s} is not a valid answer")
         return ret

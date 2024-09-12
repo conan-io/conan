@@ -13,7 +13,7 @@ class CacheDatabase:
 
     def __init__(self, filename):
         version = sqlite3.sqlite_version
-        if Version(version) < "3.7.11":  # Not an exception, in case some false positives
+        if Version(version) < "3.7.11":
             ConanOutput().error(f"Your sqlite3 '{version} < 3.7.11' version is not supported")
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)

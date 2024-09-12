@@ -1,6 +1,7 @@
 import json
 import os
 
+from conan.api.model import MultiPackagesList, PackagesList
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_reference_args
@@ -11,11 +12,15 @@ def common_args_export(parser):
     add_reference_args(parser)
 
 
-def json_export(ref):
-    cli_out_write(json.dumps({"reference": ref.repr_notime()}))
+def json_export(data):
+    cli_out_write(json.dumps({"reference": data["reference"].repr_notime()}))
 
 
-@conan_command(group="Creator", formatters={"json": json_export})
+def pkglist_export(data):
+    cli_out_write(json.dumps(data["pkglist"], indent=4))
+
+
+@conan_command(group="Creator", formatters={"json": json_export, "pkglist": pkglist_export})
 def export(conan_api, parser, *args):
     """
     Export a recipe to the Conan package cache.
@@ -51,4 +56,14 @@ def export(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
                                                          args.build_require)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return ref
+
+    exported_list = PackagesList()
+    exported_list.add_refs([ref])
+
+    pkglist = MultiPackagesList()
+    pkglist.add("Local Cache", exported_list)
+
+    return {
+        "pkglist": pkglist.serialize(),
+        "reference": ref
+    }

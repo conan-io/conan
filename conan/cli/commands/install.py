@@ -30,7 +30,8 @@ def install(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-d", "--deployer", action="append",
-                        help='Deploy using the provided deployer to the output folder')
+                        help="Deploy using the provided deployer to the output folder. "
+                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--deployer-package", action="append",
@@ -40,7 +41,6 @@ def install(conan_api, parser, *args):
                         help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-
     # basic paths
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None

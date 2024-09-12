@@ -4,62 +4,54 @@ from shutil import which
 
 from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException
-from conans.util.env import get_env
 
 
 def vs_installation_path(version):
+    return _vs_installation_path(version)[0]
+
+
+def vs_detect_update(version):
+    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
+    full_version = _vs_installation_path(version)[1]
+    components = full_version.split(".")
+    if len(components) > 1:
+        return components[1]
+
+
+def _vs_installation_path(version):
     # TODO: Preference hardcoded, [conf] must be defined
     preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
     # Try with vswhere()
     try:
         legacy_products = vswhere(legacy=True)
-        all_products = vswhere(products=["*"])
-        products = legacy_products + all_products
+        products = vswhere(products=["*"])
+        products.extend(p for p in legacy_products if p not in products)
     except ConanException:
         products = None
 
-    vs_paths = []
-
-    if products:
-        # remove repeated products
-        seen_products = []
-        for product in products:
-            if product not in seen_products:
-                seen_products.append(product)
-
-        # Append products with "productId" by order of preference
+    if products:  # First matching
         for product_type in preference:
-            for product in seen_products:
-                product = dict(product)
-                if (product["installationVersion"].startswith(("%d." % int(version)))
-                        and "productId" in product):
-                    if product_type in product["productId"]:
-                        vs_paths.append(product["installationPath"])
+            for product in products:
+                if product["installationVersion"].startswith(f"{version}."):
+                    if product_type in product.get("productId", ""):
+                        return product["installationPath"], product["installationVersion"]
 
         # Append products without "productId" (Legacy installations)
-        for product in seen_products:
-            product = dict(product)
-            if (product["installationVersion"].startswith(("%d." % int(version)))
+        for product in products:
+            if (product["installationVersion"].startswith(f"{version}.")
                     and "productId" not in product):
-                vs_paths.append(product["installationPath"])
+                return product["installationPath"], product["installationVersion"]
 
     # If vswhere does not find anything or not available, try with vs_comntools
-    if not vs_paths:
-        env_var = "vs%s0comntools" % version
-        vs_path = os.getenv(env_var)
+    vs_path = os.getenv("vs%s0comntools" % version)
+    if vs_path:
+        sub_path_to_remove = os.path.join("", "Common7", "Tools", "")
+        # Remove '\\Common7\\Tools\\' to get same output as vswhere
+        if vs_path.endswith(sub_path_to_remove):
+            vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
 
-        if vs_path:
-            sub_path_to_remove = os.path.join("", "Common7", "Tools", "")
-            # Remove '\\Common7\\Tools\\' to get same output as vswhere
-            if vs_path.endswith(sub_path_to_remove):
-                vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
-
-        result_vs_installation_path = vs_path
-    else:
-        result_vs_installation_path = vs_paths[0]
-
-    return result_vs_installation_path
+    return vs_path, None
 
 
 def vswhere(all_=False, prerelease=True, products=None, requires=None, version="", latest=False,
@@ -76,7 +68,7 @@ def vswhere(all_=False, prerelease=True, products=None, requires=None, version="
                              "'products' or 'requires' parameter")
 
     installer_path = None
-    program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
+    program_files = os.environ.get("ProgramFiles(x86)") or os.environ.get("ProgramFiles")
     if program_files:
         expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                      "vswhere.exe")

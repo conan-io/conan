@@ -12,7 +12,7 @@ class RemoveAPI:
     def recipe(self, ref: RecipeReference, remote: Remote=None):
         assert ref.revision, "Recipe revision cannot be None to remove a recipe"
         """Removes the recipe (or recipe revision if present) and all the packages (with all prev)"""
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         if remote:
             app.remote_manager.remove_recipe(ref, remote)
         else:
@@ -23,7 +23,7 @@ class RemoveAPI:
     def all_recipe_packages(self, ref: RecipeReference, remote: Remote = None):
         assert ref.revision, "Recipe revision cannot be None to remove a recipe"
         """Removes all the packages from the provided reference"""
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         if remote:
             app.remote_manager.remove_all_packages(ref, remote)
         else:
@@ -42,7 +42,7 @@ class RemoveAPI:
         assert pref.ref.revision, "Recipe revision cannot be None to remove a package"
         assert pref.revision, "Package revision cannot be None to remove a package"
 
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         if remote:
             # FIXME: Create a "packages" method to optimize remote remove?
             app.remote_manager.remove_packages([pref], remote)

@@ -26,6 +26,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple import to_apple_arch, is_apple_os
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import cppstd_flag
@@ -63,6 +64,8 @@ class BazelToolchain:
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
+        raise_on_universal_arch(conanfile)
+
         self._conanfile = conanfile
 
         # Bazel build parameters
@@ -76,7 +79,7 @@ class BazelToolchain:
         #: String used to add --dynamic_mode=["fully"|"off"]. Depends on self.options.shared value.
         self.dynamic_mode = "fully" if shared else "off"
         #: String used to add --cppstd=[FLAG]. Depends on your settings.
-        self.cppstd = cppstd_flag(self._conanfile.settings)
+        self.cppstd = cppstd_flag(self._conanfile)
         #: List of flags used to add --copt=flag1 ... --copt=flagN
         self.copt = []
         #: List of flags used to add --conlyopt=flag1 ... --conlyopt=flagN
