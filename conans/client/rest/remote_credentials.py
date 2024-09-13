@@ -41,7 +41,7 @@ class RemoteCredentials:
             try:
                 plugin_user, plugin_password = auth_plugin(remote, user=user, password=password)
             except Exception as e:
-                msg = f"Error while processing 'auth.py' plugin"
+                msg = f"Error while processing 'auth_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
                 raise ConanException(msg)
             if plugin_user and plugin_password:

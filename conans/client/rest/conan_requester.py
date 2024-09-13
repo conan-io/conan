@@ -6,11 +6,15 @@ import platform
 
 import requests
 import urllib3
+from exceptiongroup import catch
 from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
+from conan.internal.cache.home_paths import HomePaths
+
 from conans import __version__ as client_version
-from conans.errors import ConanException
+from conans.client.loader import load_python_file
+from conans.errors import ConanException, scoped_traceback
 
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
@@ -30,6 +34,7 @@ class _SourceURLCredentials:
     """
     def __init__(self, cache_folder):
         self._urls = {}
+        self.auth_source_plugin_path = HomePaths(cache_folder).auth_source_plugin_path
         if not cache_folder:
             return
         creds_path = os.path.join(cache_folder, "source_credentials.json")
@@ -61,6 +66,23 @@ class _SourceURLCredentials:
             raise ConanException(f"Error loading 'source_credentials.json' {creds_path}: {repr(e)}")
 
     def add_auth(self, url, kwargs):
+        # First, try to use "auth_source_plugin"
+        auth_source_plugin = _load_auth_source_plugin(self.auth_source_plugin_path)
+        if auth_source_plugin:
+            try:
+                c = auth_source_plugin(url)
+            except Exception as e:
+                msg = f"Error while processing 'auth_source_remote.py' plugin"
+                msg = scoped_traceback(msg, e, scope="/extensions/plugins")
+                raise ConanException(msg)
+            if c:
+                if c.get("token"):
+                    kwargs["headers"]["Authorization"] = f"Bearer {c.get('token')}"
+                if c.get("user") and c.get("password"):
+                    kwargs["auth"] = (c.get("user"), c.get("password"))
+                return
+
+        # Then, try to find the credentials in "_urls"
         for u, creds in self._urls.items():
             if url.startswith(u):
                 token = creds.get("token")
@@ -183,3 +205,9 @@ class ConanRequester:
             if popped:
                 os.environ.clear()
                 os.environ.update(old_env)
+
+def _load_auth_source_plugin(auth_source_plugin_path):
+    if os.path.exists(auth_source_plugin_path):
+        mod, _ = load_python_file(auth_source_plugin_path)
+        if hasattr(mod, "auth_source_plugin"):
+            return mod.auth_source_plugin
