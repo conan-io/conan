@@ -1,9 +1,7 @@
-# Base image is Ubuntu latest
 FROM ubuntu:latest
 
 LABEL maintainer="Conan.io <info@conan.io>"
 
-# Update system and install necessary dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -25,42 +23,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-openssl \
     ca-certificates \
     sudo \
+    tar \
     && rm -rf /var/lib/apt/lists/*
 
-# Create 'conan' user and grant sudo permissions
 RUN useradd -m -s /bin/bash conan && \
     echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Install pyenv dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables
 ENV HOME /home/conan
 ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
 
-# Install pyenv
 RUN git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
 
-# Install pyenv-virtualenv (opcional, si lo necesitas)
 RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
 
-# Install Python versions using pyenv
 RUN /bin/bash -c "pyenv install 3.8.6 && pyenv global 3.8.6"
 
-# Install pip and upgrade
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 
-# Change ownership of the home directory to 'conan' user
 RUN chown -R conan:conan $HOME
 
-# Switch to 'conan' user
 USER conan
 WORKDIR $HOME
 
-# Default command
 CMD ["/bin/bash"]
