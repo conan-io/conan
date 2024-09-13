@@ -132,7 +132,7 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+        "system": {"path": {'Windows': r"C:\msys64\usr\bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
