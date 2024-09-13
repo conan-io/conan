@@ -35,10 +35,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV HOME /home/conan
 ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
 
 RUN git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
-
 RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
 
 RUN /bin/bash -c "pyenv install 3.8.6 && pyenv global 3.8.6"
