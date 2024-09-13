@@ -60,7 +60,7 @@ jobs:
         python-version: ['3.8.6']
     env:
       PYENV_ROOT: /home/conan/.pyenv
-      PATH: /home/conan/.pyenv/bin:/home/conan/.pyenv/shims:$PATH
+      PATH: /home/conan/.pyenv/bin:/home/conan/.pyenv/shims:/usr/bin:/bin:$PATH 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
