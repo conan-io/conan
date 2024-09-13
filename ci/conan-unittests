@@ -1,9 +1,9 @@
-# Dockerfile basado en Ubuntu latest
+# Base image is Ubuntu latest
 FROM ubuntu:latest
 
 LABEL maintainer="Conan.io <info@conan.io>"
 
-# Actualiza el sistema e instala las dependencias necesarias
+# Update system and install necessary dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -26,26 +26,36 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     sudo
 
-# Crear usuario 'conan' y otorgarle permisos sudo
+# Create 'conan' user and grant sudo permissions
 RUN useradd -m -s /bin/bash conan && \
     echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-USER conan
-WORKDIR /home/conan
-ENV PATH /home/conan/.pyenv/shims:/home/conan/.pyenv/bin:$PATH
+# Switch to root to configure pyenv globally in /etc/profile
+USER root
 
-# Instalar pyenv
-RUN curl https://pyenv.run | bash
-
-# Configuración global de pyenv en /etc/profile
-RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /etc/profile && \
-    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile && \
+# Configure pyenv globally via /etc/profile
+RUN echo 'export PYENV_ROOT="/home/conan/.pyenv"' >> /etc/profile && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile && \
     echo 'eval "$(pyenv init --path)"' >> /etc/profile && \
     echo 'eval "$(pyenv init -)"' >> /etc/profile && \
     echo 'eval "$(pyenv virtualenv-init -)"' >> /etc/profile
 
-# Instalar la versión de Python 3.8.6 y configurarla globalmente
-RUN /bin/bash -c "source /etc/profile && pyenv install 3.8.6 && pyenv global 3.8.6"
+# Switch back to the 'conan' user
+USER conan
+WORKDIR /home/conan
+ENV HOME /home/conan
+ENV PATH /home/conan/.pyenv/shims:/home/conan/.pyenv/bin:$PATH
 
-# Comando por defecto
+# Install pyenv
+RUN curl https://pyenv.run | bash
+
+RUN echo 'export PATH="/home/conan/.pyenv/bin:$PATH"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv init --path)"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> /home/conan/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> /home/conan/.bashrc
+
+# Install Python 3.8.6 using pyenv and set it as the global version
+RUN /bin/bash -l -c "pyenv install 3.8.6 && pyenv global 3.8.6"
+
+# Default command
 CMD ["/bin/bash"]
