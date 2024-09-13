@@ -6,7 +6,6 @@ import platform
 
 import requests
 import urllib3
-from exceptiongroup import catch
 from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
