@@ -16,7 +16,7 @@ class RemoteCredentials:
     def __init__(self, cache_folder, global_conf):
         self._global_conf = global_conf
         self._urls = {}
-        self.auth_plugin_path = HomePaths(cache_folder).auth_plugin_path
+        self.auth_plugin = _load_auth_plugin(HomePaths(cache_folder).auth_plugin_path)
         creds_path = os.path.join(cache_folder, "credentials.json")
         if not os.path.exists(creds_path):
             return
@@ -36,8 +36,8 @@ class RemoteCredentials:
             return user, password
 
         # First get the auth_plugin
-        auth_plugin = _load_auth_plugin(self.auth_plugin_path)
-        if auth_plugin is not None:
+
+        if self.auth_plugin is not None:
             try:
                 plugin_user, plugin_password = auth_plugin(remote, user=user, password=password)
             except Exception as e:
