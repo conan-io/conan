@@ -70,6 +70,7 @@ class LockfileAPI:
                                      build_requires=[ref] if is_build_require else None)
         if lockfile is None:  # If there was no lockfile, it is a partial one to lock export
             new_lock.partial = True
+            new_lock.export = True
         return new_lock
 
     @staticmethod

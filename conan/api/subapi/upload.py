@@ -45,7 +45,8 @@ class UploadAPI:
         app = ConanApp(self.conan_api)
         preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
-        if metadata != ['']:
+
+        if metadata != ['']:  # User explicitly opted-out
             gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
         # This might add files entries to package_list with signatures

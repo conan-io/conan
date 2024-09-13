@@ -125,6 +125,7 @@ class Lockfile(object):
         self._alias = {}
         self._overrides = Overrides()
         self.partial = False
+        self.export = False  # If this is for 'conan create' without user --lockfile
 
         if deps_graph is None:
             return

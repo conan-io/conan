@@ -11,7 +11,8 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
-                                       BINARY_PLATFORM)
+                                       BINARY_PLATFORM, DepsGraph)
+from conans.model.graph_lock import Lockfile
 from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
@@ -199,6 +200,23 @@ class GraphBinariesAnalyzer(object):
                                               "didn't enable 'tools.graph:vendor=build' to compute " \
                                               "its dependencies"
                 node.binary = BINARY_INVALID
+
+        # Bundle-Lockfile
+        if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
+                                                                 check_type=bool):
+            partial_lockfile = Lockfile(DepsGraph.from_node(node))
+            metadata_folder = node.conanfile.recipe_metadata_folder
+            bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
+            if os.path.isfile(bundled_lockfile):
+                node.conanfile.output.info("Updating existing metadata lockfile with current "
+                                           "graph information")
+                exported_lockfile = Lockfile.load(bundled_lockfile)
+                exported_lockfile.partial = True
+                exported_lockfile.merge(partial_lockfile)
+            else:
+                exported_lockfile = partial_lockfile
+            node.conanfile.output.info(f"Storing current lockfile in metadata: {bundled_lockfile}")
+            exported_lockfile.save(bundled_lockfile)
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
