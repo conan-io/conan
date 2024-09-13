@@ -4,7 +4,7 @@ FROM ubuntu:latest
 LABEL maintainer="Conan.io <info@conan.io>"
 
 # Update system and install necessary dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     make \
@@ -24,38 +24,43 @@ RUN apt-get update && apt-get install -y \
     liblzma-dev \
     python3-openssl \
     ca-certificates \
-    sudo
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create 'conan' user and grant sudo permissions
 RUN useradd -m -s /bin/bash conan && \
     echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Switch to root to configure pyenv globally in /etc/profile
-USER root
+# Install pyenv dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Configure pyenv globally via /etc/profile
-RUN echo 'export PYENV_ROOT="/home/conan/.pyenv"' >> /etc/profile && \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile && \
-    echo 'eval "$(pyenv init --path)"' >> /etc/profile && \
-    echo 'eval "$(pyenv init -)"' >> /etc/profile && \
-    echo 'eval "$(pyenv virtualenv-init -)"' >> /etc/profile
-
-# Switch back to the 'conan' user
-USER conan
-WORKDIR /home/conan
+# Set environment variables
 ENV HOME /home/conan
-ENV PATH /home/conan/.pyenv/shims:/home/conan/.pyenv/bin:$PATH
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
 
 # Install pyenv
-RUN curl https://pyenv.run | bash
+RUN git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
 
-RUN echo 'export PATH="/home/conan/.pyenv/bin:$PATH"' >> /home/conan/.bashrc && \
-    echo 'eval "$(pyenv init --path)"' >> /home/conan/.bashrc && \
-    echo 'eval "$(pyenv init -)"' >> /home/conan/.bashrc && \
-    echo 'eval "$(pyenv virtualenv-init -)"' >> /home/conan/.bashrc
+# Install pyenv-virtualenv (opcional, si lo necesitas)
+RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
 
-# Install Python 3.8.6 using pyenv and set it as the global version
-RUN /bin/bash -l -c "pyenv install 3.8.6 && pyenv global 3.8.6"
+# Install Python versions using pyenv
+RUN /bin/bash -c "pyenv install 3.8.6 && pyenv global 3.8.6"
+
+# Install pip and upgrade
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python get-pip.py && \
+    rm get-pip.py
+
+# Change ownership of the home directory to 'conan' user
+RUN chown -R conan:conan $HOME
+
+# Switch to 'conan' user
+USER conan
+WORKDIR $HOME
 
 # Default command
 CMD ["/bin/bash"]

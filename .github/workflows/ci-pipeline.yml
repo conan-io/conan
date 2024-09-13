@@ -23,7 +23,7 @@ jobs:
         run: |
           DOCKERFILE_HASH=$(find ./ci/conan-unittests -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
           echo "Dockerfile hash: $DOCKERFILE_HASH"
-          echo "::set-output name=hash::$DOCKERFILE_HASH"
+          echo "hash=$DOCKERFILE_HASH" >> $GITHUB_OUTPUT
 
       - name: Cache Docker image
         id: cache_docker_image
@@ -32,19 +32,20 @@ jobs:
           path: docker_image_cache
           key: ${{ runner.os }}-docker-${{ steps.dockerfile_hash.outputs.hash }}
 
-      - name: Pull Docker image (if exists in cache or registry)
-        id: pull_image
+      - name: Load Docker image from cache
+        if: steps.cache_docker_image.outputs.cache-hit == 'true'
         run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/conan-unittests:latest || echo "Image not found"
+          docker load -i docker_image_cache/conan-unittests.tar
 
-      - name: Build Docker image (if not pulled or cache miss)
-        if: steps.pull_image.outcome == 'failure' || steps.cache_docker_image.outputs.cache-hit != 'true'
+      - name: Build Docker image (if not cached)
+        if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/conan-unittests:latest -f ./ci/conan-unittests .
-          mkdir -p docker_image_cache && docker save ghcr.io/${{ github.repository_owner }}/conan-unittests:latest -o docker_image_cache/conan-unittests.tar
+          mkdir -p docker_image_cache
+          docker save ghcr.io/${{ github.repository_owner }}/conan-unittests:latest -o docker_image_cache/conan-unittests.tar
 
       - name: Push Docker image to GHCR
-        if: steps.pull_image.outcome == 'failure' || steps.cache_docker_image.outputs.cache-hit != 'true'
+        if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: |
           docker push ghcr.io/${{ github.repository_owner }}/conan-unittests:latest
 
@@ -56,120 +57,32 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.8.6]
+        python-version: ['3.8.6']
+    env:
+      PYENV_ROOT: /home/conan/.pyenv
+      PATH: /home/conan/.pyenv/bin:/home/conan/.pyenv/shims:$PATH
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
         run: |
-          eval "$(pyenv init --path)"
-          eval "$(pyenv init -)"
           pyenv global ${{ matrix.python-version }}
-          python -m pip install --upgrade pip
-          python -m pip install -r conans/requirements.txt
-          python -m pip install -r conans/requirements_dev.txt
-          python -m pip install meson
+          python --version
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
 
       - name: Run tests
         run: |
-          python -m pytest test/unittests --durations=20 -n 4
-
-  # linux_functional:
-  #   needs: cancel_previous
-  #   runs-on: ubuntu-latest
-  #   container:
-  #     image: conanio/ci-functional
-  #   strategy:
-  #     matrix:
-  #       python-version: [3.8, 3.9, 3.12]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install -r conans/requirements.txt
-  #         pip install -r conans/requirements_dev.txt
-  #         pip install meson
-
-  #     - name: Run tests
-  #       run: |
-  #         pytest test/functional --durations=20 -n 4
-
-  # windows_tests:
-  #   needs: cancel_previous
-  #   runs-on: windows-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: [3.8, 3.9, 3.12]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-
-  #     - name: Install dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r conans/requirements.txt
-  #         pip install -r conans/requirements_dev.txt
-  #         pip install meson
-
-  #     - name: Run tests
-  #       run: |
-  #         pytest test/unittests --durations=20 -n 4
-
-  # macos_tests:
-  #   needs: cancel_previous
-  #   runs-on: macos-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: [3.8, 3.9, 3.12]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-
-  #     - name: Install dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r conans/requirements.txt
-  #         pip install -r conans/requirements_dev.txt
-  #         pip install meson
-
-  #     - name: Run tests
-  #       run: |
-  #         pytest test/unittests --durations=20 -n 4
-
-  deploy_pypitest:
-    if: github.ref == 'refs/heads/develop2'
-    runs-on: ubuntu-latest
-    container:
-      image: conanio/ci-functional
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install dependencies for deployment
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install twine
-          python .ci/bump_dev_version.py
-
-      - name: Build and deploy to TestPyPI
-#        env:
-#          TWINE_USERNAME: ${{ secrets.PYPITEST_CONAN_CREDENTIALS_USERNAME }}
-#          TWINE_PASSWORD: ${{ secrets.PYPITEST_CONAN_CREDENTIALS_PASSWORD }}
-        run: |
-          rm -rf dist/
-          python setup.py sdist
-#          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+          pytest test/unittests --durations=20 -n 4
