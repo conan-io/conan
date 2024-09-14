@@ -87,6 +87,7 @@ def test_config_install_conanignore():
         'config_folder/tests/tester': '',
         'config_folder/other_tests/tester2': ''
     })
+
     def _assert_config_exists(path):
         assert os.path.exists(os.path.join(tc.cache_folder, path))
 
