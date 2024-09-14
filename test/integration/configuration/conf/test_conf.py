@@ -6,7 +6,7 @@ import pytest
 from mock import patch
 
 from conan import conan_version
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, load

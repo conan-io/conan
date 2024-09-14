@@ -150,10 +150,6 @@ build_type: [null, Debug, Release, RelWithDebInfo, MinSizeRel]
 """
 
 
-def get_default_settings_yml():
-    return default_settings_yml
-
-
 def migrate_settings_file(cache_folder):
     from conans.client.migrations import update_file
 
