@@ -48,8 +48,10 @@ def test_config_list():
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
 
-    client.run("config list unexpectedarg", assert_error=True)
-    assert "unrecognized arguments: unexpectedarg" in client.out
+    client.run("config list cmake")
+    assert "tools.cmake:cmake_program: Path to CMake executable" in client.out
+    assert "core.download:parallel" not in client.out
+    assert "tools.build:verbosity" not in client.out
 
 
 def test_config_install():
