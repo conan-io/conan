@@ -99,8 +99,13 @@ class MultiPackagesList:
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
-        graph = json.loads(load(graphfile))
-        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+        try:
+            graph = json.loads(load(graphfile))
+            return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+        except JSONDecodeError as e:
+            raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
+        except Exception as e:
+            raise ConanException(f"Graph file broken: {graphfile}\n{e}")
 
     @staticmethod
     def _define_graph(graph, graph_recipes=None, graph_binaries=None):

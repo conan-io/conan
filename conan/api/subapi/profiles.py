@@ -144,7 +144,7 @@ class ProfilesAPI:
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
-        from conans.client.conf.detect import detect_defaults_settings
+        from conan.internal.api.profile.detect import detect_defaults_settings
         settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value
