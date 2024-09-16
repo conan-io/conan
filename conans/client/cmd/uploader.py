@@ -2,7 +2,6 @@ import os
 import shutil
 import tarfile
 import time
-import zstandard
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
@@ -12,7 +11,7 @@ from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
                                gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size)
+                               human_size, tar_zst_compress)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -212,12 +211,10 @@ class PackagePreparator:
         files.pop(CONANINFO)
         files.pop(CONAN_MANIFEST)
 
-        if os.path.isfile(package_file):
-            output.info(f"Not writing '{package_file_name}' because it already exists.")
-        else:
-            source_files = {f: path for f, path in files.items()}
+        if not os.path.isfile(package_file):
+            tgz_files = {f: path for f, path in files.items()}
             compresslevel = self._global_conf.get(compress_level_config, check_type=int)
-            compressed_path = compress_files(source_files, package_file_name, download_pkg_folder,
+            compressed_path = compress_files(tgz_files, package_file_name, download_pkg_folder,
                                              compresslevel=compresslevel, compressformat=compression_format,
                                              ref=pref)
 
@@ -278,32 +275,7 @@ def compress_files(files, name, dest_dir, compressformat=None, compresslevel=Non
     ConanOutput(scope=str(ref)).info(f"Compressing {name}")
 
     if compressformat == "zstd":
-        with open(tar_path, "wb") as tarfile_obj:
-            # Only provide level if it was overridden by config.
-            zstd_kwargs = {}
-            if compresslevel is not None:
-                zstd_kwargs["level"] = compresslevel
-
-            dctx = zstandard.ZstdCompressor(write_checksum=True, threads=-1, **zstd_kwargs)
-
-            # Create a zstd stream writer so tarfile writes uncompressed data to
-            # the zstd stream writer, which in turn writes compressed data to the
-            # output tar.zst file.
-            with dctx.stream_writer(tarfile_obj) as stream_writer:
-                # The choice of bufsize=32768 comes from profiling compression at various
-                # values and finding that bufsize value consistently performs well.
-                # The variance in compression times at bufsize<=64KB is small. It is only
-                # when bufsize>=128KB that compression times start increasing.
-                with tarfile.open(mode="w|", fileobj=stream_writer, bufsize=32768,
-                                  format=tarfile.PAX_FORMAT) as tar:
-                    unflushed_bytes = 0
-                    for filename, abs_path in sorted(files.items()):
-                        tar.add(abs_path, filename, recursive=False)
-
-                        unflushed_bytes += os.path.getsize(abs_path)
-                        if unflushed_bytes >= 2097152:
-                            stream_writer.flush()  # Flush the current zstd block.
-                            unflushed_bytes = 0
+        tar_zst_compress(tar_path, files, compresslevel=compresslevel)
     else:
         with set_dirty_context_manager(tar_path), open(tar_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,

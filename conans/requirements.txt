@@ -7,4 +7,3 @@ fasteners>=0.15
 distro>=1.4.0, <=1.8.0; platform_system == 'Linux' or platform_system == 'FreeBSD'
 Jinja2>=3.0, <4.0.0
 python-dateutil>=2.8.0, <3
-zstandard>=0.20, <= 0.23

@@ -286,7 +286,7 @@ def uncompress_file(src_path, dest_folder, scope=None):
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
         with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder,
-                        is_tar_zst=src_path.endswith(".tar.zst"))
+                        is_tar_zst=src_path.endswith((".tar.zst", ".tzst")))
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))
