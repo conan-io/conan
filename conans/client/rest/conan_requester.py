@@ -33,7 +33,8 @@ class _SourceURLCredentials:
     """
     def __init__(self, cache_folder):
         self._urls = {}
-        self.auth_source_plugin = _load_auth_source_plugin(HomePaths(cache_folder).auth_source_plugin_path)
+        auth_source_plugin_path = HomePaths(cache_folder or "").auth_source_plugin_path
+        self.auth_source_plugin = _load_auth_source_plugin(auth_source_plugin_path)
         if not cache_folder:
             return
         creds_path = os.path.join(cache_folder, "source_credentials.json")
@@ -68,7 +69,7 @@ class _SourceURLCredentials:
         # First, try to use "auth_source_plugin"
         if self.auth_source_plugin:
             try:
-                c = auth_source_plugin(url)
+                c = self.auth_source_plugin(url)
             except Exception as e:
                 msg = f"Error while processing 'auth_source_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
