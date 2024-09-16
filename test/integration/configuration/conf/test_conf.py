@@ -6,7 +6,7 @@ import pytest
 from mock import patch
 
 from conan import conan_version
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, load
@@ -134,7 +134,7 @@ def test_new_config_file(client):
     assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
 
-@patch("conans.client.conf.required_version.client_version", "1.26.0")
+@patch("conans.model.version_range.client_version", "1.26.0")
 def test_new_config_file_required_version():
     client = TestClient()
     conf = textwrap.dedent("""\

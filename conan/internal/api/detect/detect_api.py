@@ -292,7 +292,7 @@ def default_msvc_runtime(compiler):
 
 
 def detect_msvc_update(version):
-    from conans.client.conf.detect_vs import vs_detect_update
+    from conan.internal.api.detect.detect_vs import vs_detect_update
     return vs_detect_update(version)
 
 
@@ -416,7 +416,7 @@ def default_msvc_ide_version(version):
 
 
 def _detect_vs_ide_version():
-    from conans.client.conf.detect_vs import vs_installation_path
+    from conan.internal.api.detect.detect_vs import vs_installation_path
     msvc_versions = "17", "16", "15"
     for version in msvc_versions:
         vs_path = os.getenv('vs%s0comntools' % version)
