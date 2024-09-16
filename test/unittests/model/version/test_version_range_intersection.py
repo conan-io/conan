@@ -112,3 +112,19 @@ def test_range_intersection_prerelease(range1, range2, result):
     assert str(inter.version()) == f'[{result}]'
     inter = r2.intersection(r1)  # Test reverse order, result should be the same
     assert str(inter.version()) == f'[{result}]'
+
+
+@pytest.mark.parametrize("range1, range2, result", [
+    [">=1.0,include_prerelease", ">=1.0, include_prerelease", ">=1.0,include_prerelease"],
+    [">=1.0, include_prerelease", ">=1.0,include_prerelease", ">=1.0, include_prerelease"],
+    [">=1.0,include_prerelease", ">=1.0", ">=1.0"],
+    [">=1.0", ">=1.0,include_prerelease", ">=1.0"],
+])
+def test_version_range_intersection_shortcircuit(range1, range2, result):
+    r1 = VersionRange(range1)
+    r2 = VersionRange(range2)
+    inter = r1.intersection(r2)
+    # Same expression as first one
+    assert inter._expression == result
+    # But make sure we don't actually just return the first object itself, reevaluate it always!
+    assert r1 is not inter

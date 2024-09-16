@@ -139,7 +139,7 @@ class _ConditionSet:
                 if not version == condition.version:
                     return False
         return True
-    
+
     def __eq__(self, other):
         if not isinstance(other, _ConditionSet):
             return False
