@@ -139,6 +139,14 @@ class _ConditionSet:
                 if not version == condition.version:
                     return False
         return True
+    
+    def __eq__(self, other):
+        if not isinstance(other, _ConditionSet):
+            return False
+        if len(self.conditions) !=  len(other.conditions):
+            return False
+        return (self.prerelease == other.prerelease
+                and all(c == o for c, o in zip(self.conditions, other.conditions)))
 
 
 class VersionRange:
@@ -188,8 +196,8 @@ class VersionRange:
 
     def intersection(self, other):
         # skip calculations if ranges are equal
-        if self._expression == other._expression:
-            return self
+        if self.condition_sets == other.condition_sets:
+            return VersionRange(self._expression)
 
         conditions = []
 
@@ -212,12 +220,12 @@ class VersionRange:
                 if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
                     conditions.append(internal_conditions)
                 # conservative approach: if any of the conditions forbid prereleases, forbid them in the result
-                if not (lhs_conditions.prerelease and rhs_conditions.prerelease):
+                if not lhs_conditions.prerelease or not rhs_conditions.prerelease:
                     prerelease = False
 
         if not conditions:
             return None
-        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (',include_prerelease' if prerelease else '')
+        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
         result = VersionRange(expression)
         # TODO: Direct definition of conditions not reparsing
         # result.condition_sets = self.condition_sets + other.condition_sets
