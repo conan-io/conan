@@ -13,7 +13,7 @@ class TestAuthRemotePlugin:
     def test_error_profile_plugin(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
-            def auth_plugin(remote, user=None, password=None):
+            def auth_remote_plugin(remote, user=None, password=None):
                 raise Exception("Test Error")
             """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
@@ -30,7 +30,7 @@ class TestAuthRemotePlugin:
         should_fail = password == "bad-password"
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent(f"""\
-            def auth_plugin(remote, user=None, password=None):
+            def auth_remote_plugin(remote, user=None, password=None):
                 return "admin", "{password}"
             """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
@@ -48,7 +48,7 @@ class TestAuthRemotePlugin:
     def test_profile_plugin_fallback(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
-                def auth_plugin(remote, user=None, password=None):
+                def auth_remote_plugin(remote, user=None, password=None):
                     return None, None
                 """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)

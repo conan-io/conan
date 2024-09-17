@@ -16,7 +16,7 @@ class RemoteCredentials:
     def __init__(self, cache_folder, global_conf):
         self._global_conf = global_conf
         self._urls = {}
-        self.auth_plugin = _load_auth_plugin(HomePaths(cache_folder).auth_remote_plugin_path)
+        self.auth_remote_plugin = _load_auth_remote_plugin(HomePaths(cache_folder).auth_remote_plugin_path)
         creds_path = os.path.join(cache_folder, "credentials.json")
         if not os.path.exists(creds_path):
             return
@@ -35,11 +35,11 @@ class RemoteCredentials:
         if user is not None and password is not None:
             return user, password
 
-        # First get the auth_plugin
+        # First get the auth_remote_plugin
 
-        if self.auth_plugin is not None:
+        if self.auth_remote_plugin is not None:
             try:
-                plugin_user, plugin_password = self.auth_plugin(remote, user=user, password=password)
+                plugin_user, plugin_password = self.auth_remote_plugin(remote, user=user, password=password)
             except Exception as e:
                 msg = f"Error while processing 'auth_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
@@ -82,8 +82,8 @@ class RemoteCredentials:
             ConanOutput().info("Got password '******' from environment")
         return user, passwd
 
-def _load_auth_plugin(auth_remote_plugin_path):
+def _load_auth_remote_plugin(auth_remote_plugin_path):
     if os.path.exists(auth_remote_plugin_path):
         mod, _ = load_python_file(auth_remote_plugin_path)
-        if hasattr(mod, "auth_plugin"):
-            return mod.auth_plugin
+        if hasattr(mod, "auth_remote_plugin"):
+            return mod.auth_remote_plugin
