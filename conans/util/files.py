@@ -316,8 +316,17 @@ def tar_zst_compress(tar_path, files, compresslevel=None):
             # when bufsize>=128KB that compression times start increasing.
             with tarfile.open(mode="w|", fileobj=stream_writer, bufsize=32768,
                               format=tarfile.PAX_FORMAT) as tar:
+                current_frame_bytes = 0
                 for filename, abs_path in sorted(files.items()):
                     tar.add(abs_path, filename, recursive=False)
+
+                    # Flush the current frame if it has reached a large enough size.
+                    # There is no required size, but 128MB is a good starting point
+                    # because it allows for faster random access to the file.
+                    current_frame_bytes += os.path.getsize(abs_path)
+                    if current_frame_bytes >= 134217728:
+                        stream_writer.flush(zstandard.FLUSH_FRAME)
+                        current_frame_bytes = 0
 
 
 def tar_extract(fileobj, destination_dir, is_tar_zst=False):
