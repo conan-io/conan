@@ -10,7 +10,7 @@ from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-class TestErrorsAuthSourcePlugin:
+class TestAuthSourcePlugin:
     @pytest.fixture
     def setup_test_client(self):
         self.client = TestClient(default_server_user=True, light=True)
@@ -34,7 +34,7 @@ class TestErrorsAuthSourcePlugin:
 
         return self.client, self.file_server.fake_url
 
-    """ when the plugin fails, we want a clear message and a helpful trace
+    """ Test when the plugin fails, we want a clear message and a helpful trace
     """
     def test_error_source_plugin(self, setup_test_client):
         c, url = setup_test_client
@@ -46,6 +46,9 @@ class TestErrorsAuthSourcePlugin:
         c.run("source conanfile.py", assert_error=True)
         assert "Test Error" in c.out
 
+    """ Test when the plugin give a correct and wrong password, we want a message about the success
+        or fail in login
+    """
     @pytest.mark.parametrize("password", ["password", "bad-password"])
     def test_profile_plugin_direct_credentials(self, password, setup_test_client):
         should_fail = password == "bad-password"
@@ -61,6 +64,9 @@ class TestErrorsAuthSourcePlugin:
         else:
             assert os.path.exists(os.path.join(c.current_folder, "myfile.txt"))
 
+    """ Test when the plugin do not give any user or password, we want the code to continue with
+        the rest of the input methods
+    """
     def test_profile_plugin_fallback(self, setup_test_client):
         c, url = setup_test_client
         auth_plugin = textwrap.dedent("""\

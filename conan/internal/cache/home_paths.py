@@ -56,7 +56,7 @@ class HomePaths:
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "profile.py")
 
     @property
-    def auth_plugin_path(self):
+    def auth_remote_plugin_path(self):
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "auth_remote.py")
 
     @property
