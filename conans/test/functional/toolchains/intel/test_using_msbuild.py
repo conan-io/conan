@@ -44,7 +44,7 @@ class MSBuildIntelTestCase(BaseIntelTestCase):
         # Prepare the actual consumer package
         self.t.save({"conanfile.py": conanfile_py,
                      "MyProject.sln": sln_file,
-                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj(),
                      "MyApp/MyApp.cpp": app,
                      'profile': self.profile},
                     clean_first=True)

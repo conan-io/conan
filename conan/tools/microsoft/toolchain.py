@@ -12,6 +12,15 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+def arch_to_vcproj_platform(arch):
+    return {
+        "x86": "Win32",
+        "x86_64": "x64",
+        "armv7": "ARM",
+        "armv8": "ARM64",
+    }.get(arch)
+
+
 class MSBuildToolchain(object):
 
     filename = "conantoolchain.props"
@@ -52,27 +61,23 @@ class MSBuildToolchain(object):
         self.cflags = []
         self.ldflags = []
         self.configuration = conanfile.settings.build_type
+        self.platform = arch_to_vcproj_platform(str(conanfile.settings.arch))
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = msvs_toolset(conanfile)
         self.properties = {}
         check_using_build_profile(self._conanfile)
 
-    def _name_condition(self, settings):
+    def _name_condition(self):
         props = [("Configuration", self.configuration),
-                 # TODO: refactor, put in common with MSBuildDeps. Beware this is != msbuild_arch
-                 #  because of Win32
-                 ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64',
-                               'armv7': 'ARM',
-                               'armv8': 'ARM64'}.get(settings.get_safe("arch")))]
+                 ("Platform", self.platform)]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
         return name.lower(), condition
 
     def generate(self):
-        name, condition = self._name_condition(self._conanfile.settings)
+        name, condition = self._name_condition()
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files
         self._write_config_toolchain(config_filename)

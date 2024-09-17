@@ -7,6 +7,7 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.microsoft.toolchain import arch_to_vcproj_platform
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -18,6 +19,8 @@ class MSBuildDeps(object):
     conandeps.props: unconditional import of all *direct* dependencies only
 
     """
+
+    filename = "conandeps.props"
 
     _vars_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -92,12 +95,7 @@ class MSBuildDeps(object):
         self._conanfile = conanfile
         self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.configuration = conanfile.settings.build_type
-        # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
-        # in x86=>Win32
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        self.platform = arch_to_vcproj_platform(str(conanfile.settings.arch))
         ca_exclude = "tools.microsoft.msbuilddeps:exclude_code_analysis"
         self.exclude_code_analysis = self._conanfile.conf.get(ca_exclude, check_type=list)
         check_using_build_profile(self._conanfile)
@@ -251,7 +249,6 @@ class MSBuildDeps(object):
         """ this is a .props file including direct declared dependencies
         """
         # Current directory is the generators_folder
-        conandeps_filename = "conandeps.props"
         direct_deps = self._conanfile.dependencies.filter({"direct": True})
         pkg_aggregated_content = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
@@ -262,12 +259,12 @@ class MSBuildDeps(object):
             """)
         for req, dep in direct_deps.items():
             dep_name = self._dep_name(dep, req.build)
-            filename = "conan_%s.props" % dep_name
+            dep_filename = "conan_%s.props" % dep_name
             comp_condition = "'$(conan_%s_props_imported)' != 'True'" % dep_name
-            pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
+            pkg_aggregated_content = self._dep_props_file("", self.filename, dep_filename,
                                                           condition=comp_condition,
                                                           content=pkg_aggregated_content)
-        return {conandeps_filename: pkg_aggregated_content}
+        return {self.filename: pkg_aggregated_content}
 
     def _package_props_files(self, dep, build=False):
         """ all the files for a given package:
