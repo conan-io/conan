@@ -33,10 +33,11 @@ class _SourceURLCredentials:
     """
     def __init__(self, cache_folder):
         self._urls = {}
-        auth_source_plugin_path = HomePaths(cache_folder or "").auth_source_plugin_path
-        self.auth_source_plugin = _load_auth_source_plugin(auth_source_plugin_path)
+        self.auth_source_plugin = None
         if not cache_folder:
             return
+        auth_source_plugin_path = HomePaths(cache_folder).auth_source_plugin_path
+        self.auth_source_plugin = _load_auth_source_plugin(auth_source_plugin_path)
         creds_path = os.path.join(cache_folder, "source_credentials.json")
         if not os.path.exists(creds_path):
             return
