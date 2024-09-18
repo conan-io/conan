@@ -600,12 +600,15 @@ class ConanInfo(object):
             compatible.settings.compiler.cppstd = cppstd
 
         from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
-        visual_version = msvc_version_to_vs_ide_version(version)
-        compatible.settings.compiler.version = visual_version
-        runtime = "MT" if runtime == "static" else "MD"
-        if runtime_type == "Debug":
-            runtime = "{}d".format(runtime)
-        compatible.settings.compiler.runtime = runtime
+        if version is not None:
+            visual_version = msvc_version_to_vs_ide_version(version)
+            compatible.settings.compiler.version = visual_version
+
+        if runtime is not None and runtime_type is not None:
+            runtime = "MT" if runtime == "static" else "MD"
+            if runtime_type == "Debug":
+                runtime = "{}d".format(runtime)
+            compatible.settings.compiler.runtime = runtime
 
         # Some 'final adjustment'
         # In case the cppstd is the 'default' for the compiler, it will actually be erased
