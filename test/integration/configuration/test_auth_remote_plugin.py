@@ -10,7 +10,7 @@ from conans.util.files import save
 class TestAuthRemotePlugin:
     """ Test when the plugin fails, we want a clear message and a helpful trace
     """
-    def test_error_profile_plugin(self):
+    def test_error_auth_remote_plugin(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
             def auth_remote_plugin(remote, user=None, password=None):
@@ -26,7 +26,7 @@ class TestAuthRemotePlugin:
         or fail in login
     """
     @pytest.mark.parametrize("password", ["password", "bad-password"])
-    def test_profile_plugin_direct_credentials(self, password):
+    def test_auth_remote_plugin_direct_credentials(self, password):
         should_fail = password == "bad-password"
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent(f"""\
@@ -45,7 +45,7 @@ class TestAuthRemotePlugin:
     """ Test when the plugin do not give any user or password, we want the code to continue with
         the rest of the input methods
     """
-    def test_profile_plugin_fallback(self):
+    def test_auth_remote_plugin_fallback(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
                 def auth_remote_plugin(remote, user=None, password=None):

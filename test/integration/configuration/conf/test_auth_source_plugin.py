@@ -50,7 +50,7 @@ class TestAuthSourcePlugin:
         or fail in login
     """
     @pytest.mark.parametrize("password", ["password", "bad-password"])
-    def test_profile_plugin_direct_credentials(self, password, setup_test_client):
+    def test_auth_source_plugin_direct_credentials(self, password, setup_test_client):
         should_fail = password == "bad-password"
         c, url = setup_test_client
         auth_plugin = textwrap.dedent(f"""\
@@ -67,7 +67,7 @@ class TestAuthSourcePlugin:
     """ Test when the plugin do not give any user or password, we want the code to continue with
         the rest of the input methods
     """
-    def test_profile_plugin_fallback(self, setup_test_client):
+    def test_auth_source_plugin_fallback(self, setup_test_client):
         c, url = setup_test_client
         auth_plugin = textwrap.dedent("""\
                 def auth_plugin(remote, user=None, password=None):
