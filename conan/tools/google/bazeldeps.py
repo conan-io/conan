@@ -7,6 +7,7 @@ from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.files import fetch_libraries
 from conans.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'requires', 'cpp_info'])
@@ -69,86 +70,6 @@ def _get_requirements(conanfile, build_context_activated):
         if require.build and dep.ref.name not in build_context_activated:
             continue
         yield require, dep
-
-
-def _get_libs(dep, cpp_info=None) -> list:
-    """
-    Get the static/shared library paths
-
-    :param dep: normally a <ConanFileInterface obj>
-    :param cpp_info: <CppInfo obj> of the component.
-    :return: list of tuples per static/shared library ->
-             [(lib_name, is_shared, library_path, interface_library_path)]
-             Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
-                    Windows would have:
-                        * shared: library_path as DLL, and interface_library_path as LIB
-                        * static: library_path as LIB, and interface_library_path as None
-    """
-    def _is_shared():
-        """
-        Checking traits and shared option
-        """
-        default_value = dep.options.get_safe("shared") if dep.options else False
-        # Conan 2.x
-        # return {"shared-library": True,
-        #         "static-library": False}.get(str(dep.package_type), default_value)
-        return default_value
-
-    def _save_lib_path(lib_, lib_path_):
-        """Add each lib with its full library path"""
-        formatted_path = lib_path_.replace("\\", "/")
-        _, ext_ = os.path.splitext(formatted_path)
-        if is_shared and ext_ == ".lib":  # Windows interface library
-            interface_lib_paths[lib_] = formatted_path
-        else:
-            lib_paths[lib_] = formatted_path
-
-    cpp_info = cpp_info or dep.cpp_info
-    is_shared = _is_shared()
-    libdirs = cpp_info.libdirs
-    bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
-    libs = cpp_info.libs[:]  # copying the values
-    lib_paths = {}
-    interface_lib_paths = {}
-    for libdir in set(libdirs + bindirs):
-        if not os.path.exists(libdir):
-            continue
-        files = os.listdir(libdir)
-        for f in files:
-            full_path = os.path.join(libdir, f)
-            if not os.path.isfile(full_path):  # Make sure that directories are excluded
-                continue
-            name, ext = os.path.splitext(f)
-            # Users may not name their libraries in a conventional way. For example, directly
-            # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
-            # Issue related: https://github.com/conan-io/conan/issues/11331
-            if ext and f in libs:  # let's ensure that it has any extension
-                _save_lib_path(f, full_path)
-                continue
-            if name not in libs and name.startswith("lib"):
-                name = name[3:]  # libpkg -> pkg
-            # FIXME: Should it read a conf variable to know unexpected extensions?
-            if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
-               (not is_shared and ext in (".a", ".lib")):
-                if name in libs:
-                    _save_lib_path(name, full_path)
-                    continue
-                else:  # last chance: some cases the name could be pkg.if instead of pkg
-                    name = name.split(".", maxsplit=1)[0]
-                    if name in libs:
-                        _save_lib_path(name, full_path)
-
-    libraries = []
-    for lib, lib_path in lib_paths.items():
-        interface_lib_path = None
-        if lib_path.endswith(".dll"):
-            if lib not in interface_lib_paths:
-                raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
-                                     f" Only found {lib_path}")
-            interface_lib_path = interface_lib_paths.pop(lib)
-        libraries.append((lib, is_shared, lib_path, interface_lib_path))
-    # TODO: Would we want to manage the cases where DLLs are provided by the system?
-    return libraries
 
 
 def _get_headers(cpp_info, package_folder_path):
@@ -417,7 +338,7 @@ class _BazelBUILDGenerator:
                 # os_build = self._dep.settings_build.get_safe("os")
                 os_build = self._dep.settings.get_safe("os")
                 linkopts = _get_linkopts(cpp_info, os_build)
-                libs = _get_libs(self._dep, cpp_info)
+                libs = fetch_libraries(self._dep, cpp_info)
                 libs_info = []
                 bindirs = [_relativize_path(bindir, package_folder_path)
                            for bindir in cpp_info.bindirs]
