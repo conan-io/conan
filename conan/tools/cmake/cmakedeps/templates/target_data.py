@@ -23,7 +23,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.arch:
             data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
-        return data_fname
+        # https://github.com/conan-io/conan/issues/17009
+        return data_fname.replace("|", "-")
 
     @property
     def _build_modules_activated(self):
