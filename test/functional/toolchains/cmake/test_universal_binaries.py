@@ -136,4 +136,6 @@ def test_create_universal_binary_ninja():
                            "-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
                            "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW "
                            "-DCMAKE_BUILD_TYPE=Release")
+
     assert "ninja: error: build.ninja:87: expected newline, got '|'" not in client.out
+    assert "Build files have been written to:" in client.out
