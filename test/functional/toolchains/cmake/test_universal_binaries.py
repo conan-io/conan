@@ -126,8 +126,8 @@ def test_create_universal_binary_ninja():
         """)
 
     client.save({"conanfile.txt": conanfile,
-                      "CMakeLists.txt": cmake},
-               clean_first=True)
+                 "CMakeLists.txt": cmake},
+                 clean_first=True)
 
     client.run('install . -s=arch="armv8|x86_64" --build=missing -of=build')
 
