@@ -72,6 +72,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     if not shell_path:
         raise ConanException("The config 'tools.microsoft.bash:path' is "
                              "needed to run commands in a Windows subsystem")
+    shell_path = shell_path.replace("\\", "/")  # Should work in all terminals
     env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH

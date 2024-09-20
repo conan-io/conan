@@ -1,7 +1,7 @@
 import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
-from conan.internal.api.detect_api import default_cppstd as default_cppstd_
+from conan.internal.api.detect.detect_api import default_cppstd as default_cppstd_
 from conans.model.version import Version
 
 

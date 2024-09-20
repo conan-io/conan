@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
 from conan.api.output import ConanOutput
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException
