@@ -116,6 +116,8 @@ def test_create_universal_binary_ninja():
         [generators]
         CMakeToolchain
         CMakeDeps
+        VirtualBuildEnv
+        VirtualRunEnv
         """)
 
     cmake = textwrap.dedent("""
@@ -139,3 +141,5 @@ def test_create_universal_binary_ninja():
 
     assert "ninja: error: build.ninja:87: expected newline, got '|'" not in client.out
     assert "Build files have been written to:" in client.out
+    # test that there are no files with the "|" character in the build folder
+    assert not any("|" in f for f in os.listdir(os.path.join(client.current_folder, "build")))
