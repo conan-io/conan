@@ -16,7 +16,7 @@ RUN useradd -m -s /bin/bash conan && \
 
 ENV HOME /home/conan
 ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
 
 RUN curl https://pyenv.run | bash
 
