@@ -39,7 +39,7 @@ class RemoteCredentials:
 
         if self.auth_remote_plugin is not None:
             try:
-                plugin_user, plugin_password = self.auth_remote_plugin(remote, user=user, password=password)
+                plugin_user, plugin_password = self.auth_remote_plugin(remote, user=user)
             except Exception as e:
                 msg = f"Error while processing 'auth_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
