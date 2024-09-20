@@ -2,6 +2,8 @@ FROM ubuntu:22.04
 
 LABEL maintainer="Conan.io <info@conan.io>"
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl make build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
