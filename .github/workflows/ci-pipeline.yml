@@ -22,7 +22,6 @@ jobs:
         id: dockerfile_hash
         run: |
           DOCKERFILE_HASH=$(find ./ci/conan-unittests -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
-          echo "Dockerfile hash: $DOCKERFILE_HASH"
           echo "hash=$DOCKERFILE_HASH" >> $GITHUB_OUTPUT
 
       - name: Cache Docker image
@@ -34,8 +33,7 @@ jobs:
 
       - name: Load Docker image from cache
         if: steps.cache_docker_image.outputs.cache-hit == 'true'
-        run: |
-          docker load -i docker_image_cache/conan-unittests.tar
+        run: docker load -i docker_image_cache/conan-unittests.tar
 
       - name: Build Docker image (if not cached)
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
@@ -46,8 +44,7 @@ jobs:
 
       - name: Push Docker image to GHCR
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/conan-unittests:latest
+        run: docker push ghcr.io/${{ github.repository_owner }}/conan-unittests:latest
 
   linux_unittests:
     needs: build_container
@@ -81,5 +78,4 @@ jobs:
           pip install meson
 
       - name: Run tests
-        run: |
-          pytest test/unittests --durations=20 -n 4
+        run: pytest test/unittests --durations=20 -n 4

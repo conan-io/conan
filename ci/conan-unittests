@@ -1,51 +1,36 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 LABEL maintainer="Conan.io <info@conan.io>"
 
+# Instalar dependencias necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    make \
-    build-essential \
-    libssl-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    wget \
-    llvm \
-    libncurses5-dev \
-    libncursesw5-dev \
-    xz-utils \
-    tk-dev \
-    libffi-dev \
-    liblzma-dev \
-    python3-openssl \
-    ca-certificates \
-    sudo \
-    tar \
-    && rm -rf /var/lib/apt/lists/*
+    git curl make build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
+    libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev \
+    liblzma-dev python3-openssl ca-certificates sudo tar && \
+    rm -rf /var/lib/apt/lists/*
 
+# Crear usuario 'conan'
 RUN useradd -m -s /bin/bash conan && \
     echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
-
+# Configurar variables de entorno para pyenv
 ENV HOME /home/conan
 ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
 
-RUN git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
-RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
+# Instalar pyenv usando el instalador oficial
+RUN curl https://pyenv.run | bash
 
-RUN /bin/bash -c "pyenv install 3.8.6 && pyenv global 3.8.6"
+# Instalar Python y establecer versión global
+RUN pyenv install 3.8.6 && pyenv global 3.8.6
 
+# Instalar pip
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 
+# Cambiar propiedad al usuario 'conan'
 RUN chown -R conan:conan $HOME
 
 USER conan
