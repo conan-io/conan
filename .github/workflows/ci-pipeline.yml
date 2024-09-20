@@ -82,4 +82,4 @@ jobs:
           pip install meson
 
       - name: Run tests
-        run: pytest test/unittests --durations=20 -n 2
+        run: pytest test/unittests --durations=20 -n 4
