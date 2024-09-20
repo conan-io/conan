@@ -14,13 +14,13 @@ from pathlib import Path
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
-from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import DATA_YML
+from conans.model.version_range import validate_conan_version
 from conans.util.files import load, chdir, load_user_encoded
 
 

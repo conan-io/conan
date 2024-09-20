@@ -1,7 +1,8 @@
+import os
 import time
 from copy import copy
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
@@ -53,7 +54,7 @@ class FileUploader(object):
         return bool(response.ok)
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None):
+               headers=None, ref=None):
         retry = retry if retry is not None else self._config.get("core.upload:retry", default=1,
                                                                  check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
@@ -69,7 +70,7 @@ class FileUploader(object):
 
         for counter in range(retry + 1):
             try:
-                return self._upload_file(url, abs_path, headers, auth)
+                return self._upload_file(url, abs_path, headers, auth, ref)
             except (NotFoundException, ForbiddenException, AuthenticationException,
                     RequestErrorException):
                 raise
@@ -82,8 +83,28 @@ class FileUploader(object):
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
-    def _upload_file(self, url, abs_path,  headers, auth):
+    def _upload_file(self, url, abs_path, headers, auth, ref):
+        class FileProgress:  # Wrapper just to provide an upload progress every 10 seconds
+            def __init__(self, f, total_size):
+                self._f = f
+                self._total = total_size
+                self._name = os.path.basename(f.name)
+                self._t = TimedOutput(interval=10)
+                self._read = 0
+
+            def __getattr__(self, item):
+                return getattr(self._f, item)
+
+            def read(self, n=-1):
+                read_bytes = self._f.read(n)
+                self._read += len(read_bytes)
+                self._t.info(f"{ref}: Uploading {self._name}: {int(self._read*100/self._total)}%")
+                return read_bytes
+
+        filesize = os.path.getsize(abs_path)
         with open(abs_path, mode='rb') as file_handler:
+            big_file = filesize > 100000000  # 100 MB
+            file_handler = FileProgress(file_handler, filesize) if big_file else file_handler
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth,

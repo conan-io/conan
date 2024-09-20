@@ -7,10 +7,11 @@ from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
 from conan.api.output import ConanOutput
-from conans.client.conf import default_settings_yml
-from conan.internal.api import detect_api
+
+from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
+from conan.internal.default_settings import default_settings_yml
 from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import consumer_definer
