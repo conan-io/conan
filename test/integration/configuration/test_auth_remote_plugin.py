@@ -13,7 +13,7 @@ class TestAuthRemotePlugin:
     def test_error_auth_remote_plugin(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
-            def auth_remote_plugin(remote, user=None, password=None):
+            def auth_remote_plugin(remote, user=None):
                 raise Exception("Test Error")
             """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
