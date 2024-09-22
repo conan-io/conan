@@ -34,7 +34,7 @@ class VirtualBuildEnv:
         if configuration:
             f += "-" + configuration.replace(".", "_")
         if arch:
-            f += "-" + arch.replace(".", "_")
+            f += "-" + arch.replace(".", "_").replace("|", "_")
         return f
 
     def environment(self):
