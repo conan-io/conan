@@ -32,6 +32,13 @@ class GraphBinariesAnalyzer(object):
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder)
+        unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
+        non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")
+        # recipe_revision_mode already takes into account the package_id
+        embed_mode = global_conf.get("core.package_id:default_embed_mode", default="full_mode")
+        python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
+        build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
+        self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -364,7 +371,7 @@ class GraphBinariesAnalyzer(object):
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._global_conf, config_version=config_version)
+        compute_package_id(node, self._modes, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -425,7 +432,7 @@ class GraphBinariesAnalyzer(object):
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._global_conf, config_version=config_version)
+                compute_package_id(node, self._modes, config_version=config_version)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):
