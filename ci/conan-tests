@@ -78,7 +78,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     mv cmake-3.19.7-Linux-x86_64 /usr/share/cmake-3.19.7 && \
     wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz && \
     tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && \
-    mv cmake-3.23.5-Linux-x86_64 /usr/share/cmake-3.23.5 && \
+    mv cmake-3.23.5-linux-x86_64 /usr/share/cmake-3.23.5 && \
     update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.15.7/bin/cmake 10 && \
     update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.16.9/bin/cmake 20 && \
     update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.17.5/bin/cmake 30 && \
