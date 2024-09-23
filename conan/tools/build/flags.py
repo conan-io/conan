@@ -264,7 +264,10 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if clang_version >= "13.0":
+    if clang_version >= "16.0":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+    elif clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
