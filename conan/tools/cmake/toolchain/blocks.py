@@ -890,13 +890,19 @@ class GenericSystemBlock(Block):
         {% endif %}
         {% if cmake_system_name %}
         # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
+        endif()
         {% endif %}
         {% if cmake_system_version %}
+        if(NOT DEFINED CMAKE_SYSTEM_VERSION) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_VERSION {{ cmake_system_version }})
+        endif()
         {% endif %}
         {% if cmake_system_processor %}
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
+        endif()
         {% endif %}
 
         {% if generator_platform and not winsdk_version %}
@@ -1042,15 +1048,13 @@ class GenericSystemBlock(Block):
         return version_mapping.get(os_name, {}).get(str(os_version))
 
     def _get_cross_build(self):
-        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-
         system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         # try to detect automatically
-        if not user_toolchain and not is_universal_arch(self._conanfile.settings.get_safe("arch"),
-                                                        self._conanfile.settings.possible_values().get("arch")):
+        if not is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                                 self._conanfile.settings.possible_values().get("arch")):
             os_host = self._conanfile.settings.get_safe("os")
             os_host_version = self._conanfile.settings.get_safe("os.version")
             arch_host = self._conanfile.settings.get_safe("arch")
@@ -1073,7 +1077,6 @@ class GenericSystemBlock(Block):
                     else:
                         _system_processor = arch_host
                     _system_version = os_host_version
-
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version
