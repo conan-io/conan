@@ -103,6 +103,9 @@ def _get_libs(dep, cpp_info=None) -> list:
             lib_paths[lib_] = formatted_path
 
     cpp_info = cpp_info or dep.cpp_info
+    if hasattr(cpp_info, "aggregated_components"):
+        # Global cpp_info
+        cpp_info = cpp_info.aggregated_components()
     is_shared = _is_shared()
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries

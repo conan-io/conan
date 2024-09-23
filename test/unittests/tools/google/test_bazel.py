@@ -4,12 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
 from conan.tools.google import Bazel
 from conan.tools.google.bazeldeps import _relativize_path, _get_libs
 from conans.model.options import Options
-from conan.test.utils.mocks import ConanFileMock
-from conan.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")
@@ -28,10 +28,12 @@ def cpp_info():
     save(ConanFileMock(), os.path.join(libdirs, "mylibwin2.if.lib"), "")
     save(ConanFileMock(), os.path.join(libdirs, "libmylib.so"), "")
     save(ConanFileMock(), os.path.join(libdirs, "subfolder", "libmylib.a"), "")  # recursive
-    cpp_info_mock = MagicMock(_base_folder=None, libdirs=None, bindirs=None, libs=None)
+    cpp_info_mock = MagicMock(_base_folder=None, libdirs=[], bindirs=[], libs=[],
+                              aggregated_components=MagicMock())
     cpp_info_mock._base_folder = folder.replace("\\", "/")
     cpp_info_mock.libdirs = [libdirs]
     cpp_info_mock.bindirs = [bindirs]
+    cpp_info_mock.aggregated_components.return_value = cpp_info_mock
     return cpp_info_mock
 
 
@@ -118,3 +120,22 @@ def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
     found_libs.sort()
     ret.sort()
     assert found_libs == ret
+
+
+def test_shared_windows_libs_with_different_names():
+    folder = temp_folder(path_with_spaces=False)
+    bindirs = os.path.join(folder, "bin")
+    libdirs = os.path.join(folder, "lib")
+    save(ConanFileMock(), os.path.join(bindirs, "libcurl.dll"), "")
+    save(ConanFileMock(), os.path.join(libdirs, "libcurl_imp.lib"), "")
+    cpp_info_mock = MagicMock(_base_folder=None, libdirs=None, bindirs=None, libs=None)
+    cpp_info_mock.libdirs = [libdirs]
+    cpp_info_mock.bindirs = [bindirs]
+    cpp_info_mock.libs = ["libcurl_imp"]
+    found_libs = _get_libs(ConanFileMock(options=Options(options_values={"shared": True})),
+                           cpp_info_mock)
+    found_libs.sort()
+    base_folder = folder.replace("\\", "/")
+    assert found_libs == [('libcurl_imp', True,
+                           f'{base_folder}/bin/libcurl.dll',
+                           f'{base_folder}/lib/libcurl_imp.lib')]
