@@ -348,13 +348,15 @@ def tar_extract(fileobj, destination_dir, is_tar_zst=False):
             # The choice of bufsize=32768 comes from profiling decompression at various
             # values and finding that bufsize value consistently performs well.
             with tarfile.open(fileobj=stream_reader, bufsize=32768, mode="r|") as the_tar:
-                the_tar.extractall(path=destination_dir)
+                the_tar.extractall(path=destination_dir,
+                                   filter=lambda tarinfo, _: tarinfo)
     else:
         with tarfile.open(fileobj=fileobj) as the_tar:
             # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
             # "could not change modification time", with time=0
             # the_tar.errorlevel = 2  # raise exception if any error
-            the_tar.extractall(path=destination_dir)
+            the_tar.extractall(path=destination_dir,
+                               filter=lambda tarinfo, _: tarinfo)
 
 
 def exception_message_safe(exc):
