@@ -92,9 +92,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 10 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 30 && \
     update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 10 && \
-    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-11 30 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 10 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-11 30 && \
     update-alternatives --set gcc /usr/bin/gcc-9 && \
     update-alternatives --set g++ /usr/bin/g++-9 && \
     update-alternatives --set clang /usr/bin/clang-14 && \
