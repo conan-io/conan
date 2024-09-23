@@ -70,7 +70,7 @@ class TestAuthSourcePlugin:
     def test_auth_source_plugin_fallback(self, setup_test_client):
         c, url = setup_test_client
         auth_plugin = textwrap.dedent("""\
-                def auth_plugin(remote, user=None, password=None):
+                def auth_source_plugin(url):
                     return None
                 """)
         save(os.path.join(c.cache.plugins_path, "auth_source.py"), auth_plugin)

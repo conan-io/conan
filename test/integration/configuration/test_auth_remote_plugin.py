@@ -30,7 +30,7 @@ class TestAuthRemotePlugin:
         should_fail = password == "bad-password"
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent(f"""\
-            def auth_remote_plugin(remote, user=None, password=None):
+            def auth_remote_plugin(remote, user=None):
                 return "admin", "{password}"
             """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
@@ -48,7 +48,7 @@ class TestAuthRemotePlugin:
     def test_auth_remote_plugin_fallback(self):
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
-                def auth_remote_plugin(remote, user=None, password=None):
+                def auth_remote_plugin(remote, user=None):
                     return None, None
                 """)
         save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
