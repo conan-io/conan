@@ -71,7 +71,7 @@ class ConanApiAuthManager(object):
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
             creds = RemoteCredentials(self._cache_folder, self._global_conf)
-            input_user, input_password = creds.auth(remote.name)
+            input_user, input_password = creds.auth(remote)
             try:
                 self._authenticate(remote, input_user, input_password)
             except AuthenticationException:

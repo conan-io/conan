@@ -56,6 +56,14 @@ class HomePaths:
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "profile.py")
 
     @property
+    def auth_remote_plugin_path(self):
+        return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "auth_remote.py")
+
+    @property
+    def auth_source_plugin_path(self):
+        return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "auth_source.py")
+
+    @property
     def sign_plugin_path(self):
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "sign", "sign.py")
 
