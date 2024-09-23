@@ -865,13 +865,9 @@ class CompilersBlock(Block):
     """)
 
     def context(self):
-        return {"compilers": self.get_compilers(self._conanfile)}
-
-    @staticmethod
-    def get_compilers(conanfile):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
-        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={},
-                                               check_type=dict)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
@@ -882,7 +878,7 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-        return compilers
+        return {"compilers": compilers}
 
 
 class GenericSystemBlock(Block):
@@ -1018,26 +1014,27 @@ class GenericSystemBlock(Block):
     @staticmethod
     def _get_darwin_version(os_name, os_version):
         # version mapping from https://en.wikipedia.org/wiki/Darwin_(operating_system)
+        # but a more detailed version can be found in https://theapplewiki.com/wiki/Kernel
         version_mapping = {
             "Macos": {
                 "10.6": "10", "10.7": "11", "10.8": "12", "10.9": "13", "10.10": "14", "10.11": "15",
                 "10.12": "16", "10.13": "17", "10.14": "18", "10.15": "19", "11": "20", "12": "21",
-                "13": "22", "14": "23",
+                "13": "22", "14": "23", "15": "24"
             },
             "iOS": {
                 "7": "14", "8": "14", "9": "15", "10": "16", "11": "17", "12": "18", "13": "19",
-                "14": "20", "15": "21", "16": "22", "17": "23"
+                "14": "20", "15": "21", "16": "22", "17": "23", "18": "24"
             },
             "watchOS": {
                 "4": "17", "5": "18", "6": "19", "7": "20",
-                "8": "21", "9": "22", "10": "23"
+                "8": "21", "9": "22", "10": "23", "11": "24"
             },
             "tvOS": {
                 "11": "17", "12": "18", "13": "19", "14": "20",
-                "15": "21", "16": "22", "17": "23"
+                "15": "21", "16": "22", "17": "23", "18": "24"
             },
             "visionOS": {
-                "1": "23"
+                "1": "23", "2": "24"
             }
         }
         os_version = Version(os_version).major if os_name != "Macos" or (os_name == "Macos" and Version(

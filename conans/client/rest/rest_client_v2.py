@@ -123,14 +123,14 @@ class RestV2Methods(RestCommonMethods):
         # Direct upload the recipe
         urls = {fn: self.router.recipe_file(ref, fn)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls)
+        self._upload_files(files_to_upload, urls, str(ref))
 
     def _upload_package(self, pref, files_to_upload):
         urls = {fn: self.router.package_file(pref, fn)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls)
+        self._upload_files(files_to_upload, urls, str(pref))
 
-    def _upload_files(self, files, urls):
+    def _upload_files(self, files, urls, ref):
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
@@ -143,7 +143,7 @@ class RestV2Methods(RestCommonMethods):
                 headers = {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy,
-                                headers=headers)
+                                headers=headers, ref=ref)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
