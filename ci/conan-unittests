@@ -20,7 +20,11 @@ ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
 
 RUN curl https://pyenv.run | bash
 
-RUN pyenv install 3.8.6 && pyenv global 3.8.6
+RUN pyenv install 3.6.15 && \
+    pyenv install 3.8.6 && \
+    pyenv install 3.9.2 && \
+    pyenv install 3.12.3 && \
+    pyenv global 3.9.2
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python get-pip.py && \
