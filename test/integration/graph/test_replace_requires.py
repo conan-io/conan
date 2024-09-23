@@ -147,3 +147,13 @@ def test_replace_requires_json_format():
     assert "pkg/0.1: pkg/0.2" in c.out  # The replacement happens
     graph = json.loads(c.stdout)
     assert graph["graph"]["replaced_requires"] == {"pkg/0.1": "pkg/0.2"}
+
+
+def test_replace_requires_test_requires():
+    c = TestClient(light=True)
+    c.save({"gtest/conanfile.py": GenConanfile("gtest", "0.2"),
+            "app/conanfile.py": GenConanfile().with_test_requires("gtest/0.1"),
+            "profile": f"[replace_requires]\ngtest/0.1: gtest/0.2"})
+    c.run("create gtest")
+    c.run("install app -pr=profile")
+    assert "gtest/0.1: gtest/0.2" in c.out  # The replacement happens

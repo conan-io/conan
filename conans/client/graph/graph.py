@@ -64,7 +64,6 @@ class Node(object):
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
-        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
         self.is_conf = False
@@ -238,7 +237,7 @@ class Node(object):
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
-        result["invalid_build"] = self.cant_build
+        result["invalid_build"] = getattr(getattr(self.conanfile, "info", None), "cant_build", False)
         result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())

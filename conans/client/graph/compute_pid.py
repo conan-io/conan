@@ -6,20 +6,12 @@ from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, Pyth
 from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
-def compute_package_id(node, new_config, config_version):
+def compute_package_id(node, modes, config_version):
     """
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
-
-    # TODO: Extract
-    unknown_mode = new_config.get("core.package_id:default_unknown_mode", default="semver_mode")
-    non_embed_mode = new_config.get("core.package_id:default_non_embed_mode", default="minor_mode")
-    # recipe_revision_mode already takes into account the package_id
-    embed_mode = new_config.get("core.package_id:default_embed_mode", default="full_mode")
-    python_mode = new_config.get("core.package_id:default_python_mode", default="minor_mode")
-    build_mode = new_config.get("core.package_id:default_build_mode", default=None)
-
+    unknown_mode, non_embed_mode, embed_mode, python_mode, build_mode = modes
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
         python_requires = python_requires.info_requires()
@@ -65,7 +57,7 @@ def compute_package_id(node, new_config, config_version):
                     conanfile.validate_build()
                 except ConanInvalidConfiguration as e:
                     # This 'cant_build' will be ignored if we don't have to build the node.
-                    node.cant_build = str(e)
+                    conanfile.info.cant_build = str(e)
 
     run_validate_package_id(conanfile)
 

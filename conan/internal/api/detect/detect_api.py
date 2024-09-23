@@ -5,6 +5,7 @@ import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
+from conan.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import load, save
 from conans.util.runners import check_output_runner, detect_runner
@@ -291,7 +292,7 @@ def default_msvc_runtime(compiler):
 
 
 def detect_msvc_update(version):
-    from conans.client.conf.detect_vs import vs_detect_update
+    from conan.internal.api.detect.detect_vs import vs_detect_update
     return vs_detect_update(version)
 
 
@@ -415,7 +416,7 @@ def default_msvc_ide_version(version):
 
 
 def _detect_vs_ide_version():
-    from conans.client.conf.detect_vs import vs_installation_path
+    from conan.internal.api.detect.detect_vs import vs_installation_path
     msvc_versions = "17", "16", "15"
     for version in msvc_versions:
         vs_path = os.getenv('vs%s0comntools' % version)
@@ -568,6 +569,9 @@ def default_compiler_version(compiler, version):
     of the minor or patch digits, that do not affect binary compatibility
     """
     output = ConanOutput(scope="detect_api")
+    if not version:
+        raise ConanException(
+            f"No version provided to 'detect_api.default_compiler_version()' for {compiler} compiler")
     tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0

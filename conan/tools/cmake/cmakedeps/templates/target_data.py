@@ -23,7 +23,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.arch:
             data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
-        return data_fname
+        # https://github.com/conan-io/conan/issues/17009
+        return data_fname.replace("|", "_")
 
     @property
     def _build_modules_activated(self):
@@ -356,8 +357,8 @@ class _TargetDataContext(object):
         if require and not require.run:
             self.bin_paths = ""
 
-        build_modules = cmakedeps.get_property("cmake_build_modules", conanfile) or []
+        build_modules = cmakedeps.get_property("cmake_build_modules", conanfile, check_type=list) or []
         self.build_modules_paths = join_paths(build_modules)
         # SONAME flag only makes sense for SHARED libraries
-        nosoname = cmakedeps.get_property("nosoname", conanfile, comp_name)
+        nosoname = cmakedeps.get_property("nosoname", conanfile, comp_name, check_type=bool)
         self.no_soname = str((nosoname if self.library_type == "SHARED" else False) or False).upper()

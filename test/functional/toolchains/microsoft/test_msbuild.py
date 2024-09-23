@@ -5,7 +5,7 @@ import textwrap
 import pytest
 
 from conan.tools.microsoft.visual import vcvars_command
-from conans.client.conf.detect_vs import vs_installation_path
+from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient

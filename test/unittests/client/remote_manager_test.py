@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.cmd.uploader import compress_files
+from conan.internal.api.uploader import compress_files
 from conans.client.remote_manager import uncompress_file
 from conan.internal.paths import PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME
 from conan.test.utils.test_files import temp_folder

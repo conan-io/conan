@@ -254,7 +254,7 @@ class LinkerScriptsBlock(Block):
         # Add linker flags from tools.build:linker_scripts conf
 
         message(STATUS "Conan toolchain: Defining linker script flag: {{ linker_script_flags }}")
-        string(APPEND CONAN_EXE_LINKER_FLAGS {{ linker_script_flags }})
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ linker_script_flags }}")
         """)
 
     def context(self):
@@ -265,7 +265,7 @@ class LinkerScriptsBlock(Block):
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
         linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                           for p in linker_scripts]
-        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        linker_script_flags = [r'-T\"' + linker_script + r'\"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
 
@@ -273,17 +273,30 @@ class CppStdBlock(Block):
     template = textwrap.dedent("""\
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
+        function(conan_modify_std_watch variable access value current_list_file stack)
+            set(conan_watched_std_variable {{ cppstd }})
+            if (${variable} STREQUAL "CMAKE_C_STANDARD")
+                set(conan_watched_std_variable {{ cstd }})
+            endif()
+            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${conan_watched_std_variable})
+                message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${conan_watched_std_variable} has been modified to ${value} by ${current_list_file}")
+            endif()
+            unset(conan_watched_std_variable)
+        endfunction()
+
         {% if cppstd %}
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_CXX_STANDARD conan_modify_std_watch)
         {% endif %}
         {% if cstd %}
         message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
         set(CMAKE_C_STANDARD {{ cstd }})
         set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
         set(CMAKE_C_STANDARD_REQUIRED ON)
+        variable_watch(CMAKE_C_STANDARD conan_modify_std_watch)
         {% endif %}
         """)
 
@@ -973,6 +986,11 @@ class GenericSystemBlock(Block):
                                  "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
+            # os_host would be 'baremetal' for tricore, but it's ideal to use the Generic-ELF
+            # system name instead of just "Generic" because it matches how Aurix Dev Studio
+            # generated makefiles behave by generating binaries with the '.elf' extension.
+            if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                return "Generic-ELF"
             return cmake_system_name_map.get(os_host, os_host)
         elif arch_host is not None and arch_host != arch_build:
             if not ((arch_build == "x86_64") and (arch_host == "x86") or
@@ -996,26 +1014,27 @@ class GenericSystemBlock(Block):
     @staticmethod
     def _get_darwin_version(os_name, os_version):
         # version mapping from https://en.wikipedia.org/wiki/Darwin_(operating_system)
+        # but a more detailed version can be found in https://theapplewiki.com/wiki/Kernel
         version_mapping = {
             "Macos": {
                 "10.6": "10", "10.7": "11", "10.8": "12", "10.9": "13", "10.10": "14", "10.11": "15",
                 "10.12": "16", "10.13": "17", "10.14": "18", "10.15": "19", "11": "20", "12": "21",
-                "13": "22", "14": "23",
+                "13": "22", "14": "23", "15": "24"
             },
             "iOS": {
                 "7": "14", "8": "14", "9": "15", "10": "16", "11": "17", "12": "18", "13": "19",
-                "14": "20", "15": "21", "16": "22", "17": "23"
+                "14": "20", "15": "21", "16": "22", "17": "23", "18": "24"
             },
             "watchOS": {
                 "4": "17", "5": "18", "6": "19", "7": "20",
-                "8": "21", "9": "22", "10": "23"
+                "8": "21", "9": "22", "10": "23", "11": "24"
             },
             "tvOS": {
                 "11": "17", "12": "18", "13": "19", "14": "20",
-                "15": "21", "16": "22", "17": "23"
+                "15": "21", "16": "22", "17": "23", "18": "24"
             },
             "visionOS": {
-                "1": "23"
+                "1": "23", "2": "24"
             }
         }
         os_version = Version(os_version).major if os_name != "Macos" or (os_name == "Macos" and Version(
@@ -1049,8 +1068,12 @@ class GenericSystemBlock(Block):
                     _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
+                    if arch_host in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+                        _system_processor = "tricore"
+                    else:
+                        _system_processor = arch_host
                     _system_version = os_host_version
-                    _system_processor = arch_host
+
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version

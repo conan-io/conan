@@ -32,6 +32,13 @@ class GraphBinariesAnalyzer(object):
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder)
+        unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
+        non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")
+        # recipe_revision_mode already takes into account the package_id
+        embed_mode = global_conf.get("core.package_id:default_embed_mode", default="full_mode")
+        python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
+        build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
+        self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -44,7 +51,7 @@ class GraphBinariesAnalyzer(object):
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
-            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
+            node.binary = BINARY_BUILD if not conanfile.info.cant_build else BINARY_INVALID
             node.prev = None
             return True
 
@@ -114,35 +121,37 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
-    def _process_compatible_packages(self, node, remotes, update):
+    def _get_compatible_packages(self, node):
         conanfile = node.conanfile
-        original_binary = node.binary
         original_package_id = node.package_id
 
         compatibles = self._compatibility.compatibles(conanfile)
         existing = compatibles.pop(original_package_id, None)   # Skip main package_id
         if existing:  # Skip the check if same package_id
-            conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
-                                  "the default package ID: Skipping it.")
+            conanfile.output.debug(f"Compatible package ID {original_package_id} equal to "
+                                   "the default package ID: Skipping it.")
+        return compatibles
 
-        if not compatibles:
-            return
+    @staticmethod
+    def _compatible_found(conanfile, pkg_id, compatible_pkg):
+        diff = conanfile.info.dump_diff(compatible_pkg)
+        conanfile.output.success(f"Found compatible package '{pkg_id}': {diff}")
+        # So they are available in package_info() method
+        conanfile.info = compatible_pkg  # Redefine current
 
-        def _compatible_found(pkg_id, compatible_pkg):
-            diff = conanfile.info.dump_diff(compatible_pkg)
-            conanfile.output.info(f"Main binary package '{original_package_id}' missing. Using "
-                                  f"compatible package '{pkg_id}': {diff}")
-            # So they are available in package_info() method
-            conanfile.info = compatible_pkg  # Redefine current
+        # TODO: Improve this interface
+        # The package_id method might have modified the settings to erase information,
+        # ensure we allow those new values
+        conanfile.settings = conanfile.settings.copy_conaninfo_settings()
+        conanfile.settings.update_values(compatible_pkg.settings.values_list)
+        # Trick to allow mutating the options (they were freeze=True)
+        conanfile.options = conanfile.options.copy_conaninfo_options()
+        conanfile.options.update_options(compatible_pkg.options)
 
-            # TODO: Improve this interface
-            # The package_id method might have modified the settings to erase information,
-            # ensure we allow those new values
-            conanfile.settings = conanfile.settings.copy_conaninfo_settings()
-            conanfile.settings.update_values(compatible_pkg.settings.values_list)
-            # Trick to allow mutating the options (they were freeze=True)
-            conanfile.options = conanfile.options.copy_conaninfo_options()
-            conanfile.options.update_options(compatible_pkg.options)
+    def _find_existing_compatible_binaries(self, node, compatibles, remotes, update):
+        conanfile = node.conanfile
+        original_binary = node.binary
+        original_package_id = node.package_id
 
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
@@ -153,7 +162,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = None  # Invalidate it
             self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
             if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
-                _compatible_found(package_id, compatible_package)
+                self._compatible_found(conanfile, package_id, compatible_package)
                 return
         if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
@@ -164,8 +173,9 @@ class GraphBinariesAnalyzer(object):
                 node.binary = None  # Invalidate it
                 self._evaluate_download(node, remotes, update)
                 if node.binary == BINARY_DOWNLOAD:
-                    _compatible_found(package_id, compatible_package)
+                    self._compatible_found(conanfile, package_id, compatible_package)
                     return
+
         # If no compatible is found, restore original state
         node.binary = original_binary
         node._package_id = original_package_id
@@ -176,14 +186,17 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         self._process_node(node, build_mode, remotes, update)
+        original_package_id = node.package_id
         if node.binary == BINARY_MISSING \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
-            self._process_compatible_packages(node, remotes, update)
+            compatibles = self._get_compatible_packages(node)
+            node.conanfile.output.info(f"Main binary package '{original_package_id}' missing")
+            self._find_existing_compatible_binaries(node, compatibles, remotes, update)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
             node.should_build = True
             node.build_allowed = True
-            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
+            node.binary = BINARY_BUILD if not node.conanfile.info.cant_build else BINARY_INVALID
 
         if node.binary == BINARY_BUILD:
             conanfile = node.conanfile
@@ -358,7 +371,7 @@ class GraphBinariesAnalyzer(object):
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._global_conf, config_version=config_version)
+        compute_package_id(node, self._modes, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -419,7 +432,7 @@ class GraphBinariesAnalyzer(object):
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._global_conf, config_version=config_version)
+                compute_package_id(node, self._modes, config_version=config_version)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):
@@ -434,7 +447,10 @@ class GraphBinariesAnalyzer(object):
         required_nodes.add(graph.root)
         for node in graph.nodes:
             if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
-                if not node.build_allowed:  # Only those that are forced to build, not only "missing"
+                can_skip = node.conanfile.conf.get("tools.graph:skip_binaries",
+                                                   check_type=bool, default=True)
+                # Only those that are forced to build, not only "missing"
+                if not node.build_allowed or not can_skip:
                     required_nodes.add(node)
 
         root_nodes = required_nodes.copy()
