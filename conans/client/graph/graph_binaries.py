@@ -447,7 +447,10 @@ class GraphBinariesAnalyzer(object):
         required_nodes.add(graph.root)
         for node in graph.nodes:
             if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
-                if not node.build_allowed:  # Only those that are forced to build, not only "missing"
+                can_skip = node.conanfile.conf.get("tools.graph:skip_binaries",
+                                                   check_type=bool, default=True)
+                # Only those that are forced to build, not only "missing"
+                if not node.build_allowed or not can_skip:
                     required_nodes.add(node)
 
         root_nodes = required_nodes.copy()
