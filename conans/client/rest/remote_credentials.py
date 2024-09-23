@@ -12,11 +12,13 @@ from conans.client.userio import UserInput
 from conans.errors import ConanException, scoped_traceback
 from conans.util.files import load
 
+
 class RemoteCredentials:
     def __init__(self, cache_folder, global_conf):
         self._global_conf = global_conf
         self._urls = {}
-        self.auth_remote_plugin = _load_auth_remote_plugin(HomePaths(cache_folder).auth_remote_plugin_path)
+        auth_plugin_path = HomePaths(cache_folder).auth_remote_plugin_path
+        self._auth_remote_plugin = _load_auth_remote_plugin(auth_plugin_path)
         creds_path = os.path.join(cache_folder, "credentials.json")
         if not os.path.exists(creds_path):
             return
@@ -31,15 +33,11 @@ class RemoteCredentials:
         except Exception as e:
             raise ConanException(f"Error loading 'credentials.json' {creds_path}: {repr(e)}")
 
-    def auth(self, remote, user=None, password=None):
-        if user is not None and password is not None:
-            return user, password
-
+    def auth(self, remote, user=None):
         # First get the auth_remote_plugin
-
-        if self.auth_remote_plugin is not None:
+        if self._auth_remote_plugin is not None:
             try:
-                plugin_user, plugin_password = self.auth_remote_plugin(remote, user=user)
+                plugin_user, plugin_password = self._auth_remote_plugin(remote, user=user)
             except Exception as e:
                 msg = f"Error while processing 'auth_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
@@ -82,8 +80,8 @@ class RemoteCredentials:
             ConanOutput().info("Got password '******' from environment")
         return user, passwd
 
+
 def _load_auth_remote_plugin(auth_remote_plugin_path):
     if os.path.exists(auth_remote_plugin_path):
         mod, _ = load_python_file(auth_remote_plugin_path)
-        if hasattr(mod, "auth_remote_plugin"):
-            return mod.auth_remote_plugin
+        return getattr(mod, "auth_remote_plugin", None)
