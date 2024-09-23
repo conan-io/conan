@@ -24,6 +24,8 @@ class TestPkgConfig:
                 """)
         c.save({"conanfile.py": conanfile})
         c.run("install .", assert_error=True)
+        assert "PkgConfig failed. Command: pkg-config --libs-only-l something_that_not_exist " \
+               "--print-errors" in c.out
         assert "Package something_that_not_exist was not found" in c.out
 
     def test_pc(self):
