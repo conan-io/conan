@@ -24,7 +24,6 @@ ENV PY36=3.6.15 \
 
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     add-apt-repository -y ppa:fish-shell/release-3 && \
-    apt-get update
     apt-get update && apt-get install -y --no-install-recommends \
     git curl make build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
