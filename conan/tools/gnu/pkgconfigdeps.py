@@ -347,7 +347,11 @@ class _PCGenerator:
         dep_name = dep.ref.name
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
-            return self._properties[f"{dep_comp}{self._suffix}"][prop]
+            value = self._properties[f"{dep_comp}{self._suffix}"][prop]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {prop} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
                 else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
