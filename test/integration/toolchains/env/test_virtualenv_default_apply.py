@@ -48,7 +48,7 @@ def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
 
     exists_file = os.path.exists(filepath)
 
-    should_exist = cli_value != "never" and (default_virtualenv is None or default_virtualenv)
+    should_exist = cli_value != "false" and (default_virtualenv is None or default_virtualenv)
 
     if should_exist:
         assert exists_file, f"File {filename} should exist in {os.listdir(client.current_folder)}"
