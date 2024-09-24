@@ -22,15 +22,25 @@ ENV PY36=3.6.15 \
     BAZEL_6_3_2=6.3.2 \
     BAZEL_7_1_2=7.1.2
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    add-apt-repository -y ppa:fish-shell/release-3 && \
+    apt-get update
+    apt-get update && apt-get install -y --no-install-recommends \
     git curl make build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
     libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev \
     liblzma-dev python3-openssl ca-certificates sudo tar \
     software-properties-common \
     autotools-dev automake linux-libc-dev subversion subversion-tools ninja-build \
+    gcc-9 g++-9 \
+    gcc-11 g++-11 \
+    clang-14 clang++-14 \
+    fish \
     gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf unzip \
-    && rm -rf /var/lib/apt/lists/*
+    apt-transport-https \
+    gnupg-agent \
+    software-properties-common && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash conan && \
     echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
@@ -55,13 +65,6 @@ RUN chown -R conan:conan $HOME
 
 USER root
 
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
-    add-apt-repository -y ppa:fish-shell/release-3 && \
-    apt-get update
-
-RUN apt-get install -y --no-install-recommends fish && \
-    rm -rf /var/lib/apt/lists/*
-
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7-Linux-x86_64.tar.gz && \
     tar --transform='s/cmake-3.15.7-Linux-x86_64/cmake-3.15.7-linux-x86_64/' -xvzf cmake-3.15.7-Linux-x86_64.tar.gz && \
     mv cmake-3.15.7-linux-x86_64 /usr/share/cmake-3.15.7 && \
@@ -85,11 +88,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     update-alternatives --set cmake /usr/share/cmake-3.15.7/bin/cmake && \
     rm cmake-*.tar.gz
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc-9 g++-9 \
-    gcc-11 g++-11 \
-    clang-14 clang++-14 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 10 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 30 && \
@@ -98,12 +97,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     update-alternatives --set gcc /usr/bin/gcc-9 && \
     update-alternatives --set g++ /usr/bin/g++-9 && \
     update-alternatives --set clang /usr/bin/clang-14 && \
-    update-alternatives --set clang++ /usr/bin/clang++-14 && \
-    rm -rf /var/lib/apt/lists/*
+    update-alternatives --set clang++ /usr/bin/clang++-14
 
 RUN wget https://dl.google.com/android/repository/android-ndk-r23c-linux.zip && \
     unzip android-ndk-r23c-linux.zip -d /opt/ && \
     rm android-ndk-r23c-linux.zip
+
+
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
     wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6_3_2}/bazel-${BAZEL_6_3_2}-linux-x86_64 && \
@@ -112,21 +117,8 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
     mkdir -p /usr/share/bazel-$BAZEL_7_1_2/bin && \
     wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_1_2}/bazel-${BAZEL_7_1_2}-linux-x86_64 && \
     chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
-    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel && \
-    rm bazel-*.linux-x86_64
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg-agent \
-    software-properties-common && \
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io && \
-    rm -rf /var/lib/apt/lists/*
-
+    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
+    
 RUN usermod -aG docker conan
 
 USER conan
