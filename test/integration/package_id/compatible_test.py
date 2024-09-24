@@ -504,7 +504,6 @@ class TestCompatibleBuild:
         assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
         c.run(f"create . {settings} --build=missing", assert_error=True)
-        # the one for cppstd=17 is built!!
         c.assert_listed_binary({"pkg/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Invalid")})
         assert "pkg/0.1: Invalid: Current cppstd (11)" in c.out
 
