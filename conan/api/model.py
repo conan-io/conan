@@ -56,7 +56,7 @@ class MultiPackagesList:
         try:
             return self.lists[name]
         except KeyError:
-            raise ConanException(f"'{name}' doesn't exist is package list")
+            raise ConanException(f"'{name}' doesn't exist in package list")
 
     def add(self, name, pkg_list):
         self.lists[name] = pkg_list

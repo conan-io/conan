@@ -3,6 +3,7 @@ from typing import Optional
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import Version
+from conans import __version__ as client_version
 
 
 @total_ordering
@@ -233,3 +234,13 @@ class VersionRange:
 
     def version(self):
         return Version(f"[{self._expression}]")
+
+
+def validate_conan_version(required_range):
+    clientver = Version(client_version)
+    version_range = VersionRange(required_range)
+    for conditions in version_range.condition_sets:
+        conditions.prerelease = True
+    if not version_range.contains(clientver, resolve_prerelease=None):
+        raise ConanException("Current Conan version ({}) does not satisfy "
+                             "the defined one ({}).".format(clientver, required_range))
