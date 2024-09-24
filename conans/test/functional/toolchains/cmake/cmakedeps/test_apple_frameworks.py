@@ -1,4 +1,5 @@
 import platform
+import re
 import textwrap
 
 import pytest
@@ -449,3 +450,82 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
     t.run("create . hello/1.0@")
+
+
+@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_apple_different_components_but_same_framework_names():
+    """
+    Testing issue about incorrect path found for a different
+    component with the same framework names
+
+    Note: this test is only using CMake tool but it's not compiling anything
+
+    Issue: https://github.com/conan-io/conan/pull/12088
+    """
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+    import os
+
+    from conan import ConanFile
+    from conan.tools.files import mkdir, save
+
+    class HelloConan(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "build_type"
+
+        def package(self):
+            mkdir(self, os.path.join(self.package_folder, "ComponentA"))
+            mkdir(self, os.path.join(self.package_folder, "ComponentB"))
+            save(self, os.path.join(self.package_folder, "ComponentA", "libComponent.a"), b"#whatever")
+            save(self, os.path.join(self.package_folder, "ComponentB", "libComponent.a"), b"#whatever")
+
+        def package_info(self):
+            self.cpp_info.components["ComponentA"].frameworkdirs = [os.path.join(self.package_folder, "ComponentA")]
+            self.cpp_info.components["ComponentA"].frameworks = ["Component"]
+            self.cpp_info.components["ComponentA"].includedirs = []
+            self.cpp_info.components["ComponentB"].frameworkdirs = [os.path.join(self.package_folder, "ComponentB")]
+            self.cpp_info.components["ComponentB"].frameworks = ["Component"]
+            self.cpp_info.components["ComponentB"].includedirs = []
+    """)
+    test_cmakelist = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(PackageTest CXX)
+
+    find_package(hello CONFIG REQUIRED)
+
+    message("hello::ComponentA FRAMEWORK_DIRS: ${hello_hello_ComponentA_FRAMEWORK_DIRS_RELEASE}")
+    message("hello::ComponentA FRAMEWORKS_FOUND: ${hello_hello_ComponentA_FRAMEWORKS_FOUND_RELEASE}")
+    message("hello::ComponentB FRAMEWORK_DIRS: ${hello_hello_ComponentB_FRAMEWORK_DIRS_RELEASE}")
+    message("hello::ComponentB FRAMEWORKS_FOUND: ${hello_hello_ComponentB_FRAMEWORKS_FOUND_RELEASE}")
+    """)
+    test_conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import CMake
+
+    class HelloTestConan(ConanFile):
+        settings = "os", "build_type"
+        generators = "CMakeDeps", "CMakeToolchain"
+        apply_env = False
+        test_type = "explicit"
+
+        def requirements(self):
+            self.requires(self.tested_reference_str)
+
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+
+        def test(self):
+            pass
+    """)
+    client.save({'conanfile.py': conanfile,
+                 "test_package/conanfile.py": test_conanfile,
+                 'test_package/CMakeLists.txt': test_cmakelist})
+    client.run("create . -s build_type=Release")
+    # Checking that each Component has its own Framework
+    assert re.search(r"hello::ComponentA\D+FRAMEWORKS_FOUND:.*/ComponentA/libComponent\.a", str(client.out), re.MULTILINE)
+    assert re.search(r"hello::ComponentB\D+FRAMEWORKS_FOUND:.*/ComponentB/libComponent\.a", str(client.out), re.MULTILINE)
