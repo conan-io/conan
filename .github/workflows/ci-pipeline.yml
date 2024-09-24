@@ -51,7 +51,7 @@ jobs:
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: docker push ghcr.io/${{ github.repository_owner }}/conan-tests:latest
 
-  linux_unittests:
+  linux:
     needs: build_container
     runs-on: ubuntu-latest
     container:
