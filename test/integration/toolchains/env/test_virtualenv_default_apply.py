@@ -24,7 +24,7 @@ def client():
 
 @pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
-@pytest.mark.parametrize("cli_value", [None, "never"])
+@pytest.mark.parametrize("cli_value", [None, "false"])
 def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     format_str = {True: f"virtual{scope}env = True",
                   False: f"virtual{scope}env = False",
