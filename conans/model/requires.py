@@ -254,7 +254,10 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
-        # TODO: self.package_id_mode => Choose more restrictive?
+        # package_id_mode is not being propagated downstream. So it is enough to check if the
+        # current require already defined it or not
+        if self.package_id_mode is None:
+            self.package_id_mode = other.package_id_mode
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
