@@ -22,7 +22,9 @@ ENV PY36=3.6.15 \
     BAZEL_6_3_2=6.3.2 \
     BAZEL_7_1_2=7.1.2
 
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     add-apt-repository -y ppa:fish-shell/release-3 && \
     apt-get update && apt-get install -y --no-install-recommends \
     git curl make build-essential libssl-dev zlib1g-dev \
@@ -37,8 +39,7 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     fish \
     gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf unzip \
     apt-transport-https \
-    gnupg-agent \
-    software-properties-common && \
+    gnupg-agent && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash conan && \
