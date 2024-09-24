@@ -85,6 +85,7 @@ jobs:
           pip install meson
 
       - name: Run tests
+        shell: bash
         run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20 -n 4
