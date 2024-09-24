@@ -48,8 +48,11 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
-    # Gzip compression
+    # Compression for `conan upload`
+    "core.upload:compression_format": "The compression format used when uploading Conan packages. "
+                                      "Possible values: 'zstd', 'gzip' (default=gzip)",
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    "core.zstd:compresslevel": "The zstd compression level for Conan artifacts (default=3)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
