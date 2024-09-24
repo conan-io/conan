@@ -60,7 +60,6 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
-        test-type: ['unittests', 'integration', 'functional']
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -84,13 +83,17 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install meson
 
-      - name: Run tests
+      - name: Run unit tests
         shell: bash
         run: |
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n 4
-          fi
+          pytest test/unittests --durations=20 -n 4
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          pytest test/integration --durations=20 -n 4
+
+      - name: Run functional tests
+        shell: bash
+        run: |
+          pytest test/functional --durations=20 -n 4
