@@ -22,10 +22,10 @@ def test_required_conan_version():
     client.run("source . ", assert_error=True)
     assert f"Current Conan version ({__version__}) does not satisfy the defined one (>=100.0)" in client.out
 
-    with mock.patch("conans.client.conf.required_version.client_version", "101.0"):
+    with mock.patch("conans.model.version_range.client_version", "101.0"):
         client.run("export . --name=pkg --version=1.0")
 
-    with mock.patch("conans.client.conf.required_version.client_version", "101.0-dev"):
+    with mock.patch("conans.model.version_range.client_version", "101.0-dev"):
         client.run("export . --name=pkg --version=1.0")
 
     client.run("install --requires=pkg/1.0@", assert_error=True)

@@ -99,3 +99,47 @@ def test_create_universal_binary():
     client.run_command("lipo -info './build/armv8|armv8.3|x86_64/Release/foo'")
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+@pytest.mark.tool("cmake", "3.23")
+def test_create_universal_binary_ninja():
+    client = TestClient()
+
+    client.run("new cmake_lib -d name=mylibrary -d version=1.0")
+
+    client.run('export .')
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        mylibrary/1.0
+        [generators]
+        CMakeToolchain
+        CMakeDeps
+        VirtualBuildEnv
+        VirtualRunEnv
+        """)
+
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.23)
+        project(ninjatest CXX)
+
+        find_package(mylibrary CONFIG REQUIRED)
+        """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmake},
+                 clean_first=True)
+
+    client.run('install . -s=arch="armv8|x86_64" --build=missing -of=build')
+
+    with client.chdir("build"):
+        client.run_command("cmake .. -GNinja "
+                           "-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                           "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW "
+                           "-DCMAKE_BUILD_TYPE=Release")
+
+    assert "expected newline, got '|'" not in client.out
+    assert "Build files have been written to:" in client.out
+    # test that there are no files with the "|" character in the build folder
+    assert not any("|" in f for f in os.listdir(os.path.join(client.current_folder, "build")))

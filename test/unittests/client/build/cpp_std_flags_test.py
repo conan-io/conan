@@ -1,6 +1,6 @@
 import unittest
 
-from conan.internal.api.detect_api import default_cppstd
+from conan.internal.api.detect.detect_api import default_cppstd
 from conan.tools.build import cppstd_flag
 from conans.model.version import Version
 from conan.test.utils.mocks import MockSettings, ConanFileMock
