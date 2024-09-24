@@ -66,7 +66,12 @@ RUN apt-get update && \
         g++-arm-linux-gnueabihf \
         unzip \
         apt-transport-https \
-        gnupg-agent && \
+        gnupg-agent \
+        gcc-9-multilib \
+        g++-9-multilib \
+        gcc-11-multilib \
+        g++-11-multilib \
+        scons && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     add-apt-repository -y ppa:fish-shell/release-3 && \
     apt-get update && \
