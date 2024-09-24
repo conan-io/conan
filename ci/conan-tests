@@ -136,8 +136,7 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
     mkdir -p /usr/share/bazel-$BAZEL_7_1_2/bin && \
     wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_1_2}/bazel-${BAZEL_7_1_2}-linux-x86_64 && \
     chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
-    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel && \
-    rm bazel-${BAZEL_6_3_2}-linux-x86_64 bazel-${BAZEL_7_1_2}-linux-x86_64
+    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
 
 RUN usermod -aG docker conan
 
