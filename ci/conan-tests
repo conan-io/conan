@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev \
     liblzma-dev python3-openssl ca-certificates sudo tar \
     software-properties-common \
-    autotools-dev automake linux-libc-dev subversion subversion-tools ninja-build \
+    autotools-dev automake autoconf pkg-config linux-libc-dev subversion subversion-tools ninja-build \
     gcc-9 g++-9 \
     gcc-11 g++-11 \
     clang-14 clang++-14 \
