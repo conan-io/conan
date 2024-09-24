@@ -33,6 +33,7 @@ def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
     from conan import ConanFile
 
     class ConanFileToolsTest(ConanFile):
+        settings = "os"
         {}
         requires = "foo/1.0"
     """).format(format_str)
