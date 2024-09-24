@@ -1,0 +1,83 @@
+name: OSX Tests
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  testing:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        setup: [unittests, functional, integration, performance]
+
+    runs-on: ${{ matrix.os }}
+
+    name: OS ${{ matrix.os }} - ${{ matrix.setup }} tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install Python requirements
+        run: |
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+
+      - name: Install Rosetta 2
+        run: |
+          /usr/sbin/softwareupdate --install-rosetta --agree-to-license
+
+      - name: Install CMake versions
+        working-directory: /tmp
+        run: |
+          for version in 3.15.7 3.16.9 3.17.5; do
+            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-Darwin-x86_64.tar.gz
+            tar -xzf cmake-${version}-Darwin-x86_64.tar.gz \
+              --exclude=CMake.app/Contents/bin/cmake-gui \
+              --exclude=CMake.app/Contents/doc/cmake \
+              --exclude=CMake.app/Contents/share/cmake-{version%.*}/Help \
+              --exclude=CMake.app/Contents/share/vim
+            mkdir -p ${HOME}/Applications/CMake/${version}
+            cp -fR cmake-${version}-Darwin-x86_64/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
+            /Users/runner/Applications/CMake/${version}/bin/cmake --version
+            rm -rf cmake-${version}-Darwin-x86_64
+            rm cmake-${version}-Darwin-x86_64.tar.gz
+          done
+          for version in 3.19.7 3.23.1; do
+            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
+            tar -xzf cmake-${version}-macos-universal.tar.gz \
+              --exclude=CMake.app/Contents/bin/cmake-gui \
+              --exclude=CMake.app/Contents/doc/cmake \
+              --exclude=CMake.app/Contents/share/cmake-{version%.*}/Help \
+              --exclude=CMake.app/Contents/share/vim
+            mkdir -p ${HOME}/Applications/CMake/${version}
+            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
+            /Users/runner/Applications/CMake/${version}/bin/cmake --version
+            rm -rf cmake-${version}-macos-universal
+            rm cmake-${version}-macos-universal.tar.gz
+          done
+
+      - name: Install Ninja
+        run: |
+          pip install ninja==1.10.2
+
+      - name: Install xcodegen
+        run: |
+          brew install xcodegen
+
+      - name: Run Test - ${{ matrix.setup }}
+        run: |
+          python -m pytest -x -v --color=auto test/${{ matrix.setup }}
