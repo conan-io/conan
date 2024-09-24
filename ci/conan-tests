@@ -103,22 +103,20 @@ RUN chown -R conan:conan $HOME
 USER root
 
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7-Linux-x86_64.tar.gz && \
-    tar --strip-components=1 -xzf cmake-3.15.7-Linux-x86_64.tar.gz -C /usr/share/cmake-3.15.7 && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.16.9/cmake-3.16.9-Linux-x86_64.tar.gz && \
-    tar --strip-components=1 -xzf cmake-3.16.9-Linux-x86_64.tar.gz -C /usr/share/cmake-3.16.9 && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.tar.gz && \
-    tar --strip-components=1 -xzf cmake-3.17.5-Linux-x86_64.tar.gz -C /usr/share/cmake-3.17.5 && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.19.7/cmake-3.19.7-Linux-x86_64.tar.gz && \
-    tar --strip-components=1 -xzf cmake-3.19.7-Linux-x86_64.tar.gz -C /usr/share/cmake-3.19.7 && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz && \
-    tar --strip-components=1 -xzf cmake-3.23.5-Linux-x86_64.tar.gz -C /usr/share/cmake-3.23.5 && \
-    update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.15.7/bin/cmake 10 && \
-    update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.16.9/bin/cmake 20 && \
-    update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.17.5/bin/cmake 30 && \
-    update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.19.7/bin/cmake 40 && \
-    update-alternatives --install /usr/bin/cmake cmake /usr/share/cmake-3.23.5/bin/cmake 50 && \
-    update-alternatives --set cmake /usr/share/cmake-3.15.7/bin/cmake && \
-    rm cmake-*.tar.gz
+    tar -xvzf cmake-3.15.7-Linux-x86_64.tar.gz && mv cmake-3.15.7-Linux-x86_64 /usr/share/cmake-3.15.7  && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.16.9/cmake-3.16.9-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.16.9-Linux-x86_64.tar.gz && mv cmake-3.16.9-Linux-x86_64 /usr/share/cmake-3.16.9 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.17.5-Linux-x86_64.tar.gz && mv cmake-3.17.5-Linux-x86_64 /usr/share/cmake-3.17.5 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.19.7/cmake-3.19.7-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.19.7-Linux-x86_64.tar.gz && mv cmake-3.19.7-Linux-x86_64 /usr/share/cmake-3.19.7 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15_7 10 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16_9 20 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17_5 30 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19_7 40 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23_5 50
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
