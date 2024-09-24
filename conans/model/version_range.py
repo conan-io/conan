@@ -141,14 +141,6 @@ class _ConditionSet:
                     return False
         return True
 
-    def __eq__(self, other):
-        if not isinstance(other, _ConditionSet):
-            return False
-        if len(self.conditions) !=  len(other.conditions):
-            return False
-        return (self.prerelease == other.prerelease
-                and all(c == o for c, o in zip(self.conditions, other.conditions)))
-
 
 class VersionRange:
     def __init__(self, expression):
@@ -196,10 +188,6 @@ class VersionRange:
         return False
 
     def intersection(self, other):
-        # skip calculations if ranges are equal
-        if self.condition_sets == other.condition_sets:
-            return VersionRange(self._expression)
-
         conditions = []
 
         def _calculate_limits(operator, lhs, rhs):
