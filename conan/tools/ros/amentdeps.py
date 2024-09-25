@@ -833,7 +833,7 @@ class AmentDeps(object):
 
         @param require: conanfile object
         @param dependency: requires node structure of the graph
-        @return: list of library dirs of dependencies in inverse order
+        @return: string of ; separated library dirs of dependencies in inverse order
         """
         run_paths = []
 
