@@ -75,20 +75,7 @@ def test_ament_environment_shared_libraries():
     """
     client = TestClient()
     with client.chdir("lib"):
-        conanfile1 = textwrap.dedent('''
-               import os
-               from conan import ConanFile
-               from conan.tools.files import save
-
-               class Recipe(ConanFile):
-                   name = "lib1"
-                   version = "1.0"
-                   options = {"shared": [True, False]}
-                   default_options = {"shared": False}
-
-                   def package(self):
-                       save(self, os.path.join(self.package_folder, "lib", "lib2"), "")
-               ''')
+        c1 = GenConanfile("lib1", "1.0").with_shared_option(False).with_package_file("lib/lib2", "")
         c2 = GenConanfile("lib2", "1.0").with_shared_option(False).with_requirement("lib1/1.0").with_package_file("lib/lib2", "")
                ''')
         conanfile3 = textwrap.dedent('''
