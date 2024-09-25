@@ -3,6 +3,8 @@ from conan.tools.cmake import CMakeDeps
 
 import os
 
+# File templates for this generator can be found at https://github.com/ament/ament_package
+
 local_setup_bash = """\
 # generated from ament_package/template/package_level/local_setup.bash.in
 
