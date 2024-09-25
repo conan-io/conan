@@ -3,21 +3,7 @@ from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
 
 
-class RestApiClientFactory(object):
-
-    def __init__(self, requester, config):
-        self._requester = requester
-        self._config = config
-        self._cached_capabilities = {}
-
-    def new(self, remote, token, refresh_token, custom_headers):
-        tmp = RestApiClient(remote, token, refresh_token, custom_headers,
-                            self._requester, self._config,
-                            self._cached_capabilities)
-        return tmp
-
-
-class RestApiClient(object):
+class RestApiClient:
     """
         Rest Api Client for handle remote.
     """
