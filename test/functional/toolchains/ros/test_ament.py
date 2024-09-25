@@ -118,9 +118,9 @@ def test_ament_environment_shared_libraries():
             "conanfile3.txt": conanfile3
         })
 
-        client.run("create conanfile1.py -o */*:shared=True")
-        client.run("create conanfile2.py -o */*:shared=True")
-        client.run("install conanfile3.txt -o */*:shared=True --output-folder install")
+        client.run("create conanfile1.py -o *:shared=True")
+        client.run("create conanfile2.py -o *:shared=True")
+        client.run("install conanfile3.txt -o *:shared=True --output-folder install")
         library_path_content = client.load("install/conan_lib2/share/conan_lib2/environment/library_path.dsv")
         client.run(
             "cache path lib1/1.0#0b460773ae733a626bcaa3592244fc05:1744785cb24e3bdca70e27041dc5abd20476f947")
