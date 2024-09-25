@@ -100,9 +100,6 @@ class RestApiClient:
     def remove_packages(self, prefs):
         return self._get_api().remove_packages(prefs)
 
-    def server_capabilities(self):
-        return self._get_api().server_capabilities()
-
     def get_recipe_revisions_references(self, ref):
         return self._get_api().get_recipe_revisions_references(ref)
 

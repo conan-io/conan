@@ -1,10 +1,8 @@
 import os
 import unittest
 
-import pytest
 from mock import Mock
 
-from conans import REVISIONS
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
@@ -24,7 +22,6 @@ from conan.test.utils.tools import get_free_port
 from conans.util.files import md5, save
 
 
-@pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
 
@@ -63,10 +60,6 @@ class RestApiTest(unittest.TestCase):
 
     def tearDown(self):
         RestApiTest.server.clean()
-
-    def test_server_capabilities(self):
-        capabilities = self.api.server_capabilities()
-        self.assertEqual(capabilities, ["ImCool", "TooCool", REVISIONS])
 
     def test_get_conan(self):
         # Upload a conans
