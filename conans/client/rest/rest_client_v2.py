@@ -166,7 +166,7 @@ class RestV2Methods:
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
-    def get_json(self, url, data=None, headers=None):
+    def _get_json(self, url, data=None, headers=None):
         req_headers = self.custom_headers.copy()
         req_headers.update(headers or {})
         if data:  # POST request
@@ -203,23 +203,27 @@ class RestV2Methods:
 
     def upload_recipe(self, ref, files_to_upload):
         if files_to_upload:
-            self._upload_recipe(ref, files_to_upload)
+            urls = {fn: self.router.recipe_file(ref, fn)
+                    for fn in files_to_upload}
+            self._upload_files(files_to_upload, urls, str(ref))
 
     def upload_package(self, pref, files_to_upload):
-        self._upload_package(pref, files_to_upload)
+        urls = {fn: self.router.package_file(pref, fn)
+                for fn in files_to_upload}
+        self._upload_files(files_to_upload, urls, str(pref))
 
     def search(self, pattern=None, ignorecase=True):
         """
         the_files: dict with relative_path: content
         """
         url = self.router.search(pattern, ignorecase)
-        response = self.get_json(url)["results"]
+        response = self._get_json(url)["results"]
         # We need to filter the "_/_" user and channel from Artifactory
         ret = []
         for reference in response:
             try:
                 ref = RecipeReference.loads(reference)
-            except TypeError as te:
+            except TypeError:
                 raise ConanException("Unexpected response from server.\n"
                                      "URL: `{}`\n"
                                      "Expected an iterable, but got {}.".format(url, type(response)))
@@ -233,7 +237,7 @@ class RestV2Methods:
     def search_packages(self, ref):
         """Client is filtering by the query"""
         url = self.router.search_packages(ref)
-        package_infos = self.get_json(url)
+        package_infos = self._get_json(url)
         return package_infos
 
     @property
@@ -241,7 +245,7 @@ class RestV2Methods:
         return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
-        data = self.get_json(url)
+        data = self._get_json(url)
         # Discarding (.keys()) still empty metadata for files
         # and make sure the paths like metadata/sign/signature are normalized to /
         data["files"] = list(d.replace("\\", "/") for d in data["files"].keys())
@@ -330,35 +334,22 @@ class RestV2Methods:
                     ret.append(tmp)
         return sorted(ret)
 
-    def _upload_recipe(self, ref, files_to_upload):
-        # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn)
-                for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, str(ref))
-
-    def _upload_package(self, pref, files_to_upload):
-        urls = {fn: self.router.package_file(pref, fn)
-                for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, str(pref))
-
     def _upload_files(self, files, urls, ref):
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
-        output = ConanOutput()
         for filename in sorted(files):
             # As the filenames are sorted, the last one is always "conanmanifest.txt"
             resource_url = urls[filename]
             try:
-                headers = {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy,
-                                headers=headers, ref=ref)
+                                dedup=self._checksum_deploy, ref=ref)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
-                output.error(f"\nError uploading file: {filename}, '{exc}'", error_type="exception")
+                ConanOutput().error(f"\nError uploading file: {filename}, '{exc}'",
+                                    error_type="exception")
                 failed.append(filename)
 
         if failed:
@@ -406,7 +397,7 @@ class RestV2Methods:
             # Double check if it is a 404 because there are no packages
             try:
                 package_search_url = self.router.search_packages(ref)
-                if not self.get_json(package_search_url):
+                if not self._get_json(package_search_url):
                     return
             except Exception as e:
                 pass
@@ -483,7 +474,7 @@ class RestV2Methods:
 
     def get_recipe_revisions_references(self, ref):
         url = self.router.recipe_revisions(ref)
-        tmp = self.get_json(url)["revisions"]
+        tmp = self._get_json(url)["revisions"]
         remote_refs = []
         for item in tmp:
             _tmp = copy.copy(ref)
@@ -497,7 +488,7 @@ class RestV2Methods:
 
     def get_latest_recipe_reference(self, ref):
         url = self.router.recipe_latest(ref)
-        data = self.get_json(url)
+        data = self._get_json(url)
         remote_ref = copy.copy(ref)
         remote_ref.revision = data.get("revision")
         remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
@@ -505,7 +496,7 @@ class RestV2Methods:
 
     def get_package_revisions_references(self, pref, headers=None):
         url = self.router.package_revisions(pref)
-        tmp = self.get_json(url, headers=headers)["revisions"]
+        tmp = self._get_json(url, headers=headers)["revisions"]
         remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
                         from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
 
@@ -518,7 +509,7 @@ class RestV2Methods:
 
     def get_latest_package_reference(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)
-        data = self.get_json(url, headers=headers)
+        data = self._get_json(url, headers=headers)
         remote_pref = copy.copy(pref)
         remote_pref.revision = data.get("revision")
         remote_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
