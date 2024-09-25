@@ -72,7 +72,8 @@ class RequirementInfo:
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
-            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+            raise ConanException(f"require {self._ref} package_id_mode='{default_package_id_mode}' "
+                                 "is not a known package_id_mode")
         else:
             func_package_id_mode()
 
