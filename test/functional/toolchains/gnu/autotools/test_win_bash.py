@@ -120,7 +120,7 @@ def test_conf_inherited_in_test_package():
 
             def package_info(self):
                 self.conf_info.define("tools.microsoft.bash:subsystem", "msys2")
-                self.conf_info.define("tools.microsoft.bash:path", "{}")
+                self.conf_info.define("tools.microsoft.bash:path", r"{}")
     """.format(bash_path))
     client.save({"conanfile.py": conanfile})
     client.run("create .")

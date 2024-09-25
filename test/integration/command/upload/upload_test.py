@@ -116,7 +116,7 @@ class UploadTest(unittest.TestCase):
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
-        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
+        with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm -r default --only-recipe",
                        assert_error=True)
             self.assertIn("Error gzopen conan_sources.tgz", client.out)
@@ -145,7 +145,7 @@ class UploadTest(unittest.TestCase):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
-        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
+        with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm -r default", assert_error=True)
             self.assertIn("Error gzopen conan_package.tgz", client.out)
 

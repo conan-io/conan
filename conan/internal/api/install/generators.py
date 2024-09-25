@@ -30,7 +30,9 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "PremakeDeps": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
-               "QbsDeps": "conan.tools.qbs"
+               "QbsDeps": "conan.tools.qbs",
+               "QbsProfile": "conan.tools.qbs",
+               "CPSDeps": "conan.tools.cps"
                }
 
 
@@ -68,7 +70,7 @@ def load_cache_generators(path):
     return result
 
 
-def write_generators(conanfile, app):
+def write_generators(conanfile, app, envs_generation=None):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
 
@@ -116,18 +118,20 @@ def write_generators(conanfile, app):
             with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
-    if conanfile.virtualbuildenv:
-        mkdir(new_gen_folder)
-        with chdir(new_gen_folder):
-            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            env = VirtualBuildEnv(conanfile)
-            env.generate()
-    if conanfile.virtualrunenv:
-        mkdir(new_gen_folder)
-        with chdir(new_gen_folder):
-            from conan.tools.env import VirtualRunEnv
-            env = VirtualRunEnv(conanfile)
-            env.generate()
+    if envs_generation is None:
+        if conanfile.virtualbuildenv:
+            mkdir(new_gen_folder)
+            with chdir(new_gen_folder):
+                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                env = VirtualBuildEnv(conanfile)
+                # TODO: Check length of env.vars().keys() when adding NotEmpty
+                env.generate()
+        if conanfile.virtualrunenv:
+            mkdir(new_gen_folder)
+            with chdir(new_gen_folder):
+                from conan.tools.env import VirtualRunEnv
+                env = VirtualRunEnv(conanfile)
+                env.generate()
 
     _generate_aggregated_env(conanfile)
 

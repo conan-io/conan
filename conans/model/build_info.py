@@ -242,6 +242,16 @@ class _Component:
     def libs(self):
         if self._libs is None:
             self._libs = []
+        if isinstance(self._libs, dict):
+            return [self._libs.keys()]  # Return a list to not break any interface
+        return self._libs
+
+    @property
+    def full_libs(self):
+        if self._libs is None:
+            self._libs = []
+        if isinstance(self._libs, list):
+            return {k: {} for k in self._libs}
         return self._libs
 
     @libs.setter
