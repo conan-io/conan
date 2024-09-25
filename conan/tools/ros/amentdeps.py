@@ -712,7 +712,7 @@ gitignore = """\
 """
 
 
-class Ament(object):
+class AmentDeps(object):
     """
     Generator to serve as integration for Robot Operating System 2 development workspaces.
     It is able to generate files in the similar way Ament does by injecting the Conan-retrieved library's information

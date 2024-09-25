@@ -5,9 +5,9 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_ament_cmake():
+def test_amentdeps():
     """
-    Test that the ament generator generates conan_<name> folders and place CMake files
+    Test that the amentdeps generator generates conan_<name> folders and place CMake files
     in the correct path
     """
     client = TestClient()
@@ -43,7 +43,7 @@ def test_ament_cmake():
         [requires]
         lib2/1.0
         [generators]
-        Ament
+        AmentDeps
         ''')
     client.save({
         "conanfile1.py": conanfile1,
@@ -68,7 +68,7 @@ def test_ament_cmake():
     assert os.path.exists(lib1_cmake_config)
 
 
-def test_ament_environment_shared_libraries():
+def test_amentdeps_environment_shared_libraries():
     """
     Test that the library path file is properly generated so that the environment is set up correctly
     so that the executables generated can found the shared libraries of conan packages
@@ -80,7 +80,7 @@ def test_ament_environment_shared_libraries():
            [requires]
            lib2/1.0
            [generators]
-           Ament
+           AmentDeps
            ''')
     client.save({
         "conanfile1.py": c1,
