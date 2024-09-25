@@ -883,8 +883,8 @@ class CompilersBlock(Block):
         if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
             # None of them defined, if one is defined by user, user should define the other too
             if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
-                compilers["C"] = "cl.exe"
-                compilers["CXX"] = "cl.exe"
+                compilers["C"] = "cl"
+                compilers["CXX"] = "cl"
         return {"compilers": compilers}
 
 
