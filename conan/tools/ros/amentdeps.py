@@ -46,10 +46,10 @@ gitignore = """\
 class AmentDeps(object):
     """
     Generator to serve as integration for Robot Operating System 2 development workspaces.
-    It is able to generate files in the similar way Ament does by injecting the Conan-retrieved library's information
-    into the proper directories and files.
-    The directory tree is then recognized by Colcon so packages in the workspace can be built and run using the Conan
-    package's libraries from the Conan cache.
+    It is able to generate files in the similar way Ament does by injecting the Conan-retrieved
+    library's information into the proper directories and files.
+    The directory tree is then recognized by Colcon so packages in the workspace can be built and run
+    using the Conan package's libraries from the Conan cache.
     """
 
     def __init__(self, conanfile):
@@ -62,14 +62,18 @@ class AmentDeps(object):
 
         output_folder = self._conanfile.generators_folder
         if not output_folder.endswith("install"):
-          self._conanfile.output.warning("The output folder for the Ament generator should be always 'install'. Make sure you are using '--output-folder install' in your 'conan install' command")
-        root_folder = os.path.sep.join(output_folder.split(os.path.sep)[:-1])  # This should be the workspace root folder
+            self._conanfile.output.warning(
+                "The output folder for the Ament generator should be always"
+                " 'install'. Make sure you are using '--output-folder"
+                " install' in your 'conan install' command")
+        # This should be the workspace root folder
+        root_folder = os.path.sep.join(output_folder.split(os.path.sep)[:-1])
         self._conanfile.output.info(f"ROS2 workspace root folder: {root_folder}")
         self._conanfile.output.info(f"ROS2 workspace install folder: {output_folder}")
 
         for require, dep in self._conanfile.dependencies.items():
             if not require.direct:
-                # Only direct depdendencies should be included
+                # Only direct dependencies should be included
                 continue
             ref_name = require.ref.name
             ament_ref_name = f"conan_{ref_name}"
@@ -78,22 +82,20 @@ class AmentDeps(object):
             ref_license = dep.license or "unknown"
             run_paths = self.get_run_paths(require, dep)
 
-            self.generate_direct_dependency(root_folder, output_folder, ament_ref_name, ref_name, ref_version, ref_description, ref_license, run_paths)
+            self.generate_direct_dependency(root_folder, output_folder, ament_ref_name, ref_name,
+                                            ref_version, ref_description, ref_license, run_paths)
             dependencies = ", ".join([dep.ref.name for _, dep in dep.dependencies.items()])
             self._conanfile.output.info(f"{ref_name} dependencies: {dependencies}")
             for req, _ in dep.dependencies.items():
                 self.generate_cmake_files(output_folder, ament_ref_name, req.ref.name)
 
-    def generate_direct_dependency(self, root_folder, install_folder, ament_ref_name, ref_name, ref_version, ref_description, ref_license, run_paths):
+    def generate_direct_dependency(self, root_folder, install_folder, ament_ref_name, ref_name,
+                                   ref_version, ref_description, ref_license, run_paths):
         """
         Generate correct directory structure for a direct dependency.
-        -> conan_<require>: Mock dependency inside workspace.
-        -> install/conan_<require>/share/conan_<require>: Common package files.
-        -> install/conan_<require>/share/colcon-core: To mark package as installed for Colcon.
-        -> install/conan_<require>/ament_index/conan_<require>: To mark package as installed for Ament.
-        -> install/conan_<require>/ament_index/conan_<require>/environment: Files to set up the running environment.
-        -> install/conan_<require>/ament_index/conan_<require>/hook: Files to set up the building environment.
 
+        @param install_folder: Install folder of the workspace
+        @param root_folder: Root folder of the workspace
         @param ament_ref_name: Name of the dependency with the 'conan_' prefix.
         @param ref_name: Name of the Conan reference.
         @param ref_version: Version of the Conan reference.
@@ -103,7 +105,8 @@ class AmentDeps(object):
         @return:
         """
         direct_dependency_folder = os.path.join(root_folder, ament_ref_name)
-        self._conanfile.output.info(f"Creating Conan direct dependency folder at: {direct_dependency_folder}")
+        self._conanfile.output.info(f"Creating Conan direct dependency folder at: "
+                                    f"{direct_dependency_folder}")
 
         paths_content = [
             (os.path.join(direct_dependency_folder, "package.xml"),
@@ -125,17 +128,20 @@ class AmentDeps(object):
         Generate CMakeDeps files inside install/<ament_ref_name>/share/<require_name>/cmake directory
         Fox example : install/conan_boost/share/bzip2/cmake
 
+        @param install_folder: workspace install folder
         @param ament_ref_name: name of the direct dependency
         @param require_name: name of the transitive dependency
         """
         self._conanfile.output.info(f"Generating CMake files for {require_name} dependency")
         for generator_file, content in self.cmakedeps_files.items():
             # Create CMake files in install/<ament_ref_name>/share/<require_name>/cmake directory
-            if require_name in generator_file.lower() or "cmakedeps_macros.cmake" in generator_file.lower():
-              self._conanfile.output.info(f"Generating CMake file {generator_file}")
-              # FIXME: This is a way to save only the require_name related cmake files (and helper cmake files), however, names might not match!!
-              file_path = os.path.join(install_folder, ament_ref_name, "share", require_name, "cmake", generator_file)
-              save(self._conanfile, file_path, content)
+            if require_name in generator_file.lower() or\
+              "cmakedeps_macros.cmake" in generator_file.lower():
+                self._conanfile.output.info(f"Generating CMake file {generator_file}")
+                # FIXME: <require_name> and dep name in generated CMake files might not match!
+                file_path = os.path.join(install_folder, ament_ref_name, "share", require_name,
+                                         "cmake", generator_file)
+                save(self._conanfile, file_path, content)
 
     @staticmethod
     def get_run_paths(require, dependency):
@@ -154,7 +160,7 @@ class AmentDeps(object):
                 cpp_info = dep.cpp_info.aggregated_components()
                 for d in cpp_info.libdirs:
                     if os.path.exists(d):
-                      paths.insert(0, d)
+                        paths.insert(0, d)
             return paths
 
         run_paths[:0] = _get_cpp_info_libdirs(require, dependency)
