@@ -382,6 +382,8 @@ class ConanInfo:
         config_version_dumps = self.config_version.serialize() if self.config_version else None
         if config_version_dumps:
             result["config_version"] = config_version_dumps
+        if self.compatibility_delta:
+            result["compatibility_delta"] = self.compatibility_delta
         return result
 
     def dumps(self):

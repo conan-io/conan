@@ -652,13 +652,13 @@ class TestCompatibleBuild:
         bo = json.loads(c.load("build_order.json"))
         liba = bo["order"][0][0]
         assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
-        assert liba["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+        assert liba["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
         assert liba["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
         # Lets make sure the build works too
         c.run(f"install {settings} {liba['build_args']}")
         libb = bo["order"][1][0]
         assert libb["ref"] == "libb/0.1#62bb167aaa5306d1ac757bb817797f9e"
-        assert libb["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
+        assert libb["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
         assert libb["build_args"] == "--requires=libb/0.1 --build=compatible:libb/0.1"
         # Lets make sure the build works too
         c.run(f"install {settings} {libb['build_args']}")
@@ -674,7 +674,7 @@ class TestCompatibleBuild:
         for pkg_index in (0, 1):
             liba = bo["order"][0][pkg_index]
             assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
-            assert liba["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+            assert liba["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
             assert liba["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
 
         # By recipe also works
@@ -685,12 +685,12 @@ class TestCompatibleBuild:
         liba = bo["order"][0][0]
         assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
         pkga = liba["packages"][0][0]
-        assert pkga["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+        assert pkga["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
         assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
         libb = bo["order"][1][0]
         assert libb["ref"] == "libb/0.1#62bb167aaa5306d1ac757bb817797f9e"
         pkgb = libb["packages"][0][0]
-        assert pkgb["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
+        assert pkgb["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
         assert pkgb["build_args"] == "--requires=libb/0.1 --build=compatible:libb/0.1"
 
         # Now lets make sure that build-order-merge works too
@@ -704,5 +704,5 @@ class TestCompatibleBuild:
         assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
         for pkg_index in (0, 1):
             pkga = liba["packages"][0][pkg_index]
-            assert pkga["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+            assert pkga["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
             assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"

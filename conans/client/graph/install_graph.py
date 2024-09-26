@@ -32,7 +32,7 @@ class _InstallPackageReference:
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
         self.overrides = Overrides()
         self.ref = None
-        self.compatibility_delta = None
+        self.info = None
 
     @property
     def pref(self):
@@ -54,7 +54,7 @@ class _InstallPackageReference:
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         result.overrides = node.overrides()
-        result.compatibility_delta = node.conanfile.info.compatibility_delta
+        result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
         return result
 
     def add(self, node):
@@ -69,7 +69,7 @@ class _InstallPackageReference:
         if self.binary != BINARY_BUILD:
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
-        compatible = "compatible:" if self.compatibility_delta else ""
+        compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -87,7 +87,7 @@ class _InstallPackageReference:
                 "depends": self.depends,
                 "overrides": self.overrides.serialize(),
                 "build_args": self._build_args(),
-                "compatibility_delta": self.compatibility_delta}
+                "info": self.info}
 
     @staticmethod
     def deserialize(data, filename, ref):
@@ -101,7 +101,7 @@ class _InstallPackageReference:
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
-        result.compatibility_delta = data.get("compatibility_delta")
+        result.info = data.get("info")
         return result
 
 
@@ -226,7 +226,7 @@ class _InstallConfiguration:
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
-        self.compatibility_delta = None
+        self.info = None
 
     def __str__(self):
         return f"{self.ref}:{self.package_id} ({self.binary}) -> {[str(d) for d in self.depends]}"
@@ -254,7 +254,7 @@ class _InstallConfiguration:
         # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.overrides = node.overrides()
-        result.compatibility_delta = node.conanfile.info.compatibility_delta
+        result.info = node.conanfile.info.serialize()
 
         result.nodes.append(node)
         for dep in node.dependencies:
@@ -280,7 +280,7 @@ class _InstallConfiguration:
         if self.binary != BINARY_BUILD:
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
-        compatible = "compatible:" if self.compatibility_delta else ""
+        compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
             cmd += " " + " ".join(f"-o {o}" for o in self.options)
@@ -300,7 +300,7 @@ class _InstallConfiguration:
                 "depends": [d.repr_notime() for d in self.depends],
                 "overrides": self.overrides.serialize(),
                 "build_args": self._build_args(),
-                "compatibility_delta": self.compatibility_delta
+                "info": self.info
                 }
 
     @staticmethod
@@ -315,7 +315,7 @@ class _InstallConfiguration:
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])
-        result.compatibility_delta = data.get("compatibility_delta")
+        result.info = data.get("info")
         return result
 
     def merge(self, other):
