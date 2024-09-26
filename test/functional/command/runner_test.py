@@ -15,12 +15,12 @@ def docker_skip(test_image=None):
             docker_client = docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
         if test_image:
             docker_client.images.pull(test_image)
-    except docker.errors.DockerException:
-        return True
-    except docker.errors.ImageNotFound:
-        return True
-    except docker.errors.APIError:
-        return True
+    except docker.errors.DockerException as e:
+        raise e
+    except docker.errors.ImageNotFound as e:
+        raise e
+    except docker.errors.APIError as e:
+        raise e
     return False
 
 
