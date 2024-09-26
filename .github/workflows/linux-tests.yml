@@ -85,6 +85,11 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install meson
 
+      - name: Check Docker socket permissions
+        run: |
+          ls -l /var/run/docker.sock
+          id
+
       - name: Run tests
         shell: bash
         run: |

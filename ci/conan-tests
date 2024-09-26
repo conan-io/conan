@@ -140,7 +140,7 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
     chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
     mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
 
-RUN usermod -aG docker conan
+RUN usermod -aG docker conan && newgrp docker
 
 USER conan
 WORKDIR $HOME
