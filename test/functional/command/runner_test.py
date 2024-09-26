@@ -9,10 +9,7 @@ from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 def docker_skip(test_image=None):
     try:
-        try:
-            docker_client = docker.from_env()
-        except:
-            docker_client = docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+        docker_client = docker.from_env()
         if test_image:
             docker_client.images.pull(test_image)
     except docker.errors.DockerException as e:
