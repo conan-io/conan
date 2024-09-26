@@ -250,6 +250,11 @@ def format_libraries(libraries, settings):
             if not library.endswith(".lib"):
                 library += ".lib"
             result.append(library)
+        elif library.startswith("lib") and library.endswith(".a"):
+            # link by filename
+            # TODO: at this point, we should only use -l:
+            # if we are sure that we use ld as linker
+            result.append("-l:%s" % library)
         else:
             result.append("-l%s" % library)
     return result

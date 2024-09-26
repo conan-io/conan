@@ -244,3 +244,5 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(['lib1.lib', 'lib2.lib'],
                          format_libraries(['lib1', 'lib2'],
                                           MockSettings({"compiler": "Visual Studio"})))
+        self.assertEqual(['-l:liba.a', '-l:libb.a'],
+                         format_libraries(['liba.a', 'libb.a'], MockSettings({})))
