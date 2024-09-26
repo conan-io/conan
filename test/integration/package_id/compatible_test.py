@@ -1,3 +1,4 @@
+import json
 import textwrap
 import unittest
 
@@ -618,3 +619,90 @@ class TestCompatibleBuild:
         assert "compiler.cppstd: 14" in c.out
         c.run("list libb:*")
         assert "compiler.cppstd: 17" in c.out
+
+    def test_multi_level_build_compatible_build_order(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.build import check_min_cppstd
+
+           class Pkg(ConanFile):
+               name = "{name}"
+               version = "0.1"
+               settings = "os", "compiler"
+               {requires}
+
+               def validate_build(self):
+                   check_min_cppstd(self, {cppstd})
+            """)
+        c.save({"liba/conanfile.py": conanfile.format(name="liba", cppstd=14, requires=""),
+                "libb/conanfile.py": conanfile.format(name="libb", cppstd=17,
+                                                      requires='requires="liba/0.1"')})
+        c.run("export liba")
+        c.run("export libb")
+        settings = "-s os=Windows -s compiler=gcc -s compiler.version=11 " \
+                   "-s compiler.libcxx=libstdc++11 -s compiler.cppstd=11"
+        c.run(f"graph build-order --requires=libb/0.1 {settings} --format=json", assert_error=True,
+              redirect_stdout="build_order.json")
+        c.assert_listed_binary({"liba/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Missing"),
+                                "libb/0.1": ("144910d65b27bcbf7d544201f5578555bbd0376e", "Missing")})
+
+        c.run(f"graph build-order --requires=libb/0.1 {settings} --build=compatible "
+              "--order-by=configuration --format=json", redirect_stdout="build_order.json")
+        bo = json.loads(c.load("build_order.json"))
+        liba = bo["order"][0][0]
+        assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
+        assert liba["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+        assert liba["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
+        # Lets make sure the build works too
+        c.run(f"install {settings} {liba['build_args']}")
+        libb = bo["order"][1][0]
+        assert libb["ref"] == "libb/0.1#62bb167aaa5306d1ac757bb817797f9e"
+        assert libb["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
+        assert libb["build_args"] == "--requires=libb/0.1 --build=compatible:libb/0.1"
+        # Lets make sure the build works too
+        c.run(f"install {settings} {libb['build_args']}")
+
+        # Now lets make sure that build-order-merge works too
+        c.run(f"graph build-order --requires=libb/0.1 {settings} -s compiler.version=12 "
+              "--build=compatible --order-by=configuration --format=json",
+              redirect_stdout="build_order2.json")
+
+        c.run(f"graph build-order-merge --file=build_order.json --file=build_order2.json -f=json",
+              redirect_stdout="build_order_merged.json")
+        bo = json.loads(c.load("build_order_merged.json"))
+        for pkg_index in (0, 1):
+            liba = bo["order"][0][pkg_index]
+            assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
+            assert liba["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+            assert liba["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
+
+        # By recipe also works
+        c.run("remove *:* -c")
+        c.run(f"graph build-order --requires=libb/0.1 {settings} --build=compatible "
+              "--order-by=recipe --format=json", redirect_stdout="build_order.json")
+        bo = json.loads(c.load("build_order.json"))
+        liba = bo["order"][0][0]
+        assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
+        pkga = liba["packages"][0][0]
+        assert pkga["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+        assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
+        libb = bo["order"][1][0]
+        assert libb["ref"] == "libb/0.1#62bb167aaa5306d1ac757bb817797f9e"
+        pkgb = libb["packages"][0][0]
+        assert pkgb["compatibility_delta"] == {"settings": [["compiler.cppstd", "17"]]}
+        assert pkgb["build_args"] == "--requires=libb/0.1 --build=compatible:libb/0.1"
+
+        # Now lets make sure that build-order-merge works too
+        c.run(f"graph build-order --requires=libb/0.1 {settings} -s compiler.version=12 "
+              "--order-by=recipe --build=compatible --format=json",
+              redirect_stdout="build_order2.json")
+        c.run(f"graph build-order-merge --file=build_order.json --file=build_order2.json -f=json",
+              redirect_stdout="build_order_merged.json")
+        bo = json.loads(c.load("build_order_merged.json"))
+        liba = bo["order"][0][0]
+        assert liba["ref"] == "liba/0.1#c1459d256a9c2d3c49d149fd7c43310c"
+        for pkg_index in (0, 1):
+            pkga = liba["packages"][0][pkg_index]
+            assert pkga["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
+            assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
