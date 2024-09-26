@@ -296,6 +296,7 @@ def tar_extract(fileobj, destination_dir):
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
     # the_tar.errorlevel = 2  # raise exception if any error
+    the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
     the_tar.extractall(path=destination_dir)
     the_tar.close()
 
