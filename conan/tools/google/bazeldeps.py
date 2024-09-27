@@ -4,14 +4,13 @@ import textwrap
 from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
-from setuptools.command.easy_install import is_sh
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
-_BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'requires', 'cpp_info'])
+_BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
 _LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'import_lib_path'])
 
 
@@ -73,12 +72,13 @@ def _get_requirements(conanfile, build_context_activated):
         yield require, dep
 
 
-def _get_libs(dep, cpp_info=None) -> list:
+def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
     """
     Get the static/shared library paths
 
     :param dep: normally a <ConanFileInterface obj>
     :param cpp_info: <CppInfo obj> of the component.
+    :param reference_name: <str> Package/Component's reference name. ``None`` by default.
     :return: list of tuples per static/shared library ->
              [(lib_name, is_shared, library_path, import_library_path)]
              Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
@@ -115,22 +115,31 @@ def _get_libs(dep, cpp_info=None) -> list:
         if ext == "dll" or ext.endswith(".dll"):
             if lib_name:
                 shared_windows_libs[lib_name] = formatted_path
-            else:
-                for l in libs:
-                    if name.startswith(l) or l in name:
-                        shared_windows_libs[l] = formatted_path
+            elif total_libs_number == 1:
+                shared_windows_libs[libs[0]] = formatted_path
+            elif len(libs) == 1 and ref_name in name and libs[0] not in shared_windows_libs:
+                shared_windows_libs[libs[0]] = formatted_path
+            else:  # let's cross the fingers... This is the last chance.
+                for lib in libs:
+                    if ref_name in name and ref_name in lib and lib not in shared_windows_libs:
+                        shared_windows_libs[lib] = formatted_path
                         break
         elif lib_name is not None:
             lib_paths[lib_name] = formatted_path
 
     cpp_info = cpp_info or dep.cpp_info
-    if hasattr(cpp_info, "aggregated_components"):
-        # Global cpp_info
-        cpp_info = cpp_info.aggregated_components()
+    libs = cpp_info.libs[:]  # copying the values
+    if not libs:  # no libraries declared
+        return []
     is_shared = _is_shared()
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
-    libs = cpp_info.libs[:]  # copying the values
+    ref_name = reference_name or dep.ref.name
+    if hasattr(cpp_info, "aggregated_components"):
+        # Global cpp_info
+        total_libs_number = len(cpp_info.aggregated_components().libs)
+    else:
+        total_libs_number = len(libs)
     lib_paths = {}
     shared_windows_libs = {}
     for libdir in set(libdirs + bindirs):
@@ -610,7 +619,8 @@ class _InfoGenerator:
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
             comp_name = _get_component_name(self._dep, comp_ref_name)
             # Save each component information
-            components_info.append(_BazelTargetInfo(None, comp_name, comp_requires_names, cpp_info))
+            components_info.append(_BazelTargetInfo(None, comp_name, comp_ref_name,
+                                                    comp_requires_names, cpp_info))
         return components_info
 
     @property
@@ -633,7 +643,8 @@ class _InfoGenerator:
                 for req in self._transitive_reqs.values()
             ]
         cpp_info = self._dep.cpp_info
-        return _BazelTargetInfo(repository_name, pkg_name, requires, cpp_info)
+        return _BazelTargetInfo(repository_name, pkg_name, _get_package_reference_name(self._dep),
+                                requires, cpp_info)
 
 
 class BazelDeps:

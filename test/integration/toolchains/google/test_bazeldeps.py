@@ -983,3 +983,25 @@ class TestBazelGenerationBuildContext:
         # Now make sure we can actually build with build!=host context
         c.run("install app -s:h build_type=Debug --build=missing")
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+
+
+def test_shared_windows_find_libraries():
+    """
+    Testing the ``_get_libs`` mechanism in Windows, the shared libraries and their
+    import ones are correctly found.
+
+    Note: simulating dependencies with openssl, libcurl, and zlib packages:
+
+    zlib:
+        - (zlib package) bin/zlib1.dll AND lib/zdll.lib
+    libcurl:
+        - (curl component) bin/libcurl.dll AND lib/libcurl_imp.lib
+    openssl:
+        - (crypto component) bin/libcrypto-3-x64.dll AND lib/libcrypto.lib
+        - (ssl component) bin/libssl-3-x64.dll AND lib/libssl.lib
+
+
+    Issue: https://github.com/conan-io/conan/issues/16691
+    """
+    pass
