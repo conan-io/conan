@@ -56,11 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
-      options: --user conan --volume /var/run/docker.sock:/var/run/docker.sock
+      options: --user conan
     strategy:
       matrix:
-        python-version: ['3.12.3']#, '3.9.2', '3.8.6', '3.6.15']
-        test-type: ['unittests']#, 'integration', 'functional']
+        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
+        test-type: ['unittests', 'integration', 'functional']
     name: Python ${{ matrix.python-version }} - ${{ matrix.test-type }}
     steps:
       - name: Checkout code
@@ -85,19 +85,64 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install meson
 
-      - name: Check Docker socket permissions
-        run: |
-          ls -l /var/run/docker.sock
-          id
-
       - name: Run tests
         shell: bash
         run: |
-           pytest -m docker_runner -rs
-#          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-#            pytest test/unittests --durations=20 -n 4 -rs
-#          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-#            pytest test/integration --durations=20 -n 4 -rs
-#          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-#            pytest test/functional --durations=20 -n 4 -rs
-#          fi
+          if [ "${{ matrix.test-type }}" == "unittests" ]; then
+            pytest test/unittests --durations=20 -n 4 -rs
+          elif [ "${{ matrix.test-type }}" == "integration" ]; then
+            pytest test/integration --durations=20 -n 4 -rs
+          elif [ "${{ matrix.test-type }}" == "functional" ]; then
+            pytest test/functional --durations=20 -n 4 -rs
+          fi
+
+  linux_docker_tests:
+    needs: build_container
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12.3']
+    name: Docker Runner Tests - Python ${{ matrix.python-version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+          pip install meson
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Docker image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+
+      - name: Run tests inside Docker container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}":/workspace \
+            -w /workspace \
+            ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
+            bash -c "
+              pyenv global ${{ matrix.python-version }} && \
+              python --version && \
+              pip install --upgrade pip && \
+              pip install -r conans/requirements.txt && \
+              pip install -r conans/requirements_dev.txt && \
+              pip install -r conans/requirements_server.txt && \
+              pip install meson && \
+              pytest -m docker_runner --durations=20 -n 4 -rs
+            "
