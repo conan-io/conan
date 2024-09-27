@@ -2,6 +2,8 @@ FROM ubuntu:24.04
 
 LABEL maintainer="Conan.io <info@conan.io>"
 
+ARG DOCKER_GID=999
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV PY36=3.6.15 \
@@ -140,7 +142,9 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
     chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
     mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
 
-RUN usermod -aG docker conan && newgrp docker
+RUN groupadd -g $DOCKER_GID docker || groupmod -g $DOCKER_GID docker
+
+RUN usermod -aG docker conan
 
 USER conan
 WORKDIR $HOME

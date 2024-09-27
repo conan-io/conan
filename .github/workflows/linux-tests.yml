@@ -40,10 +40,20 @@ jobs:
         if: steps.cache_docker_image.outputs.cache-hit == 'true'
         run: docker load -i docker_image_cache/conan-tests.tar
 
+      - name: Get Docker group GID
+        if: steps.cache_docker_image.outputs.cache-hit != 'true'
+        id: docker_gid
+        run: |
+          DOCKER_GID=$(getent group docker | cut -d: -f3)
+          echo "docker_gid=$DOCKER_GID" >> $GITHUB_OUTPUT
+
       - name: Build Docker image (if not cached)
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:latest -f ./ci/conan-tests .
+          docker build \
+          --build-arg DOCKER_GID=${{ steps.docker_gid.outputs.docker_gid }} \
+          -t ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
+          -f ./ci/conan-tests .
           mkdir -p docker_image_cache
           docker save ghcr.io/${{ github.repository_owner }}/conan-tests:latest -o docker_image_cache/conan-tests.tar
 
@@ -107,19 +117,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r conans/requirements.txt
-          pip install -r conans/requirements_dev.txt
-          pip install -r conans/requirements_server.txt
-          pip install meson
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -129,6 +126,18 @@ jobs:
 
       - name: Pull Docker image
         run: docker pull ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+
+      - name: Check Docker socket permissions inside container
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
+            bash -c "
+              ls -l /var/run/docker.sock
+              id
+              groups conan
+              getent group docker
+            "
 
       - name: Run tests inside Docker container
         run: |
