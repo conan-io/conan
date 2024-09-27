@@ -80,7 +80,7 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
     :param cpp_info: <CppInfo obj> of the component.
     :param reference_name: <str> Package/Component's reference name. ``None`` by default.
     :return: list of tuples per static/shared library ->
-             [(lib_name, is_shared, library_path, import_library_path)]
+             [(name, is_shared, lib_path, import_lib_path)]
              Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
                     Windows would have:
                         * shared: library_path as DLL, and import_library_path as LIB
@@ -155,15 +155,15 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
                 _save_lib_path(f, full_path)
 
     libraries = []
-    for lib_name, library_path in lib_paths.items():
-        import_library_path = None
-        if is_shared and os.path.splitext(library_path)[1] == ".lib":
-            if lib_name not in shared_windows_libs:
+    for name, lib_path in lib_paths.items():
+        import_lib_path = None
+        if is_shared and os.path.splitext(lib_path)[1] == ".lib":
+            if name not in shared_windows_libs:
                 raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
-                                     f" Only found {library_path}")
-            import_library_path = library_path  # .lib
-            library_path = shared_windows_libs.pop(lib_name)  # .dll
-        libraries.append((lib_name, is_shared, library_path, import_library_path))
+                                     f" Only found {lib_path}")
+            import_lib_path = lib_path  # .lib
+            lib_path = shared_windows_libs.pop(name)  # .dll
+        libraries.append((name, is_shared, lib_path, import_lib_path))
     # TODO: Would we want to manage the cases where DLLs are provided by the system?
     return libraries
 
