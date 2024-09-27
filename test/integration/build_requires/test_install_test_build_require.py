@@ -222,3 +222,37 @@ def test_bootstrap_other_architecture():
     assert package1["depends"] == []
     assert package2["package_id"] == linux_pkg_id
     assert package2["depends"] == [win_pkg_id]
+
+
+def test_bootstrap_cc():
+    # https://github.com/conan-io/conan/issues/16758
+    cc = textwrap.dedent("""
+        from conan import ConanFile
+
+        class CcConanfile(ConanFile):
+            name = "cc"
+            version = "1.0"
+            options = {"bootstrap": [True, False]}
+            default_options = {"bootstrap": True}
+
+            def build_requirements(self):
+                if self.options.bootstrap:
+                    self.tool_requires("cc/1.0", options={"*:bootstrap": False})
+        """)
+    foo = GenConanfile("foo", "1.0").with_tool_requirement("cc/1.0")
+    c = TestClient()
+    c.save({"cc/conanfile.py": cc,
+            "foo/conanfile.py": foo})
+    c.run("create cc --build-require")
+    # Both are build-requires
+    c.assert_listed_binary({"cc/1.0": ("826727aac60b5956d1df5121a3921f26a6984f15", "Build")},
+                           build=True)
+    c.assert_listed_binary({"cc/1.0": ("96ae1d965ce6f2e2256ac0cfc3a35dcd4860c389", "Build")},
+                           build=True)
+    # This works fine, being able to build the 2 different binaries both bootstrapped and not
+    c.run("list cc/1.0:*")
+    assert "bootstrap: False" in c.out
+    assert "bootstrap: True" in c.out
+    c.run("create foo")
+    c.assert_listed_binary({"cc/1.0": ("96ae1d965ce6f2e2256ac0cfc3a35dcd4860c389", "Cache")},
+                           build=True)
