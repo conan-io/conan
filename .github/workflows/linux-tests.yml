@@ -109,6 +109,9 @@ jobs:
   linux_docker_tests:
     needs: build_container
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+      options: --user conan -v /var/run/docker.sock:/var/run/docker.sock
     strategy:
       matrix:
         python-version: ['3.12.3']
@@ -127,30 +130,15 @@ jobs:
       - name: Pull Docker image
         run: docker pull ghcr.io/${{ github.repository_owner }}/conan-tests:latest
 
-      - name: Check Docker socket permissions inside container
+      - name: Install dependencies
         run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
-            bash -c "
-              ls -l /var/run/docker.sock
-              id
-              groups conan
-              getent group docker
-            "
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+          pip install meson
 
-      - name: Run tests inside Docker container
+      - name: Run tests
+        shell: bash
         run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
-            bash -c "
-              pyenv global ${{ matrix.python-version }} && \
-              python --version && \
-              pip install --upgrade pip && \
-              pip install -r conans/requirements.txt && \
-              pip install -r conans/requirements_dev.txt && \
-              pip install -r conans/requirements_server.txt && \
-              pip install meson && \
-              pytest -m docker_runner --durations=20 -rs
-            "
+          pytest -m docker_runner --durations=20 -rs
