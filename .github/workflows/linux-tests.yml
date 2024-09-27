@@ -142,9 +142,7 @@ jobs:
       - name: Run tests inside Docker container
         run: |
           docker run --rm \
-            -v "${{ github.workspace }}":/workspace \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -w /workspace \
             ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
             bash -c "
               pyenv global ${{ matrix.python-version }} && \
@@ -154,5 +152,5 @@ jobs:
               pip install -r conans/requirements_dev.txt && \
               pip install -r conans/requirements_server.txt && \
               pip install meson && \
-              pytest -m docker_runner --durations=20 -n 4 -rs
+              pytest -m docker_runner --durations=20 -rs
             "
