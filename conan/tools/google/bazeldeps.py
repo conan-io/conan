@@ -115,9 +115,7 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
         if ext == "dll" or ext.endswith(".dll"):
             if lib_name:
                 shared_windows_libs[lib_name] = formatted_path
-            elif total_libs_number == 1:
-                shared_windows_libs[libs[0]] = formatted_path
-            elif len(libs) == 1 and ref_name in name and libs[0] not in shared_windows_libs:
+            elif total_libs_number == 1 and libs[0] not in shared_windows_libs:
                 shared_windows_libs[libs[0]] = formatted_path
             else:  # let's cross the fingers... This is the last chance.
                 for lib in libs:
