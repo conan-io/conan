@@ -16,18 +16,20 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 from conans.client.rest.remote_credentials import RemoteCredentials
+from conans.client.rest.rest_client import RestApiClient
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
 
 LOGIN_RETRIES = 3
 
 
-class ConanApiAuthManager(object):
+class ConanApiAuthManager:
 
-    def __init__(self, rest_client_factory, cache_folder, localdb, global_conf):
-        self._rest_client_factory = rest_client_factory
+    def __init__(self, requester, cache_folder, localdb, global_conf):
+        self._requester = requester
         self._localdb = localdb
         self._global_conf = global_conf
         self._cache_folder = cache_folder
+        self._cached_capabilities = {}  # common to all RestApiClient
 
     def call_rest_api_method(self, remote, method_name, *args, **kwargs):
         """Handles AuthenticationException and request user to input a user and a password"""
@@ -71,7 +73,7 @@ class ConanApiAuthManager(object):
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
             creds = RemoteCredentials(self._cache_folder, self._global_conf)
-            input_user, input_password = creds.auth(remote.name)
+            input_user, input_password = creds.auth(remote)
             try:
                 self._authenticate(remote, input_user, input_password)
             except AuthenticationException:
@@ -89,7 +91,8 @@ class ConanApiAuthManager(object):
         username, token, refresh_token = self._localdb.get_login(remote.url)
         custom_headers = {'X-Client-Anonymous-Id': self._get_mac_digest(),
                           'X-Client-Id': str(username or "")}
-        return self._rest_client_factory.new(remote, token, refresh_token, custom_headers)
+        return RestApiClient(remote, token, refresh_token, custom_headers, self._requester,
+                             self._global_conf, self._cached_capabilities)
 
     def _clear_user_tokens_in_db(self, user, remote):
         try:

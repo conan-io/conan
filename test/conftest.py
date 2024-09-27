@@ -6,7 +6,7 @@ from shutil import which
 
 import pytest
 
-from conans.client.conf.detect_vs import vswhere
+from conan.internal.api.detect.detect_vs import vswhere
 
 """
 To override these locations with your own in your dev machine:
@@ -132,7 +132,7 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+        "system": {"path": {'Windows': r"C:\msys64\usr\bin"}},
     },
     'msys2_clang64': {
         "disabled": True,

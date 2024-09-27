@@ -40,6 +40,8 @@ def architecture_flag(settings):
             return '-m32'
         elif arch in ['s390']:
             return '-m31'
+        elif arch in ['tc131', 'tc16', 'tc161', 'tc162', 'tc18']:
+            return '-m{}'.format(arch)
         elif the_os == 'AIX':
             if arch in ['ppc32']:
                 return '-maix32'
@@ -262,7 +264,10 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if clang_version >= "13.0":
+    if clang_version >= "16.0":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+    elif clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 

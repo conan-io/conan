@@ -4,8 +4,8 @@ from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conan.internal.upload_metadata import gather_metadata
-from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
+from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker, \
+    gather_metadata
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import ConanException, AuthenticationException, ForbiddenException

@@ -63,6 +63,8 @@ class CacheAPI:
         app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
+        if os.path.exists(ref_layout.finalize()):
+            return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
     def check_integrity(self, package_list):
@@ -168,6 +170,7 @@ class CacheAPI:
             the_tar = tarfile.open(fileobj=file_handler)
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
+            the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
             the_tar.extractall(path=cache_folder)
             the_tar.close()
 
