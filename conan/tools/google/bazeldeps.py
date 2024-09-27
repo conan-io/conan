@@ -155,15 +155,15 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
                 _save_lib_path(f, full_path)
 
     libraries = []
-    for lib, lib_path in lib_paths.items():
-        import_lib_path = None
-        if is_shared and os.path.splitext(lib_path)[1] == ".lib":
-            if lib not in shared_windows_libs:
+    for lib_name, library_path in lib_paths.items():
+        import_library_path = None
+        if is_shared and os.path.splitext(library_path)[1] == ".lib":
+            if lib_name not in shared_windows_libs:
                 raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
-                                     f" Only found {lib_path}")
-            import_lib_path = lib_path  # .lib
-            lib_path = shared_windows_libs.pop(lib)  # .dll
-        libraries.append((lib, is_shared, lib_path, import_lib_path))
+                                     f" Only found {library_path}")
+            import_library_path = library_path  # .lib
+            library_path = shared_windows_libs.pop(lib_name)  # .dll
+        libraries.append((lib_name, is_shared, library_path, import_library_path))
     # TODO: Would we want to manage the cases where DLLs are provided by the system?
     return libraries
 
