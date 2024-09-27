@@ -75,6 +75,10 @@ class ConanFile:
     runenv_info = None
     conf_info = None
 
+    # Hook data
+    hook_name = None
+    hook_method = None
+
     def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem

@@ -30,11 +30,16 @@ class HookManager:
             try:
                 conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
                                                                    method_name)
+                conanfile.hook_name = name
+                conanfile.hook_method = method_name
+
                 method(conanfile)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
                 conanfile.display_name = display_name
+                conanfile.hook_name = None
+                conanfile.hook_method = None
 
     def _load_hooks(self):
         hooks = {}
