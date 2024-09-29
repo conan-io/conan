@@ -51,7 +51,8 @@ class ConanApiAuthManager:
                 # Anonymous is not enough, ask for a user
                 ConanOutput().info('Please log in to "%s" to perform this action. '
                                    'Execute "conan remote login" command.' % remote.name)
-                return self._retry_with_new_token(user, remote, method_name, *args, **kwargs)
+                if self._get_credentials_and_authenticate(user, remote):
+                    self.call_rest_api_method(remote, method_name, *args, **kwargs)
             elif token and refresh_token:
                 # If we have a refresh token try to refresh the access token
                 try:
@@ -67,13 +68,13 @@ class ConanApiAuthManager:
                 self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
-    def _retry_with_new_token(self, user, remote, method_name, *args, **kwargs):
+    def _get_credentials_and_authenticate(self, user, remote):
         """Try LOGIN_RETRIES to obtain a password from user input for which
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
+        creds = RemoteCredentials(self._cache_folder, self._global_conf)
         for _ in range(LOGIN_RETRIES):
-            creds = RemoteCredentials(self._cache_folder, self._global_conf)
-            input_user, input_password = creds.auth(remote)
+            input_user, input_password, interactive = creds.auth(remote)
             try:
                 self._authenticate(remote, input_user, input_password)
             except AuthenticationException:
@@ -82,9 +83,10 @@ class ConanApiAuthManager:
                     out.error('Wrong user or password', error_type="exception")
                 else:
                     out.error(f'Wrong password for user "{user}"', error_type="exception")
+                if interactive:
+                    break
             else:
-                return self.call_rest_api_method(remote, method_name, *args, **kwargs)
-
+                return True
         raise AuthenticationException("Too many failed login attempts, bye!")
 
     def _get_rest_client(self, remote):

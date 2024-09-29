@@ -24,11 +24,11 @@ class JWTAuth(AuthBase):
     """Attaches JWT Authentication to the given Request object."""
 
     def __init__(self, token):
-        self.token = token
+        self._bearer = "Bearer %s" % str(token) if token else None
 
     def __call__(self, request):
-        if self.token:
-            request.headers['Authorization'] = "Bearer %s" % str(self.token)
+        if self._bearer:
+            request.headers['Authorization'] = self._bearer
         return request
 
 
@@ -51,17 +51,14 @@ class RestV2Methods:
 
     def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
                  checksum_deploy=False):
-        self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
         self._checksum_deploy = checksum_deploy
-
-    @property
-    def auth(self):
-        return JWTAuth(self.token)
+        self.router = ClientV2Router(self.remote_url.rstrip("/"))
+        self.auth = JWTAuth(token)
 
     @staticmethod
     def _check_error_response(ret):
@@ -239,10 +236,6 @@ class RestV2Methods:
         url = self.router.search_packages(ref)
         package_infos = self._get_json(url)
         return package_infos
-
-    @property
-    def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
         data = self._get_json(url)
