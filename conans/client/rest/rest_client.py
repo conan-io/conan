@@ -8,14 +8,11 @@ class RestApiClient:
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, remote, token, refresh_token, custom_headers, requester,
-                 config, cached_capabilities):
-
+    def __init__(self, remote, token, refresh_token, requester, config, cached_capabilities):
         # Set to instance
         self._token = token
         self._refresh_token = refresh_token
         self._remote_url = remote.url
-        self._custom_headers = custom_headers
         self._requester = requester
 
         self._verify_ssl = remote.verify_ssl
@@ -27,7 +24,7 @@ class RestApiClient:
     def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
-            tmp = RestV2Methods(self._remote_url, self._token, self._custom_headers,
+            tmp = RestV2Methods(self._remote_url, self._token,
                                 self._requester, self._config, self._verify_ssl)
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
@@ -41,7 +38,7 @@ class RestApiClient:
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
-        return RestV2Methods(self._remote_url, self._token, self._custom_headers,
+        return RestV2Methods(self._remote_url, self._token,
                              self._requester, self._config, self._verify_ssl,
                              checksum_deploy)
 
@@ -61,7 +58,7 @@ class RestApiClient:
         return self._get_api().upload_package(pref, files_to_upload)
 
     def authenticate(self, user, password):
-        api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,
+        api_v2 = RestV2Methods(self._remote_url, self._token,
                                self._requester, self._config, self._verify_ssl)
 
         if self._refresh_token and self._token:

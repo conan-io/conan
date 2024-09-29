@@ -1,9 +1,11 @@
 import copy
 import fnmatch
+import hashlib
 import json
 import os
 
 from requests.auth import AuthBase, HTTPBasicAuth
+from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 
@@ -24,11 +26,11 @@ class JWTAuth(AuthBase):
     """Attaches JWT Authentication to the given Request object."""
 
     def __init__(self, token):
-        self._bearer = "Bearer %s" % str(token) if token else None
+        self.bearer = "Bearer %s" % str(token) if token else None
 
     def __call__(self, request):
-        if self._bearer:
-            request.headers['Authorization'] = self._bearer
+        if self.bearer:
+            request.headers['Authorization'] = self.bearer
         return request
 
 
@@ -47,12 +49,22 @@ def get_exception_from_error(error_code):
             return None
 
 
+def _get_mac_digest():  # To avoid re-hashing all the time the same mac
+    cached = getattr(_get_mac_digest, "_cached_value", None)
+    if cached is not None:
+        return cached
+    sha1 = hashlib.sha1()
+    sha1.update(str(get_mac()).encode())
+    cached = str(sha1.hexdigest())
+    _get_mac_digest._cached_value = cached
+    return cached
+
+
 class RestV2Methods:
 
-    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 checksum_deploy=False):
+    def __init__(self, remote_url, token, requester, config, verify_ssl, checksum_deploy=False):
         self.remote_url = remote_url
-        self.custom_headers = custom_headers
+        self.custom_headers = {'X-Client-Anonymous-Id': _get_mac_digest()}
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl

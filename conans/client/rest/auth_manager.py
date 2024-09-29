@@ -11,9 +11,6 @@ Flow:
     get_conan with the new token.
 """
 
-import hashlib
-from uuid import getnode as get_mac
-
 from conan.api.output import ConanOutput
 from conans.client.rest.remote_credentials import RemoteCredentials
 from conans.client.rest.rest_client import RestApiClient
@@ -52,7 +49,7 @@ class ConanApiAuthManager:
                 ConanOutput().info('Please log in to "%s" to perform this action. '
                                    'Execute "conan remote login" command.' % remote.name)
                 if self._get_credentials_and_authenticate(user, remote):
-                    self.call_rest_api_method(remote, method_name, *args, **kwargs)
+                    return self.call_rest_api_method(remote, method_name, *args, **kwargs)
             elif token and refresh_token:
                 # If we have a refresh token try to refresh the access token
                 try:
@@ -83,17 +80,15 @@ class ConanApiAuthManager:
                     out.error('Wrong user or password', error_type="exception")
                 else:
                     out.error(f'Wrong password for user "{user}"', error_type="exception")
-                if interactive:
-                    break
+                if not interactive:
+                    raise AuthenticationException(f"Authentication error in remote '{remote.name}'")
             else:
                 return True
         raise AuthenticationException("Too many failed login attempts, bye!")
 
     def _get_rest_client(self, remote):
         username, token, refresh_token = self._localdb.get_login(remote.url)
-        custom_headers = {'X-Client-Anonymous-Id': self._get_mac_digest(),
-                          'X-Client-Id': str(username or "")}
-        return RestApiClient(remote, token, refresh_token, custom_headers, self._requester,
+        return RestApiClient(remote, token, refresh_token, self._requester,
                              self._global_conf, self._cached_capabilities)
 
     def _clear_user_tokens_in_db(self, user, remote):
@@ -103,12 +98,6 @@ class ConanApiAuthManager:
             out = ConanOutput()
             out.error('Your credentials could not be stored in local cache\n', error_type="exception")
             out.debug(str(e) + '\n')
-
-    @staticmethod
-    def _get_mac_digest():
-        sha1 = hashlib.sha1()
-        sha1.update(str(get_mac()).encode())
-        return str(sha1.hexdigest())
 
     def _authenticate(self, remote, user, password):
         rest_client = self._get_rest_client(remote)

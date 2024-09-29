@@ -158,11 +158,11 @@ class AuthenticationTest(unittest.TestCase):
                 elif "ping" in url:
                     resp_basic_auth.headers = {"Content-Type": "application/json",
                                                "X-Conan-Server-Capabilities": "revisions"}
-                    token = getattr(kwargs["auth"], "token", None)
+                    bearer = getattr(kwargs["auth"], "bearer", None)
                     password = getattr(kwargs["auth"], "password", None)
-                    if token and token != "TOKEN":
+                    if bearer and bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
-                    if not token and not password:
+                    if not bearer and not password:
                         raise AuthenticationException(
                             "I'm an Artifactory without anonymous access that "
                             "requires authentication for the ping endpoint and "

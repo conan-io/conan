@@ -52,7 +52,7 @@ class RestApiTest(unittest.TestCase):
                 cls.auth_manager._authenticate(cls.remote, user="private_user",
                                                password="private_pass")
                 cls.api = RestApiClient(cls.remote, localdb.access_token, localdb.refresh_token,
-                                        {}, requester, config, {})
+                                        requester, config, {})
 
     @classmethod
     def tearDownClass(cls):

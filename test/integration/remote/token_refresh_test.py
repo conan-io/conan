@@ -52,7 +52,7 @@ class ResponseAuthenticationRequired(object):
 class RequesterWithTokenMock(object):
 
     def get(self, url, **kwargs):
-        if not kwargs["auth"]._bearer or "expired" in kwargs["auth"]._bearer:
+        if not kwargs["auth"].bearer or "expired" in kwargs["auth"].bearer:
             return ResponseAuthenticationRequired()
         if url.endswith("files"):
             return ResponseDownloadURLs()
