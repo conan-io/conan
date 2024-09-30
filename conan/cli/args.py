@@ -48,7 +48,7 @@ def add_common_install_arguments(parser):
                        help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
-                   "for the given pattern, or all references in the graph if no argument is supplied. "
+                   "for the given reference name, or all references in the graph if no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. It will update to the "
                    "latest revision for the resolved version range.")
