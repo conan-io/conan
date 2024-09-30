@@ -140,6 +140,7 @@ class AuthorizeTest(unittest.TestCase):
         tc.run("remote login default pepe -p pepepass")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
+
 class AuthenticationTest(unittest.TestCase):
 
     def test_unauthorized_during_capabilities(self):
@@ -168,7 +169,7 @@ class AuthenticationTest(unittest.TestCase):
                             "requires authentication for the ping endpoint and "
                             "I don't return the capabilities")
                 elif "search" in url:
-                    if kwargs["auth"].token != "TOKEN":
+                    if kwargs["auth"].bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
                     resp_basic_auth._content = b'{"results": []}'
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
