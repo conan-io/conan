@@ -96,7 +96,7 @@ def add_profiles_args(parser):
                             help="")
 
     create_config("pr", "profile")
-    create_config("o", "options", "-o pkg:with_qt=true")
+    create_config("o", "options", "-o pkg/*:with_qt=True")
     create_config("s", "settings", "-s compiler=gcc")
     create_config("c", "conf", "-c tools.cmake.cmaketoolchain:generator=Xcode")
 
