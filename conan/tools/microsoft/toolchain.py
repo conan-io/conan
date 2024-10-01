@@ -113,7 +113,7 @@ class MSBuildToolchain(object):
             "MTd": "MultiThreadedDebug",
             "MD": "MultiThreadedDLL",
             "MDd": "MultiThreadedDebugDLL",
-        }.get(msvc_runtime_flag(self), "")
+        }.get(msvc_runtime_flag(self._conanfile), "")
 
     @property
     def context_config_toolchain(self):
