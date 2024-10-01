@@ -97,6 +97,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    pr_args = []
+    for context in "host", "build":
+        for f in "profile", "settings", "options", "conf":
+            s = "pr" if f == "profile" else f[0]
+            pr_args += [f'-{s}:{context[0]} "{v}"' for v in getattr(args, f"{f}_{context}") or []]
+    profile_args = " ".join(pr_args)
 
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
@@ -116,7 +122,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out = ConanOutput()
     out.title("Computing the build order")
 
-    install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    install_graph = InstallGraph(deps_graph, order_by=args.order_by, profile_args=profile_args)
     if args.reduce:
         if args.order_by is None:
             raise ConanException("--reduce needs --order-by argument defined")

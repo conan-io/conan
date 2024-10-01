@@ -765,3 +765,23 @@ class TestBuildOrderReduce:
         tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
         assert "IndexError: list index out of range" not in tc.out
+
+
+def test_multi_configuration_profile_args():
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile().with_settings("os"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1",
+            "mypr": ""})
+    c.run("export pkg --name=pkg --version=0.1")
+    args = "-pr=mypr -s:b os=Linux -o:h *:shared=True -c:h user.my:conf=1"
+    c.run(f"graph build-order consumer --format=json --build=missing -s os=Windows {args} "
+          "--order-by=recipe", redirect_stdout="bo_win.json")
+    c.run(f"graph build-order consumer --format=json --build=missing -s os=Linux {args} "
+          "--order-by=recipe", redirect_stdout="bo_nix.json")
+    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
+          redirect_stdout="bo3.json")
+
+    bo_json = json.loads(c.load("bo3.json"))
+    win = '-pr:h "mypr" -s:h "os=Windows" -o:h "*:shared=True" -c:h "user.my:conf=1" -s:b "os=Linux"'
+    nix = '-pr:h "mypr" -s:h "os=Linux" -o:h "*:shared=True" -c:h "user.my:conf=1" -s:b "os=Linux"'
+    assert bo_json["profile_args"] == {"bo_win": win, "bo_nix": nix}

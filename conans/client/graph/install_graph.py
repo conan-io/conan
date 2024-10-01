@@ -335,13 +335,15 @@ class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph, order_by=None):
+    def __init__(self, deps_graph, order_by=None, profile_args=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
         order_by = order_by or "recipe"
         self._order = order_by
         self._node_cls = _InstallRecipeReference if order_by == "recipe" else _InstallConfiguration
         self._is_test_package = False
         self.reduced = False
+        self._profile_args = profile_args
+        self._filename = None
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
             self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
@@ -368,15 +370,20 @@ class InstallGraph:
                 self._nodes[ref] = install_node
             else:
                 existing.merge(install_node)
+        if not isinstance(self._profile_args, dict):
+            self._profile_args = {self._filename: self._profile_args}
+        self._profile_args[other._filename] = other._profile_args
 
     @staticmethod
     def deserialize(data, filename):
         legacy = isinstance(data, list)
-        order, data, reduced = ("recipe", data, False) if legacy else \
-            (data["order_by"], data["order"], data["reduced"])
+        order, data, reduced, profile_args = ("recipe", data, False, None) if legacy else \
+            (data["order_by"], data["order"], data["reduced"], data.get("profile_args"))
         result = InstallGraph(None, order_by=order)
+        result._filename = filename
         result.reduced = reduced
         result.legacy = legacy
+        result._profile_args = profile_args
         for level in data:
             for item in level:
                 elem = result._node_cls.deserialize(item, filename)
@@ -462,16 +469,18 @@ class InstallGraph:
         result = {"order_by": self._order,
                   "reduced": self.reduced,
                   "order": [[n.serialize() for n in level] for level in install_order]}
+        if self._profile_args:
+            result["profile_args"] = self._profile_args
         return result
 
     def _get_missing_invalid_packages(self):
         missing, invalid = [], []
 
-        def analyze_package(package):
-            if package.binary == BINARY_MISSING:
-                missing.append(package)
-            elif package.binary == BINARY_INVALID:
-                invalid.append(package)
+        def analyze_package(pkg):
+            if pkg.binary == BINARY_MISSING:
+                missing.append(pkg)
+            elif pkg.binary == BINARY_INVALID:
+                invalid.append(pkg)
         for _, install_node in self._nodes.items():
             if self._order == "recipe":
                 for package in install_node.packages.values():
@@ -505,7 +514,8 @@ class InstallGraph:
             return "\n".join(errors)
         return None
 
-    def _raise_invalid(self, invalid):
+    @staticmethod
+    def _raise_invalid(invalid):
         msg = ["There are invalid packages:"]
         for package in invalid:
             node = package.nodes[0]
