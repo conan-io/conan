@@ -383,13 +383,13 @@ def _cppstd_gcc(gcc_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
+    if gcc_version >= "10":
+        v20 = "c++20"
+        vgnu20 = "gnu++20"
+
     if gcc_version >= "11":
         v23 = "c++23"
         vgnu23 = "gnu++23"
-
-    if gcc_version >= "12":
-        v20 = "c++20"
-        vgnu20 = "gnu++20"
 
     if gcc_version >= "14":
         v26 = "c++26"
