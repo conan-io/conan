@@ -410,7 +410,6 @@ def test_create_docker_runner_from_configfile():
             build_context: {conan_base_path()}
         run:
             name: my-custom-conan-runner-container
-            containerUser: conan
         """)
     client.save({"configfile.yaml": configfile})
 
@@ -468,7 +467,6 @@ def test_create_docker_runner_from_configfile_with_args():
                 BASE_IMAGE: ubuntu:22.04
         run:
             name: my-conan-runner-container-with-args
-            containerUser: conan
         """)
     client.save({"configfile.yaml": configfile})
 
