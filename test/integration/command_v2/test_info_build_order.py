@@ -780,8 +780,7 @@ def test_multi_configuration_profile_args():
           "--order-by=recipe", redirect_stdout="bo_nix.json")
     c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
           redirect_stdout="bo3.json")
-
     bo_json = json.loads(c.load("bo3.json"))
     win = '-pr:h "mypr" -s:h "os=Windows" -o:h "*:shared=True" -c:h "user.my:conf=1" -s:b "os=Linux"'
     nix = '-pr:h "mypr" -s:h "os=Linux" -o:h "*:shared=True" -c:h "user.my:conf=1" -s:b "os=Linux"'
-    assert bo_json["profile_args"] == {"bo_win": win, "bo_nix": nix}
+    assert bo_json["profiles"] == {"bo_win": {"args": win}, "bo_nix": {"args": nix}}
