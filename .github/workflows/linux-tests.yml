@@ -115,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
-      options: -v /var/run/docker.sock:/var/run/docker.sock
+      options: --user conan -v /var/run/docker.sock:/var/run/docker.sock
     strategy:
       matrix:
         python-version: ['3.12.3']
