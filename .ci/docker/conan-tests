@@ -144,7 +144,7 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
 
 RUN groupadd -g $DOCKER_GID docker || groupmod -g $DOCKER_GID docker
 
-RUN usermod -aG docker conan
+RUN usermod -aG docker root
 
 USER conan
 WORKDIR $HOME
