@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.internal import check_duplicated_generator
-from conans.client.conf.detect_vs import vs_installation_path
+from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC

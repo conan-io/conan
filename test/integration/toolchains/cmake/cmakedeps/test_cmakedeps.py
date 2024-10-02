@@ -819,3 +819,27 @@ def test_component_name_same_package():
     # FIXME: Depending on itself, this doesn't look good
     assert 'set_property(TARGET dep::dep APPEND PROPERTY ' \
            'INTERFACE_LINK_LIBRARIES dep::dep)' in cmake_target
+
+
+def test_cmakedeps_set_get_property_checktype():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "app"
+            version = "0.1"
+            settings = "build_type"
+            requires = "dep/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "foo", 1)
+                deps.get_property("foo", self.dependencies["dep"], check_type=list)
+                deps.generate()
+            """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create app", assert_error=True)
+    assert 'The expected type for foo is "list", but "int" was found' in c.out

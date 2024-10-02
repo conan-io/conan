@@ -5,7 +5,7 @@ from shutil import which
 
 import pytest
 
-from conans.client.conf.detect_vs import vswhere
+from conan.internal.api.detect.detect_vs import vswhere
 from conans.errors import ConanException
 from conan.test.utils.env import environment_update
 
