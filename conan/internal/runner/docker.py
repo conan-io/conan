@@ -113,6 +113,7 @@ class DockerRunner:
         # Update conan command and some paths to run inside the container
         raw_args[raw_args.index(args.path)] = self.abs_docker_path
         self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
+        self.command = "pwd && ls && ls /root && ls /root/.conan2 && " + self.command
 
     def run(self):
         """
