@@ -45,11 +45,11 @@ jobs:
         run: docker load -i docker_image_cache/conan-tests.tar
 
       - name: Get Docker group GID
-        #if: steps.cache_docker_image.outputs.cache-hit != 'true'
+        if: steps.cache_docker_image.outputs.cache-hit != 'true'
         id: docker_gid
         run: |
           DOCKER_GID=$(getent group docker | cut -d: -f3)
-          echo "docker_gid=$DOCKER_GID"
+          echo "docker_gid=$DOCKER_GID" >> $GITHUB_OUTPUT
 
       - name: Build Docker image (if not cached)
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
