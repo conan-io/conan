@@ -1,10 +1,12 @@
 import copy
+import glob
 import json
 import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -91,6 +93,11 @@ class _Component:
             self.libdirs = ["lib"]
             self.bindirs = ["bin"]
 
+        # CPS
+        self._type = None
+        self._location = None
+        self._link_location = None
+
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -111,7 +118,10 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._properties
+            "properties": self._properties,
+            "type": self._type,
+            "location": self._location,
+            "link_location": self._link_location
         }
 
     @staticmethod
@@ -242,21 +252,35 @@ class _Component:
     def libs(self):
         if self._libs is None:
             self._libs = []
-        if isinstance(self._libs, dict):
-            return [self._libs.keys()]  # Return a list to not break any interface
-        return self._libs
-
-    @property
-    def full_libs(self):
-        if self._libs is None:
-            self._libs = []
-        if isinstance(self._libs, list):
-            return {k: {} for k in self._libs}
         return self._libs
 
     @libs.setter
     def libs(self, value):
         self._libs = value
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value
+
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, value):
+        self._location = value
+
+    @property
+    def link_location(self):
+        return self._link_location
+
+    @link_location.setter
+    def link_location(self, value):
+        self._link_location = value
 
     @property
     def defines(self):
@@ -428,6 +452,67 @@ class _Component:
 
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
+
+    def deduce_cps(self, pkg_type):
+        if self._location or self._link_location:
+            if self._type is None or self._type is PackageType.HEADER:
+                raise ConanException("Incorrect cpp_info defining location without type or header")
+            return
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+            return
+
+        # Recipe didn't specify things, need to auto deduce
+        libdirs = [x.replace("\\", "/") for x in self.libdirs]
+        bindirs = [x.replace("\\", "/") for x in self.bindirs]
+
+        if len(self.libs) != 1:
+            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+
+        # TODO: Do a better handling of pre-defined type
+        libname = self.libs[0]
+        static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
+        shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
+                           f"lib{libname}.*dylib"]
+        dll_patterns = [f"{libname}.dll"]
+
+        def _find_matching(patterns, dirs):
+            matches = set()
+            for pattern in patterns:
+                for d in dirs:
+                    matches.update(glob.glob(f"{d}/{pattern}"))
+            if len(matches) == 1:
+                return next(iter(matches))
+
+        static_location = _find_matching(static_patterns, libdirs)
+        shared_location = _find_matching(shared_patterns, libdirs)
+        dll_location = _find_matching(dll_patterns, bindirs)
+        if static_location:
+            if shared_location:
+                ConanOutput().warning(f"Lib {libname} has both static {static_location} and "
+                                      f"shared {shared_location} in the same package")
+                if pkg_type is PackageType.STATIC:
+                    self._location = static_location
+                    self._type = PackageType.STATIC
+                else:
+                    self._location = shared_location
+                    self._type = PackageType.SHARED
+            elif dll_location:
+                self._location = dll_location
+                self._link_location = static_location
+                self._type = PackageType.SHARED
+            else:
+                self._location = static_location
+                self._type = PackageType.STATIC
+        elif shared_location:
+            self._location = shared_location
+            self._type = PackageType.SHARED
+        elif dll_location:
+            # Only .dll but no link library
+            self._location = dll_location
+            self._type = PackageType.SHARED
+        if self._type != pkg_type:
+            ConanOutput().warning(f"Lib {libname} deduced as '{self._type}, "
+                                  f"but 'package_type={pkg_type}'")
 
 
 class CppInfo:
