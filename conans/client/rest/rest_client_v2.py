@@ -94,52 +94,6 @@ class RestV2Methods:
         self._check_error_response(ret)
         return ret.content.decode()
 
-    def authenticate_oauth(self, user, password):
-        """Sends user + password to get:
-            - A json with an access_token and a refresh token (if supported in the remote)
-                    Artifactory >= 6.13.X
-        """
-        url = self.router.oauth_authenticate()
-        auth = HTTPBasicAuth(user, password)
-        headers = {}
-        headers.update(self.custom_headers)
-        headers["Content-type"] = "application/x-www-form-urlencoded"
-        # logger.debug("REST: Authenticating with OAUTH: %s" % url)
-        ret = self.requester.post(url, auth=auth, headers=headers, verify=self.verify_ssl)
-        self._check_error_response(ret)
-
-        data = ret.json()
-        access_token = data["access_token"]
-        refresh_token = data["refresh_token"]
-        # logger.debug("REST: Obtained refresh and access tokens")
-        return access_token, refresh_token
-
-    def refresh_token(self, token, refresh_token):
-        """Sends access_token and the refresh_token to get a pair of
-        access_token and refresh token
-
-        Artifactory >= 6.13.X
-        """
-        url = self.router.oauth_authenticate()
-        # logger.debug("REST: Refreshing Token: %s" % url)
-        headers = {}
-        headers.update(self.custom_headers)
-        headers["Content-type"] = "application/x-www-form-urlencoded"
-        payload = {'access_token': token, 'refresh_token': refresh_token,
-                   'grant_type': 'refresh_token'}
-        ret = self.requester.post(url, headers=headers, verify=self.verify_ssl, data=payload)
-        self._check_error_response(ret)
-
-        data = ret.json()
-        if "access_token" not in data:
-            # logger.debug("REST: unexpected data from server: {}".format(data))
-            raise ConanException("Error refreshing the token")
-
-        new_access_token = data["access_token"]
-        new_refresh_token = data["refresh_token"]
-        # logger.debug("REST: Obtained new refresh and access tokens")
-        return new_access_token, new_refresh_token
-
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
