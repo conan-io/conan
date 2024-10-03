@@ -338,6 +338,7 @@ class ConanInfo:
         self.python_requires = python_requires
         self.conf = conf
         self.config_version = config_version
+        self.compatibility_delta = None
 
     def clone(self):
         """ Useful for build_id implementation and for compatibility()
@@ -381,6 +382,8 @@ class ConanInfo:
         config_version_dumps = self.config_version.serialize() if self.config_version else None
         if config_version_dumps:
             result["config_version"] = config_version_dumps
+        if self.compatibility_delta:
+            result["compatibility_delta"] = self.compatibility_delta
         return result
 
     def dumps(self):
