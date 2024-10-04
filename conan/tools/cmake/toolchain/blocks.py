@@ -520,7 +520,12 @@ class AppleSystemBlock(Block):
 class FindFiles(Block):
     template = textwrap.dedent("""\
         # Define paths to find packages, programs, libraries, etc.
-
+        {% if conan_cmakedeps_paths %}
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake")
+          include("${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+        endif()
+        {% else %}
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
@@ -577,6 +582,7 @@ class FindFiles(Block):
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_INCLUDE OR CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         endif()
+        {% endif %}
         {% endif %}
     """)
 
@@ -664,7 +670,8 @@ class FindFiles(Block):
             "cmake_include_path": self._join_paths(host_include_paths),
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
-            "host_runtime_dirs": self._runtime_dirs_value(host_runtime_dirs)
+            "host_runtime_dirs": self._runtime_dirs_value(host_runtime_dirs),
+            "conan_cmakedeps_paths": self._toolchain.conan_cmakedeps_paths
         }
 
 
