@@ -3,18 +3,25 @@ import pytest
 from conans.model.version_range import VersionRange
 
 values = [
+    # empty / any ranges
+    ['', "", ">=0.0.0"],
+    ['*', "*", ">=0.0.0"],
     # single lower limits bounds
     ['>1.0', ">1.0", ">1.0"],
     ['>=1.0', ">1.0", ">1.0"],
     ['>1.0', ">1.1", ">1.1"],
     ['>1.0', ">=1.1", ">=1.1"],
     ['>=1.0', ">=1.1", ">=1.1"],
+    ['', ">1.0", ">1.0"],
+    ['>1.0', "", ">1.0"],
     # single upper limits bounds
     ['<2.0', "<2.0", "<2.0"],
     ['<=1.0', "<1.0", "<1.0"],
     ['<2.0', "<2.1", "<2.0"],
     ['<2.0', "<=1.1", "<=1.1"],
     ['<=1.0', "<=1.1", "<=1.0"],
+    ['', "<2.0", ">=0.0.0 <2.0"],
+    ['<2.0', "", ">=0.0.0 <2.0"],
     # One lower limit, one upper
     ['>=1.0', "<2.0", ">=1.0 <2.0"],
     ['>=1', '<=1', ">=1 <=1"],
@@ -83,6 +90,9 @@ def test_range_intersection_incompatible(range1, range2):
 
 
 prerelease_values = [
+    [", include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease"],
     [">=1.0-pre.1 <1.0-pre.99, include_prerelease",
      ">=1.0-pre.1 <1.0-pre.99, include_prerelease",
      ">=1.0-pre.1 <1.0-pre.99, include_prerelease"],
