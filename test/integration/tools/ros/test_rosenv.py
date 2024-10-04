@@ -81,21 +81,17 @@ def test_error_when_rosenv_not_used_with_cmake_generators():
     ROSEnv generator should be used with CMake and CMakeToolchain generators
     """
     client = TestClient()
-    c1 = GenConanfile("lib1", "1.0")
     c2 = textwrap.dedent('''
            [requires]
-           lib1/1.0
            [generators]
            ROSEnv
            ''')
     client.save({
-        "conanfile1.py": c1,
         "conanfile2.txt": c2
     })
 
-    client.run("create conanfile1.py")
     client.run("install conanfile2.txt --output-folder install/conan")
     conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
-    print("CONTENT: ", client.load(conanrosenv_path))
-    client.run_command(f". \"{conanrosenv_path}\" && env")
-    assert "kk" in client.out
+    client.run_command(f". \"{conanrosenv_path}\"", assert_error=True)
+    assert "CMAKE_TOOLCHAIN_FILE path not found" in client.out
+    assert "Make sure you are using CMakeToolchain and CMakeDeps generators too" in client.out

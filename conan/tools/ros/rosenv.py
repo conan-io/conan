@@ -1,6 +1,16 @@
 import os
 from conan.api.output import Color
 from conan.tools.files import save
+from conan.errors import ConanException
+
+
+cmake_toolchain_exists_bash = """\
+if [ ! -e "$CMAKE_TOOLCHAIN_FILE" ]; then
+    echo "Error: CMAKE_TOOLCHAIN_FILE path not found at '$CMAKE_TOOLCHAIN_FILE'."
+    echo "Make sure you are using CMakeToolchain and CMakeDeps generators too."
+    exit 1
+fi
+"""
 
 
 class ROSEnv(object):
@@ -27,12 +37,15 @@ class ROSEnv(object):
 
         content = []
         # TODO: Support ps1 and zsh script generation for Windows/Macos
+        if self._conanfile.settings.get_safe("os") == "Windows":
+            raise ConanException("ROSEnv generator does not support Windows")
         for key, value in self.variables.items():
-            line = f"export {key}=\"{value}\""
-            content.append(line)
+            content.append(f"{key}=\"{value}\"")
+            content.append(f"export {key}")
         conanrun_path = os.path.join(output_folder, "conanrun.sh")
         content.append(f". \"{conanrun_path}\"")
         filename = f"{self.filename}.bash"
+        content.append(cmake_toolchain_exists_bash)
         conanrosenv_path = os.path.join(output_folder, filename)
         save(self, conanrosenv_path, "\n".join(content))
 
