@@ -62,7 +62,7 @@ def test_rosenv():
     assert "Generated ROSEnv Conan file: conanrosenv.bash" in client.out
     conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
     assert os.path.exists(conanrosenv_path)
-    client.run_command(f"source \"{conanrosenv_path}\" && env")
+    client.run_command(f". \"{conanrosenv_path}\" && env")
     toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
     assert f"CMAKE_TOOLCHAIN_FILE={toolchain_path}" in client.out
     #TODO: Assert LD_LIBRARY_PATH/DYLD_LIBRARY_PATH/PATH paths are set in the environment
