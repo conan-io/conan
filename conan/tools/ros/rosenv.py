@@ -14,25 +14,28 @@ class ROSEnv(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.filename = "conanrosenv.bash"
+        self.filename = "conanrosenv"
         self.variables = {}
 
     def generate(self):
         output_folder = self._conanfile.generators_folder
-        self.variables["CMAKE_TOOLCHAIN_FILE"] = os.path.join(output_folder, "conan_toolchain.cmake")
+        self.variables.setdefault("CMAKE_TOOLCHAIN_FILE",
+                                  os.path.join(output_folder, "conan_toolchain.cmake"))
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type:
-            self.variables["CMAKE_BUILD_TYPE"] = build_type
+            self.variables.setdefault("CMAKE_BUILD_TYPE", build_type)
 
         content = []
+        # TODO: Support ps1 and zsh script generation for Windows/Macos
         for key, value in self.variables.items():
             line = f"export {key}=\"{value}\""
             content.append(line)
         conanrun_path = os.path.join(output_folder, "conanrun.sh")
         content.append(f". \"{conanrun_path}\"")
-        conanrosenv_path = os.path.join(output_folder, self.filename)
+        filename = f"{self.filename}.bash"
+        conanrosenv_path = os.path.join(output_folder, filename)
         save(self, conanrosenv_path, "\n".join(content))
 
-        msg = f"Generated ROSEnv Conan file: {self.filename}\n" + \
+        msg = f"Generated ROSEnv Conan file: {filename}\n" + \
               f"Use 'source {conanrosenv_path}' to set the ROSEnv Conan before 'colcon build'"
         self._conanfile.output.info(msg, fg=Color.CYAN)
