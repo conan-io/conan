@@ -1,13 +1,13 @@
 import os
 import textwrap
-from sys import platform
+import platform
 
 import pytest
 
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Uses UNIX commands")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Uses UNIX commands")
 def test_rosenv():
     """
     Test that the amentdeps generator generates conan_<name> folders and place CMake files
