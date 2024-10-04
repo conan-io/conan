@@ -59,7 +59,7 @@ def test_cmake_in_package(client):
 
             def package(self):
                 content = 'message(STATUS "Hello from dep dep-Config.cmake!!!!!")'
-                save(self, os.path.join(self.package_folder, "dep-Config.cmake"), content)
+                save(self, os.path.join(self.package_folder, "dep-config.cmake"), content)
             def package_info(self):
                 self.cpp_info.set_property("cmake_find_mode", "none")
         """)
