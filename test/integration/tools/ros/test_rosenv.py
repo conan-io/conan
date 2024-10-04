@@ -96,5 +96,6 @@ def test_error_when_rosenv_not_used_with_cmake_generators():
     client.run("create conanfile1.py")
     client.run("install conanfile2.txt --output-folder install/conan")
     conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
+    print("CONTENT: ", client.load(conanrosenv_path))
     client.run_command(f". \"{conanrosenv_path}\" && env")
     assert "kk" in client.out
