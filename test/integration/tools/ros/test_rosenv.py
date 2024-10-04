@@ -15,50 +15,17 @@ def test_rosenv():
     in the correct path
     """
     client = TestClient()
-    conanfile1 = textwrap.dedent('''
-        import os
-        from conan import ConanFile
-        from conan.tools.files import save
-        class Recipe(ConanFile):
-            name = "lib1"
-            version = "1.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def package(self):
-                save(self, os.path.join(self.package_folder, "lib", "lib1"), "")
-        ''')
-    conanfile2 = textwrap.dedent('''
-        import os
-        from conan import ConanFile
-        from conan.tools.files import save
-
-        class Recipe(ConanFile):
-            name = "lib2"
-            version = "1.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def requirements(self):
-                self.requires('lib1/1.0')
-
-            def package(self):
-                save(self, os.path.join(self.package_folder, "lib", "lib2"), "")
-        ''')
     conanfile3 = textwrap.dedent('''
         [requires]
-        lib2/1.0
         [generators]
         CMakeDeps
         CMakeToolchain
         ROSEnv
         ''')
     client.save({
-        "conanfile1.py": conanfile1,
-        "conanfile2.py": conanfile2,
         "conanfile3.txt": conanfile3
     })
 
-    client.run("create conanfile1.py")
-    client.run("create conanfile2.py")
     client.run("install conanfile3.txt --output-folder install/conan")
     assert "Generated ROSEnv Conan file: conanrosenv.bash" in client.out
     conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
@@ -117,7 +84,7 @@ def test_error_when_rosenv_not_used_with_cmake_generators():
     c1 = GenConanfile("lib1", "1.0")
     c2 = textwrap.dedent('''
            [requires]
-           lib2/1.0
+           lib1/1.0
            [generators]
            ROSEnv
            ''')
