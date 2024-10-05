@@ -90,9 +90,10 @@ class CacheDatabase:
     def create_package(self, path, ref: PkgReference, build_id):
         self._packages.create(path, ref, build_id=build_id)
 
-    def list_references(self):
+    def list_references(self, pattern=None):
         return [d["ref"]
-                for d in self._recipes.all_references()]
+                for d in self._recipes.all_references()
+                if pattern is None or d["ref"].partial_match(pattern)]
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         return [d["pref"]
