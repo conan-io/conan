@@ -93,10 +93,10 @@ def test_config_install_conanignore():
     })
 
     def _assert_config_exists(path):
-        assert os.path.exists(os.path.join(tc.cache_folder, path)), f"{path} must exist"
+        assert os.path.exists(os.path.join(tc.cache_folder, path))
 
     def _assert_config_not_exists(path):
-        assert not os.path.exists(os.path.join(tc.cache_folder, path)), f"{path} must not exist"
+        assert not os.path.exists(os.path.join(tc.cache_folder, path))
 
     tc.run('config install config_folder')
 
@@ -144,10 +144,10 @@ def test_config_install_conanignore_ignore_all_allow_specific_workflow():
     })
 
     def _assert_config_exists(path):
-        assert os.path.exists(os.path.join(tc.cache_folder, path)), f"{path} must exist"
+        assert os.path.exists(os.path.join(tc.cache_folder, path))
 
     def _assert_config_not_exists(path):
-        assert not os.path.exists(os.path.join(tc.cache_folder, path)), f"{path} must not exist"
+        assert not os.path.exists(os.path.join(tc.cache_folder, path))
 
     tc.run('config install config_folder')
 
