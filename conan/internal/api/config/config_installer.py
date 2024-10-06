@@ -33,13 +33,15 @@ class _ConanIgnoreMatcher:
         """Returns whether the path should be ignored
 
         It's ignored if:
-         - The path matches any of the ignored entries
-         - And the path does not match any of the included entries"""
+         - The path does not match any of the included entries
+         - And the path matches any of the ignored entries
+
+        In any other, the path is not ignored"""
+        for include_entry in self._included_entries:
+            if fnmatch.fnmatch(path, include_entry):
+                return False
         for ignore_entry in self._ignored_entries:
             if fnmatch.fnmatch(path, ignore_entry):
-                for include_entry in self._included_entries:
-                    if fnmatch.fnmatch(path, include_entry):
-                        return False
                 return True
         return False
 
