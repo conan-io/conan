@@ -1,7 +1,5 @@
-import json
 import textwrap
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -23,4 +21,3 @@ def test_basic():
     client.run("create .")
     assert "hello/1.2@myuser/mychannel" in client.out
     assert "hello/1.2:" not in client.out
-
