@@ -10,6 +10,7 @@ import requests
 from mock import patch
 from requests import Response
 
+from conan.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -233,9 +234,12 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
+        download_cache = temp_folder()
+        client.save_home({"global.conf": f"core.download:download_cache={download_cache}"})
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
+        assert len(os.listdir(os.path.join(download_cache, "c"))) == 6
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,

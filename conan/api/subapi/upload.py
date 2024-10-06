@@ -54,7 +54,7 @@ class UploadAPI:
     def upload(self, package_list, remote):
         app = ConanApp(self.conan_api)
         app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
+        executor = UploadExecutor(app, self.conan_api.config.global_conf)
         executor.upload(package_list, remote)
 
     def upload_full(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,

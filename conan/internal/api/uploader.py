@@ -5,13 +5,17 @@ import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
+from conans.client.downloaders.download_cache import DownloadCache
+from conans.client.rest.client_routes import ClientV2Router
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
                                gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size)
+                               remove_if_dirty, human_size)
+
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -216,8 +220,9 @@ class UploadExecutor:
     been computed and are passed in the ``upload_data`` parameter, so this executor is also
     agnostic about which files are transferred
     """
-    def __init__(self, app: ConanApp):
+    def __init__(self, app: ConanApp, global_conf):
         self._app = app
+        self._download_cache = global_conf.get("core.download:download_cache")
 
     def upload(self, upload_data, remote):
         for ref, bundle in upload_data.refs().items():
@@ -238,6 +243,7 @@ class UploadExecutor:
 
         duration = time.time() - t1
         output.debug(f"Upload {ref} in {duration} time")
+        self._cache_local(cache_files, remote, ref)
         return ref
 
     def upload_package(self, pref, prev_bundle, remote):
@@ -252,6 +258,23 @@ class UploadExecutor:
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         output.debug(f"Upload {pref} in {duration} time")
+        self._cache_local(cache_files, remote, pref)
+
+    def _cache_local(self, cache_files, remote, ref):
+        if self._download_cache is None:
+            return
+        # It will raise in other place if not absolute
+        download_cache = DownloadCache(self._download_cache)
+        router = ClientV2Router(remote.url)
+        for cache_file, path in cache_files.items():
+            url = router.recipe_file(ref, cache_file) if isinstance(ref, RecipeReference) else \
+                router.package_file(ref, cache_file)
+            cached_path, h = download_cache.cached_path(url)
+            with download_cache.lock(h):
+                remove_if_dirty(cached_path)
+                with set_dirty_context_manager(cached_path):
+                    shutil.copy2(path, cached_path)
+                    ConanOutput().verbose(f"Caching uploaded file '{cache_file}' in download cache")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
