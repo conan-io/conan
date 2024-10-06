@@ -99,8 +99,7 @@ class RecipesDBTable(BaseDbTable):
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            rows = [row for row in r.fetchall()]
-            result = [self._as_dict_no_rev_timestamp(self.row_type(*row)) for row in rows]
+            result = [self._as_dict_no_rev_timestamp(self.row_type(*row)) for row in r.fetchall()]
         return result
 
     def get_recipe(self, ref: RecipeReference):
