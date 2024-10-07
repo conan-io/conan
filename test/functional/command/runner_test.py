@@ -333,7 +333,6 @@ def test_create_docker_runner_dockerfile_file_path():
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
     conanfile = textwrap.dedent("""
     import os
