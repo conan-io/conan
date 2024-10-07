@@ -6,7 +6,7 @@ import pytest
 from mock import patch
 
 from conan import conan_version
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, load
@@ -134,7 +134,7 @@ def test_new_config_file(client):
     assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
 
-@patch("conans.client.conf.required_version.client_version", "1.26.0")
+@patch("conans.model.version_range.client_version", "1.26.0")
 def test_new_config_file_required_version():
     client = TestClient()
     conf = textwrap.dedent("""\
@@ -414,3 +414,30 @@ def test_especial_strings_fail():
     assert "user.mycompany:myother: fnmatch" in c.out
     assert "user.mycompany:myfunct: re.search" in c.out
     assert "user.mycompany:mydict: {1: 're', 2: 'fnmatch'}" in c.out
+
+
+def test_conf_test_package():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+            def test(self):
+                pass
+        """)
+    c.save({"conanfile.py": dep,
+            "test_package/conanfile.py": pkg})
+    c.run("create . -c &:user.myteam:myconf=myvalue")
+    assert "dep/0.1: user.myteam:myconf: myvalue" in c.out
+    assert "dep/0.1 (test package): user.myteam:myconf: myvalue" in c.out

@@ -28,6 +28,7 @@ def test_info_build_order():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -49,6 +50,7 @@ def test_info_build_order():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': [],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -102,6 +104,7 @@ def test_info_build_order_configuration():
                 "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                 'prev': None,
                 'filenames': [],
+                'info': {},
                 "context": "host",
                 "binary": "Build",
                 'build_args': '--requires=dep/0.1 --build=dep/0.1',
@@ -119,6 +122,7 @@ def test_info_build_order_configuration():
                 "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                 'prev': None,
                 'filenames': [],
+                'info': {'requires': ['dep/0.1']},
                 "context": "host",
                 "binary": "Build",
                 'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
@@ -170,6 +174,7 @@ def test_info_build_order_build_require():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
@@ -191,6 +196,7 @@ def test_info_build_order_build_require():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -230,9 +236,11 @@ def test_info_build_order_options():
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
+                  'info': {'options': {'myopt': '2'}},
                   'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
+                  'info': {'options': {'myopt': '1'}},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
                   'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
@@ -244,7 +252,7 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], "overrides": {},
+                  'filenames': [], 'info': {}, "overrides": {},
                   'build_args': '--requires=dep1/0.1 --build=dep1/0.1'}
              ]]},
             {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
@@ -252,7 +260,7 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], "overrides": {},
+                  'filenames': [], 'info': {}, "overrides": {},
                   'build_args': '--requires=dep2/0.1 --build=dep2/0.1'}
              ]]}
         ]
@@ -286,6 +294,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo1", "bo2"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -307,6 +316,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo1"],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -326,6 +336,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo2"],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -343,7 +354,6 @@ def test_info_build_order_merge_multi_product():
     # test that html format for build-order-merge generates something
     c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=html")
     assert "<body>" in c.stdout
-
 
 
 def test_info_build_order_merge_multi_product_configurations():
@@ -378,6 +388,7 @@ def test_info_build_order_merge_multi_product_configurations():
                     "bo1",
                     "bo2"
                 ],
+                'info': {},
                 "depends": [],
                 "overrides": {},
                 "build_args": "--requires=dep/0.1 --build=dep/0.1"
@@ -395,6 +406,7 @@ def test_info_build_order_merge_multi_product_configurations():
                 "filenames": [
                     "bo1"
                 ],
+                'info': {'requires': ['dep/0.1']},
                 "depends": [
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
@@ -412,6 +424,7 @@ def test_info_build_order_merge_multi_product_configurations():
                 "filenames": [
                     "bo2"
                 ],
+                'info': {'requires': ['dep/0.1']},
                 "depends": [
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
@@ -461,6 +474,7 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_win"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -478,6 +492,7 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_nix"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -500,6 +515,8 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "b23846b9b10455081d89a9dfacd01f7712d04b95",
                         'prev': None,
                         'filenames': ["bo_win"],
+                        'info': {'requires': ['depwin/0.1'],
+                                 'settings': {'os': 'Windows'}},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -511,6 +528,8 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
                         'prev': None,
                         'filenames': ["bo_nix"],
+                        'info': {'requires': ['depnix/0.1'],
+                                 'settings': {'os': 'Linux'}},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -565,6 +584,7 @@ def test_build_order_missing_package_check_error():
                 "binary": "Missing",
                 "options": [],
                 "filenames": [],
+                'info': {},
                 "depends": [],
                 "overrides": {},
                 "build_args": None,
@@ -580,6 +600,7 @@ def test_build_order_missing_package_check_error():
                 "binary": "Build",
                 "options": [],
                 "filenames": [],
+                'info': {'requires': ['dep/0.1']},
                 "depends": [
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],

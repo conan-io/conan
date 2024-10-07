@@ -51,7 +51,7 @@ class InstallAPI:
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_package=None, deploy_folder=None):
+                         deploy=False, deploy_package=None, deploy_folder=None, envs_generation=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -88,4 +88,4 @@ class InstallAPI:
                 final_generators.append(gen)
         conanfile.generators = final_generators
         app = ConanApp(self.conan_api)
-        write_generators(conanfile, app)
+        write_generators(conanfile, app, envs_generation=envs_generation)

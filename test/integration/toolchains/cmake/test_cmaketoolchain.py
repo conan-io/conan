@@ -119,8 +119,16 @@ def test_cross_build_user_toolchain():
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert "CMAKE_SYSTEM_NAME " not in toolchain
-    assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
+    # Fixed in https://github.com/conan-io/conan/issues/16807
+    expected = textwrap.dedent("""\
+        # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_NAME Linux)
+        endif()
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+        endif()""")
+    assert expected in toolchain
 
 
 def test_cross_build_user_toolchain_confs():
@@ -1044,30 +1052,6 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
-
-
-def test_cmake_presets_compiler():
-    profile = textwrap.dedent(r"""
-    [settings]
-    os=Windows
-    arch=x86_64
-    compiler=msvc
-    compiler.version=193
-    compiler.runtime=dynamic
-    [conf]
-    tools.build:compiler_executables={"c": "cl", "cpp": "cl.exe", "rc": "C:\\local\\rc.exe"}
-    """)
-    client = TestClient()
-    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
-        .with_generator("CMakeToolchain")
-    client.save({"conanfile.py": conanfile,
-                 "profile": profile})
-    client.run("install . -pr:b profile -pr:h profile")
-    presets = json.loads(client.load("CMakePresets.json"))
-    cache_variables = presets["configurePresets"][0]["cacheVariables"]
-    assert cache_variables["CMAKE_C_COMPILER"] == "cl"
-    assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
-    assert cache_variables["CMAKE_RC_COMPILER"] == "C:/local/rc.exe"
 
 
 def test_cmake_layout_toolchain_folder():

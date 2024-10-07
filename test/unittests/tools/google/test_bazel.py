@@ -4,12 +4,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
 from conan.tools.google import Bazel
 from conan.tools.google.bazeldeps import _relativize_path, _get_libs
-from conans.model.options import Options
-from conan.test.utils.mocks import ConanFileMock
-from conan.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")
@@ -28,10 +27,12 @@ def cpp_info():
     save(ConanFileMock(), os.path.join(libdirs, "mylibwin2.if.lib"), "")
     save(ConanFileMock(), os.path.join(libdirs, "libmylib.so"), "")
     save(ConanFileMock(), os.path.join(libdirs, "subfolder", "libmylib.a"), "")  # recursive
-    cpp_info_mock = MagicMock(_base_folder=None, libdirs=None, bindirs=None, libs=None)
+    cpp_info_mock = MagicMock(_base_folder=None, libdirs=[], bindirs=[], libs=[],
+                              aggregated_components=MagicMock())
     cpp_info_mock._base_folder = folder.replace("\\", "/")
     cpp_info_mock.libdirs = [libdirs]
     cpp_info_mock.bindirs = [bindirs]
+    cpp_info_mock.aggregated_components.return_value = cpp_info_mock
     return cpp_info_mock
 
 
@@ -82,15 +83,11 @@ def test_bazeldeps_relativize_path(path, pattern, expected):
     # Win + shared
     (["mylibwin"], True, [('mylibwin', True, '{base_folder}/bin/mylibwin.dll', '{base_folder}/lib/mylibwin.lib')]),
     # Win + shared (interface with another ext)
-    (["mylibwin2"], True,
-     [('mylibwin2', True, '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib')]),
-    # Win + Mac + shared
-    (["mylibwin", "mylibmac"], True, [('mylibmac', True, '{base_folder}/bin/mylibmac.dylib', None),
-                                      ('mylibwin', True, '{base_folder}/bin/mylibwin.dll',
-                                       '{base_folder}/lib/mylibwin.lib')]),
-    # Linux + Mac + static
-    (["myliblin", "mylibmac"], False, [('mylibmac', False, '{base_folder}/lib/mylibmac.a', None),
-                                       ('myliblin', False, '{base_folder}/lib/myliblin.a', None)]),
+    (["mylibwin2"], True, [('mylibwin2', True, '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib')]),
+    # Mac + shared
+    (["mylibmac"], True, [('mylibmac', True, '{base_folder}/bin/mylibmac.dylib', None)]),
+    # Mac + static
+    (["mylibmac"], False, [('mylibmac', False, '{base_folder}/lib/mylibmac.a', None)]),
     # mylib + shared (saved as libmylib.so) -> removing the leading "lib" if it matches
     (["mylib"], True, [('mylib', True, '{base_folder}/lib/libmylib.so', None)]),
     # mylib + static (saved in a subfolder subfolder/libmylib.a) -> non-recursive at this moment
@@ -113,8 +110,10 @@ def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
         if interface_lib_path:
             interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
         ret.append((lib, is_shared, lib_path, interface_lib_path))
-    found_libs = _get_libs(ConanFileMock(options=Options(options_values={"shared": is_shared})),
-                           cpp_info)
+    dep = MagicMock()
+    dep.options.get_safe.return_value = is_shared
+    dep.ref.name = "my_pkg"
+    found_libs = _get_libs(dep, cpp_info)
     found_libs.sort()
     ret.sort()
     assert found_libs == ret

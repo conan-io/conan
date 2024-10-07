@@ -35,7 +35,6 @@ def cppstd_compat(conanfile):
     cppstd = conanfile.settings.get_safe("compiler.cppstd")
     if not compiler or not compiler_version:
         return []
-    base = dict(conanfile.settings.values_list)
     factors = []  # List of list, each sublist is a potential combination
     if cppstd is not None and extension_properties.get("compatibility_cppstd") is not False:
         cppstd_possible_values = supported_cppstd(conanfile)
@@ -72,9 +71,7 @@ def cppstd_compat(conanfile):
 
     ret = []
     for comb in combinations:
-        configuration = base.copy()
-        configuration.update(comb)
-        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
+        ret.append({"settings": [(k, v) for k, v in comb.items()]})
     return ret
 """
 
@@ -144,6 +141,7 @@ class BinaryCompatibility:
         if compatibles:
             for elem in compatibles:
                 compat_info = conanfile.original_info.clone()
+                compat_info.compatibility_delta = elem
                 settings = elem.get("settings")
                 if settings:
                     compat_info.settings.update_values(settings, raise_undefined=False)

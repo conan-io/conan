@@ -1,14 +1,12 @@
 import os
 import unittest
 
-import pytest
 from mock import Mock
 
-from conans import REVISIONS
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClientFactory
+from conans.client.rest.rest_client import RestApiClient
 from conans.model.conf import ConfDefinition
 from conan.test.utils.env import environment_update
 from conans.client.userio import UserInput
@@ -24,7 +22,6 @@ from conan.test.utils.tools import get_free_port
 from conans.util.files import md5, save
 
 
-@pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
 
@@ -42,8 +39,6 @@ class RestApiTest(unittest.TestCase):
                 save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
-                client_factory = RestApiClientFactory(requester=requester,
-                                                      config=config)
                 localdb = LocalDBMock()
 
                 mocked_user_input = UserInput(non_interactive=False)
@@ -51,13 +46,14 @@ class RestApiTest(unittest.TestCase):
                 mocked_user_input.get_password = Mock(return_value="private_pass")
 
                 # FIXME: Missing mock
-                cls.auth_manager = ConanApiAuthManager(client_factory, temp_folder(), localdb, config)
+                cls.auth_manager = ConanApiAuthManager(requester, temp_folder(), localdb, config)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
-                cls.auth_manager._authenticate(cls.remote, user="private_user",
+                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
+                cls.auth_manager._authenticate(cls.api, cls.remote, user="private_user",
                                                password="private_pass")
-                cls.api = client_factory.new(cls.remote, localdb.access_token, localdb.refresh_token,
-                                             {})
+                # Need to define again with new token
+                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
 
     @classmethod
     def tearDownClass(cls):
@@ -65,10 +61,6 @@ class RestApiTest(unittest.TestCase):
 
     def tearDown(self):
         RestApiTest.server.clean()
-
-    def test_server_capabilities(self):
-        capabilities = self.api.server_capabilities()
-        self.assertEqual(capabilities, ["ImCool", "TooCool", REVISIONS])
 
     def test_get_conan(self):
         # Upload a conans

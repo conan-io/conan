@@ -207,7 +207,7 @@ class BasicAuthorizer(Authorizer):
                     else:
                         raise ForbiddenException("Permission denied")
                 else:
-                    raise AuthenticationException()
+                    raise AuthenticationException("Authentication error")
 
         return False
 

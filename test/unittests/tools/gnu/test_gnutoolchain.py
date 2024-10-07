@@ -48,7 +48,7 @@ def test_get_gnu_triplet_for_cross_building():
 def test_get_toolchain_cppstd():
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",
-                             "compiler.version": "10",
+                             "compiler.version": "9",
                              "compiler.cppstd": "20",
                              "os": "Linux",
                              "arch": "x86_64"})
@@ -57,7 +57,7 @@ def test_get_toolchain_cppstd():
     conanfile.settings_build = settings
     at = GnuToolchain(conanfile)
     assert at.cppstd == "-std=c++2a"
-    settings.values["compiler.version"] = "12"
+    settings.values["compiler.version"] = "10"
     at = GnuToolchain(conanfile)
     assert at.cppstd == "-std=c++20"
 
