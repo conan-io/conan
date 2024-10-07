@@ -113,7 +113,6 @@ class DockerRunner:
         # Update conan command and some paths to run inside the container
         raw_args[raw_args.index(args.path)] = self.abs_docker_path
         self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
-        self.command = "pwd && ls /root/conanrunner/pathwithoutspaces && " + self.command
 
     def run(self):
         """
@@ -147,17 +146,6 @@ class DockerRunner:
                     security_opt=self.configfile.run.security_opt,
                     detach=True,
                     auto_remove=False)
-                print(self.image,
-                    "/bin/bash -c 'while true; do sleep 30; done;'",
-                    f"name={self.name}",
-                    f"volumes={volumes}",
-                    f"environment={environment}",
-                    f"user={self.configfile.run.user}",
-                    f"privileged={self.configfile.run.privileged}",
-                    f"cap_add={self.configfile.run.cap_add}",
-                    f"security_opt={self.configfile.run.security_opt}",
-                    f"detach={True}",
-                    f"auto_remove={False}")
             _docker_info(f'Container {self.name} running')
         except Exception as e:
             raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'

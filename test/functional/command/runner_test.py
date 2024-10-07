@@ -42,7 +42,7 @@ def test_create_docker_runner_cache_shared():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -86,7 +86,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -130,7 +130,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -174,7 +174,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -245,7 +245,7 @@ def test_create_docker_runner_profile_default_folder():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -291,7 +291,7 @@ def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
@@ -362,7 +362,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
             cmake.install()
     """)
 
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                 "CMakeLists.txt": gen_cmakelists(libsources=["hello.cpp"],
                                                 appsources=["main.cpp"],
@@ -401,7 +401,7 @@ def test_create_docker_runner_from_configfile():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     configfile = textwrap.dedent(f"""
         image: conan-runner-default-test
         build:
@@ -456,7 +456,7 @@ def test_create_docker_runner_from_configfile_with_args():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     configfile = textwrap.dedent(f"""
         image: conan-runner-default-test-with-args
         build:
@@ -513,7 +513,7 @@ def test_create_docker_runner_default_build_profile():
     """
     Tests the ``conan create . ``
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
 
     profile_host = textwrap.dedent(f"""\
     [settings]

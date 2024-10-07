@@ -44,18 +44,10 @@ jobs:
         if: steps.cache_docker_image.outputs.cache-hit == 'true'
         run: docker load -i docker_image_cache/conan-tests.tar
 
-      - name: Get Docker group GID
-        if: steps.cache_docker_image.outputs.cache-hit != 'true'
-        id: docker_gid
-        run: |
-          DOCKER_GID=$(getent group docker | cut -d: -f3)
-          echo "docker_gid=$DOCKER_GID" >> $GITHUB_OUTPUT
-
       - name: Build Docker image (if not cached)
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: |
           docker build \
-          --build-arg DOCKER_GID=${{ steps.docker_gid.outputs.docker_gid }} \
           -t ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
           -f ./.ci/docker/conan-tests .
           mkdir -p docker_image_cache
@@ -65,57 +57,57 @@ jobs:
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: docker push ghcr.io/${{ github.repository_owner }}/conan-tests:latest
 
-  # linux:
-  #   needs: build_container
-  #   runs-on: ubuntu-latest
-  #   container:
-  #     image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
-  #     options: --user conan
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
-  #       test-type: ['unittests', 'integration', 'functional']
-  #   name: Python ${{ matrix.python-version }} - ${{ matrix.test-type }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  linux:
+    needs: build_container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+      options: --user conan
+    strategy:
+      matrix:
+        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
+        test-type: ['unittests', 'integration', 'functional']
+    name: Python ${{ matrix.python-version }} - ${{ matrix.test-type }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       run: |
-  #         pyenv global ${{ matrix.python-version }}
-  #         python --version
+      - name: Set up Python ${{ matrix.python-version }}
+        run: |
+          pyenv global ${{ matrix.python-version }}
+          python --version
 
-  #     - name: Cache pip
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: ~/.cache/pip
-  #         key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
 
-  #     - name: Install dependencies
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install -r conans/requirements.txt
-  #         pip install -r conans/requirements_dev.txt
-  #         pip install -r conans/requirements_server.txt
-  #         pip install meson
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+          pip install meson
 
-  #     - name: Run tests
-  #       shell: bash
-  #       run: |
-  #         if [ "${{ matrix.test-type }}" == "unittests" ]; then
-  #           pytest test/unittests --durations=20 -n 4 -rs
-  #         elif [ "${{ matrix.test-type }}" == "integration" ]; then
-  #           pytest test/integration --durations=20 -n 4 -rs
-  #         elif [ "${{ matrix.test-type }}" == "functional" ]; then
-  #           pytest test/functional --durations=20 -n 4 -rs
-  #         fi
+      - name: Run tests
+        shell: bash
+        run: |
+          if [ "${{ matrix.test-type }}" == "unittests" ]; then
+            pytest test/unittests --durations=20 -n 4 -rs
+          elif [ "${{ matrix.test-type }}" == "integration" ]; then
+            pytest test/integration --durations=20 -n 4 -rs
+          elif [ "${{ matrix.test-type }}" == "functional" ]; then
+            pytest test/functional --durations=20 -n 4 -rs
+          fi
 
   linux_docker_tests:
     needs: build_container
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12.3']
+        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
     name: Docker Runner Tests - Python ${{ matrix.python-version }}
     steps:
       - name: Checkout code
