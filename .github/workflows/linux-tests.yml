@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build_container:
     runs-on: ubuntu-latest
+    name: Build and Publish Docker Image for testing Conan
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
