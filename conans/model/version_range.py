@@ -66,6 +66,10 @@ class _ConditionSet:
 
     def __init__(self, expression, prerelease):
         expressions = expression.split()
+        if not expressions:
+            # Guarantee at least one expression
+            expressions = [""]
+
         self.prerelease = prerelease
         self.conditions = []
         for e in expressions:

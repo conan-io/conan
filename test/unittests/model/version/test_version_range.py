@@ -33,6 +33,7 @@ values = [
     # pre-releases
     ['',                             [[[">=", "0.0.0-"]]],    ["1.0"],                ["1.0-pre.1"]],
     ['*, include_prerelease=True',   [[[">=", "0.0.0-"]]],    ["1.0", "1.0-pre.1", "0.0.0", "0.0.0-pre.1"],   []],
+    [', include_prerelease=True',   [[[">=", "0.0.0-"]]],    ["1.0", "1.0-pre.1", "0.0.0", "0.0.0-pre.1"],   []],
     ['>1- <2.0',                     [[['>', '1-'], ['<', '2.0-']]],
                                      ["1.0", "1.1", "1.9"],   ["1-pre.1", "1.5.1-pre1", "2.1-pre1"]],
     ['>1- <2.0 || ^3.2 ',  [[['>', '1-'], ['<', '2.0-']], [['>=', '3.2-'], ['<', '4.0-']]],
@@ -53,14 +54,19 @@ values = [
     ['>=2.0-pre.0, include_prerelease', [[['>=', '2.0-pre.0']]], ["2.1", "2.0-pre.1"], ["1.5"]],
     # Build metadata
     ['>=1.0.0+2', [[['>=', '1.0.0+2']]], ["1.0.0+2", "1.0.0+3"], ["1.0.0+1"]],
-    ['>=2.2.0+build.en.305 <2.2.0+build.en.306', [], ["2.2.0+build.en.305", "2.2.0+build.en.305.1", "2.2.0+build.en.305.2"], ["2.2.0+build.en.306"]]
+    ['>=2.2.0+build.en.305 <2.2.0+build.en.306', [[['>=', '2.2.0+build.en.305'], ['<', '2.2.0+build.en.306']]],
+                                                 ["2.2.0+build.en.305", "2.2.0+build.en.305.1", "2.2.0+build.en.305.2"], ["2.2.0+build.en.306"]]
 ]
 
 
 @pytest.mark.parametrize("version_range, conditions, versions_in, versions_out", values)
 def test_range(version_range, conditions, versions_in, versions_out):
     r = VersionRange(version_range)
+    assert len(r.condition_sets) == len(conditions), \
+        f"Expected {r} to have {len(conditions)} condition sets, but got {len(r.condition_sets)}"
     for condition_set, expected_condition_set in zip(r.condition_sets, conditions):
+        assert len(condition_set.conditions) == len(expected_condition_set), \
+            f"Expected {r} to have {len(expected_condition_set)} conditions, but got {len(condition_set.conditions)}"
         for condition, expected_condition in zip(condition_set.conditions, expected_condition_set):
             assert condition.operator == expected_condition[0], f"Expected {r} condition operator to be {expected_condition[0]}, but got {condition.operator}"
             assert condition.version == expected_condition[1], f"Expected {r} condition version to be {expected_condition[1]}, but got {condition.version}"
@@ -80,6 +86,10 @@ def test_range(version_range, conditions, versions_in, versions_out):
     ['*, include_prerelease', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
     ['*, include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     ['*, include_prerelease', None, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+
+    [', include_prerelease', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+    [', include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    [', include_prerelease', None, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
 
     ['>1 <2.0', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
     ['>1 <2.0', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
