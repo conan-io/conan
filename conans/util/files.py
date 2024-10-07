@@ -301,13 +301,6 @@ def tar_extract(fileobj, destination_dir):
     the_tar.close()
 
 
-def exception_message_safe(exc):
-    try:
-        return str(exc)
-    except Exception:
-        return repr(exc)
-
-
 def merge_directories(src, dst):
     from conan.tools.files import copy
     copy(None, pattern="*", src=src, dst=dst)

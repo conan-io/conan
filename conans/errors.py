@@ -6,8 +6,8 @@
     matching exception.
 
     see return_plugin.py
-
 """
+import traceback
 from contextlib import contextmanager
 
 
@@ -34,37 +34,22 @@ def conanfile_remove_attr(conanfile, names, method):
 
 
 @contextmanager
-def conanfile_exception_formatter(conanfile_name, func_name):
+def conanfile_exception_formatter(conanfile, funcname):
     """
     Decorator to throw an exception formatted with the line of the conanfile where the error ocurrs.
     """
-
-    def _raise_conanfile_exc(e):
-        from conan.api.output import LEVEL_DEBUG, ConanOutput
-        if ConanOutput.level_allowed(LEVEL_DEBUG):
-            import traceback
-            raise ConanException(traceback.format_exc())
-        m = scoped_traceback(f"{conanfile_name}: Error in {func_name}() method", e,
-                             scope="conanfile.py")
-        raise ConanException(m)
-
     try:
         yield
-    # TODO: Move ConanInvalidConfiguration from here?
     except ConanInvalidConfiguration as exc:
-        msg = "{}: Invalid configuration: {}".format(str(conanfile_name), exc)
+        # TODO: This is never called from `conanfile.validate()` but could be called from others
+        msg = "{}: Invalid configuration: {}".format(str(conanfile), exc)
         raise ConanInvalidConfiguration(msg)
-    except AttributeError as exc:
-        list_methods = [m for m in dir(list) if not m.startswith('__')]
-        if "NoneType" in str(exc) and func_name in ['layout', 'package_info'] and \
-            any(method in str(exc) for method in list_methods):
-            raise ConanException("{}: {}. No default values are set for components. You are probably "
-                                 "trying to manipulate a component attribute in the '{}' method "
-                                 "without defining it previously".format(str(conanfile_name), exc, func_name))
-        else:
-            _raise_conanfile_exc(exc)
     except Exception as exc:
-        _raise_conanfile_exc(exc)
+        m = scoped_traceback(f"{conanfile}: Error in {funcname}() method", exc, scope="conanfile.py")
+        from conan.api.output import LEVEL_DEBUG, ConanOutput
+        if ConanOutput.level_allowed(LEVEL_DEBUG):
+            m = traceback.format_exc() + "\n" + m
+        raise ConanException(m)
 
 
 def scoped_traceback(header_msg, exception, scope):
@@ -74,7 +59,6 @@ def scoped_traceback(header_msg, exception, scope):
     the traces.
     """
     import sys
-    import traceback
     content_lines = []
     try:
         scope_reached = False
@@ -105,26 +89,16 @@ def scoped_traceback(header_msg, exception, scope):
 
 
 class ConanException(Exception):
-    """
-         Generic conans exception
-    """
-    def __init__(self, *args, **kwargs):
-        self.info = None
-        self.remote = kwargs.pop("remote", None)
-        super(ConanException, self).__init__(*args, **kwargs)
-
-    def remote_message(self):
-        if self.remote:
-            return " [Remote: {}]".format(self.remote.name)
-        return ""
+    """ Generic conan exception """
+    def __init__(self, msg=None, remote=None):
+        self.remote = remote
+        super().__init__(msg)
 
     def __str__(self):
-        from conans.util.files import exception_message_safe
-        msg = super(ConanException, self).__str__()
+        msg = super().__str__()
         if self.remote:
-            return "{}.{}".format(exception_message_safe(msg), self.remote_message())
-
-        return exception_message_safe(msg)
+            return f"{msg}. [Remote: {self.remote.name}]"
+        return msg
 
 
 class ConanReferenceDoesNotExistInDB(ConanException):
@@ -134,12 +108,6 @@ class ConanReferenceDoesNotExistInDB(ConanException):
 
 class ConanReferenceAlreadyExistsInDB(ConanException):
     """ Reference already exists in cache db """
-    pass
-
-
-class NoRemoteAvailable(ConanException):
-    """ No default remote configured or the specified remote do not exists
-    """
     pass
 
 
@@ -191,37 +159,19 @@ class NotFoundException(ConanException):  # 404
     """
         404 error
     """
-
-    def __init__(self, *args, **kwargs):
-        self.remote = kwargs.pop("remote", None)
-        super(NotFoundException, self).__init__(*args, **kwargs)
+    pass
 
 
 class RecipeNotFoundException(NotFoundException):
 
-    def __init__(self, ref, remote=None):
-        from conans.model.recipe_ref import RecipeReference
-        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a RecipeReference"
-        self.ref = ref
-        super(RecipeNotFoundException, self).__init__(remote=remote)
-
-    def __str__(self):
-        tmp = repr(self.ref)
-        return "Recipe not found: '{}'".format(tmp, self.remote_message())
+    def __init__(self, ref):
+        super().__init__(f"Recipe not found: '{ref.repr_notime()}'")
 
 
 class PackageNotFoundException(NotFoundException):
 
-    def __init__(self, pref, remote=None):
-        from conans.model.package_ref import PkgReference
-        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a PkgReference"
-        self.pref = pref
-
-        super(PackageNotFoundException, self).__init__(remote=remote)
-
-    def __str__(self):
-        return "Binary package not found: '{}'{}".format(self.pref.repr_notime(),
-                                                         self.remote_message())
+    def __init__(self, pref):
+        super().__init__(f"Binary package not found: '{pref.repr_notime()}'")
 
 
 EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
