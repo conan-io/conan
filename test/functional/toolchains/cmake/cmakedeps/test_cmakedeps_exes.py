@@ -146,14 +146,13 @@ def test_exe_components():
 
     consumer = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
+        from conan.tools.cmake import CMakeDeps2, CMakeToolchain, CMake, cmake_layout
         class Consumer(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             tool_requires = "mytool/0.1"
 
             def generate(self):
-                deps = CMakeDeps(self)
-                deps.build_context_activated = ["mytool"]
+                deps = CMakeDeps2(self)
                 deps.generate()
                 tc = CMakeToolchain(self)
                 tc.generate()
