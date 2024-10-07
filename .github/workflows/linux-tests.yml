@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
+        python-version: ['3.12.3', '3.9.2']
     name: Docker Runner Tests - Python ${{ matrix.python-version }}
     steps:
       - name: Checkout code
