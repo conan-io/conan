@@ -103,7 +103,6 @@ jobs:
           fi
 
   linux_docker_tests:
-    needs: build_container
     runs-on: ubuntu-latest
     name: Docker Runner Tests
     strategy:
