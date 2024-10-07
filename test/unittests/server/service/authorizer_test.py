@@ -1,6 +1,6 @@
 import unittest
 
-from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
+from conan.internal.errors import InternalErrorException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.server.service.authorize import BasicAuthorizer

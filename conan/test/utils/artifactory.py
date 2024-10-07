@@ -4,7 +4,7 @@ import uuid
 
 import requests
 
-from conans.errors import RecipeNotFoundException, PackageNotFoundException
+from conan.internal.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.server.revision_list import _RevisionEntry
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")

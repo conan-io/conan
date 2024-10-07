@@ -4,7 +4,7 @@ import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",

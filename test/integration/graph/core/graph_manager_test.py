@@ -2,7 +2,7 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
-from conans.errors import ConanException
+from conan.errors import ConanException
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
 

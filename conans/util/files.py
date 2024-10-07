@@ -11,8 +11,7 @@ import time
 
 from contextlib import contextmanager
 
-
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
