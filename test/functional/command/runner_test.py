@@ -362,7 +362,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
             cmake.install()
     """)
 
-    client = TestClient()
+    client = TestClient(path_with_spaces=False)
     client.save({'conanfile.py': conanfile,
                 "CMakeLists.txt": gen_cmakelists(libsources=["hello.cpp"],
                                                 appsources=["main.cpp"],
