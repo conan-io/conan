@@ -68,7 +68,7 @@ jobs:
       matrix:
         python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
         test-type: ['unittests', 'integration', 'functional']
-    name: Conan Test Suite - Python ${{ matrix.python-version }} - ${{ matrix.test-type }}
+    name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }}) 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
