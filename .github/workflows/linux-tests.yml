@@ -126,7 +126,7 @@ jobs:
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_dev.txt
           pip install -r conans/requirements_server.txt
-          pip install meson
+          pip install -r conans/requirements_runner.txt
       - name: Run tests
         shell: bash
         run: |
