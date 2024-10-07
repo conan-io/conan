@@ -77,7 +77,8 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
-        self._exes = None  # application executables
+        self.exe = None  # application executable, only 1 allowed, following CPS
+        self.location = None
 
         self._sysroot = None
         self._requires = None
@@ -113,7 +114,7 @@ class _Component:
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
-            "exes": self._exes,
+            "exe": self.exe,
         }
 
     @staticmethod
@@ -259,16 +260,6 @@ class _Component:
     @libs.setter
     def libs(self, value):
         self._libs = value
-
-    @property
-    def exes(self):
-        if self._exes is None:
-            self._exes = {}
-        return self._exes
-
-    @exes.setter
-    def exes(self, value):
-        self._exes = value
 
     @property
     def defines(self):

@@ -29,6 +29,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
                                                 self.conanfile, check_type=bool)
+        if self.conanfile.cpp_info.exe:
+            exe_location = self.conanfile.cpp_info.location.replace("\\", "/")
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
+        else:
+            exe_location = pfolder_var_name = ""
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
@@ -37,7 +42,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
                 "set_interface_link_directories": auto_link and is_win,
-                "cpp_info": self.conanfile.cpp_info}
+                "exe": self.conanfile.cpp_info.exe,
+                "exe_location": f"${{{pfolder_var_name}}}/{exe_location}"}
 
     @property
     def template(self):
@@ -130,10 +136,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             {%- endif %}
 
             # Exe information
-            {% for exe_name, exe_info in cpp_info.exes.items() %}
-            add_executable({{pkg_name}}::{{exe_name}} IMPORTED)
-            set_target_properties({{pkg_name}}::{{exe_name}} PROPERTIES IMPORTED_LOCATION${config_suffix} "{{exe_info["location"]}}")
-            {%- endfor %}
+            {% if exe %}
+            message(STATUS "Conan: Target declared imported executable '{{pkg_name}}::{{exe}}'")
+            add_executable({{pkg_name}}::{{exe}} IMPORTED)
+            set_target_properties({{pkg_name}}::{{exe}} PROPERTIES IMPORTED_LOCATION${config_suffix} "{{exe_location}}")
+            {%- endif %}
 
         {%- else %}
 
