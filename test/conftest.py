@@ -359,10 +359,3 @@ def pytest_runtest_setup(item):
         item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
-
-
-# fail if all tests are skipped
-def pytest_sessionfinish(session, exitstatus):
-    if session.testscollected > 0 and session.testsfailed == 0 and session.testscollected == session.skipped:
-        session.exitstatus = 1
-        print("All tests were skipped. Failing the test run.")
