@@ -1,3 +1,4 @@
+import traceback
 from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
@@ -373,7 +374,6 @@ def _load_python_file(conan_file_path):
     except ConanException:
         raise
     except Exception:
-        import traceback
         trace = traceback.format_exc().split('\n')
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))
