@@ -57,7 +57,7 @@ jobs:
         if: steps.cache_docker_image.outputs.cache-hit != 'true'
         run: docker push ghcr.io/${{ github.repository_owner }}/conan-tests:latest
 
-  linux:
+  linux_test_suite:
     needs: build_container
     runs-on: ubuntu-latest
     container:
@@ -105,28 +105,25 @@ jobs:
   linux_docker_tests:
     needs: build_container
     runs-on: ubuntu-latest
+    name: Docker Runner Tests
     strategy:
       matrix:
-        python-version: ['3.12.3', '3.9.2']
-    name: Docker Runner Tests - Python ${{ matrix.python-version }}
+        python-version: [3.12, 3.9]
     steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: |
-          pyenv global ${{ matrix.python-version }}
-          python --version
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_runner.txt
 
       - name: Run tests
