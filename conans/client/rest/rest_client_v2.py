@@ -1,9 +1,11 @@
 import copy
 import fnmatch
+import hashlib
 import json
 import os
 
 from requests.auth import AuthBase, HTTPBasicAuth
+from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 
@@ -24,11 +26,11 @@ class JWTAuth(AuthBase):
     """Attaches JWT Authentication to the given Request object."""
 
     def __init__(self, token):
-        self.token = token
+        self.bearer = "Bearer %s" % str(token) if token else None
 
     def __call__(self, request):
-        if self.token:
-            request.headers['Authorization'] = "Bearer %s" % str(self.token)
+        if self.bearer:
+            request.headers['Authorization'] = self.bearer
         return request
 
 
@@ -47,21 +49,28 @@ def get_exception_from_error(error_code):
             return None
 
 
+def _get_mac_digest():  # To avoid re-hashing all the time the same mac
+    cached = getattr(_get_mac_digest, "_cached_value", None)
+    if cached is not None:
+        return cached
+    sha1 = hashlib.sha1()
+    sha1.update(str(get_mac()).encode())
+    cached = str(sha1.hexdigest())
+    _get_mac_digest._cached_value = cached
+    return cached
+
+
 class RestV2Methods:
 
-    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 checksum_deploy=False):
-        self.token = token
+    def __init__(self, remote_url, token, requester, config, verify_ssl, checksum_deploy=False):
         self.remote_url = remote_url
-        self.custom_headers = custom_headers
+        self.custom_headers = {'X-Client-Anonymous-Id': _get_mac_digest()}
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
         self._checksum_deploy = checksum_deploy
-
-    @property
-    def auth(self):
-        return JWTAuth(self.token)
+        self.router = ClientV2Router(self.remote_url.rstrip("/"))
+        self.auth = JWTAuth(token)
 
     @staticmethod
     def _check_error_response(ret):
@@ -84,52 +93,6 @@ class RestV2Methods:
 
         self._check_error_response(ret)
         return ret.content.decode()
-
-    def authenticate_oauth(self, user, password):
-        """Sends user + password to get:
-            - A json with an access_token and a refresh token (if supported in the remote)
-                    Artifactory >= 6.13.X
-        """
-        url = self.router.oauth_authenticate()
-        auth = HTTPBasicAuth(user, password)
-        headers = {}
-        headers.update(self.custom_headers)
-        headers["Content-type"] = "application/x-www-form-urlencoded"
-        # logger.debug("REST: Authenticating with OAUTH: %s" % url)
-        ret = self.requester.post(url, auth=auth, headers=headers, verify=self.verify_ssl)
-        self._check_error_response(ret)
-
-        data = ret.json()
-        access_token = data["access_token"]
-        refresh_token = data["refresh_token"]
-        # logger.debug("REST: Obtained refresh and access tokens")
-        return access_token, refresh_token
-
-    def refresh_token(self, token, refresh_token):
-        """Sends access_token and the refresh_token to get a pair of
-        access_token and refresh token
-
-        Artifactory >= 6.13.X
-        """
-        url = self.router.oauth_authenticate()
-        # logger.debug("REST: Refreshing Token: %s" % url)
-        headers = {}
-        headers.update(self.custom_headers)
-        headers["Content-type"] = "application/x-www-form-urlencoded"
-        payload = {'access_token': token, 'refresh_token': refresh_token,
-                   'grant_type': 'refresh_token'}
-        ret = self.requester.post(url, headers=headers, verify=self.verify_ssl, data=payload)
-        self._check_error_response(ret)
-
-        data = ret.json()
-        if "access_token" not in data:
-            # logger.debug("REST: unexpected data from server: {}".format(data))
-            raise ConanException("Error refreshing the token")
-
-        new_access_token = data["access_token"]
-        new_refresh_token = data["refresh_token"]
-        # logger.debug("REST: Obtained new refresh and access tokens")
-        return new_access_token, new_refresh_token
 
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
@@ -239,10 +202,6 @@ class RestV2Methods:
         url = self.router.search_packages(ref)
         package_infos = self._get_json(url)
         return package_infos
-
-    @property
-    def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
         data = self._get_json(url)
