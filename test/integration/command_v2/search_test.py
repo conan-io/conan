@@ -4,7 +4,8 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.errors import ConanConnectionError, ConanException
+from conan.internal.errors import ConanConnectionError
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer

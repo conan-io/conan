@@ -1,6 +1,6 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class RestApiClient:

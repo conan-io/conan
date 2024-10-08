@@ -13,8 +13,9 @@ from conans.client.downloaders.caching_file_downloader import ConanInternalCache
 from conans.client.rest import response_to_str
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
-from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
-    RecipeNotFoundException, AuthenticationException, ForbiddenException, EXCEPTION_CODE_MAPPING
+from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException, \
+    RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.model.recipe_ref import RecipeReference
