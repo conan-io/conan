@@ -157,7 +157,7 @@ def _receive_generators(conanfile):
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.generator_info:
             # In case generators has been defined as a tuple
-            conanfile.generators = list(conanfile.generators) + list(build_require.generator_info)
+            conanfile.generators = list(build_require.generator_info) + list(conanfile.generators)
 
 
 def _generate_aggregated_env(conanfile):
