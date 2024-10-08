@@ -73,6 +73,7 @@ def load_cache_generators(path):
 def write_generators(conanfile, app, envs_generation=None):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
+    _receive_generators(conanfile)
 
     hook_manager = app.hook_manager
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
@@ -149,6 +150,14 @@ def _receive_conf(conanfile):
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
             conanfile.conf.compose_conf(build_require.conf_info)
+
+
+def _receive_generators(conanfile):
+    """  Collect generators_info from the immediate build_requires"""
+    for build_require in conanfile.dependencies.direct_build.values():
+        if build_require.generator_info:
+            # In case generators has been defined as a tuple
+            conanfile.generators = list(conanfile.generators) + list(build_require.generator_info)
 
 
 def _generate_aggregated_env(conanfile):
