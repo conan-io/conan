@@ -2,7 +2,7 @@ import copy
 import os
 import unittest
 
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

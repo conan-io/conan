@@ -7,7 +7,7 @@ from conan import ConanFile
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings

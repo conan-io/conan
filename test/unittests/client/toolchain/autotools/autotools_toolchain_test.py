@@ -5,7 +5,7 @@ import pytest
 
 from conan.tools.build import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conan.test.utils.test_files import temp_folder

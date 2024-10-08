@@ -1,6 +1,6 @@
 import hashlib
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version

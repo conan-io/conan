@@ -5,7 +5,7 @@ import pytest
 
 from conan.api.conan_api import ConanAPI
 from conan.internal.cache.home_paths import HomePaths
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save
 

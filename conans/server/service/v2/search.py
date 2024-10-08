@@ -3,7 +3,7 @@ import os
 import re
 from fnmatch import translate
 
-from conans.errors import ForbiddenException, RecipeNotFoundException
+from conan.internal.errors import ForbiddenException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO

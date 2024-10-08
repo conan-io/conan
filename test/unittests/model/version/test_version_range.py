@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 from conans.model.version_range import VersionRange
 from conan.test.utils.tools import TestClient

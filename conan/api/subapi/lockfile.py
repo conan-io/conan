@@ -3,7 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conans.client.graph.graph import Overrides
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 
 

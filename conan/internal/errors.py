@@ -1,14 +1,7 @@
-"""
-    Exceptions raised and handled in Conan
-    These exceptions are mapped between server (as an HTTP response) and client
-    through the REST API. When an error happens in server its translated to an HTTP
-    error code that its sent to client. Client reads the server code and raise the
-    matching exception.
-
-    see return_plugin.py
-"""
 import traceback
 from contextlib import contextmanager
+
+from conan.errors import ConanException, ConanInvalidConfiguration
 
 
 @contextmanager
@@ -88,19 +81,6 @@ def scoped_traceback(header_msg, exception, scope):
     return ret
 
 
-class ConanException(Exception):
-    """ Generic conan exception """
-    def __init__(self, msg=None, remote=None):
-        self.remote = remote
-        super().__init__(msg)
-
-    def __str__(self):
-        msg = super().__str__()
-        if self.remote:
-            return f"{msg}. [Remote: {self.remote.name}]"
-        return msg
-
-
 class ConanReferenceDoesNotExistInDB(ConanException):
     """ Reference does not exist in cache db """
     pass
@@ -115,18 +95,6 @@ class ConanConnectionError(ConanException):
     pass
 
 
-class ConanInvalidConfiguration(ConanException):
-    """
-    This binary, for the requested configuration and package-id cannot be built
-    """
-    pass
-
-
-class ConanMigrationError(ConanException):
-    pass
-
-
-# Remote exceptions #
 class InternalErrorException(ConanException):
     """
          Generic 500 error

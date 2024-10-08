@@ -14,7 +14,8 @@ Flow:
 from conan.api.output import ConanOutput
 from conans.client.rest.remote_credentials import RemoteCredentials
 from conans.client.rest.rest_client import RestApiClient
-from conans.errors import AuthenticationException, ConanException, ForbiddenException
+from conan.internal.errors import AuthenticationException, ForbiddenException
+from conan.errors import ConanException
 
 LOGIN_RETRIES = 3
 
