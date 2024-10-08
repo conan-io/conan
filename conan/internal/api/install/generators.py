@@ -92,8 +92,11 @@ def write_generators(conanfile, app, envs_generation=None):
     conanfile.generators = []
     try:
         for generator_name in old_generators:
-            global_generator = global_generators.get(generator_name)
-            generator_class = global_generator or _get_generator_class(generator_name)
+            if isinstance(generator_name, str):
+                global_generator = global_generators.get(generator_name)
+                generator_class = global_generator or _get_generator_class(generator_name)
+            else:
+                generator_class = generator_name
             if generator_class:
                 try:
                     generator = generator_class(conanfile)
