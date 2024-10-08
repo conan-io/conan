@@ -222,12 +222,12 @@ def test_info_build_order_options():
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
              ]]}
         ],
         [
@@ -671,4 +671,4 @@ def test_build_order_space_in_options():
     tc.run("create dep")
     tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
     order = json.loads(tc.load("order.json"))
-    assert order["order"][0][0]["build_args"] == """--requires=dep/1.0 --build=dep/1.0 -o='dep/*:extras=cxx="yes" gnuext='"'"'no'"'"'' -o='dep/*:flags=define=FOO define=BAR define=BAZ'"""
+    assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
