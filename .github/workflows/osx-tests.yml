@@ -83,6 +83,12 @@ jobs:
         run: |
           brew install xcodegen make libtool xz zlib autoconf automake ninja
 
+      - name: Install default Xcode
+        run: |
+          sudo xcode-select -s /Applications/conan/xcode/{{ xcode_default_version }}/Xcode.app
+          sudo xcode-select --install || true
+          sudo xcodebuild -license accept
+
       - name: Run Test - ${{ matrix.setup }}
         run: |
           python -m pytest -x -v --color=auto test/${{ matrix.setup }}

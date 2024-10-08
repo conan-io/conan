@@ -178,7 +178,7 @@ tools_locations = {
         "exe": "ndk-build",
         "default": "system",
         "system": {
-            "path": {'Darwin': 'Users/runner/Library/Android/sdk'}
+            "path": {'Darwin': '/Users/runner/Library/Android/sdk'}
         }
     },
     "qbs": {"disabled": True},
