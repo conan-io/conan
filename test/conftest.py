@@ -158,10 +158,10 @@ tools_locations = {
         "default": "6.3.2",
         "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
                            'Windows': 'C:/bazel-6.3.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
+                           'Darwin': '/Users/runner/Applications/bazel/6.3.2/bin'}},
         "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
                            'Windows': 'C:/bazel-7.1.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
+                           'Darwin': '/Users/runner/Applications/bazel/7.1.2/bin'}},
     },
     'premake': {
         "exe": "premake5",
@@ -178,7 +178,7 @@ tools_locations = {
         "exe": "ndk-build",
         "default": "system",
         "system": {
-            "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
+            "path": {'Darwin': 'Users/runner/Library/Android/sdk'}
         }
     },
     "qbs": {"disabled": True},
