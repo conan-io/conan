@@ -4,6 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.api.subapi.config import ConfigAPI
+from conan.internal.default_settings import migrate_settings_file
 from conans.migrations import Migrator
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save
@@ -44,13 +45,12 @@ class ClientMigrator(Migrator):
         # Migrate the settings if they were the default for that version
         # Time for migrations!
         # Update settings.yml
-        from conans.client.conf import migrate_settings_file
         migrate_settings_file(self.cache_folder)
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
         from conans.client.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
-        from conans.client.profile_loader import migrate_profile_plugin
+        from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
 
         if old_version and old_version < "2.0.14-":

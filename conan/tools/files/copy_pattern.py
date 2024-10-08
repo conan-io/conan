@@ -3,7 +3,7 @@ import fnmatch
 import os
 import shutil
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import mkdir
 
 

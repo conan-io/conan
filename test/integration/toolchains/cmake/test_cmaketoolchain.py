@@ -119,8 +119,16 @@ def test_cross_build_user_toolchain():
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert "CMAKE_SYSTEM_NAME " not in toolchain
-    assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
+    # Fixed in https://github.com/conan-io/conan/issues/16807
+    expected = textwrap.dedent("""\
+        # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_NAME Linux)
+        endif()
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+        endif()""")
+    assert expected in toolchain
 
 
 def test_cross_build_user_toolchain_confs():
@@ -1128,7 +1136,8 @@ def test_set_linker_scripts():
                 "profile": profile})
     client.run("install . -pr:b profile -pr:h profile")
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS -T"/usr/local/src/flash.ld" -T"C:/local/extra_data.ld")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS ' \
+           r'" -T\"/usr/local/src/flash.ld\" -T\"C:/local/extra_data.ld\"")' in toolchain
 
 
 def test_test_package_layout():
@@ -1276,6 +1285,32 @@ def test_build_folder_vars_self_name_version():
     presets = load(os.path.join(build_folder,
                                 "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
     assert "conan-windows-pkg-0.1-debug" in presets
+
+
+def test_build_folder_vars_constants_user():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "dep"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"const.myvalue\"]'"
+    settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
+    c.run("install . -c={} {}".format(conf, settings))
+    assert "cmake --preset conan-myvalue-debug" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "build", "myvalue", "Debug"))
+    presets = load(os.path.join(c.current_folder,
+                                "build/myvalue/Debug/generators/CMakePresets.json"))
+    assert "conan-myvalue-debug" in presets
 
 
 def test_extra_flags():
@@ -1648,6 +1683,7 @@ def test_toolchain_extra_variables():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(myVar "hello world" CACHE PATH "My cache variable" FORCE)' in toolchain
 
+
 def test_variables_wrong_scaping():
     # https://github.com/conan-io/conan/issues/16432
     c = TestClient()
@@ -1662,3 +1698,30 @@ def test_variables_wrong_scaping():
     c.run("install pkg --deployer=full_deploy")
     toolchain = c.load("pkg/conan_toolchain.cmake")
     assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain
+
+
+def test_tricore():
+    # making sure the arch ``tc131`` is there
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    c.run("install . -s os=baremetal -s compiler=gcc -s arch=tc131")
+    content = c.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_SYSTEM_NAME Generic-ELF)' in content
+    assert 'set(CMAKE_SYSTEM_PROCESSOR tricore)' in content
+    assert 'string(APPEND CONAN_CXX_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_C_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " -mtc131")' in content
+
+
+def test_declared_stdlib_and_passed():
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=Cstd")' in tc
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=stdcxx4")' in tc

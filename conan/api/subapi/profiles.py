@@ -4,8 +4,9 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 
 from conans.client.loader import load_python_file
-from conans.client.profile_loader import ProfileLoader
-from conans.errors import ConanException, scoped_traceback
+from conan.internal.api.profile.profile_loader import ProfileLoader
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
 from conans.model.profile import Profile
 
 DEFAULT_PROFILE_NAME = "default"
@@ -144,7 +145,7 @@ class ProfilesAPI:
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
-        from conans.client.conf.detect import detect_defaults_settings
+        from conan.internal.api.profile.detect import detect_defaults_settings
         settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value

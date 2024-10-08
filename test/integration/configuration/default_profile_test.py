@@ -6,7 +6,7 @@ from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
 
 

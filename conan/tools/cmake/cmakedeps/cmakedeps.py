@@ -149,16 +149,20 @@ class CMakeDeps(object):
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 
-    def get_property(self, prop, dep, comp_name=None):
+    def get_property(self, prop, dep, comp_name=None, check_type=None):
         dep_name = dep.ref.name
         build_suffix = "&build" if str(
             dep_name) in self.build_context_activated and dep.context == "build" else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
-            return self._properties[f"{dep_comp}{build_suffix}"][prop]
+            value = self._properties[f"{dep_comp}{build_suffix}"][prop]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {prop} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
-            return dep.cpp_info.get_property(prop) if not comp_name else dep.cpp_info.components[
-                comp_name].get_property(prop)
+            return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
+                else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
 
     def get_cmake_package_name(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""

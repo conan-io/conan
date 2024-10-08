@@ -1,3 +1,4 @@
+import traceback
 from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
@@ -14,13 +15,14 @@ from pathlib import Path
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
-from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter, NotFoundException
+from conan.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import DATA_YML
+from conans.model.version_range import validate_conan_version
 from conans.util.files import load, chdir, load_user_encoded
 
 
@@ -253,7 +255,7 @@ class ConanFileLoader:
 
         if tool_requires:
             for reference in tool_requires:
-                conanfile.requires.build_require(repr(reference))
+                conanfile.requires.tool_require(repr(reference))
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))
@@ -373,7 +375,6 @@ def _load_python_file(conan_file_path):
     except ConanException:
         raise
     except Exception:
-        import traceback
         trace = traceback.format_exc().split('\n')
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))

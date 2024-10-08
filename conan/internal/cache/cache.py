@@ -1,14 +1,17 @@
 import hashlib
 import os
+import re
 import shutil
 import uuid
+from fnmatch import translate
 from typing import List
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanException
+from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
@@ -168,8 +171,18 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def all_refs(self):
-        return self._db.list_references()
+    def search_recipes(self, pattern=None, ignorecase=True):
+        # Conan references in main storage
+        if pattern:
+            if isinstance(pattern, RecipeReference):
+                pattern = repr(pattern)
+            pattern = translate(pattern)
+            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+
+        refs = self._db.list_references()
+        if pattern:
+            refs = [r for r in refs if r.partial_match(pattern)]
+        return refs
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

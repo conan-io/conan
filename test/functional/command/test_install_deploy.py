@@ -437,6 +437,18 @@ def test_not_deploy_absolute_paths():
     assert f'export MYPATH="{some_abs_path}/mypath"' in env
 
 
+def test_deploy_incorrect_folder():
+    # https://github.com/conan-io/cmake-conan/issues/658
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    c.run('install . --deployer=full_deploy --deployer-folder="mydep fold"')
+    assert os.path.exists(os.path.join(c.current_folder, "mydep fold"))
+    if platform.system() == "Windows":  # This only fails in Windows
+        c.run(r'install . --deployer=full_deploy --deployer-folder="\"mydep fold\""',
+              assert_error=True)
+        assert "ERROR: Deployer folder cannot be created" in c.out
+
+
 class TestRuntimeDeployer:
     def test_runtime_deploy(self):
         c = TestClient()
@@ -444,6 +456,7 @@ class TestRuntimeDeployer:
            from conan import ConanFile
            from conan.tools.files import copy
            class Pkg(ConanFile):
+               package_type = "shared-library"
                def package(self):
                    copy(self, "*.so", src=self.build_folder, dst=self.package_folder)
                    copy(self, "*.dll", src=self.build_folder, dst=self.package_folder)
@@ -461,6 +474,25 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
+    def test_runtime_not_deploy(self):
+        # https://github.com/conan-io/conan/issues/16712
+        # If no run=False (no package-type), then no runtime is deployed
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           class Pkg(ConanFile):
+               def package(self):
+                   copy(self, "*.so", src=self.build_folder, dst=self.package_folder)
+                   copy(self, "*.dll", src=self.build_folder, dst=self.package_folder)
+           """)
+        c.save({"pkga/conanfile.py": conanfile,
+                "pkga/lib/pkga.so": "",
+                "pkga/bin/pkga.dll": ""})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("install --requires=pkga/1.0 --deployer=runtime_deploy --deployer-folder=myruntime")
+        assert os.listdir(os.path.join(c.current_folder, "myruntime")) == []
+
     def test_runtime_deploy_components(self):
         c = TestClient()
         conanfile = textwrap.dedent("""
@@ -468,6 +500,7 @@ class TestRuntimeDeployer:
             from conan import ConanFile
             from conan.tools.files import copy
             class Pkg(ConanFile):
+               package_type = "shared-library"
                def package(self):
                    copy(self, "*.so", src=self.build_folder,
                         dst=os.path.join(self.package_folder, "a"))
@@ -489,3 +522,17 @@ class TestRuntimeDeployer:
 
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+
+
+def test_deployer_errors():
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "mydeploy.py": "",
+            "mydeploy2.py": "nonsense"})
+    c.run("install . --deployer=nonexisting.py", assert_error=True)
+    assert "ERROR: Cannot find deployer 'nonexisting.py'" in c.out
+    c.run("install . --deployer=mydeploy.py", assert_error=True)
+    assert "ERROR: Deployer does not contain 'deploy()' function" in c.out
+    c.run("install . --deployer=mydeploy2.py", assert_error=True)
+    # The error message says conanfile, not a big deal still path to file is shown
+    assert "ERROR: Unable to load conanfile" in c.out

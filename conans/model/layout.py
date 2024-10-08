@@ -45,6 +45,7 @@ class Folders(object):
 
         self._base_recipe_metadata = None
         self._base_pkg_metadata = None
+        self._immutable_package_folder = None
 
         self.source = ""
         self.build = ""
@@ -141,6 +142,14 @@ class Folders(object):
     def package_folder(self):
         """For the cache, the package folder is only the base"""
         return self._base_package
+
+    def set_finalize_folder(self, folder):
+        self._immutable_package_folder = self.package_folder
+        self.set_base_package(folder)
+
+    @property
+    def immutable_package_folder(self):
+        return self._immutable_package_folder or self.package_folder
 
     @property
     def generators_folder(self):

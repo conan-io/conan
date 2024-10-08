@@ -28,6 +28,7 @@ def test_info_build_order():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -49,6 +50,7 @@ def test_info_build_order():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': [],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -73,6 +75,14 @@ def test_info_build_order():
     assert bo_json["order_by"] == "recipe"
     assert bo_json["order"] == result
 
+    # test html format
+    c.run("graph build-order consumer --build=missing --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=html")
+    assert "<body>" in c.stdout
+    c.run("graph build-order consumer --order-by=configuration --build=missing --format=html")
+    assert "<body>" in c.stdout
+
 
 def test_info_build_order_configuration():
     c = TestClient()
@@ -94,6 +104,7 @@ def test_info_build_order_configuration():
                 "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                 'prev': None,
                 'filenames': [],
+                'info': {},
                 "context": "host",
                 "binary": "Build",
                 'build_args': '--requires=dep/0.1 --build=dep/0.1',
@@ -111,6 +122,7 @@ def test_info_build_order_configuration():
                 "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                 'prev': None,
                 'filenames': [],
+                'info': {'requires': ['dep/0.1']},
                 "context": "host",
                 "binary": "Build",
                 'build_args': '--requires=pkg/0.1 --build=pkg/0.1',
@@ -162,6 +174,7 @@ def test_info_build_order_build_require():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
@@ -183,6 +196,7 @@ def test_info_build_order_build_require():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -222,9 +236,11 @@ def test_info_build_order_options():
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
+                  'info': {'options': {'myopt': '2'}},
                   'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
+                  'info': {'options': {'myopt': '1'}},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
                   'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
@@ -236,7 +252,7 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], "overrides": {},
+                  'filenames': [], 'info': {}, "overrides": {},
                   'build_args': '--requires=dep1/0.1 --build=dep1/0.1'}
              ]]},
             {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
@@ -244,7 +260,7 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], "overrides": {},
+                  'filenames': [], 'info': {}, "overrides": {},
                   'build_args': '--requires=dep2/0.1 --build=dep2/0.1'}
              ]]}
         ]
@@ -278,6 +294,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo1", "bo2"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -299,6 +316,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo1"],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -318,6 +336,7 @@ def test_info_build_order_merge_multi_product():
                         "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo2"],
+                        'info': {'requires': ['dep/0.1']},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -331,6 +350,10 @@ def test_info_build_order_merge_multi_product():
     ]
 
     assert bo_json == result
+
+    # test that html format for build-order-merge generates something
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=html")
+    assert "<body>" in c.stdout
 
 
 def test_info_build_order_merge_multi_product_configurations():
@@ -365,6 +388,7 @@ def test_info_build_order_merge_multi_product_configurations():
                     "bo1",
                     "bo2"
                 ],
+                'info': {},
                 "depends": [],
                 "overrides": {},
                 "build_args": "--requires=dep/0.1 --build=dep/0.1"
@@ -382,6 +406,7 @@ def test_info_build_order_merge_multi_product_configurations():
                 "filenames": [
                     "bo1"
                 ],
+                'info': {'requires': ['dep/0.1']},
                 "depends": [
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
@@ -399,6 +424,7 @@ def test_info_build_order_merge_multi_product_configurations():
                 "filenames": [
                     "bo2"
                 ],
+                'info': {'requires': ['dep/0.1']},
                 "depends": [
                     "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
                 ],
@@ -448,6 +474,7 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_win"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -465,6 +492,7 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_nix"],
+                        'info': {},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -487,6 +515,8 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "b23846b9b10455081d89a9dfacd01f7712d04b95",
                         'prev': None,
                         'filenames': ["bo_win"],
+                        'info': {'requires': ['depwin/0.1'],
+                                 'settings': {'os': 'Windows'}},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -498,6 +528,8 @@ def test_info_build_order_merge_conditionals():
                         "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
                         'prev': None,
                         'filenames': ["bo_nix"],
+                        'info': {'requires': ['depnix/0.1'],
+                                 'settings': {'os': 'Linux'}},
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
@@ -525,6 +557,60 @@ def test_info_build_order_lockfile_location():
     assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
     c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
+
+
+def test_build_order_missing_package_check_error():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+
+    exit_code = c.run("graph build-order consumer --build='pkg/*' --order=configuration --format=json", assert_error=True)
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "configuration"
+    assert exit_code != 0
+    assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in c.out
+
+    result = [
+        [
+            {
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                "pref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "prev": None,
+                "context": "host",
+                "binary": "Missing",
+                "options": [],
+                "filenames": [],
+                'info': {},
+                "depends": [],
+                "overrides": {},
+                "build_args": None,
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [],
+                'info': {'requires': ['dep/0.1']},
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "overrides": {},
+                "build_args": "--requires=pkg/0.1 --build=pkg/0.1",
+            }
+        ],
+    ]
+
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_broken_recipe():
@@ -653,8 +739,34 @@ class TestBuildOrderReduce:
         c.run(f"graph build-order-merge --file=bo3.json --file=bo2.json", assert_error=True)
         assert "ERROR: Cannot merge build-orders of configuration!=recipe" in c.out
 
+    def test_merge_missing_error(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")})
+        tc.run("export dep")
+        tc.run("graph build-order --order=recipe --requires=dep/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
+        tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
+        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Missing binary" in tc.out
+        assert "IndexError: list index out of range" not in tc.out
 
-def test_build_order_space_in_options():
+    def test_merge_invalid_error(self):
+        tc = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            def validate(self):
+                raise ConanInvalidConfiguration("This configuration is not valid")
+        """)
+        tc.save({"dep/conanfile.py": conanfile})
+        tc.run("export dep")
+        tc.run("graph build-order --order=recipe --requires=dep/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
+        tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
+        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
+        assert "IndexError: list index out of range" not in tc.out
+
+  def test_build_order_space_in_options():
     tc = TestClient(light=True)
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
                 .with_option("flags", ["ANY", None])
@@ -672,3 +784,4 @@ def test_build_order_space_in_options():
     tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
     order = json.loads(tc.load("order.json"))
     assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
+=======

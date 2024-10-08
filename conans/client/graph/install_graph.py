@@ -6,7 +6,7 @@ import textwrap
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanException, ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -33,6 +33,7 @@ class _InstallPackageReference:
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
         self.overrides = Overrides()
         self.ref = None
+        self.info = None
 
     @property
     def pref(self):
@@ -54,6 +55,7 @@ class _InstallPackageReference:
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         result.overrides = node.overrides()
+        result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
         return result
 
     def add(self, node):
@@ -68,7 +70,8 @@ class _InstallPackageReference:
         if self.binary != BINARY_BUILD:
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
-        cmd += f" --build={self.ref}"
+        compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
+        cmd += f" --build={compatible}{self.ref}"
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
@@ -85,7 +88,8 @@ class _InstallPackageReference:
                 "filenames": self.filenames,
                 "depends": self.depends,
                 "overrides": self.overrides.serialize(),
-                "build_args": self._build_args()}
+                "build_args": self._build_args(),
+                "info": self.info}
 
     @staticmethod
     def deserialize(data, filename, ref):
@@ -99,6 +103,7 @@ class _InstallPackageReference:
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
+        result.info = data.get("info")
         return result
 
 
@@ -223,6 +228,7 @@ class _InstallConfiguration:
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
+        self.info = None
 
     def __str__(self):
         return f"{self.ref}:{self.package_id} ({self.binary}) -> {[str(d) for d in self.depends]}"
@@ -250,6 +256,7 @@ class _InstallConfiguration:
         # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.overrides = node.overrides()
+        result.info = node.conanfile.info.serialize()
 
         result.nodes.append(node)
         for dep in node.dependencies:
@@ -275,7 +282,8 @@ class _InstallConfiguration:
         if self.binary != BINARY_BUILD:
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
-        cmd += f" --build={self.ref}"
+        compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
+        cmd += f" --build={compatible}{self.ref}"
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
@@ -294,7 +302,8 @@ class _InstallConfiguration:
                 "filenames": self.filenames,
                 "depends": [d.repr_notime() for d in self.depends],
                 "overrides": self.overrides.serialize(),
-                "build_args": self._build_args()
+                "build_args": self._build_args(),
+                "info": self.info
                 }
 
     @staticmethod
@@ -309,6 +318,7 @@ class _InstallConfiguration:
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])
+        result.info = data.get("info")
         return result
 
     def merge(self, other):
@@ -457,27 +467,57 @@ class InstallGraph:
                   "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
-    def raise_errors(self):
+    def _get_missing_invalid_packages(self):
         missing, invalid = [], []
-        for ref, install_node in self._nodes.items():
-            for package in install_node.packages.values():
-                if package.binary == BINARY_MISSING:
-                    missing.append(package)
-                elif package.binary == BINARY_INVALID:
-                    invalid.append(package)
 
+        def analyze_package(package):
+            if package.binary == BINARY_MISSING:
+                missing.append(package)
+            elif package.binary == BINARY_INVALID:
+                invalid.append(package)
+        for _, install_node in self._nodes.items():
+            if self._order == "recipe":
+                for package in install_node.packages.values():
+                    analyze_package(package)
+            elif self._order == "configuration":
+                analyze_package(install_node)
+
+        return missing, invalid
+
+    def raise_errors(self):
+        missing, invalid = self._get_missing_invalid_packages()
         if invalid:
-            msg = ["There are invalid packages:"]
-            for package in invalid:
-                node = package.nodes[0]
-                if node.cant_build and node.should_build:
-                    binary, reason = "Cannot build for this configuration", node.cant_build
-                else:
-                    binary, reason = "Invalid", node.conanfile.info.invalid
-                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
-            raise ConanInvalidConfiguration("\n".join(msg))
+            self._raise_invalid(invalid)
         if missing:
             self._raise_missing(missing)
+
+    def get_errors(self):
+        missing, invalid = self._get_missing_invalid_packages()
+        errors = []
+        tab = "    "
+        if invalid or missing:
+            errors.append("There are some error(s) in the graph:")
+        if invalid:
+            for package in invalid:
+                errors.append(f"{tab}- {package.pref}: Invalid configuration")
+        if missing:
+            missing_prefs = set(n.pref for n in missing)  # avoid duplicated
+            for pref in list(sorted([str(pref) for pref in missing_prefs])):
+                errors.append(f"{tab}- {pref}: Missing binary")
+        if errors:
+            return "\n".join(errors)
+        return None
+
+    def _raise_invalid(self, invalid):
+        msg = ["There are invalid packages:"]
+        for package in invalid:
+            node = package.nodes[0]
+            if node.conanfile.info.cant_build and node.should_build:
+                binary, reason = "Cannot build for this configuration", node.conanfile.info.cant_build
+            else:
+                binary, reason = "Invalid", node.conanfile.info.invalid
+            msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
+        raise ConanInvalidConfiguration("\n".join(msg))
 
     def _raise_missing(self, missing):
         # TODO: Remove out argument

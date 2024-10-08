@@ -3,11 +3,10 @@ import os
 import re
 from fnmatch import translate
 
-from conans.errors import ForbiddenException, RecipeNotFoundException
+from conan.internal.errors import ForbiddenException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO
-from conans.search.search import _partial_match
 from conans.server.utils.files import list_folder_subdirs
 from conans.util.files import load
 
@@ -16,7 +15,8 @@ def _get_local_infos_min(server_store, ref):
     result = {}
     new_ref = ref
     subdirs = list_folder_subdirs(server_store.packages(new_ref), level=1)
-    for package_id in subdirs:
+    # Seems that Python3.12 os.walk is retrieving a different order of folders
+    for package_id in sorted(subdirs):
         if package_id in result:
             continue
         # Read conaninfo
@@ -93,7 +93,7 @@ class SearchService(object):
                 fields_dir = [underscore_to_none(d) for d in subdir.split("/")]
                 new_ref = RecipeReference(*fields_dir)
                 new_ref.revision = None
-                if _partial_match(b_pattern, repr(new_ref)):
+                if new_ref.partial_match(b_pattern):
                     ret.add(new_ref)
 
             return sorted(ret)

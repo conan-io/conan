@@ -48,9 +48,9 @@ def add_common_install_arguments(parser):
                        help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
-                   "for the given reference, or all in case no argument is supplied. "
+                   "for the given reference name, or all references in the graph if no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
-                   "satisfies the range. Also, if using revisions, it will update to the "
+                   "satisfies the range. It will update to the "
                    "latest revision for the resolved version range.")
 
     parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
@@ -96,9 +96,9 @@ def add_profiles_args(parser):
                             help="")
 
     create_config("pr", "profile")
-    create_config("o", "options", "-o pkg:with_qt=true")
-    create_config("s", "settings", "-s compiler=gcc")
-    create_config("c", "conf", "-c tools.cmake.cmaketoolchain:generator=Xcode")
+    create_config("o", "options", '-o="pkg/*:with_qt=True"')
+    create_config("s", "settings", '-s="compiler=gcc"')
+    create_config("c", "conf", '-c="tools.cmake.cmaketoolchain:generator=Xcode"')
 
 
 def add_reference_args(parser):

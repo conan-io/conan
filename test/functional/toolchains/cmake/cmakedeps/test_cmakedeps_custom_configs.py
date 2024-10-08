@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.client.conf import get_default_settings_yml
+from conan.internal.default_settings import default_settings_yml
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.tools import TestClient
@@ -145,7 +145,7 @@ class CustomSettingsTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        settings = get_default_settings_yml()
+        settings = default_settings_yml
         settings = settings.replace("build_type: [null, Debug, Release, ",
                                     "build_type: [null, Debug, MyRelease, ")
         save(self.client.cache.settings_path, settings)

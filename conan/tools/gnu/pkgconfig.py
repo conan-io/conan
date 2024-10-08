@@ -1,3 +1,4 @@
+import textwrap
 from io import StringIO
 
 from conan.tools.build import cmd_args_to_string
@@ -30,8 +31,13 @@ class PkgConfig:
             env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
         with env.vars(self._conanfile).apply():
             # This way we get the environment from ConanFile, from profile (default buildenv)
-            output = StringIO()
-            self._conanfile.run(command, stdout=output, quiet=True)
+            output, err = StringIO(), StringIO()
+            ret = self._conanfile.run(command, stdout=output, stderr=err, quiet=True,
+                                      ignore_errors=True)
+            if ret != 0:
+                raise ConanException(f"PkgConfig failed. Command: {command}\n"
+                                     f"    stdout:\n{textwrap.indent(output.getvalue(), '    ')}\n"
+                                     f"    stderr:\n{textwrap.indent(err.getvalue(), '    ')}\n")
         value = output.getvalue().strip()
         return value
 

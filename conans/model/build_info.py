@@ -4,7 +4,7 @@ import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -194,22 +194,28 @@ class _Component:
     @property
     def bindir(self):
         bindirs = self.bindirs
-        assert bindirs
-        assert len(bindirs) == 1
+        if not bindirs or len(bindirs) != 1:
+            raise ConanException(f"The bindir property is undefined because bindirs "
+                                 f"{'is empty' if not bindirs else 'has more than one element'}."
+                                 f" Consider using the bindirs property.")
         return bindirs[0]
 
     @property
     def libdir(self):
         libdirs = self.libdirs
-        assert libdirs
-        assert len(libdirs) == 1
+        if not libdirs or len(libdirs) != 1:
+            raise ConanException(f"The libdir property is undefined because libdirs "
+                                 f"{'is empty' if not libdirs else 'has more than one element'}."
+                                 f" Consider using the libdirs property.")
         return libdirs[0]
 
     @property
     def includedir(self):
         includedirs = self.includedirs
-        assert includedirs
-        assert len(includedirs) == 1
+        if not includedirs or len(includedirs) != 1:
+            raise ConanException(f"The includedir property is undefined because includedirs "
+                                 f"{'is empty' if not includedirs else 'has more than one element'}."
+                                 f" Consider using the includedirs property.")
         return includedirs[0]
 
     @property
@@ -236,6 +242,16 @@ class _Component:
     def libs(self):
         if self._libs is None:
             self._libs = []
+        if isinstance(self._libs, dict):
+            return [self._libs.keys()]  # Return a list to not break any interface
+        return self._libs
+
+    @property
+    def full_libs(self):
+        if self._libs is None:
+            self._libs = []
+        if isinstance(self._libs, list):
+            return {k: {} for k in self._libs}
         return self._libs
 
     @libs.setter
@@ -334,11 +350,15 @@ class _Component:
             self._properties = {}
         self._properties[property_name] = value
 
-    def get_property(self, property_name):
+    def get_property(self, property_name, check_type=None):
         if self._properties is None:
             return None
         try:
-            return self._properties[property_name]
+            value = self._properties[property_name]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {property_name} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             pass
 
@@ -544,8 +564,10 @@ class CppInfo:
         if not external:
             return
         # Only direct host (not test) dependencies can define required components
-        direct_dependencies = [d.ref.name for d in conanfile.requires.values()
-                               if not d.build and not d.is_test and d.visible and not d.override]
+        # We use conanfile.dependencies to use the already replaced ones by "replace_requires"
+        # So consumers can keep their ``self.cpp_info.requires = ["pkg_name::comp"]``
+        direct_dependencies = [r.ref.name for r, d in conanfile.dependencies.items() if r.direct
+                               and not r.build and not r.is_test and r.visible and not r.override]
 
         for e in external:
             if e not in direct_dependencies:

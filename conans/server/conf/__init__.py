@@ -8,15 +8,35 @@ import string
 from datetime import timedelta
 from configparser import ConfigParser, NoSectionError
 
-from conans.errors import ConanException
-from conan.internal.paths import conan_expand_user
+from conan.errors import ConanException
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.util.env import get_env
 from conans.util.files import mkdir, save, load
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
+
+
+def get_env(env_key, default=None, environment=None):
+    """Get the env variable associated with env_key"""
+    if environment is None:
+        environment = os.environ
+
+    env_var = environment.get(env_key, default)
+    if env_var != default:
+        if isinstance(default, str):
+            return env_var
+        elif isinstance(default, bool):
+            return env_var == "1" or env_var == "True"
+        elif isinstance(default, int):
+            return int(env_var)
+        elif isinstance(default, float):
+            return float(env_var)
+        elif isinstance(default, list):
+            if env_var.strip():
+                return [var.strip() for var in env_var.split(",")]
+            return []
+    return env_var
 
 
 class ConanServerConfigParser(ConfigParser):
@@ -131,7 +151,7 @@ class ConanServerConfigParser(ConfigParser):
             if disk_path.startswith("."):
                 disk_path = os.path.join(os.path.dirname(self.config_filename), disk_path)
                 disk_path = os.path.abspath(disk_path)
-            ret = conan_expand_user(disk_path)
+            ret = os.path.expanduser(disk_path)
         except ConanException:
             # If storage_path is not defined, use the current dir
             # So tests use test folder instead of user/.conan_server

@@ -8,10 +8,11 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.errors import ConanException, ConanConnectionError
+from conan.internal.errors import ConanConnectionError
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import load, save
 
 
@@ -42,6 +43,20 @@ class TestParamErrors:
 
         c.run("list * -p os=Linux", assert_error=True)
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
+
+    def test_graph_file_error(self):
+        # This can happen when reusing the same file in input and output
+        c = TestClient(light=True)
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file not found" in c.out
+        c.save({"graph.json": ""})
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file invalid JSON:" in c.out
+        text = b'\x2b\x2f\x76\x38J\xe2nis\xa7'
+        with open(os.path.join(c.current_folder, "graph.json"), 'wb') as handle:
+            handle.write(text)
+        c.run("list --graph=graph.json", assert_error=True)
+        assert "ERROR: Graph file broken" in c.out
 
 
 @pytest.fixture(scope="module")
