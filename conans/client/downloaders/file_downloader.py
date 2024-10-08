@@ -84,7 +84,7 @@ class FileDownloader:
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                if auth is None or (hasattr(auth, "bearer") and auth.bearer is None):
                     # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))

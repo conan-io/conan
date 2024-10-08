@@ -7,8 +7,7 @@ methods if receives AuthenticationException from RestApiClient.
 Flow:
     Directly invoke a REST method in RestApiClient, example: get_conan.
     if receives AuthenticationException (not open method) will ask user for login and password
-    and will invoke RestApiClient.get_token() (with LOGIN_RETRIES retries) and retry to call
-    get_conan with the new token.
+    (with LOGIN_RETRIES retries) and retry to call with the new token.
 """
 
 from conan.api.output import ConanOutput
