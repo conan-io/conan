@@ -92,5 +92,8 @@ jobs:
           xcrun --find clang++
 
       - name: Run Test - ${{ matrix.setup }}
+        env:
+          CXX: /Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
+          CC: /Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
         run: |
           python -m pytest -x -v --color=auto test/${{ matrix.setup }}
