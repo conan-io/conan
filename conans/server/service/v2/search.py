@@ -87,7 +87,6 @@ class SearchService(object):
             pattern = str(pattern)
             b_pattern = translate(pattern)
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
-            ret = set()
             for subdir in subdirs:
                 fields_dir = [underscore_to_none(d) for d in subdir.split("/")]
                 new_ref = RecipeReference(*fields_dir)
