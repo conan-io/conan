@@ -766,7 +766,7 @@ class TestBuildOrderReduce:
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
         assert "IndexError: list index out of range" not in tc.out
 
-  def test_build_order_space_in_options():
+def test_build_order_space_in_options():
     tc = TestClient(light=True)
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
                 .with_option("flags", ["ANY", None])
@@ -784,4 +784,3 @@ class TestBuildOrderReduce:
     tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
     order = json.loads(tc.load("order.json"))
     assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
-=======
