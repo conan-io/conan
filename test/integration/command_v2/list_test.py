@@ -8,7 +8,8 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.errors import ConanException, ConanConnectionError
+from conan.internal.errors import ConanConnectionError
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.env import environment_update

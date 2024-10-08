@@ -6,7 +6,7 @@ import unittest
 from requests.models import Response
 
 from conan.internal.api.remotes.localdb import LocalDB
-from conans.errors import AuthenticationException
+from conan.internal.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
@@ -140,6 +140,7 @@ class AuthorizeTest(unittest.TestCase):
         tc.run("remote login default pepe -p pepepass")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
+
 class AuthenticationTest(unittest.TestCase):
 
     def test_unauthorized_during_capabilities(self):
@@ -158,17 +159,17 @@ class AuthenticationTest(unittest.TestCase):
                 elif "ping" in url:
                     resp_basic_auth.headers = {"Content-Type": "application/json",
                                                "X-Conan-Server-Capabilities": "revisions"}
-                    token = getattr(kwargs["auth"], "token", None)
+                    bearer = getattr(kwargs["auth"], "bearer", None)
                     password = getattr(kwargs["auth"], "password", None)
-                    if token and token != "TOKEN":
+                    if bearer and bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
-                    if not token and not password:
+                    if not bearer and not password:
                         raise AuthenticationException(
                             "I'm an Artifactory without anonymous access that "
                             "requires authentication for the ping endpoint and "
                             "I don't return the capabilities")
                 elif "search" in url:
-                    if kwargs["auth"].token != "TOKEN":
+                    if kwargs["auth"].bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
                     resp_basic_auth._content = b'{"results": []}'
                     resp_basic_auth.headers = {"Content-Type": "application/json"}

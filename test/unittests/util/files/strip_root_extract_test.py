@@ -4,7 +4,7 @@ import unittest
 import zipfile
 
 from conan.tools.files.files import untargz, unzip
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.manifest import gather_files
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.mocks import RedirectedTestOutput

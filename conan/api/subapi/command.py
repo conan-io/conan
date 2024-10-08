@@ -1,5 +1,5 @@
-from conans.errors import ConanException
 from conan.api.output import ConanOutput
+from conan.errors import ConanException
 
 
 class CommandAPI:

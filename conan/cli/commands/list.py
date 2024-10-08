@@ -6,7 +6,7 @@ from conan.api.output import Color, cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.dates import timestamp_to_str
 
 

@@ -5,8 +5,9 @@ import time
 
 from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
-from conans.errors import ConanException, NotFoundException, AuthenticationException, \
-    ForbiddenException, ConanConnectionError, RequestErrorException
+from conan.internal.errors import ConanConnectionError, RequestErrorException, AuthenticationException, \
+    ForbiddenException, NotFoundException
+from conan.errors import ConanException
 from conans.util.files import human_size, check_with_algorithm_sum
 
 
