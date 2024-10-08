@@ -28,19 +28,20 @@ def test_search_recipes(remote_name):
     api = ConanAPI(client.cache_folder)
     remote = api.remotes.get(remote_name) if remote_name else None
 
-    sot = api.search.recipes(query="f*", remote=remote)
-    assert sot == [RecipeReference.loads("felipe/1.0"),
-                   RecipeReference.loads("felipe/2.0"),
-                   RecipeReference.loads("foo/1.0")]
+    with client.mocked_servers():
+        sot = api.search.recipes(query="f*", remote=remote)
+        assert sot == [RecipeReference.loads("felipe/1.0"),
+                       RecipeReference.loads("felipe/2.0"),
+                       RecipeReference.loads("foo/1.0")]
 
-    sot = api.search.recipes(query="fo*", remote=remote)
-    assert sot == [RecipeReference.loads("foo/1.0")]
+        sot = api.search.recipes(query="fo*", remote=remote)
+        assert sot == [RecipeReference.loads("foo/1.0")]
 
-    sot = api.search.recipes(query=None, remote=remote)
-    assert sot == [RecipeReference.loads("felipe/1.0"),
-                   RecipeReference.loads("felipe/2.0"),
-                   RecipeReference.loads("foo/1.0")]
+        sot = api.search.recipes(query=None, remote=remote)
+        assert sot == [RecipeReference.loads("felipe/1.0"),
+                       RecipeReference.loads("felipe/2.0"),
+                       RecipeReference.loads("foo/1.0")]
 
-    sot = api.search.recipes(query="*i*", remote=remote)
-    assert sot == [RecipeReference.loads("felipe/1.0"),
-                   RecipeReference.loads("felipe/2.0")]
+        sot = api.search.recipes(query="*i*", remote=remote)
+        assert sot == [RecipeReference.loads("felipe/1.0"),
+                       RecipeReference.loads("felipe/2.0")]

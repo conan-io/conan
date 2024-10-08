@@ -75,14 +75,13 @@ class SearchService(object):
         def underscore_to_none(field):
             return field if field != "_" else None
 
+        ret = set()
         if not pattern:
-            ret = []
             for folder in subdirs:
                 fields_dir = [underscore_to_none(d) for d in folder.split("/")]
                 r = RecipeReference(*fields_dir)
                 r.revision = None
-                ret.append(r)
-            return sorted(ret)
+                ret.add(r)
         else:
             # Conan references in main storage
             pattern = str(pattern)
@@ -96,7 +95,7 @@ class SearchService(object):
                 if new_ref.partial_match(b_pattern):
                     ret.add(new_ref)
 
-            return sorted(ret)
+        return sorted(ret)
 
     def search(self, pattern=None, ignorecase=True):
         """ Get all the info about any package
