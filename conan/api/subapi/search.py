@@ -21,4 +21,4 @@ class SearchAPI:
         for r in refs:
             if not only_none_user_channel or (r.user is None and r.channel is None):
                 ret.append(r)
-        return ret
+        return sorted(ret)

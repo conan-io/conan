@@ -91,12 +91,10 @@ class CacheDatabase:
         self._packages.create(path, ref, build_id=build_id)
 
     def list_references(self, pattern=None):
-        """Returns a list of RecipeReference, optionally filtering by pattern.
-         The references are sorted by name/version,
-         and their revision and timestamp attributes are not set"""
-        return sorted([d["ref"]
-                       for d in self._recipes.all_references()
-                       if pattern is None or d["ref"].partial_match(pattern)])
+        """Returns a list of all RecipeReference in the cache, optionally filtering by pattern.
+         The references have their revision and timestamp attributes unset"""
+        return [ref for ref in self._recipes.all_references()
+                if pattern is None or ref.partial_match(pattern)]
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         return [d["pref"]
