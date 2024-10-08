@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 
@@ -20,5 +21,18 @@ class CommandAPI:
             command = commands[current_cmd]
         except KeyError:
             raise ConanException(f"Command {current_cmd} does not exist")
+        # Conan has some global state in the ConanOutput class that
+        # get redefined when running a command and leak to the calling scope
+        # if running from a custom command.
+        # Store the old one and restore it after the command execution as a workaround.
+        _conan_output_level = ConanOutput._conan_output_level
+        _silent_warn_tags = ConanOutput._silent_warn_tags
+        _warnings_as_errors = ConanOutput._warnings_as_errors
 
-        return command.run_cli(self.conan_api, args)
+        try:
+            result = command.run_cli(self.conan_api, args)
+        finally:
+            ConanOutput._conan_output_level = _conan_output_level
+            ConanOutput._silent_warn_tags = _silent_warn_tags
+            ConanOutput._warnings_as_errors = _warnings_as_errors
+        return result
