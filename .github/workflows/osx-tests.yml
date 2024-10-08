@@ -79,15 +79,9 @@ jobs:
               chmod +x ${HOME}/Applications/bazel/${version}/bazel
             done
 
-      - name: Install Ninja
-        run: |
-          pip install ninja==1.10.2
-
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen
-          brew install make
-          brew libtool
+          brew install xcodegen make libtool xz zlib autoconf automake ninja
 
       - name: Run Test - ${{ matrix.setup }}
         run: |
