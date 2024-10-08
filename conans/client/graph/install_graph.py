@@ -341,7 +341,7 @@ class ProfileArgs:
         for context in "host", "build":
             for f in "profile", "settings", "options", "conf":
                 s = "pr" if f == "profile" else f[0]
-                pr_args += [f'-{s}:{context[0]} "{v}"' for v in
+                pr_args += [f'-{s}:{context[0]}="{v}"' for v in
                             getattr(args, f"{f}_{context}") or []]
         return ProfileArgs(" ".join(pr_args))
 
