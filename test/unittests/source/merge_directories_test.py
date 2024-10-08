@@ -5,7 +5,7 @@ from os.path import join
 
 import pytest
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save, merge_directories, load
 

@@ -5,7 +5,8 @@ import shutil
 from conan.internal.cache.home_paths import HomePaths
 from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
-from conans.errors import ConanException, conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter
+from conan.errors import ConanException
 from conans.util.files import rmdir, mkdir
 
 
@@ -18,7 +19,10 @@ def _find_deployer(d, cache_deploy_folder):
     """
     def _load(path):
         mod, _ = load_python_file(path)
-        return mod.deploy
+        try:
+            return mod.deploy
+        except AttributeError:
+            raise ConanException(f"Deployer does not contain 'deploy()' function: {path}")
 
     if not d.endswith(".py"):
         d += ".py"  # Deployers must be python files

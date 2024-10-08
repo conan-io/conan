@@ -4,7 +4,7 @@ import pytest
 
 from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
@@ -48,7 +48,7 @@ def test_get_gnu_triplet_for_cross_building():
 def test_get_toolchain_cppstd():
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",
-                             "compiler.version": "10",
+                             "compiler.version": "9",
                              "compiler.cppstd": "20",
                              "os": "Linux",
                              "arch": "x86_64"})
@@ -57,7 +57,7 @@ def test_get_toolchain_cppstd():
     conanfile.settings_build = settings
     autotoolschain = AutotoolsToolchain(conanfile)
     assert autotoolschain.cppstd == "-std=c++2a"
-    settings.values["compiler.version"] = "12"
+    settings.values["compiler.version"] = "10"
     autotoolschain = AutotoolsToolchain(conanfile)
     assert autotoolschain.cppstd == "-std=c++20"
 
@@ -211,3 +211,18 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     at.update_make_args({"--new-complex-flag": "new-value"})
     new_make_args = cmd_args_to_string(at.make_args)
     assert "--new-complex-flag=new-value" in new_make_args
+
+
+def test_tricore():
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "os": "baremetal",
+                             "arch": "tc131"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    env = autotoolschain.environment().vars(conanfile)
+    assert '-mtc131' in env["CFLAGS"]
+    assert '-mtc131' in env["CXXFLAGS"]
+    assert '-mtc131' in env["LDFLAGS"]

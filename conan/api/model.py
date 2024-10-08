@@ -5,7 +5,8 @@ from json import JSONDecodeError
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
-from conans.errors import ConanException, NotFoundException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -56,7 +57,7 @@ class MultiPackagesList:
         try:
             return self.lists[name]
         except KeyError:
-            raise ConanException(f"'{name}' doesn't exist is package list")
+            raise ConanException(f"'{name}' doesn't exist in package list")
 
     def add(self, name, pkg_list):
         self.lists[name] = pkg_list
@@ -99,8 +100,13 @@ class MultiPackagesList:
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
-        graph = json.loads(load(graphfile))
-        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+        try:
+            graph = json.loads(load(graphfile))
+            return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+        except JSONDecodeError as e:
+            raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
+        except Exception as e:
+            raise ConanException(f"Graph file broken: {graphfile}\n{e}")
 
     @staticmethod
     def _define_graph(graph, graph_recipes=None, graph_binaries=None):

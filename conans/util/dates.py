@@ -4,7 +4,7 @@ import time
 
 from dateutil import parser
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def from_timestamp_to_iso8601(timestamp):

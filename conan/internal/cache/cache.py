@@ -10,7 +10,8 @@ from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLay
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanException
+from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now

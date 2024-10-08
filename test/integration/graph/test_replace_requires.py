@@ -1,4 +1,5 @@
 import json
+import textwrap
 
 import pytest
 
@@ -157,3 +158,120 @@ def test_replace_requires_test_requires():
     c.run("create gtest")
     c.run("install app -pr=profile")
     assert "gtest/0.1: gtest/0.2" in c.out  # The replacement happens
+
+
+def test_replace_requires_consumer_references():
+    c = TestClient()
+    # IMPORTANT: The replacement package must be target-compatible
+    zlib_ng = textwrap.dedent("""
+        from conan import ConanFile
+        class ZlibNG(ConanFile):
+            name = "zlib-ng"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            settings = "build_type"
+            requires = "zlib/0.1"
+            generators = "CMakeDeps"
+
+            def generate(self):
+                self.output.info(f"DEP ZLIB generate: {self.dependencies['zlib'].ref.name}!")
+            def build(self):
+                self.output.info(f"DEP ZLIB build: {self.dependencies['zlib'].ref.name}!")
+            def package_info(self):
+                self.output.info(f"DEP ZLIB package_info: {self.dependencies['zlib'].ref.name}!")
+                self.cpp_info.requires = ["zlib::zlib"]
+        """)
+    c.save({"zlibng/conanfile.py": zlib_ng,
+            "app/conanfile.py": conanfile,
+            "profile": "[replace_requires]\nzlib/0.1: zlib-ng/0.1"})
+    c.run("create zlibng")
+    c.run("build app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
+    # Check generated CMake code. If the targets are NOT compatible, then the replacement
+    # Cannot happen
+    assert "find_package(ZLIB)" in c.out
+    assert "target_link_libraries(... ZLIB::ZLIB)" in c.out
+    cmake = c.load("app/ZLIBTargets.cmake")
+    assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
+    c.run("create app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "app/0.1: DEP ZLIB generate: zlib-ng!" in c.out
+    assert "app/0.1: DEP ZLIB build: zlib-ng!" in c.out
+
+
+def test_replace_requires_consumer_components_options():
+    c = TestClient()
+    # IMPORTANT: The replacement package must be target-compatible
+    zlib_ng = textwrap.dedent("""
+        from conan import ConanFile
+        class ZlibNG(ConanFile):
+            name = "zlib-ng"
+            version = "0.1"
+            options = {"compat": [False, True]}
+            default_options = {"compat": False}
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+                if self.options.compat:
+                    self.cpp_info.components["myzlib"].set_property("cmake_target_name",
+                                                                    "ZLIB::zmylib")
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            settings = "build_type"
+            requires = "zlib/0.1"
+            generators = "CMakeDeps"
+
+            def generate(self):
+                self.output.info(f"DEP ZLIB generate: {self.dependencies['zlib'].ref.name}!")
+            def build(self):
+                self.output.info(f"DEP ZLIB build: {self.dependencies['zlib'].ref.name}!")
+            def package_info(self):
+                self.output.info(f"DEP ZLIB package_info: {self.dependencies['zlib'].ref.name}!")
+                self.cpp_info.requires = ["zlib::myzlib"]
+        """)
+    profile = textwrap.dedent("""
+        [options]
+        zlib-ng/*:compat=True
+
+        [replace_requires]
+        zlib/0.1: zlib-ng/0.1
+        """)
+    c.save({"zlibng/conanfile.py": zlib_ng,
+            "app/conanfile.py": conanfile,
+            "profile": profile})
+
+    c.run("create zlibng -o *:compat=True")
+    c.run("build app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
+    # Check generated CMake code. If the targets are NOT compatible, then the replacement
+    # Cannot happen
+    assert "find_package(ZLIB)" in c.out
+    assert "target_link_libraries(... ZLIB::ZLIB)" in c.out
+    cmake = c.load("app/ZLIBTargets.cmake")
+    assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
+    cmake = c.load("app/ZLIB-Target-none.cmake")
+    assert "set_property(TARGET ZLIB::ZLIB APPEND PROPERTY INTERFACE_LINK_LIBRARIES ZLIB::zmylib)" \
+           in cmake
+
+    c.run("create app -pr=profile")
+    assert "zlib/0.1: zlib-ng/0.1" in c.out
+    assert "app/0.1: DEP ZLIB generate: zlib-ng!" in c.out
+    assert "app/0.1: DEP ZLIB build: zlib-ng!" in c.out
+    assert "find_package(ZLIB)" in c.out
+    assert "target_link_libraries(... ZLIB::ZLIB)" in c.out

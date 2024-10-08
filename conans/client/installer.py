@@ -10,7 +10,8 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
+from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
+from conan.errors import ConanException
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conan.internal.paths import CONANINFO
@@ -338,7 +339,9 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_package_info(conanfile, pkg_folder, is_editable=False)
+            self._call_finalize_method(conanfile, package_layout.finalize())
+            # Use package_folder which has been updated previously by install_method if necessary
+            self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         # It will only run generation
@@ -454,3 +457,15 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+
+    def _call_finalize_method(self, conanfile, finalize_folder):
+        if hasattr(conanfile, "finalize"):
+            conanfile.folders.set_finalize_folder(finalize_folder)
+            if not os.path.exists(finalize_folder):
+                mkdir(finalize_folder)
+                conanfile.output.highlight("Calling finalize()")
+                with conanfile_exception_formatter(conanfile, "finalize"):
+                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], 'finalize'):
+                        conanfile.finalize()
+
+            conanfile.output.success(f"Finalized folder {finalize_folder}")

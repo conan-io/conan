@@ -787,3 +787,59 @@ def test_using_deployer_folder():
     content = c.load("dep-release-x86_64-data.cmake")
     assert ('set(dep_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/mydeploy/direct_deploy/dep")'
             in content)
+
+
+def test_component_name_same_package():
+    """
+    When the package and the component are the same the variables declared in data and linked
+    to the target have to be the same.
+    https://github.com/conan-io/conan/issues/9071
+
+    This doesn't seem to have any special treatment, in fact, last FIXME looks it could be
+    problematic
+    """
+    c = TestClient()
+    dep = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.components["dep"].includedirs = ["myincludes"]
+            """)
+    c.save({"conanfile.py": dep})
+    c.run("create .")
+    c.run("install --requires=dep/0.1 -g CMakeDeps -s arch=x86_64")
+    cmake_data = c.load("dep-release-x86_64-data.cmake")
+    assert 'set(dep_dep_dep_INCLUDE_DIRS_RELEASE ' \
+           '"${dep_PACKAGE_FOLDER_RELEASE}/myincludes")' in cmake_data
+    cmake_target = c.load("dep-Target-release.cmake")
+    assert 'add_library(dep_dep_dep_DEPS_TARGET INTERFACE IMPORTED)' in cmake_target
+    assert 'set_property(TARGET dep::dep APPEND' in cmake_target
+    # FIXME: Depending on itself, this doesn't look good
+    assert 'set_property(TARGET dep::dep APPEND PROPERTY ' \
+           'INTERFACE_LINK_LIBRARIES dep::dep)' in cmake_target
+
+
+def test_cmakedeps_set_get_property_checktype():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "app"
+            version = "0.1"
+            settings = "build_type"
+            requires = "dep/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "foo", 1)
+                deps.get_property("foo", self.dependencies["dep"], check_type=list)
+                deps.generate()
+            """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create app", assert_error=True)
+    assert 'The expected type for foo is "list", but "int" was found' in c.out

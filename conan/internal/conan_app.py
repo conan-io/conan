@@ -11,7 +11,6 @@ from conans.client.loader import ConanFileLoader, load_python_file
 from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClientFactory
 from conan.internal.api.remotes.localdb import LocalDB
 
 
@@ -52,11 +51,9 @@ class ConanApp:
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
-        rest_client_factory = RestApiClientFactory(self.requester, global_conf)
         # Wraps RestApiClient to add authentication support (same interface)
         self.localdb = LocalDB(cache_folder)
-        auth_manager = ConanApiAuthManager(rest_client_factory, cache_folder, self.localdb,
-                                           global_conf)
+        auth_manager = ConanApiAuthManager(self.requester, cache_folder, self.localdb, global_conf)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
 

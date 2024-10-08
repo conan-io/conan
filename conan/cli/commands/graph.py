@@ -15,7 +15,7 @@ from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
 
 
