@@ -3,7 +3,7 @@ import os
 
 from jinja2 import Template, StrictUndefined
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load
 from conans import __version__
 

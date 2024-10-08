@@ -3,7 +3,7 @@ import unittest
 import mock
 
 from conans import __version__
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save

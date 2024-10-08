@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.config_parser import ConfigParser
 
 

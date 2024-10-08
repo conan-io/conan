@@ -49,10 +49,11 @@ class RestApiTest(unittest.TestCase):
                 cls.auth_manager = ConanApiAuthManager(requester, temp_folder(), localdb, config)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
-                cls.auth_manager._authenticate(cls.remote, user="private_user",
+                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
+                cls.auth_manager._authenticate(cls.api, cls.remote, user="private_user",
                                                password="private_pass")
-                cls.api = RestApiClient(cls.remote, localdb.access_token, localdb.refresh_token,
-                                        {}, requester, config, {})
+                # Need to define again with new token
+                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
 
     @classmethod
     def tearDownClass(cls):

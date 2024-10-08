@@ -4,7 +4,7 @@ import os
 from contextlib import contextmanager
 from threading import Lock
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save, remove_if_dirty
 from conans.util.locks import simple_lock

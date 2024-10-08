@@ -1,6 +1,6 @@
 from enum import Enum
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class PackageType(Enum):

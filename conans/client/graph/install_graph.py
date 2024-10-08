@@ -5,7 +5,7 @@ import textwrap
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanException, ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
