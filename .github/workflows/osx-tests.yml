@@ -8,7 +8,7 @@ on:
 jobs:
   testing:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [macos-latest]
         setup: [unittests, functional, integration]
@@ -19,10 +19,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -88,6 +84,12 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.0.1.app
           sudo xcode-select --install || true
           sudo xcodebuild -license accept
+
+      - name: Check for xcode compiler version
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-path
+          xcrun --find clang++
 
       - name: Run Test - ${{ matrix.setup }}
         run: |
