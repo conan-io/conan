@@ -26,6 +26,11 @@ jobs:
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
+      - name: Install Python requirements
+        run: |
+          clang --version
+          gcc --version
+          
       - name: Checkout code
         uses: actions/checkout@v4
 
