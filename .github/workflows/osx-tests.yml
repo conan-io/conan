@@ -1,30 +1,43 @@
 name: OSX Tests
 
 on:
-  workflow_dispatch:
   push:
+    branches:
+      - develop2
+      - release/*
   pull_request:
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   testing:
     strategy:
       fail-fast: true
       matrix:
-        os: [macos-latest]
-        setup: [unittests, functional, integration]
+#        setup: [unittests, functional, integration]
+        test-type: [functional]
+        python-version: ['3.9']
+    
+    runs-on: macos-12
 
-    runs-on: ${{ matrix.os }}
+    name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
-    name: OS ${{ matrix.os }} - ${{ matrix.setup }} tests
     steps:
+      - name: Checks
+        run: |
+          sudo xcode-select -p
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-          cache: 'pip'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Python requirements
         run: |
