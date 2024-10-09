@@ -26,11 +26,6 @@ jobs:
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
-      - name: Checks
-        run: |
-          clang --version
-          gcc --version
-          
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -38,14 +33,34 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/conans/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install Python requirements
         run: |
+          pip install --upgrade pip
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
 
+      - name: Cache CMake installations
+        uses: actions/cache@v3
+        with:
+          path: ${HOME}/Applications/CMake
+          key: ${{ runner.os }}-cmake-${{ matrix.test-type }}-${{ matrix.python-version }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
       - name: Install CMake versions
+        if: steps.cache-cmake.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 3.15.7 3.16.9 3.17.5; do
@@ -75,7 +90,16 @@ jobs:
             rm cmake-${version}-macos-universal.tar.gz
           done
 
+      - name: Cache Bazel installations
+        uses: actions/cache@v3
+        with:
+          path: ${HOME}/Applications/bazel
+          key: ${{ runner.os }}-bazel-${{ matrix.test-type }}-${{ matrix.python-version }}-${{ hashFiles('**/WORKSPACE') }}
+          restore-keys: |
+            ${{ runner.os }}-bazel-
+
       - name: Install Bazel versions
+        if: steps.cache-bazel.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 6.3.2 7.1.2; do
@@ -83,6 +107,14 @@ jobs:
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-x86_64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
+
+      - name: Cache Homebrew dependencies
+        uses: actions/cache@v3
+        with:
+          path: /opt/homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('**/Brewfile') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
 
       - name: Install homebrew dependencies
         run: |
