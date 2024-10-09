@@ -5,6 +5,7 @@ on:
     branches:
       - develop2
       - release/*
+      - ci/gh-action-osx
   pull_request:
     branches:
       - '*'
