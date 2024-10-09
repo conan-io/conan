@@ -921,3 +921,13 @@ class TestListBinaryFilter:
         assert len(pkg["packages"]) == 2
         settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
         assert settings == {"arch": "x86", "os": "Windows"}
+
+
+def test_overlapping_versions():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("foo")})
+    tc.run("export . --version=1.0")
+    tc.run("export . --version=1.0.0")
+    tc.run("list * -c -f=json", redirect_stdout="list.json")
+    results = json.loads(tc.load("list.json"))
+    assert len(results["Local Cache"]) == 2
