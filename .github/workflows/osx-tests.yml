@@ -32,10 +32,6 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
 
-      - name: Install Rosetta 2
-        run: |
-          /usr/sbin/softwareupdate --install-rosetta --agree-to-license
-
       - name: Install CMake versions
         # Install CMake x86_64 and use Rosetta to run. CMake Universal is supported since 3.18 only.
         working-directory: /tmp
