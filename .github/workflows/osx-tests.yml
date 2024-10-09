@@ -26,7 +26,7 @@ jobs:
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
-      - name: Install Python requirements
+      - name: Checks
         run: |
           clang --version
           gcc --version
@@ -95,5 +95,12 @@ jobs:
           xcrun --find clang++
 
       - name: Run Test - ${{ matrix.test-type }}
+        shell: bash
         run: |
-          python -m pytest -x -v --color=auto test/${{ matrix.test-type }}
+          if [ "${{ matrix.test-type }}" == "unittests" ]; then
+            pytest test/unittests --durations=20 -n 4
+          elif [ "${{ matrix.test-type }}" == "integration" ]; then
+            pytest test/integration --durations=20 -n 4
+          elif [ "${{ matrix.test-type }}" == "functional" ]; then
+            pytest test/functional --durations=20 -n 4
+          fi
