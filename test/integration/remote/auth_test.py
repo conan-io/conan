@@ -202,9 +202,9 @@ def test_token_expired():
        */*@*/*: admin
        """)
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
-    server = TestServer(base_path=server_folder, users={"admin": "password"})
+    server = TestServer(base_path=server_folder, users={"admin": "password", "other": "pass"})
 
-    c = TestClient(servers={"default": server}, inputs=["admin", "password"])
+    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"])
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
@@ -216,13 +216,12 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    conan_conf = "core:non_interactive=True"
-    c.save_home({"global.conf": conan_conf})
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")
+    assert "Remote 'default' needs authentication, obtaining credentials" in c.out
     user, token, _ = localdb.get_login(server.fake_url)
-    assert user == "admin"
-    assert token is None
+    assert user == "other"
+    assert token is not None
 
 
 def test_auth_username_space():
