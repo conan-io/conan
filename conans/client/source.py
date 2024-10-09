@@ -2,8 +2,8 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.tools.env import VirtualBuildEnv
-from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException, \
-    conanfile_remove_attr
+from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter, NotFoundException
+from conan.errors import ConanException
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories, clean_dirty, chdir)
 

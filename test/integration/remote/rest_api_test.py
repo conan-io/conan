@@ -32,7 +32,11 @@ class RestApiTest(unittest.TestCase):
     def setUpClass(cls):
         if not cls.server:
             with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
-                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
+                read_perms = [("*/*@*/*", "private_user")]
+                write_perms = [("*/*@*/*", "private_user")]
+                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
+                                                read_permissions=read_perms,
+                                                write_permissions=write_perms)
                 cls.server.start()
 
                 filename = os.path.join(temp_folder(), "conan.conf")

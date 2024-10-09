@@ -5,7 +5,7 @@ from collections import namedtuple, Counter
 from requests.exceptions import HTTPError
 
 from conans.client.rest.file_uploader import FileUploader
-from conans.errors import AuthenticationException, ForbiddenException
+from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
@@ -73,7 +73,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(ForbiddenException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
@@ -86,7 +86,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(AuthenticationException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)

@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange

@@ -16,7 +16,8 @@ from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter, NotFoundException
+from conan.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
