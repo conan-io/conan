@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -72,7 +73,8 @@ class _InstallPackageReference:
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
-            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+            scope = "" if self.context == "host" else ":b"
+            cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
@@ -283,7 +285,8 @@ class _InstallConfiguration:
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
-            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+            scope = "" if self.context == "host" else ":b"
+            cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
