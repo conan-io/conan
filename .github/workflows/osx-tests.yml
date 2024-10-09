@@ -130,9 +130,9 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n 4
+            pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n 4
+            pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n 4
+            pytest test/functional --durations=20
           fi
