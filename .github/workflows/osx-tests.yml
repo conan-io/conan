@@ -18,19 +18,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-#        setup: [unittests, functional, integration]
         test-type: [functional]
-        python-version: ['3.9']
-    
+        python-version: ['3.9', '3.10', '3.11']
     runs-on: macos-12
 
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
-      - name: Checks
-        run: |
-          sudo xcode-select -p
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -46,19 +40,18 @@ jobs:
           pip install -r conans/requirements_dev.txt
 
       - name: Install CMake versions
-        # Install CMake x86_64 and use Rosetta to run. CMake Universal is supported since 3.18 only.
-        working-directory: /tmp
         run: |
+          set -e
           for version in 3.15.7 3.16.9 3.17.5; do
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-Darwin-x86_64.tar.gz
             tar -xzf cmake-${version}-Darwin-x86_64.tar.gz \
               --exclude=CMake.app/Contents/bin/cmake-gui \
               --exclude=CMake.app/Contents/doc/cmake \
-              --exclude=CMake.app/Contents/share/cmake-{version%.*}/Help \
+              --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
               --exclude=CMake.app/Contents/share/vim
             mkdir -p ${HOME}/Applications/CMake/${version}
             cp -fR cmake-${version}-Darwin-x86_64/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
-            /Users/runner/Applications/CMake/${version}/bin/cmake --version
+            ${HOME}/Applications/CMake/${version}/bin/cmake --version
             rm -rf cmake-${version}-Darwin-x86_64
             rm cmake-${version}-Darwin-x86_64.tar.gz
           done
@@ -67,42 +60,34 @@ jobs:
             tar -xzf cmake-${version}-macos-universal.tar.gz \
               --exclude=CMake.app/Contents/bin/cmake-gui \
               --exclude=CMake.app/Contents/doc/cmake \
-              --exclude=CMake.app/Contents/share/cmake-{version%.*}/Help \
+              --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
               --exclude=CMake.app/Contents/share/vim
             mkdir -p ${HOME}/Applications/CMake/${version}
             cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
-            /Users/runner/Applications/CMake/${version}/bin/cmake --version
+            ${HOME}/Applications/CMake/${version}/bin/cmake --version
             rm -rf cmake-${version}-macos-universal
             rm cmake-${version}-macos-universal.tar.gz
           done
 
-      - name: Install Bazel
+      - name: Install Bazel versions
         run: |
-            for version in 6.3.2 7.1.2; do
-              mkdir -p ${HOME}/Applications/bazel/${version}
-              wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
-              chmod +x ${HOME}/Applications/bazel/${version}/bazel
-            done
+          set -e
+          for version in 6.3.2 7.1.2; do
+            mkdir -p ${HOME}/Applications/bazel/${version}
+            wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-x86_64
+            chmod +x ${HOME}/Applications/bazel/${version}/bazel
+          done
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool xz zlib autoconf automake ninja
+          brew install xcodegen
 
-      - name: Install default Xcode
-        run: |
-          sudo xcode-select -s /Applications/Xcode_15.0.1.app
-          sudo xcode-select --install || true
-          sudo xcodebuild -license accept
-
-      - name: Check for xcode compiler version
+      - name: Check for Xcode compiler version
         run: |
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang++
 
-      - name: Run Test - ${{ matrix.setup }}
-        env:
-          CXX: /Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
-          CC: /Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+      - name: Run Test - ${{ matrix.test-type }}
         run: |
-          python -m pytest -x -v --color=auto test/${{ matrix.setup }}
+          python -m pytest -x -v --color=auto test/${{ matrix.test-type }}
