@@ -121,13 +121,10 @@ class _Component:
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
-<<<<<<< HEAD
-            "exe": self.exe,
-=======
+            "exe": self.exe,  # single exe, incompatible with libs
             "type": self._type,
             "location": self._location,
             "link_location": self._link_location
->>>>>>> develop2
         }
 
     @staticmethod
