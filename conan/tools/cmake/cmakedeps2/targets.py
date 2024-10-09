@@ -1,23 +1,29 @@
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-
-"""
-
-FooTargets.cmake
-
-"""
+import jinja2
+from jinja2 import Template
 
 
 class TargetsTemplate2:
+    """
+    FooTargets.cmake
+    """
+    def __init__(self, cmakedeps, conanfile):
+        self._cmakedeps = cmakedeps
+        self._conanfile = conanfile
+
+    def content(self):
+        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
+                     undefined=jinja2.StrictUndefined)
+        return t.render(self._context)
 
     @property
     def filename(self):
-        name += self.file_name + "Targets.cmake"
-        return name
+        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        return f"{f}Targets.cmake"
 
     @property
-    def context(self):
+    def _context(self):
         data_pattern = "${CMAKE_CURRENT_LIST_DIR}/" if not self.generating_module else "${CMAKE_CURRENT_LIST_DIR}/module-"
         data_pattern += "{}-*-data.cmake".format(self.file_name)
 
@@ -51,7 +57,7 @@ class TargetsTemplate2:
         return ret
 
     @property
-    def template(self):
+    def _template(self):
         return textwrap.dedent("""\
         # Load the debug and release variables
         file(GLOB DATA_FILES "{{data_pattern}}")
@@ -60,40 +66,6 @@ class TargetsTemplate2:
             include(${f})
         endforeach()
 
-        # Create the targets for all the components
-        foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
-            if(NOT TARGET ${_COMPONENT})
-                add_library(${_COMPONENT} INTERFACE IMPORTED)
-                message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component target declared '${_COMPONENT}'")
-            endif()
-        endforeach()
-
-        if(NOT TARGET {{ root_target_name }})
-            add_library({{ root_target_name }} INTERFACE IMPORTED)
-            message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Target declared '{{ root_target_name }}'")
-        endif()
-
-        {%- for alias, target in cmake_target_aliases.items() %}
-
-        if(NOT TARGET {{alias}})
-            add_library({{alias}} INTERFACE IMPORTED)
-            set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        endif()
-
-        {%- endfor %}
-
-        {%- for comp_name, component_aliases in cmake_component_target_aliases.items() %}
-
-            {%- for alias, target in component_aliases.items() %}
-
-        if(NOT TARGET {{alias}})
-            add_library({{alias}} INTERFACE IMPORTED)
-            set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        endif()
-
-            {%- endfor %}
-
-        {%- endfor %}
 
         # Load the debug and release library finders
         file(GLOB CONFIG_FILES "${CMAKE_CURRENT_LIST_DIR}/{{ target_pattern }}")

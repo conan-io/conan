@@ -1,16 +1,10 @@
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-
-"""
-
-FooTarget-release.cmake
-
-"""
-
 
 class TargetConfigurationTemplate2:
-
+    """
+    FooTarget-release.cmake
+    """
     @property
     def filename(self):
         name = "" if not self.generating_module else "module-"

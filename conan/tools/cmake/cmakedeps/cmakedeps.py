@@ -13,12 +13,19 @@ from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
 from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetConfigurationTemplate
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
+from conan.tools.cmake.cmakedeps2.cmakedeps import CMakeDeps2
 from conan.tools.files import save
 from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
 
-class CMakeDeps(object):
+def CMakeDeps(conanfile):  # noqa
+    if conanfile.conf.get("tools.cmake.cmakedeps:new", check_type=bool):
+        return CMakeDeps2(conanfile)
+    return _CMakeDeps(conanfile)
+
+
+class _CMakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile

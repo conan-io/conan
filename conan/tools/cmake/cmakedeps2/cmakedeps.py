@@ -5,9 +5,18 @@ from jinja2 import Template
 
 from conan.api.output import Color
 from conan.internal import check_duplicated_generator
+from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
+from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
+from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
+
+
+FIND_MODE_MODULE = "module"
+FIND_MODE_CONFIG = "config"
+FIND_MODE_NONE = "none"
+FIND_MODE_BOTH = "both"
 
 
 class CMakeDeps2:
@@ -41,74 +50,30 @@ class CMakeDeps2:
         build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
 
-        # Check if the same package is at host and build and the same time
-        activated_br = {r.ref.name for r in build_req.values()
-                        if r.ref.name in self.build_context_activated}
-        common_names = {r.ref.name for r in host_req.values()}.intersection(activated_br)
-        for common_name in common_names:
-            suffix = self.build_context_suffix.get(common_name)
-            if not suffix:
-                raise ConanException("The package '{}' exists both as 'require' and as "
-                                     "'build require'. You need to specify a suffix using the "
-                                     "'build_context_suffix' attribute at the CMakeDeps "
-                                     "generator.".format(common_name))
-
         # Iterate all the transitive requires
-        direct_configs = []
+        ret = {}
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
-            # Require is not used at the moment, but its information could be used,
-            # and will be used in Conan 2.0
-            # Filter the build_requires not activated with cmakedeps.build_context_activated
-            if require.build and dep.ref.name not in self.build_context_activated:
-                continue
-
             cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
-            # Skip from the requirement
             if cmake_find_mode == FIND_MODE_NONE:
-                # Skip the generation of config files for this node, it will be located externally
                 continue
 
-            if cmake_find_mode in (FIND_MODE_CONFIG, FIND_MODE_BOTH):
-                self._generate_files(require, dep, ret, find_module_mode=False)
+            config = ConfigTemplate2(self, dep)
+            ret[config.filename] = config.content()
+            config_version = ConfigVersionTemplate2(self, dep)
+            ret[config_version.filename] = config_version.content()
 
-            if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
-                self._generate_files(require, dep, ret, find_module_mode=True)
-
-            if require.direct:  # aggregate config information for user convenience
-                find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
-                config = ConfigTemplate(self, require, dep, find_module_mode)
-                direct_configs.append(config)
-
-        if direct_configs:
-            # Some helpful verbose messages about generated files
-            msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
-            for config in direct_configs:
-                msg.append(f"    find_package({config.file_name})")
-            targets = ' '.join(c.root_target_name for c in direct_configs)
-            msg.append(f"    target_link_libraries(... {targets})")
-            if self._conanfile._conan_is_consumer:
-                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
-            else:
-                self._conanfile.output.verbose("\n".join(msg))
+            targets = TargetsTemplate2(self, require, dep)
+            ret[targets.filename] = targets.content()
 
         return ret
 
     def _generate_files(self, require, dep, ret):
-        config_version = ConfigVersionTemplate(self, require, dep)
-        ret[config_version.filename] = config_version.render()
-
         target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
         ret[target_configuration.filename] = target_configuration.render()
 
-        targets = TargetsTemplate(self, require, dep, find_module_mode)
-        ret[targets.filename] = targets.render()
 
-        config = ConfigTemplate(self, require, dep, find_module_mode)
-        # Only the latest configuration BUILD_MODULES and additional_variables will be used
-        # in multi-config they will be overwritten by the latest install
-        ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
         """
@@ -142,7 +107,7 @@ class CMakeDeps2:
             return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
                 else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
 
-    def get_cmake_package_name(self, dep, module_mode=None):
+    def get_cmake_filename(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
@@ -156,8 +121,8 @@ class CMakeDeps2:
         return ret or dep.ref.name
 
     @property
-    def file_name(self):
-        return self.get_cmake_package_name(conanfile, module_mode=self.generating_module) + self.suffix
+    def config_suffix(self):
+        return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
     def get_find_mode(self, dep):
         """

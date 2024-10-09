@@ -79,7 +79,7 @@ def test_exe():
         """)
     c.save({"conanfile.py": consumer,
             "CMakeLists.txt": cmake}, clean_first=True)
-    c.run("build .")
+    c.run("build . -c tools.cmake.cmakedeps:new=True")
     assert "Conan: Target declared 'mytool::mytool'" in c.out
     assert "Conan: Target declared imported executable 'mytool::myexe'" in c.out
     assert "Mytool generating out.c!!!!!" in c.out

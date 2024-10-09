@@ -1,5 +1,8 @@
 import textwrap
 
+import jinja2
+from jinja2 import Template
+
 from conan.errors import ConanException
 
 
@@ -11,15 +14,18 @@ class ConfigVersionTemplate2:
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile
 
-    @property
-    def filename(self):
-        if self.file_name == self.file_name.lower():
-            return "{}-config-version.cmake".format(self.file_name)
-        else:
-            return "{}ConfigVersion.cmake".format(self.file_name)
+    def content(self):
+        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
+                     undefined=jinja2.StrictUndefined)
+        return t.render(self._context)
 
     @property
-    def context(self):
+    def filename(self):
+        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        return  f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
+
+    @property
+    def _context(self):
         policy = self._cmakedeps.get_property("cmake_config_version_compat", self._conanfile)
         if policy is None:
             policy = "SameMajorVersion"
@@ -31,7 +37,7 @@ class ConfigVersionTemplate2:
                 "policy": policy}
 
     @property
-    def template(self):
+    def _template(self):
         # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
         # This will be at XXX-config-version.cmake
         # AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion

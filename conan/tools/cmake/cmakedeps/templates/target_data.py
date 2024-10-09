@@ -319,7 +319,6 @@ class _TargetDataContext(object):
         self.compile_definitions = join_defines(cpp_info.defines)
         self.library_type = library_type
         self.is_host_windows = "1" if is_host_windows else "0"
-        self.exe = cpp_info.exe
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
