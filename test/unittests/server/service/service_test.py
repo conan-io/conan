@@ -39,7 +39,7 @@ class ConanServiceTest(unittest.TestCase):
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
-        write_perms = []
+        write_perms = [("*/*@*/*", "*")]
         authorizer = BasicAuthorizer(read_perms, write_perms)
 
         self.fake_url = "http://url"

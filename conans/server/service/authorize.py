@@ -127,9 +127,6 @@ class BasicAuthorizer(Authorizer):
         username: User that request to read the conans
         ref: RecipeReference
         """
-        if ref.user == username:
-            return
-
         self._check_any_rule_ok(username, self.read_permissions, ref)
 
     def check_write_conan(self, username, ref):
@@ -137,9 +134,6 @@ class BasicAuthorizer(Authorizer):
         username: User that request to write the conans
         ref: RecipeReference
         """
-        if ref.user == username:
-            return True
-
         self._check_any_rule_ok(username, self.write_permissions, ref)
 
     def check_delete_conan(self, username, ref):
