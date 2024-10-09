@@ -5,7 +5,7 @@ import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 from conans.util.files import load, save
 

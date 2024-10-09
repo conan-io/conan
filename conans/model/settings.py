@@ -1,7 +1,7 @@
 import yaml
 
 from conan.internal.internal_tools import is_universal_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def bad_value_msg(name, value, value_range):
