@@ -26,7 +26,7 @@ class FileUploader(object):
             raise AuthenticationException(response_to_str(response))
 
         if response.status_code == 403:
-            if auth is None or auth.token is None:
+            if auth is None or auth.bearer is None:
                 raise AuthenticationException(response_to_str(response))
             raise ForbiddenException(response_to_str(response))
 

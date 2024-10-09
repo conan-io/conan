@@ -86,7 +86,7 @@ class AuthorizerTest(unittest.TestCase):
         # Only lasote can read it but other conans can be readed
         read_perms = [(str(self.openssl_ref), "lasote"), ("*/*@*/*", "*")]
         # Only pepe (and lasote because its owner) can write it and no more users can write
-        write_perms = [(str(self.openssl_ref), "pepe")]
+        write_perms = [(str(self.openssl_ref), "pepe, lasote")]
 
         authorizer = BasicAuthorizer(read_perms, write_perms)
 
@@ -185,12 +185,11 @@ class AuthorizerTest(unittest.TestCase):
         # Simple user list
         read_perms = [("openssl/*@lasote/testing", "user1,user2,user3")]
         authorizer = BasicAuthorizer(read_perms, [])
-        for u in ['user1','user2','user3']:
+        for u in ['user1', 'user2', 'user3']:
             authorizer.check_read_conan(u, self.openssl_ref)
 
         # Spaces bewteen user names should be ignored
         read_perms = [("openssl/*@lasote/testing", "user1 , user2,\tuser3")]
         authorizer = BasicAuthorizer(read_perms, [])
-        for u in ['user1','user2','user3']:
+        for u in ['user1', 'user2', 'user3']:
             authorizer.check_read_conan(u, self.openssl_ref)
-

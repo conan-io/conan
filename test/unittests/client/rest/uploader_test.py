@@ -37,7 +37,7 @@ class UploaderUnitTest(unittest.TestCase):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_unauthoirzed_exception_if_no_token(self):
-        auth = namedtuple("auth", "token")(None)
+        auth = namedtuple("auth", "bearer")(None)
         uploader = FileUploader(MockRequester(403), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
@@ -48,7 +48,7 @@ class UploaderUnitTest(unittest.TestCase):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_forbidden_exception_if_token(self):
-        auth = namedtuple("auth", "token")("SOMETOKEN")
+        auth = namedtuple("auth", "bearer")("SOMETOKEN")
         uploader = FileUploader(MockRequester(403), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(ForbiddenException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)

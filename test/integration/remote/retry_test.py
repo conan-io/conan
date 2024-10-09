@@ -73,7 +73,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(ForbiddenException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
@@ -86,7 +86,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(AuthenticationException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)

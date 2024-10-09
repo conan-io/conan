@@ -179,10 +179,7 @@ class PkgCache:
             pattern = translate(pattern)
             pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
 
-        refs = self._db.list_references()
-        if pattern:
-            refs = [r for r in refs if r.partial_match(pattern)]
-        return refs
+        return self._db.list_references(pattern)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

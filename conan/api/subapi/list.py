@@ -150,7 +150,6 @@ class ListAPI:
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
-            refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:

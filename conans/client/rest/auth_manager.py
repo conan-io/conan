@@ -7,8 +7,7 @@ methods if receives AuthenticationException from RestApiClient.
 Flow:
     Directly invoke a REST method in RestApiClient, example: get_conan.
     if receives AuthenticationException (not open method) will ask user for login and password
-    and will invoke RestApiClient.get_token() (with LOGIN_RETRIES retries) and retry to call
-    get_conan with the new token.
+    (with LOGIN_RETRIES retries) and retry to call with the new token.
 """
 
 from conan.api.output import ConanOutput
@@ -60,18 +59,10 @@ class ConanApiAuthManager:
             raise ForbiddenException(f"Permission denied for user: '{user}': {e}")
         except AuthenticationException:
             # User valid but not enough permissions
-            if user is None or token is None:
-                # token is None when you change user with user command
-                # Anonymous is not enough, ask for a user
-                ConanOutput().info('Please log in to "%s" to perform this action. '
-                                   'Execute "conan remote login" command.' % remote.name)
-                if self._get_credentials_and_authenticate(rest_client, user, remote):
-                    return self.call_rest_api_method(remote, method_name, *args, **kwargs)
-            else:
-                # Token expired or not valid, so clean the token and repeat the call
-                # (will be anonymous call but exporting who is calling)
-                # logger.info("Token expired or not valid, cleaning the saved token and retrying")
-                self._clear_user_tokens_in_db(user, remote)
+            # token is None when you change user with user command
+            # Anonymous is not enough, ask for a user
+            ConanOutput().info(f"Remote '{remote.name}' needs authentication, obtaining credentials")
+            if self._get_credentials_and_authenticate(rest_client, user, remote):
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
     def _get_credentials_and_authenticate(self, rest_client, user, remote):
@@ -94,14 +85,6 @@ class ConanApiAuthManager:
             else:
                 return True
         raise AuthenticationException("Too many failed login attempts, bye!")
-
-    def _clear_user_tokens_in_db(self, user, remote):
-        try:
-            self._creds.set(remote, user, token=None)
-        except Exception as e:
-            out = ConanOutput()
-            out.error('Your credentials could not be stored in local cache', error_type="exception")
-            out.debug(str(e) + '\n')
 
     def _authenticate(self, rest_client, remote, user, password):
         try:
