@@ -33,16 +33,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-
-      - name: Cache Python dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/conans/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Install Python requirements
         run: |
@@ -51,16 +41,7 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
 
-      - name: Cache CMake installations
-        uses: actions/cache@v3
-        with:
-          path: ${HOME}/Applications/CMake
-          key: ${{ runner.os }}-cmake-${{ matrix.test-type }}-${{ matrix.python-version }}-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
-
       - name: Install CMake versions
-        if: steps.cache-cmake.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 3.15.7 3.16.9 3.17.5; do
@@ -90,16 +71,7 @@ jobs:
             rm cmake-${version}-macos-universal.tar.gz
           done
 
-      - name: Cache Bazel installations
-        uses: actions/cache@v3
-        with:
-          path: ${HOME}/Applications/bazel
-          key: ${{ runner.os }}-bazel-${{ matrix.test-type }}-${{ matrix.python-version }}-${{ hashFiles('**/WORKSPACE') }}
-          restore-keys: |
-            ${{ runner.os }}-bazel-
-
       - name: Install Bazel versions
-        if: steps.cache-bazel.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 6.3.2 7.1.2; do

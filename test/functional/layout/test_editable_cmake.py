@@ -92,7 +92,6 @@ def test_editable_cmake_linux(generator):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
 @pytest.mark.tool("cmake", "3.19")
-@pytest.mark.skip("FIXME: Could not find C++ compiler on Github Action")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
 
