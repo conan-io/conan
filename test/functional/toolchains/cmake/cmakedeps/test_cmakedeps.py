@@ -561,7 +561,7 @@ def test_system_dep():
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
 
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_error_missing_build_type(matrix_client):
     # https://github.com/conan-io/conan/issues/11168
     client = matrix_client
