@@ -26,6 +26,14 @@ jobs:
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
+      - name: Check for Xcode compiler version
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-path
+          xcrun --find clang++
+          ls /Users/runner/Library/Android/sdk
+          tree /Users/runner/Library
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -72,6 +80,12 @@ jobs:
             rm cmake-${version}-macos-universal.tar.gz
           done
 
+          brew uninstall cmake || true
+          # the conftest.py defines CMake 3.15 as the default for testing
+          export PATH="${HOME}/Applications/CMake/3.15.7/bin:$PATH"
+          echo "The default CMake version for testing is:"
+          cmake --version
+
       - name: Install Bazel versions
         run: |
           set -e
@@ -84,12 +98,6 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool xz zlib autoconf automake ninja
-
-      - name: Check for Xcode compiler version
-        run: |
-          xcodebuild -version
-          xcrun --show-sdk-path
-          xcrun --find clang++
 
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
