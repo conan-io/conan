@@ -62,11 +62,11 @@ jobs:
           brew install xcodegen make libtool zlib autoconf automake ninja
           brew uninstall cmake || true
 
-      - name: Cache CMake installations (Build Versions)
+      - name: Cache CMake installations
         id: cache-cmake
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/Applications/CMake
+          path: $HOME/Applications/CMake
           key: conan-cmake-${{ runner.os }}-v3.15.7-3.16.9-3.17.5-v3.19.7-3.23.1
           restore-keys: |
             conan-cmake-${{ runner.os }}-
