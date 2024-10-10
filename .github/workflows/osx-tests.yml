@@ -64,7 +64,7 @@ jobs:
           CMAKE_BUILD_VERSIONS=("3.15.7")
           #CMAKE_BUILD_VERSIONS=("3.15.7" "3.16.9" "3.17.5")
           for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
-            echo "Compiling CMake version ${version} from source for ARM..."            
+            echo "Compiling CMake version ${version} from source for ARM..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}.tar.gz
             tar -xzf cmake-${version}.tar.gz
             cd cmake-${version}
@@ -125,11 +125,11 @@ jobs:
           xcrun -find cc
           xcrun -find c++
           #export CC=$(xcrun --find clang)
-          #export CXX=$(xcrun --find clang++)          
+          #export CXX=$(xcrun --find clang++)
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional/toolchains/cmake --durations=20
+            pytest test/functional/toolchains/cmake -v --durations=20
           fi
