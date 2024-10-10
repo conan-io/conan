@@ -125,8 +125,8 @@ jobs:
           xcrun --find clang++
           xcrun -find cc
           xcrun -find c++
-          #export CC=$(xcrun --find clang)
-          #export CXX=$(xcrun --find clang++)
+          export CC=$(xcrun --find cc)
+          export CXX=$(xcrun -find c++)
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
