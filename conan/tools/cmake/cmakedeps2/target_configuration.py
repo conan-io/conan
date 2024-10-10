@@ -25,22 +25,26 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        exes = {}
         cpp_info = self._conanfile.cpp_info
         pkg_name = self._conanfile.ref.name
         config = self._cmakedeps.configuration.upper()
         package_folder = self._conanfile.package_folder.replace("\\", "/")
         package_folder_var = f"{pkg_name}_PACKAGE_FOLDER_{config}"
 
+        exes = {}
+
+        def _add_exe(info):
+            if info.exe:
+                target = info.get_property("cmake_target_name") or f"{pkg_name}::{info.exe}"
+                exe_location = self._path(info.location, package_folder, package_folder_var)
+                exes[target] = exe_location
+
         if cpp_info.has_components:
-            for comp_name in self._conanfile.cpp_info.components:
-                if comp_name is not None:
-                    pass
+            for name, component in cpp_info.components.items():
+                _add_exe(component)
         else:
             if cpp_info.exe:
-                target = cpp_info.get_property("cmake_target_name") or f"{pkg_name}::{cpp_info.exe}"
-                exe_location = self._path(cpp_info.location, package_folder, package_folder_var)
-                exes[target] = exe_location
+                _add_exe(cpp_info)
 
         return {"package_folder": package_folder,
                 "package_folder_var": package_folder_var,
@@ -74,5 +78,6 @@ class TargetConfigurationTemplate2:
         endif()
         set_property(TARGET {{exe}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{exe}} PROPERTIES IMPORTED_LOCATION_{{config}} "{{location}}")
-        {%- endfor %}
+
+        {% endfor %}
         """)

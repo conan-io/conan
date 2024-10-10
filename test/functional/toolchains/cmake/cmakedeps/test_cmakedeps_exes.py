@@ -30,7 +30,8 @@ def test_exe():
                 cmake.install()
 
             def package_info(self):
-                self.cpp_info.exe = "myexe"
+                self.cpp_info.exe = "mytool"
+                self.cpp_info.set_property("cmake_target_name", "MyTool::myexe")
                 self.cpp_info.location = os.path.join("bin", "mytool")
         """)
     main = textwrap.dedent("""
@@ -73,13 +74,13 @@ def test_exe():
         project(consumer C)
 
         find_package(mytool)
-        add_custom_command(OUTPUT out.c COMMAND mytool::myexe)
+        add_custom_command(OUTPUT out.c COMMAND MyTool::myexe)
         add_library(myLib out.c)
         """)
     c.save({"conanfile.py": consumer,
             "CMakeLists.txt": cmake}, clean_first=True)
     c.run("build . -c tools.cmake.cmakedeps:new=True")
-    assert "Conan: Target declared imported executable 'mytool::myexe'" in c.out
+    assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
     assert "Mytool generating out.c!!!!!" in c.out
 
 
@@ -109,16 +110,18 @@ def test_exe_components():
 
             def package_info(self):
                 self.cpp_info.components["my1exe"].exe = "mytool1"
-                self.cpp_info.components["my1exe"].location = os.path.join("bin", "mytool2")
+                self.cpp_info.components["my1exe"].set_property("cmake_target_name", "MyTool::my1exe")
+                self.cpp_info.components["my1exe"].location = os.path.join("bin", "mytool1")
                 self.cpp_info.components["my2exe"].exe = "mytool2"
-                self.cpp_info.components["my1exe"].location = os.path.join("bin", "mytool2")
+                self.cpp_info.components["my2exe"].set_property("cmake_target_name", "MyTool::my2exe")
+                self.cpp_info.components["my2exe"].location = os.path.join("bin", "mytool2")
         """)
     main = textwrap.dedent("""
         #include <iostream>
         #include <fstream>
 
         int main() {{
-            std::cout << "Mytool{number} generating out.c!!!!!" << std::endl;
+            std::cout << "Mytool{number} generating out{number}.c!!!!!" << std::endl;
             std::ofstream f("out{number}.c");
         }}
         """)
@@ -144,13 +147,13 @@ def test_exe_components():
 
     consumer = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import CMakeDeps2, CMakeToolchain, CMake, cmake_layout
+        from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
         class Consumer(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             tool_requires = "mytool/0.1"
 
             def generate(self):
-                deps = CMakeDeps2(self)
+                deps = CMakeDeps(self)
                 deps.generate()
                 tc = CMakeToolchain(self)
                 tc.generate()
@@ -168,15 +171,16 @@ def test_exe_components():
 
         find_package(mytool)
         add_custom_command(OUTPUT out1.c
-                           COMMAND mytool::my1exe)
+                           COMMAND MyTool::my1exe)
         add_custom_command(OUTPUT out2.c
-                           COMMAND mytool::my2exe)
+                           COMMAND MyTool::my2exe)
         add_library(myLib out1.c out2.c)
         """)
     c.save({"conanfile.py": consumer,
             "CMakeLists.txt": cmake}, clean_first=True)
-    c.run("build .")
+    c.run("build . -c tools.cmake.cmakedeps:new=True")
     print(c.out)
-    assert "Conan: Target declared 'mytool::mytool'" in c.out
-    assert "Conan: Target declared imported executable 'mytool::myexe'" in c.out
-    assert "Mytool generating out.c!!!!!" in c.out
+    assert "Conan: Target declared imported executable 'MyTool::my1exe'" in c.out
+    assert "Mytool1 generating out1.c!!!!!" in c.out
+    assert "Conan: Target declared imported executable 'MyTool::my2exe'" in c.out
+    assert "Mytool2 generating out2.c!!!!!" in c.out

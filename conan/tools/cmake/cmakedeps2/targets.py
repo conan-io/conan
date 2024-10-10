@@ -31,7 +31,6 @@ class TargetsTemplate2:
 
     @property
     def _template(self):
-        # TODO: What if target exists only in Debug or Release?
         return textwrap.dedent("""\
             message(STATUS "Configuring Targets for {{ ref }}")
 
