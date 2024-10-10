@@ -27,10 +27,13 @@ jobs:
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
 
     steps:
-      - name: Check for Xcode compiler version
+
+      - name: Install default Xcode
         run: |
-          sudo xcodebuild -runFirstLaunch
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+          sudo xcode-select --install || true
           sudo xcodebuild -license accept
+          sudo xcodebuild -runFirstLaunch
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang++
