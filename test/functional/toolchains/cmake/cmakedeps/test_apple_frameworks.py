@@ -42,7 +42,7 @@ app_conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake", "3.23")
+#@pytest.mark.tool("cmake", "3.23")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
