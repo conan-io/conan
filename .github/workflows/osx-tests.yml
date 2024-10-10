@@ -109,15 +109,13 @@ jobs:
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         run: |
-          which clang++
-          clang++ --version
-          which clang
-          clang --version
-          export CC=$(xcrun --find clang)
-          export CXX=$(xcrun --find clang++)          
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH
-          echo "Using CC: $CC"
-          echo "Using CXX: $CXX"
+          # which clang++
+          # clang++ --version
+          # which clang
+          # clang --version
+          # export CC=$(xcrun --find clang)
+          # export CXX=$(xcrun --find clang++)          
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
