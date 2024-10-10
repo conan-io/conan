@@ -110,15 +110,15 @@ jobs:
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         run: |
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          which cmake
-          cmake --version
+          #export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          #which cmake
+          #cmake --version
           sudo xcode-select --reset
+          sudo xcode-select -p
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           sudo xcode-select --install || true
           sudo xcodebuild -license accept
           sudo xcodebuild -runFirstLaunch
-          xcode-select -p
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang
