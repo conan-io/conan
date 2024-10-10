@@ -59,7 +59,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool xz zlib autoconf automake ninja openssl
+          brew install xcodegen make libtool zlib autoconf automake ninja
 
       - name: Install CMake versions
         run: |
