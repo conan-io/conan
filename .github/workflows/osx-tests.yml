@@ -114,6 +114,8 @@ jobs:
           #which cmake
           #cmake --version
           sudo xcode-select --reset
+          echo $CC
+          echo $CXX
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
