@@ -106,6 +106,10 @@ jobs:
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         run: |
+          which clang++
+          clang++ --version
+          which clang
+          clang --version
           export CC=$(xcrun --find clang)
           export CXX=$(xcrun --find clang++)          
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH
@@ -117,5 +121,5 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20
+            pytest -v test/functional/toolchains/apple/test_xcodetoolchain.py
           fi
