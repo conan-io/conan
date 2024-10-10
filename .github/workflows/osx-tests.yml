@@ -36,9 +36,10 @@ jobs:
           sudo xcodebuild -runFirstLaunch
           xcodebuild -version
           xcrun --show-sdk-path
+          xcrun --find clang
           xcrun --find clang++
-          xcrun -find c++
           xcrun -find cc
+          xcrun -find c++
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -110,8 +111,8 @@ jobs:
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         env:
-          CC: $(xcrun --find cc)
-          CXX: $(xcrun --find c++)
+          CC: $(xcrun --find clang)
+          CXX: $(xcrun --find clang++)
         run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
