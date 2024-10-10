@@ -21,6 +21,7 @@ jobs:
       matrix:
         test-type: [functional]
         python-version: ['3.9']
+
     runs-on: macos-14
 
     name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
@@ -103,6 +104,9 @@ jobs:
 
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
+        env:
+          CC: $(xcrun --find cc)
+          CXX: $(xcrun --find c++)
         run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
