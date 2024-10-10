@@ -108,10 +108,8 @@ jobs:
         env:
           CC: $(xcrun --find clang)
           CXX: $(xcrun --find clang++)
-          # the conftest.py defines CMake 3.15 as the default for testing
-          PATH: ${HOME}/Applications/CMake/3.15.7/bin:$PATH
-
         run: |
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH
           cmake --version
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
