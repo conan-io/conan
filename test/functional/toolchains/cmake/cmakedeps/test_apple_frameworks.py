@@ -47,6 +47,7 @@ def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.19)
         project(Testing CXX)
+        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
         message(">>> foolib_FRAMEWORKS_FOUND_RELEASE: ${foolib_FRAMEWORKS_FOUND_RELEASE}")
@@ -91,7 +92,7 @@ conanfile = textwrap.dedent("""
 cmake = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.19)
             project(MyHello CXX)
-
+    
             # set @rpaths for libraries to link against
             SET(CMAKE_SKIP_RPATH FALSE)
             #SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
