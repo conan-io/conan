@@ -28,10 +28,13 @@ jobs:
     steps:
       - name: Check for Xcode compiler version
         run: |
-          brew install tree
+          sudo xcodebuild -runFirstLaunch
+          sudo xcodebuild -license accept
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang++
+          xcrun -find c++
+          xcrun -find cc
 
       - name: Checkout code
         uses: actions/checkout@v4
