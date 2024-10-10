@@ -32,8 +32,6 @@ jobs:
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang++
-          ls /Users/runner/Library/Android/sdk
-          tree /Users/runner/Library
 
       - name: Checkout code
         uses: actions/checkout@v4
