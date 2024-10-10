@@ -5,7 +5,6 @@ on:
     branches:
       - develop2
       - release/*
-      - ci/gh-action-osx
   pull_request:
     branches:
       - '*'
@@ -19,7 +18,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        test-type: [functional]
+        test-type: [unittests, integration, functional]
         python-version: ['3.9']
 
     runs-on: macos-14
@@ -62,7 +61,6 @@ jobs:
           set -e
 
           CMAKE_BUILD_VERSIONS=("3.15.7")
-          #CMAKE_BUILD_VERSIONS=("3.15.7" "3.16.9" "3.17.5")
           for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
             echo "Compiling CMake version ${version} from source for ARM..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}.tar.gz

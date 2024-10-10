@@ -20,7 +20,7 @@ def client():
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
 
-    t = TestClient(path_with_spaces=False)
+    t = TestClient()
     t.save({'conanfile.py': lib_conanfile})
     t.run("create .")
     return t
