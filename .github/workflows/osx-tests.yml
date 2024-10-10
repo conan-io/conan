@@ -66,16 +66,16 @@ jobs:
         id: cache-cmake
         uses: actions/cache@v4
         with:
-          path: $HOME/Applications/CMake
-          key: conan-cmake-v3.15.7-3.16.9-3.17.5-v3.19.7-3.23.1
+          path: ${HOME}/Applications/CMake/3.15.7
+          key: conan-cmake-3.15
 
-      - name: Install CMake versions
+      - name: Build CMake old versions not available for arm
         if: steps.cache-cmake.outputs.cache-hit != 'true'
         run: |
           set -e
 
-          CMAKE_BUILD_VERSIONS=("3.15.7" "3.16.9" "3.17.5")
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.1")
+          CMAKE_BUILD_VERSIONS=("3.15.7")
+          #CMAKE_BUILD_VERSIONS=("3.15.7" "3.16.9" "3.17.5")
           for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
             echo "Compiling CMake version ${version} from source for ARM..."            
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}.tar.gz
@@ -90,6 +90,12 @@ jobs:
             rm -rf cmake-${version} cmake-${version}.tar.gz
           done
 
+      - name: Install universal CMake versions
+        if: steps.cache-cmake.outputs.cache-hit != 'true'
+        run: |
+          set -e
+
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.1")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -113,8 +119,6 @@ jobs:
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
-          /Users/runner/Applications/bazel/6.3.2/bazel --version
-          /Users/runner/Applications/bazel/7.1.2/bazel --version
 
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash

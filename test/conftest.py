@@ -73,12 +73,10 @@ tools_locations = {
         },
         "3.16": {
             "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.16.9/bin',
                      'Linux': '/usr/share/cmake-3.16.9/bin'}
         },
         "3.17": {
             "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.17.5/bin',
                      'Linux': '/usr/share/cmake-3.17.5/bin'}
         },
         "3.19": {
