@@ -113,7 +113,7 @@ jobs:
           #export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           #which cmake
           #cmake --version
-          sudo xcode-select --switch /Library/Developer/CommandLineTools
+          sudo xcode-select --reset
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
