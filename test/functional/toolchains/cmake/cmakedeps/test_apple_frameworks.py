@@ -47,6 +47,8 @@ def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.19)
         project(Testing CXX)
+        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO")
+        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
         set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
