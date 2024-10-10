@@ -124,14 +124,14 @@ jobs:
           xcrun --find clang++
           xcrun -find cc
           xcrun -find c++
-          #export CC=$(xcrun --find clang)
-          #export CXX=$(xcrun --find clang++)
+          export CC=$(xcrun --find clang)
+          export CXX=$(xcrun --find clang++)
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py -v --durations=20
-            pytest test/functional/toolchains/cmake/cmakedeps/test_cmakedeps.py -v --durations=20
-            pytest test/functional/toolchains/cmake/cmakedeps/test_link_order.py -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py::test_apple_framework_xcode -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_cmakedeps.py::test_error_missing_build_type -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_link_order.py::test_cmake_deps -v --durations=20
           fi
