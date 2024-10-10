@@ -190,8 +190,12 @@ class TestLibs:
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
     def test_libs_components(self, matrix_client_components):
+        """
+        explicit usage of components
+        """
         c = matrix_client_components
 
+        # TODO: Check that find_package(.. COMPONENTS nonexisting) fails
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
         cmake = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
@@ -207,6 +211,32 @@ class TestLibs:
             """)
         c.save({"CMakelists.txt": cmake,
                 "src/app.cpp": app_cpp})
+        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+
+    def test_libs_components_default(self, matrix_client_components):
+        """
+        Test that the default components are used when no component is specified
+        """
+        c = matrix_client_components
+
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+
+        app_cpp = textwrap.dedent("""
+            #include "module.h"
+            int main() { module();}
+            """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+            """)
+        c.save({"src/app.cpp": app_cpp,
+                "CMakeLists.txt": cmake})
         c.run("build . -c tools.cmake.cmakedeps:new=True")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out

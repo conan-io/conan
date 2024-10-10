@@ -103,7 +103,7 @@ class CMakeDeps2:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
-        if module_mode and self.get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
+        if module_mode and self._get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
             ret = self.get_property("cmake_module_file_name", dep)
             if ret:
                 return ret
@@ -114,7 +114,7 @@ class CMakeDeps2:
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_find_mode(self, dep):
+    def _get_find_mode(self, dep):
         """
         :param dep: requirement
         :return: "none" or "config" or "module" or "both" or "config" when not set

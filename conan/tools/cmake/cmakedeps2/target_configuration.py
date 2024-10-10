@@ -14,7 +14,7 @@ class TargetConfigurationTemplate2:
     """
     def __init__(self, cmakedeps, conanfile):
         self._cmakedeps = cmakedeps
-        self._conanfile = conanfile
+        self._conanfile = conanfile  # The dependency conanfile, not the consumer one
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -31,9 +31,19 @@ class TargetConfigurationTemplate2:
         result = []
         requires = info.parsed_requires()
         pkg_name = self._conanfile.ref.name
-        if not requires and not components:
-            # else depend on the components of the dependencies (default-components or all)
-            pass
+        transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
+        if not requires and not components:  # global cpp_info without components definition
+            # TODO: Not tested at all
+            for dependency in transitive_reqs.values():
+                dep_pkg_name = dependency.ref.name
+                dep_cpp_info = dependency.cpp_info
+                if dep_cpp_info.has_components:
+                    for name, component in dep_cpp_info.components.items():
+                        result.append(f"{dep_pkg_name}::{name}")
+                else:
+                    result.append("{dep_pkg_name}::{dep_pkg_name}")
+            return result
+
         for required_scope, required_comp in requires:
             if required_scope is None:  # Points to a component of same package
                 dep_component = components[required_comp]
@@ -76,7 +86,7 @@ class TargetConfigurationTemplate2:
                     "INTERFACE" if info.type is PackageType.HEADER else None
                 includedirs = ";".join(self._path(i, package_folder, package_folder_var)
                                        for i in info.includedirs) if info.includedirs else ""
-                requires = ";".join(self._requires(info, self._conanfile.cpp_info.components))
+                requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
                 if lib_type:
                     libs[target_name] = {"type": lib_type,
                                          "includedirs": includedirs,
@@ -89,6 +99,12 @@ class TargetConfigurationTemplate2:
                 _add_libs(component)
         else:
             _add_libs(cpp_info)
+
+        if libs and f"{pkg_name}::{pkg_name}" not in libs:
+            # Add a generic interface target for the package depending on the others
+            all_requires = " ".join(libs.keys())
+            libs[f"{pkg_name}::{pkg_name}"] = {"type": "INTERFACE",
+                                               "requires": all_requires}
 
         exes = {}
 
@@ -126,6 +142,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _template(self):
+        # TODO: Check why not set_property instead of target_link_libraries
         return textwrap.dedent("""\
         set({{package_folder_var}} "{{package_folder}}")
 
@@ -139,8 +156,8 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{config}}>:{{lib_info["includedirs"]}}>)
         {% endif %}
-        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         {% if lib_info["type"] != "INTERFACE" %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
                               "{{lib_info["location"]}}")
         {% endif %}
@@ -149,8 +166,7 @@ class TargetConfigurationTemplate2:
                               "{{lib_info["link_location"]}}")
         {% endif %}
         {% if lib_info.get("requires") %}
-        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
-                              $<$<CONFIG:{{config}}>:{{lib_info["requires"]}}>)
+        target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
         {% endif %}
 
         {% endfor %}
