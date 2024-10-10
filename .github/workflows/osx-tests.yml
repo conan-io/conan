@@ -64,12 +64,10 @@ jobs:
 
       - name: Cache CMake installations
         id: cache-cmake
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: $HOME/Applications/CMake
-          key: conan-cmake-${{ runner.os }}-v3.15.7-3.16.9-3.17.5-v3.19.7-3.23.1
-          restore-keys: |
-            conan-cmake-${{ runner.os }}-
+          key: conan-cmake-v3.15.7-3.16.9-3.17.5-v3.19.7-3.23.1
 
       - name: Install CMake versions
         if: steps.cache-cmake.outputs.cache-hit != 'true'
