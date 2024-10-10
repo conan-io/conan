@@ -19,10 +19,11 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ['3.9']
+        test-type: [unittests, integration, functional]
 
     runs-on: macos-14
 
-    name: Conan Tests (${{ matrix.python-version }})
+    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
 
     steps:
 
@@ -45,27 +46,20 @@ jobs:
       - name: Uninstall default CMake
         run: brew uninstall cmake || true
 
-      - name: Run Test - unittests & integration
-        shell: bash
-        run: |
-          pytest test/unittests --durations=20
-          pytest test/integration --durations=20
-
-      # Install dependencies for functional tests
-
       - name: Install homebrew dependencies
+        if: matrix.test-type == 'functional'
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
 
       - name: Cache CMake installations
-        id: cache-cmake
+        if: matrix.test-type == 'functional'
         uses: actions/cache@v4
         with:
           path: ${HOME}/Applications/CMake/3.15.7
           key: conan-cmake-3.15
 
       - name: Build CMake old versions not available for arm
-        if: steps.cache-cmake.outputs.cache-hit != 'true'
+        if: matrix.test-type == 'functional' && steps.cache-cmake.outputs.cache-hit != 'true'
         run: |
           set -e
 
@@ -85,6 +79,7 @@ jobs:
           done
 
       - name: Install universal CMake versions
+        if: matrix.test-type == 'functional'
         run: |
           set -e
 
@@ -105,6 +100,7 @@ jobs:
           done
 
       - name: Install Bazel versions
+        if: matrix.test-type == 'functional'
         run: |
           set -e
           for version in 6.3.2 7.1.2; do
@@ -113,9 +109,14 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-      - name: Run Test - functional
-        shell: bash
+      - name: Run Tests
         run: |
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          cmake --version
-          pytest test/functional -v --durations=20
+          if [ "${{ matrix.test-type }}" == "unittests" ]; then
+            pytest test/unittests --durations=20
+          elif [ "${{ matrix.test-type }}" == "integration" ]; then
+            pytest test/integration --durations=20
+          elif [ "${{ matrix.test-type }}" == "functional" ]; then
+            export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+            cmake --version
+            pytest test/functional -v --durations=20
+          fi
