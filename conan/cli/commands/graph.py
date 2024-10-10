@@ -15,7 +15,7 @@ from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
-from conans.client.graph.install_graph import InstallGraph
+from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 from conan.internal.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
 
@@ -117,7 +117,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out = ConanOutput()
     out.title("Computing the build order")
 
-    install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    install_graph = InstallGraph(deps_graph, order_by=args.order_by,
+                                 profile_args=ProfileArgs.from_args(args))
     if args.reduce:
         if args.order_by is None:
             raise ConanException("--reduce needs --order-by argument defined")
