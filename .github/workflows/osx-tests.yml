@@ -40,6 +40,7 @@ jobs:
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
+          pip install meson
 
       - name: Install CMake versions
         run: |
@@ -76,21 +77,13 @@ jobs:
           set -e
           for version in 6.3.2 7.1.2; do
             mkdir -p ${HOME}/Applications/bazel/${version}
-            wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-x86_64
+            wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-      - name: Cache Homebrew dependencies
-        uses: actions/cache@v3
-        with:
-          path: /opt/homebrew
-          key: ${{ runner.os }}-homebrew-${{ hashFiles('**/Brewfile') }}
-          restore-keys: |
-            ${{ runner.os }}-homebrew-
-
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen
+          brew install xcodegen make libtool xz zlib autoconf automake ninja
 
       - name: Check for Xcode compiler version
         run: |
