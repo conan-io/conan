@@ -112,6 +112,7 @@ jobs:
           PATH: ${HOME}/Applications/CMake/3.15.7/bin:$PATH
 
         run: |
+          cmake --version
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
