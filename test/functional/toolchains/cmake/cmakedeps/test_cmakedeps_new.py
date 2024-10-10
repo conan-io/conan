@@ -181,12 +181,32 @@ class TestExes:
         assert "Mytool2 generating out2.c!!!!!" in c.out
 
 
+@pytest.mark.tool("cmake")
 class TestLibs:
-    def test_libs(self):
-        c = TestClient()
-        c.run("new cmake_lib -d name=pkg -d version=0.1")
-        c.run("create . -tf=")
-        c.save({}, clean_first=True)
-        c.run("new cmake_lib -d name=app -d version=0.1 -d requires=pkg/0.1")
+    def test_libs(self, matrix_client):
+        c = matrix_client
+        c.run("new cmake_lib -d name=app -d version=0.1 -d requires=matrix/1.0")
         c.run("build . -c tools.cmake.cmakedeps:new=True")
-        assert "Conan: Target declared imported STATIC library 'pkg::pkg'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+
+    def test_libs_components(self, matrix_client_components):
+        c = matrix_client_components
+
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE matrix::module)
+            """)
+        app_cpp = textwrap.dedent("""
+            #include "module.h"
+            int main() { module();}
+            """)
+        c.save({"CMakelists.txt": cmake,
+                "src/app.cpp": app_cpp})
+        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
