@@ -41,15 +41,14 @@ app_conanfile = textwrap.dedent("""
 """)
 
 
+# needs at least 3.23.3 because of error with "empty identity"
+# https://stackoverflow.com/questions/72746725/xcode-14-beta-cmake-not-able-to-resolve-cmake-c-compiler-and-cmake-cxx-compiler
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-#@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.19)
         project(Testing CXX)
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO")
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
         message(">>> foolib_FRAMEWORKS_FOUND_RELEASE: ${foolib_FRAMEWORKS_FOUND_RELEASE}")
