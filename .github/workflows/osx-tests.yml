@@ -100,7 +100,10 @@ jobs:
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
-          ls /Users/runner/Applications/bazel/
+          ls /Users/runner/Applications/bazel/6.3.2/bin
+          /Users/runner/Applications/bazel/6.3.2/bin/bazel --version
+          ls /Users/runner/Applications/bazel/7.1.2/bin
+          /Users/runner/Applications/bazel/7.1.2/bin/bazel --version
 
       - name: Install homebrew dependencies
         run: |
