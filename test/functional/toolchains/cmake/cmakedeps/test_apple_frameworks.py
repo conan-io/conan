@@ -47,7 +47,7 @@ app_conanfile = textwrap.dedent("""
 @pytest.mark.tool("cmake", "3.23")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.19)
+        cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
@@ -91,7 +91,7 @@ conanfile = textwrap.dedent("""
                     self.cpp_info.includedirs = []
             """)
 cmake = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.19)
+            cmake_minimum_required(VERSION 3.15)
             project(MyHello CXX)
 
             # set @rpaths for libraries to link against

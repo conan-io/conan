@@ -561,6 +561,7 @@ def test_system_dep():
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
 
+# needs at least 3.23.3 because of error with "empty identity"
 @pytest.mark.tool("cmake", "3.23")
 def test_error_missing_build_type(matrix_client):
     # https://github.com/conan-io/conan/issues/11168

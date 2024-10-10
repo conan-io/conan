@@ -331,6 +331,7 @@ def _run_and_get_lib_order(t, generator):
     return libs
 
 
+# needs at least 3.23.3 because of error with "empty identity"
 @pytest.mark.parametrize("generator", [None, "Xcode"])
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_deps(client, generator):
