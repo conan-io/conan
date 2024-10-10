@@ -28,6 +28,7 @@ jobs:
     steps:
       - name: Check for Xcode compiler version
         run: |
+          brew install tree
           xcodebuild -version
           xcrun --show-sdk-path
           xcrun --find clang++
