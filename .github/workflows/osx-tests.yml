@@ -42,6 +42,9 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
+      - name: Uninstall default CMake
+        run: brew uninstall cmake || true
+
       - name: Run Test - unittests & integration
         shell: bash
         run: |
@@ -53,7 +56,6 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
-          brew uninstall cmake || true
 
       - name: Cache CMake installations
         id: cache-cmake
