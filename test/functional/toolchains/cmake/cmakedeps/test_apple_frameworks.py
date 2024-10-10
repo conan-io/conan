@@ -56,7 +56,9 @@ def test_apple_framework_xcode(client):
     client.save({'conanfile.py': app_conanfile,
                  'CMakeLists.txt': app_cmakelists})
 
-    client.run("build . -c tools.cmake.cmaketoolchain:generator=Xcode")
+    client.run("build . -c tools.cmake.cmaketoolchain:generator=Xcode", assert_error=True)
+    print(client.load("./CMakeFiles/CMakeOutput.log"))
+    print(client.load("./CMakeFiles/CMakeError.log"))
     assert "/System/Library/Frameworks/Foundation.framework;" in client.out
     assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
     assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
@@ -92,7 +94,7 @@ conanfile = textwrap.dedent("""
 cmake = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.19)
             project(MyHello CXX)
-    
+
             # set @rpaths for libraries to link against
             SET(CMAKE_SKIP_RPATH FALSE)
             #SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
