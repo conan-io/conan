@@ -10,12 +10,13 @@ from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.build_order_html import format_build_order_html
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
+from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
-from conans.client.graph.install_graph import InstallGraph
-from conans.errors import NotFoundException
+from conans.client.graph.install_graph import InstallGraph, ProfileArgs
+from conan.internal.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
 
 
@@ -116,7 +117,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out = ConanOutput()
     out.title("Computing the build order")
 
-    install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    install_graph = InstallGraph(deps_graph, order_by=args.order_by,
+                                 profile_args=ProfileArgs.from_args(args))
     if args.reduce:
         if args.order_by is None:
             raise ConanException("--reduce needs --order-by argument defined")
@@ -209,6 +211,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
 
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,

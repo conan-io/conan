@@ -32,7 +32,8 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
-from conans.errors import NotFoundException, ConanException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile

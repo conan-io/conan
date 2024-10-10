@@ -15,7 +15,7 @@ from conan.internal.default_settings import default_settings_yml
 from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import consumer_definer
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition, BUILT_IN_CONFS
 from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference

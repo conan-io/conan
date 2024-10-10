@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_PLATFORM
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
 
@@ -91,6 +91,12 @@ class ConanFileDependencies(UserRequirementsDict):
     def from_node(node):
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
+        for old_req, new_req in node.replaced_requires.items():
+            existing = d.pop(new_req, None)
+            if existing is not None:
+                added_req = new_req.copy_requirement()
+                added_req.ref = RecipeReference.loads(old_req)
+                d[added_req] = existing
         return ConanFileDependencies(d)
 
     def filter(self, require_filter, remove_system=True):
