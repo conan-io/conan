@@ -113,20 +113,7 @@ jobs:
           #export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           #which cmake
           #cmake --version
-          sudo xcode-select --reset
-          sudo xcode-select -p
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          sudo xcode-select --install || true
-          sudo xcodebuild -license accept
-          sudo xcodebuild -runFirstLaunch
-          xcodebuild -version
-          xcrun --show-sdk-path
-          xcrun --find clang
-          xcrun --find clang++
-          xcrun -find cc
-          xcrun -find c++
-          export CC=/usr/bin/cc
-          export CXX=/usr/bin/c++
+          sudo xcode-select --switch /Library/Developer/CommandLineTools
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
