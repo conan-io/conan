@@ -18,12 +18,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        test-type: [unittests, integration, functional]
         python-version: ['3.9']
 
     runs-on: macos-14
 
-    name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
+    name: Conan Tests (${{ matrix.python-version }})
 
     steps:
 
@@ -42,6 +41,16 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
           pip install meson
+
+      - name: Run Test - unittests & integration
+        shell: bash
+        run: |
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          cmake --version
+          pytest test/unittests --durations=20
+          pytest test/integration --durations=20
+
+      # Install dependencies for functional tests
 
       - name: Install homebrew dependencies
         run: |
@@ -76,7 +85,6 @@ jobs:
           done
 
       - name: Install universal CMake versions
-        if: steps.cache-cmake.outputs.cache-hit != 'true'
         run: |
           set -e
 
@@ -105,15 +113,9 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-      - name: Run Test - ${{ matrix.test-type }}
+      - name: Run Test - functional
         shell: bash
         run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/integration -v --durations=20
-          fi
+          pytest test/functional -v --durations=20
