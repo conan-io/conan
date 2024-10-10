@@ -47,7 +47,7 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
-          brew uninstall cmake || true
+          #brew uninstall cmake || true
 
       # - name: Cache CMake installations
       #   id: cache-cmake
