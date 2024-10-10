@@ -24,53 +24,20 @@ class TargetsTemplate2:
 
     @property
     def _context(self):
-        data_pattern = "${CMAKE_CURRENT_LIST_DIR}/" if not self.generating_module else "${CMAKE_CURRENT_LIST_DIR}/module-"
-        data_pattern += "{}-*-data.cmake".format(self.file_name)
-
-        target_pattern = "" if not self.generating_module else "module-"
-        target_pattern += "{}-Target-*.cmake".format(self.file_name)
-
-        cmake_target_aliases = self.conanfile.cpp_info.\
-            get_property("cmake_target_aliases", check_type=list) or dict()
-
-        target = self.root_target_name
-        cmake_target_aliases = {alias: target for alias in cmake_target_aliases}
-
-        cmake_component_target_aliases = dict()
-        for comp_name in self.conanfile.cpp_info.components:
-            if comp_name is not None:
-                aliases = \
-                    self.conanfile.cpp_info.components[comp_name].\
-                    get_property("cmake_target_aliases", check_type=list) or dict()
-
-                target = self.get_component_alias(self.conanfile, comp_name)
-                cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
-
-        ret = {"pkg_name": self.pkg_name,
-               "root_target_name": self.root_target_name,
-               "file_name": self.file_name,
-               "data_pattern": data_pattern,
-               "target_pattern": target_pattern,
-               "cmake_target_aliases": cmake_target_aliases,
-               "cmake_component_target_aliases": cmake_component_target_aliases}
-
+        filename = self._cmakedeps.get_cmake_filename(self._conanfile)
+        ret = {"ref": str(self._conanfile.ref),
+               "filename": filename}
         return ret
 
     @property
     def _template(self):
+        # TODO: What if target exists only in Debug or Release?
         return textwrap.dedent("""\
-        # Load the debug and release variables
-        file(GLOB DATA_FILES "{{data_pattern}}")
+            message(STATUS "Configuring Targets for {{ ref }}")
 
-        foreach(f ${DATA_FILES})
-            include(${f})
-        endforeach()
-
-
-        # Load the debug and release library finders
-        file(GLOB CONFIG_FILES "${CMAKE_CURRENT_LIST_DIR}/{{ target_pattern }}")
-
-        foreach(f ${CONFIG_FILES})
-            include(${f})
-        endforeach()
+            # Load information for each installed configuration.
+            file(GLOB _cmake_config_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-Targets-*.cmake")
+            foreach(_cmake_config_file IN LISTS _cmake_config_files)
+              include("${_cmake_config_file}")
+            endforeach()
         """)

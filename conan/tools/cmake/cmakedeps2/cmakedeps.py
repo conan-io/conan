@@ -1,12 +1,7 @@
-import textwrap
-
-import jinja2
-from jinja2 import Template
-
-from conan.api.output import Color
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
+from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.errors import ConanException
@@ -64,16 +59,11 @@ class CMakeDeps2:
             config_version = ConfigVersionTemplate2(self, dep)
             ret[config_version.filename] = config_version.content()
 
-            targets = TargetsTemplate2(self, require, dep)
+            targets = TargetsTemplate2(self, dep)
             ret[targets.filename] = targets.content()
-
+            target_configuration = TargetConfigurationTemplate2(self, dep)
+            ret[target_configuration.filename] = target_configuration.content()
         return ret
-
-    def _generate_files(self, require, dep, ret):
-        target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
-        ret[target_configuration.filename] = target_configuration.render()
-
-
 
     def set_property(self, dep, prop, value, build_context=False):
         """

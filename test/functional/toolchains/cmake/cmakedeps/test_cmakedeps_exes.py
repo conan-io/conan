@@ -57,7 +57,6 @@ def test_exe():
 
             def generate(self):
                 deps = CMakeDeps(self)
-                deps.build_context_activated = ["mytool"]
                 deps.generate()
                 tc = CMakeToolchain(self)
                 tc.generate()
@@ -80,7 +79,6 @@ def test_exe():
     c.save({"conanfile.py": consumer,
             "CMakeLists.txt": cmake}, clean_first=True)
     c.run("build . -c tools.cmake.cmakedeps:new=True")
-    assert "Conan: Target declared 'mytool::mytool'" in c.out
     assert "Conan: Target declared imported executable 'mytool::myexe'" in c.out
     assert "Mytool generating out.c!!!!!" in c.out
 

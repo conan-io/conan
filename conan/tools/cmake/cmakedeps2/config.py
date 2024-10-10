@@ -46,7 +46,11 @@ class ConfigTemplate2:
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
 
-        check_build_type_defined()
+        get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+        if(NOT isMultiConfig AND NOT CMAKE_BUILD_TYPE)
+           message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
+                               "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
+        endif()
 
         foreach(_DEPENDENCY {{ pkg_var(pkg_name, 'FIND_DEPENDENCY_NAMES', '') }} )
             # Check that we have not already called a find_package with the transitive dependency
