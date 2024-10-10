@@ -57,22 +57,29 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
+      - name: Install homebrew dependencies
+        run: |
+          brew install xcodegen make libtool xz zlib autoconf automake ninja openssl
+
       - name: Install CMake versions
         run: |
           set -e
-          for version in 3.15.7 3.16.9 3.17.5; do
-            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-Darwin-x86_64.tar.gz
-            tar -xzf cmake-${version}-Darwin-x86_64.tar.gz \
-              --exclude=CMake.app/Contents/bin/cmake-gui \
-              --exclude=CMake.app/Contents/doc/cmake \
-              --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
-              --exclude=CMake.app/Contents/share/vim
-            mkdir -p ${HOME}/Applications/CMake/${version}
-            cp -fR cmake-${version}-Darwin-x86_64/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
+
+          CMAKE_BUILD_VERSIONS=("3.15.7" "3.16.9" "3.17.5")
+          for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
+            echo "Compiling CMake version ${version} from source for ARM..."            
+            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}.tar.gz
+            tar -xzf cmake-${version}.tar.gz
+            cd cmake-${version}
+            mkdir build && cd build
+            ../bootstrap --prefix=${HOME}/Applications/CMake/${version} -- -DCMAKE_USE_OPENSSL=ON
+            make -j$(sysctl -n hw.ncpu)
+            make install
             ${HOME}/Applications/CMake/${version}/bin/cmake --version
-            rm -rf cmake-${version}-Darwin-x86_64
-            rm cmake-${version}-Darwin-x86_64.tar.gz
+            cd ../../
+            rm -rf cmake-${version} cmake-${version}.tar.gz
           done
+
           for version in 3.19.7 3.23.1; do
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
             tar -xzf cmake-${version}-macos-universal.tar.gz \
@@ -99,10 +106,6 @@ jobs:
           /Users/runner/Applications/bazel/6.3.2/bazel --version
           /Users/runner/Applications/bazel/7.1.2/bazel --version
 
-      - name: Install homebrew dependencies
-        run: |
-          brew install xcodegen make libtool xz zlib autoconf automake ninja
-
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         run: |
@@ -121,5 +124,5 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional/toolchains/cmake
+            pytest test/functional/toolchains/cmake --durations=20
           fi
