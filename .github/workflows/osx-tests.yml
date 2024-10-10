@@ -45,8 +45,6 @@ jobs:
       - name: Run Test - unittests & integration
         shell: bash
         run: |
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          cmake --version
           pytest test/unittests --durations=20
           pytest test/integration --durations=20
 
