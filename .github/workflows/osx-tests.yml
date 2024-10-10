@@ -110,7 +110,7 @@ jobs:
       - name: Run Test - ${{ matrix.test-type }}
         shell: bash
         run: |
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          export PATH=${HOME}/Applications/CMake/3.19.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           which cmake
           cmake --version
           sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
@@ -123,6 +123,8 @@ jobs:
           xcrun --find clang++
           xcrun -find cc
           xcrun -find c++
+          #export CC=$(xcrun --find clang)
+          #export CXX=$(xcrun --find clang++)          
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
             pytest test/unittests --durations=20
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
