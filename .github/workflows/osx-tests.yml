@@ -131,5 +131,7 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional/toolchains/cmake -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_cmakedeps.py -v --durations=20
+            pytest test/functional/toolchains/cmake/cmakedeps/test_link_order.py -v --durations=20
           fi
