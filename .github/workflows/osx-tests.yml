@@ -121,5 +121,5 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest -v test/functional/toolchains/apple/test_xcodetoolchain.py
+            pytest -v test/functional/toolchains/apple
           fi
