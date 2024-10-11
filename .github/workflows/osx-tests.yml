@@ -35,6 +35,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache pip packages
+        id: cache-pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
+
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -45,6 +52,13 @@ jobs:
 
       - name: Uninstall default CMake
         run: brew uninstall cmake || true
+
+      - name: Cache Homebrew packages
+        id: cache-brew
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-brew
 
       - name: Install homebrew dependencies
         if: matrix.test-type == 'functional'
@@ -62,7 +76,7 @@ jobs:
             ~/Applications/CMake/3.23.5
             ~/Applications/bazel/6.3.2
             ~/Applications/bazel/7.1.2
-          key: conan-tools-cache
+          key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
