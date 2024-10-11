@@ -106,6 +106,7 @@ def _matrix_client_components():
        target_link_libraries(module PRIVATE vector)
 
        set_target_properties(module PROPERTIES PUBLIC_HEADER "src/module.h")
+       set_target_properties(vector PROPERTIES PUBLIC_HEADER "src/vector.h")
        install(TARGETS vector module)
        """)
     c.save({"src/vector.h": vector_h,

@@ -19,7 +19,6 @@ class TargetConfigurationTemplate2:
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        print(t.render(self._context))
         return t.render(self._context)
 
     @property
@@ -33,7 +32,6 @@ class TargetConfigurationTemplate2:
         pkg_name = self._conanfile.ref.name
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         if not requires and not components:  # global cpp_info without components definition
-            # TODO: Not tested at all
             for dependency in transitive_reqs.values():
                 dep_pkg_name = dependency.ref.name
                 dep_cpp_info = dependency.cpp_info
@@ -41,11 +39,11 @@ class TargetConfigurationTemplate2:
                     for name, component in dep_cpp_info.components.items():
                         result.append(f"{dep_pkg_name}::{name}")
                 else:
-                    result.append("{dep_pkg_name}::{dep_pkg_name}")
+                    result.append(f"{dep_pkg_name}::{dep_pkg_name}")
             return result
 
-        for required_scope, required_comp in requires:
-            if required_scope is None:  # Points to a component of same package
+        for required_pkg, required_comp in requires:
+            if required_pkg is None:  # Points to a component of same package
                 dep_component = components[required_comp]
                 dep_target = dep_component.get_property("cmake_target_name") or f"{pkg_name}::{required_comp}"
                 result.append(dep_target)
@@ -53,15 +51,17 @@ class TargetConfigurationTemplate2:
                 try:  # Make sure the declared dependency is at least in the recipe requires
                     self._conanfile.dependencies[required_pkg]
                 except KeyError:
-                    raise ConanException(f"{self.conanfile}: component '{comp_name}' required "
+                    raise ConanException(f"{self._conanfile}: component '{required_comp}' required "
                                          f"'{required_pkg}::{required_comp}', "
                                          f"but '{required_pkg}' is not a direct dependency")
                 try:
-                    req = transitive_requires[required_pkg]
+                    req = transitive_reqs[required_pkg]
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
-                    public_comp_deps.append(self.get_component_alias(req, required_comp))
+                    # TODO: Missing cmake_target_name for req
+                    dep_target = f"{required_pkg}::{required_comp}"
+                    result.append(dep_target)
         return result
 
     @property
@@ -121,11 +121,25 @@ class TargetConfigurationTemplate2:
             if cpp_info.exe:
                 _add_exe(cpp_info)
 
-        return {"package_folder": package_folder,
+        # TODO: Missing find_modes
+        dependencies = self._get_dependencies()
+        return {"dependencies": dependencies,
+                "package_folder": package_folder,
                 "package_folder_var": package_folder_var,
                 "config": config,
                 "exes": exes,
                 "libs": libs}
+
+    def _get_dependencies(self):
+        """ transitive dependencies Filenames for find_dependency()
+        """
+        # TODO: Filter build requires
+        # if self._require.build:
+        #    return []
+
+        transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
+        ret = {self._cmakedeps.get_cmake_filename(r): None for r in transitive_reqs.values()}
+        return ret
 
     @staticmethod
     def _path(p, package_folder, package_folder_var):
@@ -146,8 +160,18 @@ class TargetConfigurationTemplate2:
         return textwrap.dedent("""\
         set({{package_folder_var}} "{{package_folder}}")
 
-        # Libs information
+        # Dependencies finding
+        include(CMakeFindDependencyMacro)
+
+        {% for dep, dep_find_mode in dependencies.items() %}
+        if(NOT {{dep}}_FOUND)
+            find_dependency({{dep}} REQUIRED {{dep_find_mode}})
+        endif()
+        {% endfor %}
+
+        ################# Libs information ##############
         {% for lib, lib_info in libs.items() %}
+        #################### {{lib}} ####################
         message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
         if(NOT TARGET {{ lib }})
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
@@ -171,8 +195,9 @@ class TargetConfigurationTemplate2:
 
         {% endfor %}
 
-        # Exe information
+        ################# Exes information ##############
         {% for exe, location in exes.items() %}
+        #################### {{exe}} ####################
         message(STATUS "Conan: Target declared imported executable '{{exe}}'")
         if(NOT TARGET {{ exe }})
             add_executable({{exe}} IMPORTED)

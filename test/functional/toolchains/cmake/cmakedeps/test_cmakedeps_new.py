@@ -189,6 +189,12 @@ class TestLibs:
         c.run("build . -c tools.cmake.cmakedeps:new=True")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
+    def test_libs_transitive(self, transitive_libraries):
+        c = transitive_libraries
+        c.run("new cmake_lib -d name=app -d version=0.1 -d requires=engine/1.0")
+        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+
     def test_libs_components(self, matrix_client_components):
         """
         explicit usage of components
@@ -240,3 +246,129 @@ class TestLibs:
         c.run("build . -c tools.cmake.cmakedeps:new=True")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+
+    def test_libs_components_transitive(self, matrix_client_components):
+        """
+        explicit usage of components
+        matrix::module -> matrix::vector
+
+        engine::bots -> engine::physix
+        engine::physix -> matrix::vector
+        engine::world -> engine::physix, matrix::module
+        """
+        c = matrix_client_components
+
+        from conan.test.assets.sources import gen_function_h
+        bots_h = gen_function_h(name="bots")
+        from conan.test.assets.sources import gen_function_cpp
+        bots_cpp = gen_function_cpp(name="bots", includes=["bots", "physix"], calls=["physix"])
+        physix_h = gen_function_h(name="physix")
+        physix_cpp = gen_function_cpp(name="physix", includes=["physix", "vector"], calls=["vector"])
+        world_h = gen_function_h(name="world")
+        world_cpp = gen_function_cpp(name="world", includes=["world", "physix", "module"],
+                                     calls=["physix", "module"])
+
+        conanfile = textwrap.dedent("""
+            from os.path import join
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            from conan.tools.files import copy
+
+            class Engine(ConanFile):
+              name = "engine"
+              version = "1.0"
+              settings = "os", "compiler", "build_type", "arch"
+              generators = "CMakeToolchain"
+              exports_sources = "src/*", "CMakeLists.txt"
+
+              requires = "matrix/1.0"
+              generators = "CMakeDeps", "CMakeToolchain"
+
+              def build(self):
+                  cmake = CMake(self)
+                  cmake.configure()
+                  cmake.build()
+
+              def package(self):
+                  cmake = CMake(self)
+                  cmake.install()
+
+              def package_info(self):
+                  self.cpp_info.components["bots"].libs = ["bots"]
+                  self.cpp_info.components["bots"].includedirs = ["include"]
+                  self.cpp_info.components["bots"].libdirs = ["lib"]
+                  self.cpp_info.components["bots"].requires = ["physix"]
+
+                  self.cpp_info.components["physix"].libs = ["physix"]
+                  self.cpp_info.components["physix"].includedirs = ["include"]
+                  self.cpp_info.components["physix"].libdirs = ["lib"]
+                  self.cpp_info.components["physix"].requires = ["matrix::vector"]
+
+                  self.cpp_info.components["world"].libs = ["world"]
+                  self.cpp_info.components["world"].includedirs = ["include"]
+                  self.cpp_info.components["world"].libdirs = ["lib"]
+                  self.cpp_info.components["world"].requires = ["physix", "matrix::module"]
+                  """)
+
+        cmakelists = textwrap.dedent("""
+               set(CMAKE_CXX_COMPILER_WORKS 1)
+               set(CMAKE_CXX_ABI_COMPILED 1)
+               cmake_minimum_required(VERSION 3.15)
+               project(matrix CXX)
+
+               find_package(matrix CONFIG REQUIRED)
+
+               add_library(physix src/physix.cpp)
+               add_library(bots src/bots.cpp)
+               add_library(world src/world.cpp)
+
+               target_link_libraries(physix PRIVATE matrix::vector)
+               target_link_libraries(bots PRIVATE physix)
+               target_link_libraries(world PRIVATE physix matrix::module)
+
+               set_target_properties(bots PROPERTIES PUBLIC_HEADER "src/bots.h")
+               set_target_properties(physix PROPERTIES PUBLIC_HEADER "src/physix.h")
+               set_target_properties(world PROPERTIES PUBLIC_HEADER "src/world.h")
+               install(TARGETS physix bots world)
+               """)
+        c.save({"src/physix.h": physix_h,
+                "src/physix.cpp": physix_cpp,
+                "src/bots.h": bots_h,
+                "src/bots.cpp": bots_cpp,
+                "src/world.h": world_h,
+                "src/world.cpp": world_cpp,
+                "CMakeLists.txt": cmakelists,
+                "conanfile.py": conanfile})
+        c.run("create .")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=engine/1.0")
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(engine CONFIG REQUIRED)
+
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE engine::bots)
+
+            install(TARGETS app)
+            """)
+        app_cpp = textwrap.dedent("""
+            #include "bots.h"
+            int main() { bots();}
+            """)
+        c.save({"CMakelists.txt": cmake,
+                "src/app.cpp": app_cpp})
+        c.run("create . -c tools.cmake.cmakedeps:new=True")
+        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+        assert "Conan: Target declared imported STATIC library 'engine::bots'" in c.out
+        assert "Conan: Target declared imported STATIC library 'engine::physix'" in c.out
+        assert "Conan: Target declared imported STATIC library 'engine::world'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
+
+        assert "bots: Release!" in c.out
+        assert "physix: Release!" in c.out
+        assert "vector: Release!" in c.out
