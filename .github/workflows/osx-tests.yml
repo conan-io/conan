@@ -115,16 +115,14 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest test/unittests --durations=20
-
-      # - name: Run Tests
-      #   run: |
-      #     if [ "${{ matrix.test-type }}" == "unittests" ]; then
-      #       pytest test/unittests --durations=20
-      #     elif [ "${{ matrix.test-type }}" == "integration" ]; then
-      #       pytest test/integration --durations=20
-      #     elif [ "${{ matrix.test-type }}" == "functional" ]; then
-      #       export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-      #       cmake --version
-      #       pytest test/functional -v --durations=20
-      #     fi
+          NUM_CPUS=$(sysctl -n hw.ncpu)
+          echo "Number of CPUs available: $NUM_CPUS"
+          if [ "${{ matrix.test-type }}" == "unittests" ]; then
+            pytest test/unittests --durations=20 -n $NUM_CPUS
+          elif [ "${{ matrix.test-type }}" == "integration" ]; then
+            pytest test/integration --durations=20 -n $NUM_CPUS
+          elif [ "${{ matrix.test-type }}" == "functional" ]; then
+            export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+            cmake --version
+            pytest test/functional -v --durations=20 -n $NUM_CPUS
+          fi
