@@ -113,6 +113,10 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
+      - name: Run Tests
+        run: |
+          pytest test/unittests --durations=20
+
       # - name: Run Tests
       #   run: |
       #     if [ "${{ matrix.test-type }}" == "unittests" ]; then
