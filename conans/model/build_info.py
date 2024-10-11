@@ -522,6 +522,7 @@ class CppInfo:
 
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
+        self.default_components = None
         self._package = _Component(set_defaults)
 
     def __getattr__(self, attr):
@@ -529,7 +530,7 @@ class CppInfo:
         return getattr(self._package, attr)
 
     def __setattr__(self, attr, value):
-        if attr in ("components", "_package", "_aggregated"):
+        if attr in ("components", "default_components", "_package", "_aggregated"):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self._package, attr, value)

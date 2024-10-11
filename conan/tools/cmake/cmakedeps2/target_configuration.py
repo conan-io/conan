@@ -74,8 +74,8 @@ class TargetConfigurationTemplate2:
 
         libs = {}
 
-        def _add_libs(info):
-            if info.libs:
+        def _add_libs(info, component_name=None):
+            if info.libs:  # TODO: Handle component_name for libs
                 assert len(info.libs) == 1, "New CMakeDeps only allows 1 lib per component"
                 lib_name = info.libs[0]
                 target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{lib_name}"
@@ -93,16 +93,31 @@ class TargetConfigurationTemplate2:
                                          "location": location,
                                          "link_location": "",
                                          "requires": requires}
+            elif info.includedirs and not info.exe:  # Pure header only
+                cmp_name = component_name or pkg_name
+                target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{cmp_name}"
+                includedirs = ";".join(self._path(i, package_folder, package_folder_var)
+                                       for i in info.includedirs)
+                libs[target_name] = {"type": "INTERFACE",
+                                     "includedirs": includedirs}
 
         if cpp_info.has_components:
             for name, component in cpp_info.components.items():
-                _add_libs(component)
+                _add_libs(component, name)
         else:
             _add_libs(cpp_info)
 
         if libs and f"{pkg_name}::{pkg_name}" not in libs:
             # Add a generic interface target for the package depending on the others
-            all_requires = " ".join(libs.keys())
+            if cpp_info.default_components is not None:
+                all_requires = []
+                for default_comp in cpp_info.default_components:
+                    comp = cpp_info.components[default_comp]
+                    comp_name = comp.get_property("cmake_target_name") or f"{pkg_name}::{default_comp}"
+                    all_requires.append(comp_name)
+                all_requires = " ".join(all_requires)
+            else:
+                all_requires = " ".join(libs.keys())
             libs[f"{pkg_name}::{pkg_name}"] = {"type": "INTERFACE",
                                                "requires": all_requires}
 

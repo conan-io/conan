@@ -58,41 +58,49 @@ def _matrix_client_components():
     2 components, different than the package name
     """
     c = TestClient()
+    headers_h = textwrap.dedent("""
+        #include <iostream>
+        void headers(){ std::cout << "Matrix headers: Release!" << std::endl; }
+        """)
     vector_h = gen_function_h(name="vector")
     vector_cpp = gen_function_cpp(name="vector", includes=["vector"])
     module_h = gen_function_h(name="module")
     module_cpp = gen_function_cpp(name="module", includes=["module", "vector"], calls=["vector"])
 
     conanfile = textwrap.dedent("""
-      from os.path import join
-      from conan import ConanFile
-      from conan.tools.cmake import CMake
-      from conan.tools.files import copy
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
 
-      class Matrix(ConanFile):
-          name = "matrix"
-          version = "1.0"
-          settings = "os", "compiler", "build_type", "arch"
-          generators = "CMakeToolchain"
-          exports_sources = "src/*", "CMakeLists.txt"
+        class Matrix(ConanFile):
+            name = "matrix"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+            exports_sources = "src/*", "CMakeLists.txt"
 
-          def build(self):
-              cmake = CMake(self)
-              cmake.configure()
-              cmake.build()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
 
-          def package(self):
-              cmake = CMake(self)
-              cmake.install()
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
 
-          def package_info(self):
-              self.cpp_info.components["vector"].libs = ["vector"]
-              self.cpp_info.components["vector"].includedirs = ["include"]
-              self.cpp_info.components["vector"].libdirs = ["lib"]
-              self.cpp_info.components["module"].libs = ["module"]
-              self.cpp_info.components["module"].includedirs = ["include"]
-              self.cpp_info.components["module"].libdirs = ["lib"]
-              self.cpp_info.components["module"].requires = ["vector"]
+            def package_info(self):
+                self.cpp_info.default_components = ["vector", "module"]
+
+                self.cpp_info.components["headers"].includedirs = ["include/headers"]
+                self.cpp_info.components["headers"].set_property("cmake_target_name", "MatrixHeaders")
+
+                self.cpp_info.components["vector"].libs = ["vector"]
+                self.cpp_info.components["vector"].includedirs = ["include"]
+                self.cpp_info.components["vector"].libdirs = ["lib"]
+
+                self.cpp_info.components["module"].libs = ["module"]
+                self.cpp_info.components["module"].includedirs = ["include"]
+                self.cpp_info.components["module"].libdirs = ["lib"]
+                self.cpp_info.components["module"].requires = ["vector"]
           """)
 
     cmakelists = textwrap.dedent("""
@@ -103,13 +111,17 @@ def _matrix_client_components():
 
        add_library(vector src/vector.cpp)
        add_library(module src/module.cpp)
+       add_library(headers INTERFACE src/headers.h)
        target_link_libraries(module PRIVATE vector)
 
+       set_target_properties(headers PROPERTIES PUBLIC_HEADER "src/headers.h")
        set_target_properties(module PROPERTIES PUBLIC_HEADER "src/module.h")
        set_target_properties(vector PROPERTIES PUBLIC_HEADER "src/vector.h")
        install(TARGETS vector module)
+       install(TARGETS headers PUBLIC_HEADER DESTINATION include/headers)
        """)
-    c.save({"src/vector.h": vector_h,
+    c.save({"src/headers.h": headers_h,
+            "src/vector.h": vector_h,
             "src/vector.cpp": vector_cpp,
             "src/module.h": module_h,
             "src/module.cpp": module_cpp,

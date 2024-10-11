@@ -209,11 +209,13 @@ class TestLibs:
 
             find_package(matrix CONFIG REQUIRED)
             add_executable(app src/app.cpp)
-            target_link_libraries(app PRIVATE matrix::module)
+            # standard one, and a custom cmake_target_name one
+            target_link_libraries(app PRIVATE matrix::module MatrixHeaders)
             """)
         app_cpp = textwrap.dedent("""
             #include "module.h"
-            int main() { module();}
+            #include "headers.h"
+            int main() { module(); headers();}
             """)
         c.save({"CMakelists.txt": cmake,
                 "src/app.cpp": app_cpp})
@@ -246,6 +248,46 @@ class TestLibs:
         c.run("build . -c tools.cmake.cmakedeps:new=True")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'MatrixHeaders'" in c.out
+
+    def test_libs_components_default_error(self, matrix_client_components):
+        """
+        Same as above, but it fails, because headers is not in the default components
+        """
+        c = matrix_client_components
+
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+
+        app_cpp = textwrap.dedent("""
+            #include "module.h"
+            #include "headers.h"
+            int main() { module();}
+            """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+            """)
+        c.save({"src/app.cpp": app_cpp,
+                "CMakeLists.txt": cmake})
+        c.run("build . -c tools.cmake.cmakedeps:new=True", assert_error=True)
+        assert "Error in build() method, line 35" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix MatrixHeaders)
+            """)
+        c.save({"CMakeLists.txt": cmake})
+        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        assert "Running CMake.build()" in c.out  # Now it doesn't fail
 
     def test_libs_components_transitive(self, matrix_client_components):
         """
