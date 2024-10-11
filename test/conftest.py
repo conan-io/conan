@@ -179,6 +179,7 @@ tools_locations = {
         "default": "system",
         "system": {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
+            # 'Windows': os.getenv("ANDROID_NDK_HOME"),
         }
     },
     "qbs": {"disabled": True},
