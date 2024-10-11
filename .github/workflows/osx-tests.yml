@@ -21,7 +21,7 @@ jobs:
         python-version: ['3.9']
         test-type: [unittests, integration, functional]
 
-    runs-on: macos-13
+    runs-on: macos-14
 
     name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
 
