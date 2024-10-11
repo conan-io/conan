@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -222,6 +223,9 @@ class TestLibs:
         c.run("build . -c tools.cmake.cmakedeps:new=True")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        if platform.system() == "Windows":
+            c.run_command(r".\build\Release\app.exe")
+            assert "Matrix headers __cplusplus: __cplusplus2014" in c.out
 
     def test_libs_components_default(self, matrix_client_components):
         """

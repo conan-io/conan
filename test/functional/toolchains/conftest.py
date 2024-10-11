@@ -60,7 +60,14 @@ def _matrix_client_components():
     c = TestClient()
     headers_h = textwrap.dedent("""
         #include <iostream>
-        void headers(){ std::cout << "Matrix headers: Release!" << std::endl; }
+        #ifndef MY_MATRIX_HEADERS_DEFINE
+        #error "Fatal error MY_MATRIX_HEADERS_DEFINE not defined"
+        #endif
+        void headers(){ std::cout << "Matrix headers: Release!" << std::endl;
+            #if __cplusplus
+            std::cout << "  Matrix headers __cplusplus: __cplusplus" << __cplusplus << std::endl;
+            #endif
+        }
         """)
     vector_h = gen_function_h(name="vector")
     vector_cpp = gen_function_cpp(name="vector", includes=["vector"])
@@ -92,6 +99,9 @@ def _matrix_client_components():
 
                 self.cpp_info.components["headers"].includedirs = ["include/headers"]
                 self.cpp_info.components["headers"].set_property("cmake_target_name", "MatrixHeaders")
+                self.cpp_info.components["headers"].defines = ["MY_MATRIX_HEADERS_DEFINE=1"]
+                if self.settings.compiler == "msvc":
+                    self.cpp_info.components["headers"].cxxflags = ["/Zc:__cplusplus"]
 
                 self.cpp_info.components["vector"].libs = ["vector"]
                 self.cpp_info.components["vector"].includedirs = ["include"]

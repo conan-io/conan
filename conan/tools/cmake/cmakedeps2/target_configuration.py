@@ -75,8 +75,15 @@ class TargetConfigurationTemplate2:
         libs = {}
 
         def _add_libs(info, component_name=None):
+            defines = " ".join(info.defines)
+            includedirs = ";".join(self._path(i, package_folder, package_folder_var)
+                                   for i in info.includedirs) if info.includedirs else ""
+            requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
+            cxxflags = " ".join(info.cxxflags)
             if info.libs:  # TODO: Handle component_name for libs
-                assert len(info.libs) == 1, "New CMakeDeps only allows 1 lib per component"
+                if len(info.libs) != 1:
+                    raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
+                                         f"{self._conanfile}: {info.libs}")
                 lib_name = info.libs[0]
                 target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{lib_name}"
                 info.deduce_cps(self._conanfile.package_type)
@@ -84,22 +91,23 @@ class TargetConfigurationTemplate2:
                 lib_type = "SHARED" if info.type is PackageType.SHARED else \
                     "STATIC" if info.type is PackageType.STATIC else \
                     "INTERFACE" if info.type is PackageType.HEADER else None
-                includedirs = ";".join(self._path(i, package_folder, package_folder_var)
-                                       for i in info.includedirs) if info.includedirs else ""
-                requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
+
                 if lib_type:
                     libs[target_name] = {"type": lib_type,
                                          "includedirs": includedirs,
                                          "location": location,
                                          "link_location": "",
-                                         "requires": requires}
+                                         "requires": requires,
+                                         "defines": defines,
+                                         "cxxflags": cxxflags}
             elif info.includedirs and not info.exe:  # Pure header only
                 cmp_name = component_name or pkg_name
                 target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{cmp_name}"
-                includedirs = ";".join(self._path(i, package_folder, package_folder_var)
-                                       for i in info.includedirs)
                 libs[target_name] = {"type": "INTERFACE",
-                                     "includedirs": includedirs}
+                                     "includedirs": includedirs,
+                                     "defines": defines,
+                                     "requires": requires,
+                                     "cxxflags": cxxflags}
 
         if cpp_info.has_components:
             for name, component in cpp_info.components.items():
@@ -169,6 +177,11 @@ class TargetConfigurationTemplate2:
             return escape(p)
         return f"${{{package_folder_var}}}/{escape(p)}"
 
+    @staticmethod
+    def _escape_cmake_string(values):
+        return " ".join(v.replace("\\", "\\\\").replace('$', '\\$').replace('"', '\\"')
+                        for v in values)
+
     @property
     def _template(self):
         # TODO: Check why not set_property instead of target_link_libraries
@@ -195,6 +208,15 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{config}}>:{{lib_info["includedirs"]}}>)
         {% endif %}
+        {% if lib_info.get("defines") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                     $<$<CONFIG:{{config}}>:{{lib_info["defines"]}}>)
+        {% endif %}
+        {% if lib_info.get("cxxflags") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+                     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:{{config}}>:{{lib_info["cxxflags"]}}>>)
+        {% endif %}
+
         {% if lib_info["type"] != "INTERFACE" %}
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
