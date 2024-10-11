@@ -51,19 +51,23 @@ jobs:
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
 
-      - name: Cache CMake installations
+      - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
-        id: cache-cmake
+        id: cache-tools
         uses: actions/cache@v4
         with:
-          path: ~/Applications/CMake/3.15.7
-          key: conan-cmake-3.15
+          path: |
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/bazel/6.3.2
+            ~/Applications/bazel/7.1.2
+          key: conan-tools-cache
 
-      - name: Build CMake old versions not available for arm
-        if: matrix.test-type == 'functional' && steps.cache-cmake.outputs.cache-hit != 'true'
+      - name: Build CMake old versions not available for ARM
+        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-
           CMAKE_BUILD_VERSIONS=("3.15.7")
           for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
             echo "Compiling CMake version ${version} from source for ARM..."
@@ -80,10 +84,9 @@ jobs:
           done
 
       - name: Install universal CMake versions
-        if: matrix.test-type == 'functional'
+        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-
           CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
@@ -101,7 +104,7 @@ jobs:
           done
 
       - name: Install Bazel versions
-        if: matrix.test-type == 'functional'
+        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 6.3.2 7.1.2; do
