@@ -1,0 +1,13 @@
+name: Publish release tags to WinGet
+on:
+  release:
+    types: [released]
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: JFrog.Conan
+          installers-regex: 'conan-.+?-installer\.exe$' # Only the .exe installers
+          token: ${{ secrets.WINGET_TOKEN }}
