@@ -124,5 +124,5 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
             export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
             cmake --version
-            pytest test/functional -v --durations=20 -n $NUM_CPUS
+            pytest test/functional --durations=20 -n $NUM_CPUS
           fi
