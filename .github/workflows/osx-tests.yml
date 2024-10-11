@@ -53,6 +53,7 @@ jobs:
 
       - name: Cache CMake installations
         if: matrix.test-type == 'functional'
+        id: cache-cmake
         uses: actions/cache@v4
         with:
           path: ${HOME}/Applications/CMake/3.15.7
