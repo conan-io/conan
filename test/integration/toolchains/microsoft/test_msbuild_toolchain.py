@@ -6,7 +6,6 @@ import pytest
 from conan.test.utils.tools import TestClient
 
 
-
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("visual_studio")
 @pytest.mark.parametrize(
