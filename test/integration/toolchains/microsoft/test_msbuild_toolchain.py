@@ -8,11 +8,13 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("visual_studio")
+@pytest.mark.tool("clang", "16")
 @pytest.mark.parametrize(
     "compiler, version",
     [
         ("msvc", "190"),
         ("msvc", "191"),
+        ("clang", "16")
     ],
 )
 @pytest.mark.parametrize("runtime", ["dynamic", "static"])
@@ -45,10 +47,13 @@ def test_toolchain_win(compiler, version, runtime, runtime_type):
     props = client.load("conantoolchain_release_x64.props")
     assert "<IncludeExternals>true</IncludeExternals>" in props
     assert "<LanguageStandard>stdcpp14</LanguageStandard>" in props
-    if version == "190":
-        assert "<PlatformToolset>v140</PlatformToolset>" in props
-    else:
-        assert "<PlatformToolset>v141</PlatformToolset>" in props
+    if compiler == "msvc":
+        if version == "190":
+            assert "<PlatformToolset>v140</PlatformToolset>" in props
+        elif version == "191":
+            assert "<PlatformToolset>v141</PlatformToolset>" in props
+    elif compiler == "clang":
+        assert "<PlatformToolset>ClangCl</PlatformToolset>" in props
     if runtime == "dynamic":
         if runtime_type == "Release":
             assert "<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>" in props
