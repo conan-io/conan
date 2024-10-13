@@ -9,7 +9,7 @@ from conan.api.output import ConanOutput
 from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile

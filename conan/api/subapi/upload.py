@@ -8,7 +8,8 @@ from conan.internal.api.uploader import PackagePreparator, UploadExecutor, Uploa
     gather_metadata
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
-from conans.errors import ConanException, AuthenticationException, ForbiddenException
+from conan.internal.errors import AuthenticationException, ForbiddenException
+from conan.errors import ConanException
 
 
 class UploadAPI:

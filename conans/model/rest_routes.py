@@ -2,7 +2,6 @@ class RestRoutes(object):
     ping = "ping"
     common_search = "conans/search"
     common_authenticate = "users/authenticate"
-    oauth_authenticate = "users/token"
     common_check_credentials = "users/check_credentials"
 
     def __init__(self):

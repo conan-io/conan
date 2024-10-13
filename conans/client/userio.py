@@ -2,7 +2,7 @@ import getpass
 import os
 import sys
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def is_terminal(stream):

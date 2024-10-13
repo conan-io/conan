@@ -169,6 +169,7 @@ def test_bazeldeps_and_tool_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":mymath_precompiled",
         ],
     )
@@ -271,6 +272,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             "@second//:second",
             "@other//:other",
         ],
@@ -288,6 +290,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             "@first//:myfirstlib-cmp1",
         ],
     )
@@ -302,6 +305,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":second-mycomponent",
         ],
     )
@@ -317,6 +321,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":second-mycomponent",
             ":second-myfirstcomp",
             "@first//:myfirstlib",
@@ -343,6 +348,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":libcmp1_precompiled",
         ],
     )
@@ -358,6 +364,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":myfirstlib-cmp1",
         ],
     )""") in content
@@ -443,6 +450,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             "@other//:component1",
         ],
     )""") in content
@@ -473,6 +481,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":other_cmp1_precompiled",
         ],
     )
@@ -487,6 +496,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":other_cmp2_precompiled",
         ],
     )
@@ -501,6 +511,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":component1",
         ],
     )
@@ -516,6 +527,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":component1",
             ":fancy_name-cmp2",
             ":component3",
@@ -578,6 +590,7 @@ def test_pkgconfigdeps_with_test_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":lib{0}_precompiled",
         ],
     )""")
@@ -653,6 +666,7 @@ def test_with_editable_layout():
             ],
             visibility = ["//visibility:public"],
             deps = [
+                # do not sort
                 ":mylib_precompiled",
             ],
         )""") in content
@@ -745,6 +759,7 @@ def test_tool_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":component1",
         ],
     )
@@ -760,6 +775,7 @@ def test_tool_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
+            # do not sort
             ":component1",
             ":libother-cmp2",
             ":component3",
