@@ -66,7 +66,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        cpp_info = self._conanfile.cpp_info
+        cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
         pkg_name = self._conanfile.ref.name
         config = self._cmakedeps.configuration.upper()
         package_folder = self._conanfile.package_folder.replace("\\", "/")
@@ -86,7 +86,6 @@ class TargetConfigurationTemplate2:
                                          f"{self._conanfile}: {info.libs}")
                 lib_name = info.libs[0]
                 target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{lib_name}"
-                info.deduce_cps(self._conanfile.package_type)
                 location = self._path(info.location, package_folder, package_folder_var)
                 lib_type = "SHARED" if info.type is PackageType.SHARED else \
                     "STATIC" if info.type is PackageType.STATIC else \

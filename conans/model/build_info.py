@@ -79,8 +79,7 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
-        self.exe = None  # application executable, only 1 allowed, following CPS
-        self.location = None
+        self._exe = None  # application executable, only 1 allowed, following CPS
 
         self._sysroot = None
         self._requires = None
@@ -121,7 +120,7 @@ class _Component:
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
-            "exe": self.exe,  # single exe, incompatible with libs
+            "exe": self._exe,  # single exe, incompatible with libs
             "type": self._type,
             "location": self._location,
             "link_location": self._link_location
@@ -260,6 +259,14 @@ class _Component:
     @libs.setter
     def libs(self, value):
         self._libs = value
+
+    @property
+    def exe(self):
+        return self._exe
+
+    @exe.setter
+    def exe(self, value):
+        self._exe = value
 
     @property
     def type(self):
@@ -457,6 +464,8 @@ class _Component:
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
     def deduce_cps(self, pkg_type):
+        if self._exe:   # exe is a new field, it should have the correct location
+            return
         if self._location or self._link_location:
             if self._type is None or self._type is PackageType.HEADER:
                 raise ConanException("Incorrect cpp_info defining location without type or header")
@@ -464,12 +473,15 @@ class _Component:
         if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
             return
 
-        # Recipe didn't specify things, need to auto deduce
-        libdirs = [x.replace("\\", "/") for x in self.libdirs]
-        bindirs = [x.replace("\\", "/") for x in self.bindirs]
+        if len(self.libs) == 0:
+            return
 
         if len(self.libs) != 1:
             raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+
+        # Recipe didn't specify things, need to auto deduce
+        libdirs = [x.replace("\\", "/") for x in self.libdirs]
+        bindirs = [x.replace("\\", "/") for x in self.bindirs]
 
         # TODO: Do a better handling of pre-defined type
         libname = self.libs[0]
@@ -682,3 +694,25 @@ class CppInfo:
         # Then split the names
         ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
+
+    def deduce_full_cpp_info(self, conanfile):
+        pkg_type = conanfile.package_type
+
+        result = CppInfo().deserialize(self.serialize())  # a deep copy, via serialization
+        result.default_components = self.default_components
+        if self.libs and len(self.libs) > 1:  # expand in multiple components
+            ConanOutput().warning(f"{conanfile }The 'cpp_info.libs' contain more than 1 "
+                                  "library, this is deprecated for new CMakeDeps usage."
+                                  "Define 'cpp_info.components' instead.")
+            assert not self.components, "cpp_inf shouldn't have .libs and components"
+            for lib in self.libs:
+                c = _Component.deserialize(self._package.serialize())
+                c.libs = [lib]
+                result.components[lib] = c
+            result.libs = []
+
+        result._package.deduce_cps(pkg_type)
+        for comp in result.components.values():
+            comp.deduce_cps(pkg_type)
+
+        return result
