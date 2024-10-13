@@ -21,7 +21,7 @@ class ConfigTemplate2:
     @property
     def filename(self):
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        return f"{f}-config.cmake" if f == f.lower() else f"{f}Configcmake"
+        return f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
 
     @property
     def _context(self):

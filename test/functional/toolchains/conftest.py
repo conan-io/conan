@@ -121,7 +121,7 @@ def _matrix_client_components():
 
        add_library(vector src/vector.cpp)
        add_library(module src/module.cpp)
-       add_library(headers INTERFACE src/headers.h)
+       add_library(headers INTERFACE)
        target_link_libraries(module PRIVATE vector)
 
        set_target_properties(headers PROPERTIES PUBLIC_HEADER "src/headers.h")

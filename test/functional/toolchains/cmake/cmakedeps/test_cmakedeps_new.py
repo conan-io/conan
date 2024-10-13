@@ -182,7 +182,7 @@ class TestExes:
         assert "Mytool2 generating out2.c!!!!!" in c.out
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.15")
 class TestLibs:
     def test_libs(self, matrix_client):
         c = matrix_client
