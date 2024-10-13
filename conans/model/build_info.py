@@ -133,6 +133,13 @@ class _Component:
             setattr(result, f"_{field}", value)
         return result
 
+    def clone(self):
+        result = _Component()
+        for k, v in vars(self).items():
+            if k.startswith("_"):
+                setattr(result, k, copy.copy(v))
+        return result
+
     @property
     def includedirs(self):
         if self._includedirs is None:
@@ -549,12 +556,15 @@ class CppInfo:
 
     def serialize(self):
         ret = {"root": self._package.serialize()}
+        if self.default_components:
+            ret["default_components"] = self.default_components
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
 
     def deserialize(self, content):
         self._package = _Component.deserialize(content.pop("root"))
+        self.default_components = content.get("default_components")
         for component_name, info in content.items():
             self.components[component_name] = _Component.deserialize(info)
         return self
@@ -698,15 +708,16 @@ class CppInfo:
     def deduce_full_cpp_info(self, conanfile):
         pkg_type = conanfile.package_type
 
-        result = CppInfo().deserialize(self.serialize())  # a deep copy, via serialization
+        result = CppInfo()  # clone it
+        result._package = self._package.clone()
         result.default_components = self.default_components
+        result.components = {k: v.clone() for k, v in self.components.items()}
         if self.libs and len(self.libs) > 1:  # expand in multiple components
-            ConanOutput().warning(f"{conanfile }The 'cpp_info.libs' contain more than 1 "
-                                  "library, this is deprecated for new CMakeDeps usage."
+            ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
-            assert not self.components, "cpp_inf shouldn't have .libs and components"
+            assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
             for lib in self.libs:
-                c = _Component.deserialize(self._package.serialize())
+                c = self._package.clone()
                 c.libs = [lib]
                 result.components[lib] = c
             result.libs = []

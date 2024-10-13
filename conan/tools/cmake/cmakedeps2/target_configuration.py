@@ -34,12 +34,7 @@ class TargetConfigurationTemplate2:
         if not requires and not components:  # global cpp_info without components definition
             for dependency in transitive_reqs.values():
                 dep_pkg_name = dependency.ref.name
-                dep_cpp_info = dependency.cpp_info
-                if dep_cpp_info.has_components:
-                    for name, component in dep_cpp_info.components.items():
-                        result.append(f"{dep_pkg_name}::{name}")
-                else:
-                    result.append(f"{dep_pkg_name}::{dep_pkg_name}")
+                result.append(f"{dep_pkg_name}::{dep_pkg_name}")
             return result
 
         for required_pkg, required_comp in requires:
@@ -80,6 +75,7 @@ class TargetConfigurationTemplate2:
                                    for i in info.includedirs) if info.includedirs else ""
             requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
             cxxflags = " ".join(info.cxxflags)
+            # TODO: Other cflags, linkflags
             if info.libs:  # TODO: Handle component_name for libs
                 if len(info.libs) != 1:
                     raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"

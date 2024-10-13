@@ -315,7 +315,6 @@ class TestLibs:
                                      calls=["physix", "module"])
 
         conanfile = textwrap.dedent("""
-            from os.path import join
             from conan import ConanFile
             from conan.tools.cmake import CMake
             from conan.tools.files import copy
@@ -417,4 +416,93 @@ class TestLibs:
 
         assert "bots: Release!" in c.out
         assert "physix: Release!" in c.out
+        assert "vector: Release!" in c.out
+
+    def test_libs_components_multilib(self):
+        """
+        cpp_info.libs = ["lib1", "lib2"]
+        """
+        c = TestClient()
+
+        from conan.test.assets.sources import gen_function_h
+        vector_h = gen_function_h(name="vector")
+        from conan.test.assets.sources import gen_function_cpp
+        vector_cpp = gen_function_cpp(name="vector", includes=["vector"])
+        module_h = gen_function_h(name="module")
+        module_cpp = gen_function_cpp(name="module", includes=["module"])
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+
+            class Matrix(ConanFile):
+                name = "matrix"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "CMakeToolchain"
+                exports_sources = "src/*", "CMakeLists.txt"
+
+                generators = "CMakeDeps", "CMakeToolchain"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+
+                def package_info(self):
+                    self.cpp_info.libs = ["module", "vector"]
+                  """)
+
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            cmake_minimum_required(VERSION 3.15)
+            project(matrix CXX)
+
+            add_library(module src/module.cpp)
+            add_library(vector src/vector.cpp)
+
+            set_target_properties(vector PROPERTIES PUBLIC_HEADER "src/vector.h")
+            set_target_properties(module PROPERTIES PUBLIC_HEADER "src/module.h")
+            install(TARGETS module vector)
+            """)
+        c.save({"src/module.h": module_h,
+                "src/module.cpp": module_cpp,
+                "src/vector.h": vector_h,
+                "src/vector.cpp": vector_cpp,
+                "CMakeLists.txt": cmakelists,
+                "conanfile.py": conanfile})
+        c.run("create .")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+
+            find_package(matrix CONFIG REQUIRED)
+
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+
+            install(TARGETS app)
+            """)
+        app_cpp = textwrap.dedent("""
+            #include "vector.h"
+            #include "module.h"
+            int main() { vector();module();}
+            """)
+        c.save({"CMakelists.txt": cmake,
+                "src/app.cpp": app_cpp})
+        c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+
+        assert "vector: Release!" in c.out
+        assert "module: Release!" in c.out
         assert "vector: Release!" in c.out
