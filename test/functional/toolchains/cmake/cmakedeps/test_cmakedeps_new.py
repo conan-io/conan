@@ -182,7 +182,7 @@ class TestExes:
         assert "Mytool2 generating out2.c!!!!!" in c.out
 
 
-@pytest.mark.tool("cmake", "3.15")
+@pytest.mark.tool("cmake")
 class TestLibs:
     def test_libs(self, matrix_client):
         c = matrix_client
@@ -218,7 +218,7 @@ class TestLibs:
             #include "headers.h"
             int main() { module(); headers();}
             """)
-        c.save({"CMakelists.txt": cmake,
+        c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
@@ -403,7 +403,7 @@ class TestLibs:
             #include "bots.h"
             int main() { bots();}
             """)
-        c.save({"CMakelists.txt": cmake,
+        c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
@@ -496,7 +496,7 @@ class TestLibs:
             #include "module.h"
             int main() { vector();module();}
             """)
-        c.save({"CMakelists.txt": cmake,
+        c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
