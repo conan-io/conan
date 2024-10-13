@@ -81,7 +81,7 @@ class TestExes:
             """)
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmake}, clean_first=True)
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
         assert "Mytool generating out.c!!!!!" in c.out
 
@@ -175,7 +175,7 @@ class TestExes:
             """)
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmake}, clean_first=True)
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported executable 'MyTool::my1exe'" in c.out
         assert "Mytool1 generating out1.c!!!!!" in c.out
         assert "Conan: Target declared imported executable 'MyTool::my2exe'" in c.out
@@ -187,13 +187,13 @@ class TestLibs:
     def test_libs(self, matrix_client):
         c = matrix_client
         c.run("new cmake_lib -d name=app -d version=0.1 -d requires=matrix/1.0")
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
     def test_libs_transitive(self, transitive_libraries):
         c = transitive_libraries
         c.run("new cmake_lib -d name=app -d version=0.1 -d requires=engine/1.0")
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
     def test_libs_components(self, matrix_client_components):
@@ -220,7 +220,7 @@ class TestLibs:
             """)
         c.save({"CMakelists.txt": cmake,
                 "src/app.cpp": app_cpp})
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         if platform.system() == "Windows":
@@ -249,7 +249,7 @@ class TestLibs:
             """)
         c.save({"src/app.cpp": app_cpp,
                 "CMakeLists.txt": cmake})
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'MatrixHeaders'" in c.out
@@ -277,7 +277,7 @@ class TestLibs:
             """)
         c.save({"src/app.cpp": app_cpp,
                 "CMakeLists.txt": cmake})
-        c.run("build . -c tools.cmake.cmakedeps:new=True", assert_error=True)
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next", assert_error=True)
         assert "Error in build() method, line 35" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
@@ -290,7 +290,7 @@ class TestLibs:
             target_link_libraries(app PRIVATE matrix::matrix MatrixHeaders)
             """)
         c.save({"CMakeLists.txt": cmake})
-        c.run("build . -c tools.cmake.cmakedeps:new=True")
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Running CMake.build()" in c.out  # Now it doesn't fail
 
     def test_libs_components_transitive(self, matrix_client_components):
@@ -406,7 +406,7 @@ class TestLibs:
             """)
         c.save({"CMakelists.txt": cmake,
                 "src/app.cpp": app_cpp})
-        c.run("create . -c tools.cmake.cmakedeps:new=True")
+        c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
