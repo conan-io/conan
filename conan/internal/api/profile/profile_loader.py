@@ -43,11 +43,6 @@ def profile_plugin(profile):
 
 
 def _check_correct_cppstd(settings):
-    from conan.tools.scm import Version
-    def _error(compiler, cppstd, supported_cppstd_versions, version):
-        from conan.errors import ConanException
-        raise ConanException(f"The provided compiler.cppstd={cppstd} is not supported by {compiler} {version}. "
-                             f"Supported values are: {supported_cppstd_versions}")
     cppstd = settings.get("compiler.cppstd")
     version = settings.get("compiler.version")
 
@@ -58,15 +53,12 @@ def _check_correct_cppstd(settings):
         # supported is None when we don't have information about the compiler
         # but an empty list when no flags are supported for this version
         if supported is not None and cppstd not in supported:
-            _error(compiler, cppstd, supported, version)
+            from conan.errors import ConanException
+            raise ConanException(f"The provided compiler.cppstd={cppstd} is not supported by {compiler} {version}. "
+                                 f"Supported values are: {supported}")
 
 
 def _check_correct_cstd(settings):
-    from conan.tools.scm import Version
-    def _error(compiler, cstd, supported_cstd_versions, version):
-        from conan.errors import ConanException
-        raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}. "
-                             f"Supported values are: {supported_cstd_versions}")
     cstd = settings.get("compiler.cstd")
     version = settings.get("compiler.version")
 
@@ -77,7 +69,9 @@ def _check_correct_cstd(settings):
         # supported is None when we don't have information about the compiler
         # but an empty list when no flags are supported for this version
         if supported is not None and cstd not in supported:
-            _error(compiler, cstd, supported, version)
+            from conan.errors import ConanException
+            raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}. "
+                                 f"Supported values are: {supported}")
 """
 
 
