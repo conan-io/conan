@@ -67,7 +67,7 @@ def _check_correct_cstd(settings):
         from conan.errors import ConanException
         raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}. "
                              f"Supported values are: {supported_cstd_versions}")
-    cppstd = settings.get("compiler.cstd")
+    cstd = settings.get("compiler.cstd")
     version = settings.get("compiler.version")
 
     if cstd and version:
