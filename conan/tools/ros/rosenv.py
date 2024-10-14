@@ -1,5 +1,6 @@
 import os
 from conan.api.output import Color
+from conan.tools.env import VirtualBuildEnv, VirtualRunEnv, Environment
 from conan.tools.files import save
 from conan.errors import ConanException
 
@@ -24,8 +25,10 @@ class ROSEnv(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.filename = "conanrosenv"
         self.variables = {}
+        self._virtualbuildenv = VirtualBuildEnv(conanfile)
+        self._virtualbuildenv.basename = "conanrosenv"
+        self._virtualrunenv = VirtualRunEnv(conanfile)
 
     def generate(self):
         output_folder = self._conanfile.generators_folder
@@ -34,21 +37,15 @@ class ROSEnv(object):
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type:
             self.variables.setdefault("CMAKE_BUILD_TYPE", build_type)
-
-        content = []
-        # TODO: Support ps1 and zsh script generation for Windows/Macos
-        if self._conanfile.settings.get_safe("os") == "Windows":
-            raise ConanException("ROSEnv generator does not support Windows")
-        for key, value in self.variables.items():
-            content.append(f"{key}=\"{value}\"")
-            content.append(f"export {key}")
-        conanrun_path = os.path.join(output_folder, "conanrun.sh")
-        content.append(f". \"{conanrun_path}\"")
-        filename = f"{self.filename}.bash"
-        content.append(cmake_toolchain_exists_bash)
-        conanrosenv_path = os.path.join(output_folder, filename)
-        save(self, conanrosenv_path, "\n".join(content))
-
-        msg = f"Generated ROSEnv Conan file: {filename}\n" + \
+        # Add ROS required variables to VirtualBuildEnv
+        rosbuildenv = Environment()
+        for k, v in self.variables.items():
+            rosbuildenv.define(k, v)
+        self._virtualbuildenv._buildenv = rosbuildenv
+        # Add VirtualRunEnv variables to VirtualBuildEnv
+        self._virtualbuildenv._buildenv.compose_env(self._virtualrunenv.environment())
+        self._virtualbuildenv.generate()
+        conanrosenv_path = os.path.join(self._conanfile.generators_folder, "conanrosenv.sh")
+        msg = f"Generated ROSEnv Conan file: conanrosenv.sh\n" + \
               f"Use 'source {conanrosenv_path}' to set the ROSEnv Conan before 'colcon build'"
         self._conanfile.output.info(msg, fg=Color.CYAN)

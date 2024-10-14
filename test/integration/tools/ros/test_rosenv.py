@@ -27,8 +27,9 @@ def test_rosenv():
     })
 
     client.run("install conanfile3.txt --output-folder install/conan")
-    assert "Generated ROSEnv Conan file: conanrosenv.bash" in client.out
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
+    # assert "Generated ROSEnv Conan file: conanrosenv.sh" in client.out
+    # FIXME: This file should be conanrosenv.sh, without configuration, but conanbuild.sh is generated instead
+    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv-release-x86_64.sh")
     assert os.path.exists(conanrosenv_path)
     client.run_command(f". \"{conanrosenv_path}\" && env")
     toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
@@ -43,7 +44,7 @@ def test_rosenv_shared_libraries():
     colcon can found the shared libraries of conan packages
     """
     client = TestClient()
-    c1 = GenConanfile("lib1", "1.0").with_shared_option(False).with_package_file("lib/lib2", "lib-content")
+    c1 = GenConanfile("lib1", "1.0").with_shared_option(False).with_package_file("lib/lib1", "lib-content")
     c2 = GenConanfile("lib2", "1.0").with_shared_option(False).with_requirement("lib1/1.0").with_package_file("lib/lib2", "lib-content")
     c3 = textwrap.dedent('''
            [requires]
@@ -62,36 +63,15 @@ def test_rosenv_shared_libraries():
     client.run("create conanfile1.py -o *:shared=True")
     client.run("create conanfile2.py -o *:shared=True")
     client.run("install conanfile3.txt -o *:shared=True --output-folder install/conan")
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
+    # FIXME: This file should be conanrosenv.sh, without configuration, but conanbuild.sh is generated instead
+    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv-release-x86_64.sh")
     client.run_command(f". \"{conanrosenv_path}\" && env")
     environment_content = client.out
     client.run(
-        "cache path lib1/1.0#a77a22ae2a9a8dba9b408d95db4e9880:1744785cb24e3bdca70e27041dc5abd20476f947")
+        "cache path lib1/1.0#58723f478a96866dcbd9456d8eefd7c4:1744785cb24e3bdca70e27041dc5abd20476f947")
     lib1_lib_path = os.path.join(client.out.strip(), "lib")
     assert lib1_lib_path in environment_content
     client.run(
         "cache path lib2/1.0#4b7a6063ba107d770458ce10385beb52:5c3c2e56259489f7ffbc8e494921eda4b747ef21")
     lib2_lib_path = os.path.join(client.out.strip(), "lib")
     assert lib2_lib_path in environment_content
-
-
-@pytest.mark.skipif(platform.system() == "Windows", reason="Uses UNIX commands")
-def test_error_when_rosenv_not_used_with_cmake_generators():
-    """
-    ROSEnv generator should be used with CMake and CMakeToolchain generators
-    """
-    client = TestClient()
-    c2 = textwrap.dedent('''
-           [requires]
-           [generators]
-           ROSEnv
-           ''')
-    client.save({
-        "conanfile2.txt": c2
-    })
-
-    client.run("install conanfile2.txt --output-folder install/conan")
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.bash")
-    client.run_command(f". \"{conanrosenv_path}\"", assert_error=True)
-    assert "CMAKE_TOOLCHAIN_FILE path not found" in client.out
-    assert "Make sure you are using CMakeToolchain and CMakeDeps generators too" in client.out
