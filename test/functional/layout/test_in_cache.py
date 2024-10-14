@@ -18,7 +18,7 @@ def conanfile():
                      with_require("base/1.0"))
 
     conan_file += """
-    no_copy_sources = True
+    no_copy_source = True
 
     def layout(self):
         self.folders.source = "my_sources"
