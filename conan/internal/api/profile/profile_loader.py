@@ -54,7 +54,7 @@ def _check_correct_cppstd(settings):
         # but an empty list when no flags are supported for this version
         if supported is not None and cppstd not in supported:
             from conan.errors import ConanException
-            raise ConanException(f"The provided compiler.cppstd={cppstd} is not supported by {compiler} {version}.\n"
+            raise ConanException(f"The provided compiler.cppstd={cppstd} is not supported by {compiler} {version}. "
                                  f"Supported values are: {supported}")
 
 
@@ -70,7 +70,7 @@ def _check_correct_cstd(settings):
         # but an empty list when no flags are supported for this version
         if supported is not None and cstd not in supported:
             from conan.errors import ConanException
-            raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}.\n"
+            raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}. "
                                  f"Supported values are: {supported}")
 """
 
