@@ -27,9 +27,8 @@ def test_rosenv():
     })
 
     client.run("install conanfile3.txt --output-folder install/conan")
-    # assert "Generated ROSEnv Conan file: conanrosenv.sh" in client.out
-    # FIXME: This file should be conanrosenv.sh, without configuration, but conanbuild.sh is generated instead
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv-release-x86_64.sh")
+    assert "Generated ROSEnv Conan file: conanrosenv.sh" in client.out
+    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.sh")
     assert os.path.exists(conanrosenv_path)
     client.run_command(f". \"{conanrosenv_path}\" && env")
     toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
@@ -63,8 +62,7 @@ def test_rosenv_shared_libraries():
     client.run("create conanfile1.py -o *:shared=True")
     client.run("create conanfile2.py -o *:shared=True")
     client.run("install conanfile3.txt -o *:shared=True --output-folder install/conan")
-    # FIXME: This file should be conanrosenv.sh, without configuration, but conanbuild.sh is generated instead
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv-release-x86_64.sh")
+    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.sh")
     client.run_command(f". \"{conanrosenv_path}\" && env")
     environment_content = client.out
     client.run(

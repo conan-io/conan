@@ -1,23 +1,12 @@
 import os
 from conan.api.output import Color
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv, Environment
-from conan.tools.files import save
-from conan.errors import ConanException
-
-
-cmake_toolchain_exists_bash = """\
-if [ ! -e "$CMAKE_TOOLCHAIN_FILE" ]; then
-    echo "Error: CMAKE_TOOLCHAIN_FILE path not found at '$CMAKE_TOOLCHAIN_FILE'."
-    echo "Make sure you are using CMakeToolchain and CMakeDeps generators too."
-    exit 1
-fi
-"""
 
 
 class ROSEnv(object):
     """
     Generator to serve as integration for Robot Operating System 2 development workspaces.
-    It generates a conanrosenv.bash file that when sources sets variables so the Conan
+    It generates a conanrosenv.sh file that when sources sets variables so the Conan
     dependencies are found by CMake and the run environment is also set.
 
     IMPORTANT: This generator should be used together with CMakeDeps and CMakeToolchain generators.
@@ -44,7 +33,7 @@ class ROSEnv(object):
         self._virtualbuildenv._buildenv = rosbuildenv
         # Add VirtualRunEnv variables to VirtualBuildEnv
         self._virtualbuildenv._buildenv.compose_env(self._virtualrunenv.environment())
-        self._virtualbuildenv.generate()
+        self._virtualbuildenv.generate(scope="rosenv")  # Create new scope to generate conanrosenv.sh
         conanrosenv_path = os.path.join(self._conanfile.generators_folder, "conanrosenv.sh")
         msg = f"Generated ROSEnv Conan file: conanrosenv.sh\n" + \
               f"Use 'source {conanrosenv_path}' to set the ROSEnv Conan before 'colcon build'"
