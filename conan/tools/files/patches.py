@@ -40,7 +40,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
     """
 
     if conanfile.no_copy_source:
-        conanfile.output.warning("Patching  with 'no_copy_source = True' is dangerous. "
+        conanfile.output.warning("Patching with 'no_copy_source = True' is dangerous. "
                                  "The patches are applied directly to the source folder, "
                                  "which could lead to unexpected results. ")
 

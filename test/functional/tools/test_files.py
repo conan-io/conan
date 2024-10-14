@@ -185,6 +185,9 @@ def test_patch_real(no_copy_source):
     assert "mypkg/1.0: SOURCE: //smart contents" in client.out
     assert "mypkg/1.0: BUILD: //smart contents" in client.out
 
+    if no_copy_source:
+        assert "Patching with 'no_copy_source = True' is dangerous" in client.out
+
     # Test local source too
     client.run("install .")
     client.run("source .")
