@@ -506,3 +506,62 @@ class TestLibs:
         assert "vector: Release!" in c.out
         assert "module: Release!" in c.out
         assert "vector: Release!" in c.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("tool_requires", [True, False])
+def test_build_modules_custom_script(tool_requires):
+    """
+    it works both as a tool_requires and as a regular requirement
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+
+        class Conan(ConanFile):
+            name = "myfunctions"
+            version = "1.0"
+            exports_sources = ["*.cmake"]
+
+            def package(self):
+                copy(self, "*.cmake", self.source_folder, self.package_folder)
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_build_modules", ["myfunction.cmake"])
+        """)
+
+    myfunction = textwrap.dedent("""
+        function(myfunction)
+            message("Hello myfunction!!!!")
+        endfunction()
+        """)
+    client.save({"conanfile.py": conanfile, "myfunction.cmake": myfunction})
+    client.run("create .")
+
+    requires = "tool_requires" if tool_requires else "requires"
+    consumer = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Conan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain", "CMakeDeps"
+            {requires} = "myfunctions/1.0"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test)
+        find_package(myfunctions CONFIG REQUIRED)
+        myfunction()
+        """)
+    client.save({"conanfile.py": consumer,
+                 "CMakeLists.txt": cmakelists},
+                clean_first=True)
+    client.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
+    assert "Hello myfunction!!!!" in client.out

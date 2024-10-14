@@ -102,6 +102,9 @@ def _matrix_client_components():
                 self.cpp_info.components["headers"].defines = ["MY_MATRIX_HEADERS_DEFINE=1"]
                 if self.settings.compiler == "msvc":
                     self.cpp_info.components["headers"].cxxflags = ["/Zc:__cplusplus"]
+                    self.cpp_info.components["headers"].system_libs = ["ws2_32"]
+                else:
+                    self.cpp_info.components["headers"].system_libs = ["m"]
 
                 self.cpp_info.components["vector"].libs = ["vector"]
                 self.cpp_info.components["vector"].includedirs = ["include"]

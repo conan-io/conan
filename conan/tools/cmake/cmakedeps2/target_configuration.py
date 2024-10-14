@@ -4,6 +4,7 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
@@ -39,7 +40,8 @@ class TargetConfigurationTemplate2:
 
         for required_pkg, required_comp in requires:
             if required_pkg is None:  # Points to a component of same package
-                dep_component = components[required_comp]
+                # TODO: Using `.get()` to avoid components creating a comp because defaultdict
+                dep_component = components.get(required_comp)
                 dep_target = dep_component.get_property("cmake_target_name") or f"{pkg_name}::{required_comp}"
                 result.append(dep_target)
             else:  # Different package
@@ -50,13 +52,22 @@ class TargetConfigurationTemplate2:
                                          f"'{required_pkg}::{required_comp}', "
                                          f"but '{required_pkg}' is not a direct dependency")
                 try:
-                    req = transitive_reqs[required_pkg]
+                    dep = transitive_reqs[required_pkg]
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
                     # TODO: Missing cmake_target_name for req
-                    dep_target = f"{required_pkg}::{required_comp}"
-                    result.append(dep_target)
+                    dep_comp = dep.cpp_info.components.get(required_comp)
+                    if dep_comp is None:
+                        # TODO: Check this
+                        ConanOutput().warning(f"{self._conanfile}: component '{required_comp}' "
+                                              f"required but not existing in {dep}")
+                        dep_target = f"{required_pkg}::{required_comp}"
+                        result.append(dep_target)
+                    else:
+                        dep_cmake = dep_comp.get_property("cmake_target_name")
+                        dep_target = dep_cmake or f"{required_pkg}::{required_comp}"
+                        result.append(dep_target)
         return result
 
     @property
@@ -75,6 +86,7 @@ class TargetConfigurationTemplate2:
                                    for i in info.includedirs) if info.includedirs else ""
             requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
             cxxflags = " ".join(info.cxxflags)
+            system_libs = " ".join(info.system_libs)
             # TODO: Other cflags, linkflags
             if info.libs:  # TODO: Handle component_name for libs
                 if len(info.libs) != 1:
@@ -94,7 +106,8 @@ class TargetConfigurationTemplate2:
                                          "link_location": "",
                                          "requires": requires,
                                          "defines": defines,
-                                         "cxxflags": cxxflags}
+                                         "cxxflags": cxxflags,
+                                         "system_libs": system_libs}
             elif info.includedirs and not info.exe:  # Pure header only
                 cmp_name = component_name or pkg_name
                 target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{cmp_name}"
@@ -102,7 +115,8 @@ class TargetConfigurationTemplate2:
                                      "includedirs": includedirs,
                                      "defines": defines,
                                      "requires": requires,
-                                     "cxxflags": cxxflags}
+                                     "cxxflags": cxxflags,
+                                     "system_libs": system_libs}
 
         if cpp_info.has_components:
             for name, component in cpp_info.components.items():
@@ -115,7 +129,7 @@ class TargetConfigurationTemplate2:
             if cpp_info.default_components is not None:
                 all_requires = []
                 for default_comp in cpp_info.default_components:
-                    comp = cpp_info.components[default_comp]
+                    comp = cpp_info.components.get(default_comp)
                     comp_name = comp.get_property("cmake_target_name") or f"{pkg_name}::{default_comp}"
                     all_requires.append(comp_name)
                 all_requires = " ".join(all_requires)
@@ -156,7 +170,8 @@ class TargetConfigurationTemplate2:
         #    return []
 
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
-        ret = {self._cmakedeps.get_cmake_filename(r): None for r in transitive_reqs.values()}
+        # FIXME: Hardcoded CONFIG
+        ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
         return ret
 
     @staticmethod
@@ -223,6 +238,9 @@ class TargetConfigurationTemplate2:
         {% endif %}
         {% if lib_info.get("requires") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
+        {% endif %}
+        {% if lib_info.get("system_libs") %}
+        target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
 
         {% endfor %}
