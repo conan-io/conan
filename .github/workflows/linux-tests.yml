@@ -95,14 +95,12 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          NUM_CPUS=$(sysctl -n hw.ncpu)
-          echo "Number of CPUs available: $NUM_CPUS"
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n $NUM_CPUS
+            pytest test/unittests --durations=20 -n 4
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n $NUM_CPUS
+            pytest test/integration --durations=20 -n 4
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n $NUM_CPUS
+            pytest test/functional --durations=20 -n 4
           fi
 
   linux_docker_tests:
