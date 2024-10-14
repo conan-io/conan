@@ -48,7 +48,7 @@ def _check_correct_cppstd(settings):
 
     if cppstd and version:
         compiler = settings.get("compiler")
-        from conan.tool.build.cppstd import supported_cppstd
+        from conan.tools.build.cppstd import supported_cppstd
         supported = supported_cppstd(None, compiler, version)
         # supported is None when we don't have information about the compiler
         # but an empty list when no flags are supported for this version
@@ -64,7 +64,7 @@ def _check_correct_cstd(settings):
 
     if cstd and version:
         compiler = settings.get("compiler")
-        from conan.tool.build.cstd import supported_cstd
+        from conan.tools.build.cstd import supported_cstd
         supported = supported_cstd(None, compiler, version)
         # supported is None when we don't have information about the compiler
         # but an empty list when no flags are supported for this version
