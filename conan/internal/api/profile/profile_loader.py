@@ -107,7 +107,7 @@ def _check_correct_cstd(settings):
             mver = {"17": "192",
                     "11": "192"}.get(cstd)
         if mver and version < mver:
-            _error(compiler, cppstd, mver, version)
+            _error(compiler, cstd, mver, version)
 """
 
 
