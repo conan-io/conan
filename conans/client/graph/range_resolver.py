@@ -1,5 +1,5 @@
 from conans.client.graph.proxy import should_update_reference
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
 

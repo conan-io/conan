@@ -237,13 +237,13 @@ def test_info_build_order_options():
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
                   'info': {'options': {'myopt': '2'}},
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'info': {'options': {'myopt': '1'}},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
              ]]}
         ],
         [
@@ -765,3 +765,43 @@ class TestBuildOrderReduce:
         tc.run("graph build-order-merge --file=order.json --file=order.json --format=json", assert_error=True)
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
         assert "IndexError: list index out of range" not in tc.out
+
+
+def test_multi_configuration_profile_args():
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile().with_settings("os"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1",
+            "mypr": ""})
+    c.run("export pkg --name=pkg --version=0.1")
+    args = "-pr=mypr -s:b os=Linux -o:h *:shared=True -c:h user.my:conf=1"
+    c.run(f"graph build-order consumer --format=json --build=missing -s os=Windows {args} "
+          "--order-by=recipe", redirect_stdout="bo_win.json")
+    c.run(f"graph build-order consumer --format=json --build=missing -s os=Linux {args} "
+          "--order-by=recipe", redirect_stdout="bo_nix.json")
+    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
+          redirect_stdout="bo3.json")
+    bo_json = json.loads(c.load("bo3.json"))
+    win = '-pr:h="mypr" -s:h="os=Windows" -o:h="*:shared=True" -c:h="user.my:conf=1" -s:b="os=Linux"'
+    nix = '-pr:h="mypr" -s:h="os=Linux" -o:h="*:shared=True" -c:h="user.my:conf=1" -s:b="os=Linux"'
+    assert bo_json["profiles"] == {"bo_win": {"args": win}, "bo_nix": {"args": nix}}
+
+
+def test_build_order_space_in_options():
+    tc = TestClient(light=True)
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                .with_option("flags", ["ANY", None])
+                .with_option("extras", ["ANY", None]),
+             "conanfile.txt": textwrap.dedent("""
+             [requires]
+             dep/1.0
+
+             [options]
+             dep/*:flags=define=FOO define=BAR define=BAZ
+             dep/*:extras=cxx="yes" gnuext='no'
+             """)})
+
+    tc.run("create dep")
+    tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
+    order = json.loads(tc.load("order.json"))
+    assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
+

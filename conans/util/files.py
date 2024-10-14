@@ -11,8 +11,7 @@ import time
 
 from contextlib import contextmanager
 
-
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
@@ -299,13 +298,6 @@ def tar_extract(fileobj, destination_dir):
     the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
     the_tar.extractall(path=destination_dir)
     the_tar.close()
-
-
-def exception_message_safe(exc):
-    try:
-        return str(exc)
-    except Exception:
-        return repr(exc)
 
 
 def merge_directories(src, dst):

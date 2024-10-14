@@ -204,7 +204,7 @@ def remote_login(conan_api, parser, subparser, *args):
         if args.username is not None and args.password is not None:
             user, password = args.username, args.password
         else:
-            user, password = creds.auth(r, args.username)
+            user, password, _ = creds.auth(r, args.username)
             if args.username is not None and args.username != user:
                 raise ConanException(f"User '{args.username}' doesn't match user '{user}' in "
                                      f"credentials.json or environment variables")

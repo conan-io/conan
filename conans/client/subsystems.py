@@ -24,7 +24,7 @@ import platform
 import re
 
 from conan.tools.build import cmd_args_to_string
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 WINDOWS = "windows"
 MSYS2 = 'msys2'

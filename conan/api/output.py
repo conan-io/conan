@@ -7,7 +7,7 @@ from threading import Lock
 from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
