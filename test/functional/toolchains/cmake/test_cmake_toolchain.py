@@ -2137,9 +2137,9 @@ def test_cmake_toolchain_language_c():
         """)
 
     cmakelists = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(pkg C)
-    """)
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg C)
+        """)
 
     client.save(
         {
@@ -2149,5 +2149,11 @@ def test_cmake_toolchain_language_c():
         clean_first=True,
     )
 
-    client.run("install . -s compiler.cstd=11")
-    client.run("build . -s compiler.cstd=11")
+    if platform.system() == "Windows":
+        # compiler.version=191 is already the default now
+        client.run("build . -s compiler.cstd=11 -s compiler.version=191", assert_error=True)
+        assert "The provided compiler.cstd=11 requires at least msvc>=192 but version 191 provided" \
+               in client.out
+    else:
+        client.run("build . -s compiler.cppstd=11")
+        # It doesn't fail
