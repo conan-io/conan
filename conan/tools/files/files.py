@@ -452,7 +452,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
     """
-    if getattr(conanfile, "no_copy_source", False):
+    if conanfile.no_copy_source:
         conanfile.output.warning("Usage of 'replace_in_file' with 'no_copy_source = True' is dangerous. "
                                  "The changes might be applied directly to the source folder, "
                                  "which could lead to unexpected results. ")
