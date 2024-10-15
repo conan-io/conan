@@ -58,9 +58,6 @@ def test_plugin_profile_error_vs():
     c.run("create . -s compiler=msvc -s compiler.version=170 -s compiler.cppstd=14",
           assert_error=True)
     assert "The provided compiler.cppstd=14 is not supported by msvc 170. Supported values are: []" in c.out
-    c.run("create . -s compiler=msvc -s compiler.version=193 -s compiler.cppstd=23",
-          assert_error=True)
-    assert "The provided compiler.cppstd=14 is not supported by msvc 170. Supported values are: []" in c.out
     c.run("create . -s compiler=msvc -s compiler.version=190 -s compiler.cppstd=14")
     assert "Installing packages" in c.out
 
