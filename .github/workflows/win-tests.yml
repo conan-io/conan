@@ -124,7 +124,7 @@ jobs:
           }
       - name: Run Tests
         run: |
-          $NUM_CPUS = (Get-WmiObject -Class Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
+          $NUM_CPUS = (Get-CimInstance -ClassName Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
           Write-Host "Number of CPUs available: $NUM_CPUS"
           $matrixTestType = "{{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
