@@ -81,7 +81,7 @@ class TargetConfigurationTemplate2:
                 "exes": exes,
                 "libs": libs}
 
-    def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict[str, dict]:
+    def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
         libs = {}
         if cpp_info.has_components:
             for name, component in cpp_info.components.items():
