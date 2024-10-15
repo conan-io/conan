@@ -126,7 +126,9 @@ jobs:
         run: |
           $NUM_CPUS = (Get-CimInstance -ClassName Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
           Write-Host "Number of CPUs available: $NUM_CPUS"
-          $matrixTestType = {{ matrix.test-type }}
+          $matrixTestType = "${{ matrix.test-type }}"
+          $matrixTestType2 = "{{ matrix.test-type }}"
+          Write-Host "Matrix test-type: $matrixTestType $matrixTestType2 "
           if ($matrixTestType -eq "unittests") {
               pytest test/unittests --durations=20 -n $NUM_CPUS
           } elseif ($matrixTestType -eq "integration") {
