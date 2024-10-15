@@ -454,6 +454,7 @@ class TestLibs:
                     cmake.install()
 
                 def package_info(self):
+                    self.cpp_info.set_property("cmake_target_name", "MyMatrix::MyMatrix")
                     self.cpp_info.libs = ["module", "vector"]
                   """)
 
@@ -487,7 +488,7 @@ class TestLibs:
             find_package(matrix CONFIG REQUIRED)
 
             add_executable(app src/app.cpp)
-            target_link_libraries(app PRIVATE matrix::matrix)
+            target_link_libraries(app PRIVATE MyMatrix::MyMatrix)
 
             install(TARGETS app)
             """)
@@ -499,8 +500,9 @@ class TestLibs:
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
-        assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
-        assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::_vector'" in c.out
+        assert "Conan: Target declared imported STATIC library 'matrix::_module'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'MyMatrix::MyMatrix'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
 
         assert "vector: Release!" in c.out

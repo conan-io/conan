@@ -470,7 +470,7 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def deduce_cps(self, pkg_type):
+    def deduce_locations(self, pkg_type):
         if self._exe:   # exe is a new field, it should have the correct location
             return
         if self._location or self._link_location:
@@ -709,21 +709,32 @@ class CppInfo:
         pkg_type = conanfile.package_type
 
         result = CppInfo()  # clone it
-        result._package = self._package.clone()
-        result.default_components = self.default_components
-        result.components = {k: v.clone() for k, v in self.components.items()}
+
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
             for lib in self.libs:
-                c = self._package.clone()
+                c = _Component()  # Do not do a full clone, we don't need the properties
+                c.type = self.type  # This should be a string
+                c.includedirs = self.includedirs
+                c.libdirs = self.libdirs
                 c.libs = [lib]
-                result.components[lib] = c
-            result.libs = []
+                result.components[f"_{lib}"] = c
 
-        result._package.deduce_cps(pkg_type)
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            common.requires = list(result.components.keys()) + (self.requires or [])
+
+            result.components["_common"] = common
+        else:
+            result._package = self._package.clone()
+            result.default_components = self.default_components
+            result.components = {k: v.clone() for k, v in self.components.items()}
+
+        result._package.deduce_locations(pkg_type)
         for comp in result.components.values():
-            comp.deduce_cps(pkg_type)
+            comp.deduce_locations(pkg_type)
 
         return result

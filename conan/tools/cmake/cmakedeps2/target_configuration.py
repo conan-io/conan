@@ -80,20 +80,29 @@ class TargetConfigurationTemplate2:
 
         libs = {}
 
-        def _add_libs(info, component_name=None):
+        def _add_libs(info, component_name):
             defines = " ".join(info.defines)
             includedirs = ";".join(self._path(i, package_folder, package_folder_var)
                                    for i in info.includedirs) if info.includedirs else ""
-            requires = " ".join(self._requires(info, self._conanfile.cpp_info.components))
+            requires = " ".join(self._requires(info, cpp_info.components))
             cxxflags = " ".join(info.cxxflags)
             system_libs = " ".join(info.system_libs)
+            target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{component_name}"
+            if not info.includedirs and not info.libs:
+                return
+            assert not info.exe, "Do not define .exe and .includedirs or .libs simultaneously"
+            target = {"type": "INTERFACE",
+                      "includedirs": includedirs,
+                      "defines": defines,
+                      "requires": requires,
+                      "cxxflags": cxxflags,
+                      "system_libs": system_libs}
+            libs[target_name] = target
             # TODO: Other cflags, linkflags
-            if info.libs:  # TODO: Handle component_name for libs
+            if info.libs:
                 if len(info.libs) != 1:
                     raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                          f"{self._conanfile}: {info.libs}")
-                lib_name = info.libs[0]
-                target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{lib_name}"
                 location = self._path(info.location, package_folder, package_folder_var)
                 lib_type = "SHARED" if info.type is PackageType.SHARED else \
                     "STATIC" if info.type is PackageType.STATIC else \
@@ -101,36 +110,22 @@ class TargetConfigurationTemplate2:
 
                 if lib_type:
                     libs[target_name] = {"type": lib_type,
-                                         "includedirs": includedirs,
                                          "location": location,
-                                         "link_location": "",
-                                         "requires": requires,
-                                         "defines": defines,
-                                         "cxxflags": cxxflags,
-                                         "system_libs": system_libs}
-            elif info.includedirs and not info.exe:  # Pure header only
-                cmp_name = component_name or pkg_name
-                target_name = info.get_property("cmake_target_name") or f"{pkg_name}::{cmp_name}"
-                libs[target_name] = {"type": "INTERFACE",
-                                     "includedirs": includedirs,
-                                     "defines": defines,
-                                     "requires": requires,
-                                     "cxxflags": cxxflags,
-                                     "system_libs": system_libs}
+                                         "link_location": ""}
 
         if cpp_info.has_components:
             for name, component in cpp_info.components.items():
-                _add_libs(component, name)
+                _add_libs(component, component_name=name)
         else:
-            _add_libs(cpp_info)
+            _add_libs(cpp_info, component_name=pkg_name)
 
         if libs and f"{pkg_name}::{pkg_name}" not in libs:
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
                 all_requires = []
-                for default_comp in cpp_info.default_components:
-                    comp = cpp_info.components.get(default_comp)
-                    comp_name = comp.get_property("cmake_target_name") or f"{pkg_name}::{default_comp}"
+                for defaultc in cpp_info.default_components:
+                    comp = cpp_info.components.get(defaultc)
+                    comp_name = comp.get_property("cmake_target_name") or f"{pkg_name}::{defaultc}"
                     all_requires.append(comp_name)
                 all_requires = " ".join(all_requires)
             else:
@@ -138,20 +133,7 @@ class TargetConfigurationTemplate2:
             libs[f"{pkg_name}::{pkg_name}"] = {"type": "INTERFACE",
                                                "requires": all_requires}
 
-        exes = {}
-
-        def _add_exe(info):
-            if info.exe:
-                target = info.get_property("cmake_target_name") or f"{pkg_name}::{info.exe}"
-                exe_location = self._path(info.location, package_folder, package_folder_var)
-                exes[target] = exe_location
-
-        if cpp_info.has_components:
-            for name, component in cpp_info.components.items():
-                _add_exe(component)
-        else:
-            if cpp_info.exe:
-                _add_exe(cpp_info)
+        exes = self._get_exes(cpp_info, pkg_name, package_folder, package_folder_var)
 
         # TODO: Missing find_modes
         dependencies = self._get_dependencies()
@@ -161,6 +143,27 @@ class TargetConfigurationTemplate2:
                 "config": config,
                 "exes": exes,
                 "libs": libs}
+
+    def _get_exes(self, cpp_info, pkg_name, package_folder, package_folder_var):
+        exes = {}
+
+        if cpp_info.has_components:
+            assert not cpp_info.exe, "Package has components and exe"
+            assert not cpp_info.libs, "Package has components and libs"
+            for name, comp in cpp_info.components.items():
+                if comp.exe or comp.type is PackageType.APP:
+                    target = comp.get_property("cmake_target_name") or f"{pkg_name}::{name}"
+                    exe_location = self._path(comp.location, package_folder, package_folder_var)
+                    exes[target] = exe_location
+        else:
+            if cpp_info.exe:
+                assert not cpp_info.libs, "Package has exe and libs"
+                assert cpp_info.location, "Package has exe and no location"
+                target = cpp_info.get_property("cmake_target_name") or f"{pkg_name}::{pkg_name}"
+                exe_location = self._path(cpp_info.location, package_folder, package_folder_var)
+                exes[target] = exe_location
+
+        return exes
 
     def _get_dependencies(self):
         """ transitive dependencies Filenames for find_dependency()
