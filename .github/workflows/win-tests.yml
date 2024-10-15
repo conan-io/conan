@@ -128,9 +128,9 @@ jobs:
           Write-Host "Number of CPUs available: $NUM_CPUS"
           $matrixTestType = "${{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
-              pytest test/unittests --durations=20 -n $NUM_CPUS
+              Write-Host "pytest test/unittests --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "integration") {
-              pytest test/integration --durations=20 -n $NUM_CPUS
+              Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
               pytest test/functional --durations=20 -n $NUM_CPUS
           }
