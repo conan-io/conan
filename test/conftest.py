@@ -67,12 +67,12 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:/Tools/CMake/3.15.7/cmake-3.15.7-windows-x86_64/bin',
+            "path": {'Windows': 'C:/Tools/CMake/3.15.7/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
         "3.19": {
-            "path": {'Windows': 'C:/Tools/CMake/3.19.7/cmake-3.19.7-windows-x86_64/bin',
+            "path": {'Windows': 'C:/Tools/CMake/3.19.7/cmake-3.19.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
@@ -147,10 +147,10 @@ tools_locations = {
     'bazel': {
         "default": "6.3.2",
         "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
-                           'Windows': 'C:/Tools/bazel/6.3.2/bazel-6.3.2-windows-x86_64',
+                           'Windows': 'C:/Tools/bazel/6.3.2',
                            'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
         "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
-                           'Windows': 'C:/Tools/bazel/7.1.2/bazel-7.1.2-windows-x86_64',
+                           'Windows': 'C:/Tools/bazel/7.1.2',
                            'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
