@@ -6,10 +6,10 @@ from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
 from conan.api.output import ConanOutput
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
@@ -107,7 +107,7 @@ def _check_correct_cstd(settings):
             mver = {"17": "192",
                     "11": "192"}.get(cstd)
         if mver and version < mver:
-            _error(compiler, cppstd, mver, version)
+            _error(compiler, cstd, mver, version)
 """
 
 
@@ -319,7 +319,10 @@ class _ProfileValueParser(object):
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
-            base_profile.package_settings[pkg_name].update(values_dict)
+            existing = base_profile.package_settings[pkg_name]
+            existing.update(values_dict)
+            # Make sure they are ordered, so `compiler=xxx` goes before `compiler.cppstd` always
+            base_profile.package_settings[pkg_name] = OrderedDict(sorted(existing.items()))
         for pattern, refs in tool_requires.items():
             # If the same package, different version is added, the latest version prevail
             current = base_profile.tool_requires.setdefault(pattern, [])

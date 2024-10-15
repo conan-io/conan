@@ -1,3 +1,5 @@
+import os
+
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
@@ -9,6 +11,7 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
 
@@ -18,6 +21,8 @@ class GnuToolchain:
 
     Note: it's based on legacy AutotoolsToolchain but with a more modern and usable UX
     """
+    script_name = "conangnutoolchain"
+
     def __init__(self, conanfile, namespace=None, prefix="/"):
         """
         :param conanfile: The current recipe object. Always use ``self``.
@@ -63,8 +68,8 @@ class GnuToolchain:
             "host": {"triplet": self._conanfile.conf.get("tools.gnu:host_triplet")},
             "build": {"triplet": self._conanfile.conf.get("tools.gnu:build_triplet")}
         }
-        is_cross_building = cross_building(self._conanfile)
-        if is_cross_building:
+        self._is_cross_building = cross_building(self._conanfile)
+        if self._is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
             # Host triplet
             if not self.triplets_info["host"]["triplet"]:
@@ -88,7 +93,7 @@ class GnuToolchain:
         self.configure_args.update(self._get_default_configure_install_flags())
         self.configure_args.update(self._get_default_triplets())
         # Apple stuff
-        is_cross_building_osx = (is_cross_building
+        is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
                                  and is_apple_os(conanfile))
         min_flag, arch_flag, isysroot_flag = (
@@ -99,7 +104,7 @@ class GnuToolchain:
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
-        # MSVC common stuff
+        # Default initial environment flags
         self._initialize_default_extra_env()
 
     def yes_no(self, option_name, default=None, negated=False):
@@ -116,31 +121,99 @@ class GnuToolchain:
         option_value = not option_value if negated else option_value
         return "yes" if option_value else "no"
 
-    def _initialize_default_extra_env(self):
-        """Initialize the default environment variables."""
-        extra_env_vars = dict()
-        # Normally, these are the most common default flags used by MSVC in Windows
-        if is_msvc(self._conanfile):
-            extra_env_vars = {"CC": "cl -nologo",
-                              "CXX": "cl -nologo",
-                              "NM": "dumpbin -symbols",
-                              "OBJDUMP": ":",
-                              "RANLIB": ":",
-                              "STRIP": ":"}
+    def _resolve_android_cross_compilation(self):
+        # Issue related: https://github.com/conan-io/conan/issues/13443
+        ret = {}
+        if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
+            return ret
+
+        ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
+        if not ndk_path:
+            raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
+                                 "configuration field.")
+
+        if ndk_path:
+            arch = self._conanfile.settings.get_safe("arch")
+            os_build = self._conanfile.settings_build.get_safe("os")
+            ndk_os_folder = {
+                'Macos': 'darwin',
+                'iOS': 'darwin',
+                'watchOS': 'darwin',
+                'tvOS': 'darwin',
+                'visionOS': 'darwin',
+                'FreeBSD': 'linux',
+                'Linux': 'linux',
+                'Windows': 'windows',
+                'WindowsCE': 'windows',
+                'WindowsStore': 'windows'
+            }.get(os_build, "linux")
+            ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
+                                   f"{ndk_os_folder}-x86_64", "bin")
+            android_api_level = self._conanfile.settings.get_safe("os.api_level")
+            android_target = {'armv7': 'armv7a-linux-androideabi',
+                              'armv8': 'aarch64-linux-android',
+                              'x86': 'i686-linux-android',
+                              'x86_64': 'x86_64-linux-android'}.get(arch)
+            os_build = self._conanfile.settings_build.get_safe('os')
+            ext = ".cmd" if os_build == "Windows" else ""
+            ret = {
+                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
+                "LD": os.path.join(ndk_bin, "ld"),
+                "STRIP": os.path.join(ndk_bin, "llvm-strip"),
+                "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
+                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "AR": os.path.join(ndk_bin, "llvm-ar"),
+            }
+            # Overriding host triplet
+            self.triplets_info["host"]["triplet"] = android_target
+        return ret
+
+    def _resolve_compilers_mapping_variables(self):
+        ret = {}
         # Configuration map
         compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
                              "rc": "RC", "nm": "NM", "ranlib": "RANLIB",
                              "objdump": "OBJDUMP", "strip": "STRIP"}
         # Compiler definitions by conf
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
+                                                     default={}, check_type=dict)
         if compilers_by_conf:
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]
                     # https://github.com/conan-io/conan/issues/13780
                     compiler = unix_path(self._conanfile, compiler)
-                    extra_env_vars[env_var] = compiler  # User/tools ones have precedence
+                    ret[env_var] = compiler  # User/tools ones have precedence
+        # Issue related: https://github.com/conan-io/conan/issues/15486
+        if self._is_cross_building and self._conanfile.conf_build:
+            compilers_build_mapping = (
+                self._conanfile.conf_build.get("tools.build:compiler_executables", default={},
+                                               check_type=dict)
+            )
+            if "c" in compilers_build_mapping:
+                ret["CC_FOR_BUILD"] = compilers_build_mapping["c"]
+            if "cpp" in compilers_build_mapping:
+                ret["CXX_FOR_BUILD"] = compilers_build_mapping["cpp"]
+        return ret
+
+    def _initialize_default_extra_env(self):
+        """Initialize the default environment variables."""
+        # If it's an Android cross-compilation
+        extra_env_vars = self._resolve_android_cross_compilation()
+        if not extra_env_vars:
+            # Normally, these are the most common default flags used by MSVC in Windows
+            if is_msvc(self._conanfile):
+                extra_env_vars = {"CC": "cl -nologo",
+                                  "CXX": "cl -nologo",
+                                  "LD": "link -nologo",
+                                  "AR": "lib",
+                                  "NM": "dumpbin -symbols",
+                                  "OBJDUMP": ":",
+                                  "RANLIB": ":",
+                                  "STRIP": ":"}
+            extra_env_vars.update(self._resolve_compilers_mapping_variables())
+
         # Update the extra_env attribute with all the compiler values
         for env_var, env_value in extra_env_vars.items():
             self.extra_env.define(env_var, env_value)
@@ -252,7 +325,7 @@ class GnuToolchain:
         check_duplicated_generator(self, self._conanfile)
         # Composing both environments. User extra_env definitions has precedence
         env_vars = self._environment.vars(self._conanfile)
-        env_vars.save_script("conanautotoolstoolchain")
+        env_vars.save_script(GnuToolchain.script_name)
         # Converts all the arguments into strings
         args = {
             "configure_args": cmd_args_to_string(self._dict_to_list(self.configure_args)),

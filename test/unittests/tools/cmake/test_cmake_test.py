@@ -1,8 +1,8 @@
 import pytest
 
+from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conans.client.conf import get_default_settings_yml
 from conans.model.conf import Conf
 from conans.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
@@ -23,7 +23,7 @@ def test_run_tests(generator, target):
     multi-config ones.
     Issue related: https://github.com/conan-io/conan/issues/11405
     """
-    settings = Settings.loads(get_default_settings_yml())
+    settings = Settings.loads(default_settings_yml)
     settings.os = "Windows"
     settings.arch = "x86"
     settings.build_type = "Release"
@@ -46,7 +46,7 @@ def test_run_tests(generator, target):
 
 
 def test_cli_args_configure():
-    settings = Settings.loads(get_default_settings_yml())
+    settings = Settings.loads(default_settings_yml)
 
     conanfile = ConanFileMock()
     conanfile.conf = Conf()

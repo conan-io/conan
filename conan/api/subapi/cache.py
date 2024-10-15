@@ -11,7 +11,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conans.client.downloaders.download_cache import DownloadCache
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
@@ -63,6 +63,8 @@ class CacheAPI:
         app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
+        if os.path.exists(ref_layout.finalize()):
+            return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
     def check_integrity(self, package_list):
@@ -168,6 +170,7 @@ class CacheAPI:
             the_tar = tarfile.open(fileobj=file_handler)
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
+            the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
             the_tar.extractall(path=cache_folder)
             the_tar.close()
 

@@ -11,7 +11,7 @@ from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, 
     GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options, _PackageOptions
 from conans.model.pkg_type import PackageType
@@ -312,6 +312,7 @@ class DepsGraphBuilder(object):
                 node.conanfile.requires.reindex(require, alternative_ref.name)
             require.ref.name = alternative_ref.name
             graph.replaced_requires[original_require] = repr(require.ref)
+            node.replaced_requires[original_require] = require
             break  # First match executes the alternative and finishes checking others
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):

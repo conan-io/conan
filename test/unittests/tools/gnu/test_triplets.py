@@ -1,7 +1,7 @@
 import pytest
 
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet, _get_gnu_os, _get_gnu_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @pytest.mark.parametrize("os_, arch, compiler, expected", [

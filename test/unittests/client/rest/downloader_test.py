@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class MockResponse(object):
