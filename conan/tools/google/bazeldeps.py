@@ -410,6 +410,7 @@ class _BazelBUILDGenerator:
         visibility = ["//visibility:public"],
         {% if obj["libs"] or obj["dependencies"] or obj["component_names"] %}
         deps = [
+            # do not sort
             {% for lib in obj["libs"] %}
             ":{{ lib.name }}_precompiled",
             {% endfor %}

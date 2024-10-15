@@ -6,7 +6,7 @@ from mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 

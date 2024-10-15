@@ -10,8 +10,8 @@ from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    PackageNotFoundException
+from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
+from conan.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
