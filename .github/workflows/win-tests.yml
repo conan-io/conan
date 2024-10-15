@@ -53,9 +53,9 @@ jobs:
       - name: Install Chocolatey packages
         if: matrix.test-type == 'functional'
         run: |
-          choco install pkgconfiglite --version 0.28
-          choco install ninja --version 1.10.2
-          choco install mingw
+          choco install pkgconfiglite --version 0.28 -y --accept-license
+          choco install ninja --version 1.10.2 -y --accept-license
+          choco install mingw -y --accept-license
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
@@ -73,8 +73,8 @@ jobs:
       - name: Build CMake old versions of CMake
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          CMAKE_BUILD_VERSIONS = "3.15.7"
-          foreach ($version in CMAKE_BUILD_VERSIONS) {
+          $CMAKE_BUILD_VERSIONS = "3.15.7"
+          foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\Tools\CMake\$version"
             if (-not (Test-Path $destination)) {
@@ -91,8 +91,8 @@ jobs:
       - name: Install modern CMake versions
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          CMAKE_BUILD_VERSIONS = "3.19.7", "3.23.5"
-          foreach ($version in CMAKE_BUILD_VERSIONS) {
+          $CMAKE_BUILD_VERSIONS = "3.19.7", "3.23.5"
+          foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\Tools\CMake\$version"
             if (-not (Test-Path $destination)) {
@@ -126,7 +126,7 @@ jobs:
         run: |
           $NUM_CPUS = (Get-CimInstance -ClassName Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
           Write-Host "Number of CPUs available: $NUM_CPUS"
-          $matrixTestType = "{{ matrix.test-type }}"
+          $matrixTestType = {{ matrix.test-type }}
           if ($matrixTestType -eq "unittests") {
               pytest test/unittests --durations=20 -n $NUM_CPUS
           } elseif ($matrixTestType -eq "integration") {
