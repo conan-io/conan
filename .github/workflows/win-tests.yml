@@ -138,6 +138,7 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
+              C:\Tools\CMake\3.15.7\cmake-3.15.7-windows-x86_64\bin\cmake.exe --version
               pytest test/functional --durations=20 -n $NUM_CPUS
           }
 
