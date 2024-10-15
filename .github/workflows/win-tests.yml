@@ -53,9 +53,9 @@ jobs:
       - name: Install Chocolatey packages
         if: matrix.test-type == 'functional'
         run: |
-          choco install pkgconfiglite --version 0.28 -y
-          choco install ninja --version 1.10.2 -y
-          choco install mingw -y
+          choco install pkgconfiglite --version 0.28
+          choco install ninja --version 1.10.2
+          choco install mingw
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
