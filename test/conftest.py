@@ -44,7 +44,7 @@ tools_locations = {
 
 MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
 homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
-
+windows_choco_root = "C:/ProgramData/chocolatey/lib/"
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -58,7 +58,7 @@ tools_locations = {
         "0.28": {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Windows': f"{windows_choco_root}/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
                 'Darwin': f"{homebrew_root}/bin",
                 'Linux': "/usr/bin"
             }
@@ -67,27 +67,17 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+            "path": {'Windows': f'C:/Tools/CMake/3.15.7/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
-        "3.16": {
-            "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
-                     'Linux': '/usr/share/cmake-3.16.9/bin'}
-        },
-        "3.17": {
-            "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
-                     'Linux': '/usr/share/cmake-3.17.5/bin'}
-        },
         "3.19": {
-            "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
+            "path": {'Windows': f'C:/Tools/CMake/3.19.7/cmake-3.19.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
         "3.23": {
-            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+            "path": {'Windows': f'C:/Tools/CMake/3.23.5/cmake-3.23.5-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
         },
@@ -98,7 +88,7 @@ tools_locations = {
     'ninja': {
         "default": "1.10.2",
         "1.10.2": {
-            "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
+            "path": {'Windows': f'{windows_choco_root}/ninja/tools'}
         }
     },
     # This is the non-msys2 mingw, which is 32 bits x86 arch
@@ -107,7 +97,7 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/mingw"}},
+        "system": {"path": {'Windows': "C:/ProgramData/mingw64/mingw64/bin"}},
     },
     'mingw32': {
         "platform": "Windows",
@@ -132,7 +122,7 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': r"C:\msys64\usr\bin"}},
+        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
@@ -157,10 +147,10 @@ tools_locations = {
     'bazel': {
         "default": "6.3.2",
         "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
-                           'Windows': 'C:/bazel-6.3.2/bin',
+                           'Windows': 'C:/Tools/bazel/6.3.2',
                            'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
         "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
-                           'Windows': 'C:/bazel-7.1.2/bin',
+                           'Windows': 'C:/Tools/bazel/7.1.2',
                            'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
