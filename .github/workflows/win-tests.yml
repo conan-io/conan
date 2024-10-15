@@ -133,12 +133,15 @@ jobs:
           endlocal
       - name: Run Tests
         run: |
-          NUM_CPUS=$(sysctl -n hw.ncpu)
-          echo "Number of CPUs available: $NUM_CPUS"
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n $NUM_CPUS
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n $NUM_CPUS
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n $NUM_CPUS
-          fi
+          @echo off
+          setlocal
+          for /f "tokens=2 delims==" %%a in ('wmic cpu get NumberOfCores /value ^| find "="') do set NUM_CPUS=%%a
+          echo Number of CPUs available: %NUM_CPUS%
+          if "%{{ matrix.test-type }}%"=="unittests" (
+              pytest test/unittests --durations=20 -n %NUM_CPUS%
+          ) else if "%{{ matrix.test-type }}%"=="integration" (
+              pytest test/integration --durations=20 -n %NUM_CPUS%
+          ) else if "%{{ matrix.test-type }}%"=="functional" (
+              pytest test/functional --durations=20 -n %NUM_CPUS%
+          )
+          endlocal
