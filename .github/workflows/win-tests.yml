@@ -39,7 +39,7 @@ jobs:
         id: cache-pip
         uses: actions/cache@v4
         with:
-          path: %LocalAppData%\pip\Cache
+          path: c:\users\runneradmin\appdata\local\pip\cache
           key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
           restore-keys: |
               ${{ runner.os }}-pip-
