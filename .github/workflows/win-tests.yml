@@ -39,8 +39,28 @@ jobs:
         id: cache-pip
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
+          path: %LocalAppData%\pip\Cache
           key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
+          restore-keys: |
+              ${{ runner.os }}-pip-
+
+      - name: Cache Chocolatey packages
+        if: matrix.test-type == 'functional'
+        uses: actions/cache@v4
+        with:
+          path: C:\ProgramData\chocolatey\lib
+          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            chocolatey-packages-${{ runner.os }}-
+
+      - name: Cache Cygwin packages
+        if: matrix.test-type == 'functional'
+        uses: actions/cache@v4
+        with:
+          path: C:\cygwin64\bin
+          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            cygwin-packages-${{ runner.os }}-
 
       - name: Install Python requirements
         run: |
@@ -56,9 +76,9 @@ jobs:
           choco install pkgconfiglite --version 0.28 -y --accept-license
           choco install ninja --version 1.10.2 -y --accept-license
           choco install mingw -y --accept-license
-          choco install visualstudio2017community --version 15.9.48.0 -y --accept-license --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.ATL --add Microsoft.VisualStudio.Component.VC.v141.ATLMFC
-          choco install cygwin
-          choco install cyg-get
+          choco install visualstudio2017community --package-parameters "--allWorkloads --includeRecommended --includeOptional --passive --locale en-US" -y --accept-license
+          choco install cygwin -y --accept-license
+          choco install cyg-get -y --accept-license
 
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
@@ -130,14 +150,11 @@ jobs:
           }
       - name: Run Tests
         run: |
-          $NUM_CPUS = (Get-CimInstance -ClassName Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
-          Write-Host "Number of CPUs available: $NUM_CPUS"
           $matrixTestType = "${{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
-              Write-Host "pytest test/unittests --durations=20 -n $NUM_CPUS"
+              Write-Host "pytest test/unittests --durations=20"
           } elseif ($matrixTestType -eq "integration") {
-              Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
+              Write-Host "pytest test/integration --durations=20"
           } elseif ($matrixTestType -eq "functional") {
-              pytest test/functional --durations=20 -n $NUM_CPUS
+              pytest test/functional --durations=20
           }
-
