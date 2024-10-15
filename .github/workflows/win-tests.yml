@@ -87,7 +87,6 @@ jobs:
             Expand-Archive -Path $zipFile -DestinationPath $destination -Force
             Remove-Item $zipFile
           }
-
       - name: Install modern CMake versions
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
@@ -98,8 +97,7 @@ jobs:
                 New-Item -Path $destination -ItemType Directory
             }
             $major_minor_version = ($version -split '\.')[0..1] -join '.'
-            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-windows-x86_64.zip
-            Write-Host "Downloading CMake: $url"
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-windows-x86_64.zip"
             $zipFile = "cmake-$version-windows-x86_64.zip"
             Invoke-WebRequest -Uri $url -OutFile $zipFile
             Expand-Archive -Path $zipFile -DestinationPath $destination -Force
