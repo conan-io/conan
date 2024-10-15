@@ -190,11 +190,54 @@ class TestLibs:
         c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
-    def test_libs_transitive(self, transitive_libraries):
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_libs_transitive(self, transitive_libraries, shared):
         c = transitive_libraries
         c.run("new cmake_lib -d name=app -d version=0.1 -d requires=engine/1.0")
-        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
-        assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+        shared = "-o engine/*:shared=True" if shared else ""
+        c.run(f"build . {shared} -c tools.cmake.cmakedeps:new=will_break_next")
+        if shared:
+            assert "matrix::matrix" not in c.out  # It is hidden as static behind the engine
+            assert "Conan: Target declared imported SHARED library 'engine::engine'" in c.out
+        else:
+            assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+            assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
+
+    def test_multilevel_shared(self):
+        # TODO: make this shared fixtures in conftest for multi-level shared testing
+        c = TestClient(default_server_user=True)
+        c.run("new cmake_lib -d name=matrix -d version=0.1")
+        c.run("create . -o *:shared=True -c tools.cmake.cmakedeps:new=will_break_next")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
+        c.run("create . -o *:shared=True -c tools.cmake.cmakedeps:new=will_break_next")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=gamelib -d version=0.1 -d requires=engine/0.1")
+        c.run("create . -o *:shared=True -c tools.cmake.cmakedeps:new=will_break_next")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
+        c.run("create . -o *:shared=True -c tools.cmake.cmakedeps:new=will_break_next")
+
+        assert "matrix/0.1: Hello World Release!"
+        assert "engine/0.1: Hello World Release!"
+        assert "gamelib/0.1: Hello World Release!"
+        assert "game/0.1: Hello World Release!"
+
+        # Make sure it works downloading to another cache
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+
+        c2 = TestClient(servers=c.servers)
+        c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
+        c2.run("create . -o *:shared=True -c tools.cmake.cmakedeps:new=will_break_next")
+
+        assert "matrix/0.1: Hello World Release!"
+        assert "engine/0.1: Hello World Release!"
+        assert "gamelib/0.1: Hello World Release!"
+        assert "game/0.1: Hello World Release!"
 
     def test_libs_components(self, matrix_client_components):
         """

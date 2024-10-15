@@ -100,11 +100,16 @@ def _matrix_client_components():
                 self.cpp_info.components["headers"].includedirs = ["include/headers"]
                 self.cpp_info.components["headers"].set_property("cmake_target_name", "MatrixHeaders")
                 self.cpp_info.components["headers"].defines = ["MY_MATRIX_HEADERS_DEFINE=1"]
+                # Few flags to cover that CMakeDeps doesn't crash with them
                 if self.settings.compiler == "msvc":
                     self.cpp_info.components["headers"].cxxflags = ["/Zc:__cplusplus"]
+                    self.cpp_info.components["headers"].cflags = ["/Zc:__cplusplus"]
                     self.cpp_info.components["headers"].system_libs = ["ws2_32"]
                 else:
                     self.cpp_info.components["headers"].system_libs = ["m"]
+                    # Just to verify CMake don't break
+                    self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
+                    self.cpp_info.exelinkflags = ["-z now", "-z relro"]
 
                 self.cpp_info.components["vector"].libs = ["vector"]
                 self.cpp_info.components["vector"].includedirs = ["include"]
