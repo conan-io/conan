@@ -5,6 +5,7 @@ import jinja2
 from jinja2 import Template
 
 from conan.errors import ConanException
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.pkg_type import PackageType
 
 
@@ -24,7 +25,8 @@ class TargetConfigurationTemplate2:
     @property
     def filename(self):
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        return f"{f}-Targets-{self._cmakedeps.configuration.lower()}.cmake"
+        build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
+        return f"{f}-Targets{build}-{self._cmakedeps.configuration.lower()}.cmake"
 
     def _requires(self, info, components):
         result = []
@@ -68,8 +70,11 @@ class TargetConfigurationTemplate2:
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER_{config}"
 
-        libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
-        self._add_root_lib_target(libs, pkg_name, cpp_info)
+        libs = {}
+        # The BUILD context does not generate libraries targets atm
+        if self._conanfile.context == CONTEXT_HOST:
+            libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
+            self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
 
         # TODO: Missing find_modes

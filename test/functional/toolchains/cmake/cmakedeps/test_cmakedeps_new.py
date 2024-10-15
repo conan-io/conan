@@ -1,14 +1,17 @@
+import os
 import platform
 import textwrap
 
 import pytest
 
+from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")
 class TestExes:
-    def test_exe(self):
+    @pytest.mark.parametrize("tool_requires", [False, True])
+    def test_exe(self, tool_requires):
         conanfile = textwrap.dedent(r"""
             import os
             from conan import ConanFile
@@ -51,12 +54,13 @@ class TestExes:
                 "src/main.cpp": main})
         c.run("create .")
 
-        consumer = textwrap.dedent("""
+        requires = "tool_requires" if tool_requires else "requires"
+        consumer = textwrap.dedent(f"""
             from conan import ConanFile
             from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
             class Consumer(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
-                tool_requires = "mytool/0.1"
+                {requires} = "mytool/0.1"
 
                 def generate(self):
                     deps = CMakeDeps(self)
@@ -610,3 +614,217 @@ def test_build_modules_custom_script(tool_requires):
                 clean_first=True)
     client.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
     assert "Hello myfunction!!!!" in client.out
+
+
+@pytest.mark.tool("cmake")
+class TestProtobuf:
+
+    @pytest.fixture()
+    def protobuf(self):
+        conanfile = textwrap.dedent(r"""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+
+            class Protobuf(ConanFile):
+                name = "protobuf"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                generators = "CMakeToolchain"
+                exports_sources = "*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_name", "MyProtobuf")
+                    self.cpp_info.components["protobuf"].libs = ["protobuf"]
+                    self.cpp_info.components["protoc"].exe = "protoc"
+                    self.cpp_info.components["protoc"].set_property("cmake_target_name",
+                                                                    "Protobuf::Protocompile")
+                    self.cpp_info.components["protoc"].location = os.path.join("bin", "protoc")
+            """)
+        main = textwrap.dedent("""
+            #include <iostream>
+            #include <fstream>
+            #include "protobuf.h"
+
+            int main() {
+                protobuf();
+                #ifdef NDEBUG
+                std::cout << "Protoc RELEASE generating out.c!!!!!" << std::endl;
+                #else
+                std::cout << "Protoc DEBUG generating out.c!!!!!" << std::endl;
+                #endif
+                std::ofstream f("out.c");
+            }
+            """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(protobuf CXX)
+
+            add_library(protobuf src/protobuf.cpp)
+            add_executable(protoc src/main.cpp)
+            target_link_libraries(protoc PRIVATE protobuf)
+            set_target_properties(protobuf PROPERTIES PUBLIC_HEADER "src/protobuf.h")
+
+            install(TARGETS protoc protobuf)
+            """)
+        c = TestClient()
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": cmake,
+                "src/protobuf.h": gen_function_h(name="protobuf"),
+                "src/protobuf.cpp": gen_function_cpp(name="protobuf", includes=["protobuf"]),
+                "src/main.cpp": main})
+        c.run("export .")
+
+        consumer = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
+            class Consumer(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "protobuf/0.1"
+                generators = "CMakeToolchain", "CMakeDeps"
+
+                def layout(self):
+                    cmake_layout(self)
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run(os.path.join(self.cpp.build.bindir, "myapp"))
+            """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(consumer CXX)
+
+            find_package(MyProtobuf CONFIG REQUIRED)
+            add_custom_command(OUTPUT out.c COMMAND Protobuf::Protocompile)
+            add_executable(myapp myapp.cpp out.c)
+            target_link_libraries(myapp PRIVATE protobuf::protobuf)
+            get_target_property(imported_configs Protobuf::Protocompile IMPORTED_CONFIGURATIONS)
+            message(STATUS "Protoc imported configurations: ${imported_configs}")
+            """)
+        myapp = textwrap.dedent("""
+            #include <iostream>
+            #include "protobuf.h"
+
+            int main() {
+                protobuf();
+                std::cout << "MyApp" << std::endl;
+            }
+            """)
+        c.save({"conanfile.py": consumer,
+                "CMakeLists.txt": cmake,
+                "myapp.cpp": myapp}, clean_first=True)
+        return c
+
+    def test_requires(self, protobuf):
+        c = protobuf
+        c.run("build . --build=missing -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
+        assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
+        assert "Protoc RELEASE generating out.c!!!!!" in c.out
+
+    def test_both(self, protobuf):
+        consumer = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
+            class Consumer(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "protobuf/0.1"
+                tool_requires = "protobuf/0.1"
+                generators = "CMakeToolchain", "CMakeDeps"
+
+                def layout(self):
+                    cmake_layout(self)
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run(os.path.join(self.cpp.build.bindir, "myapp"))
+            """)
+        c = protobuf
+        c.save({"conanfile.py": consumer})
+        c.run("build . -s:h build_type=Debug --build=missing "
+              "-c tools.cmake.cmakedeps:new=will_break_next")
+
+        # FIXME: This is appending twice the DEBUG to IMPORTED_CONFIGURATIONS
+        assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
+        assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
+        assert "Protoc RELEASE generating out.c!!!!!" in c.out
+
+        assert "conanfile.py: RUN: Debug" in c.out
+        assert "protobuf: Debug!" in c.out
+
+
+@pytest.mark.tool("cmake")
+class TestConfigs:
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC multi-conf")
+    def test_multi_config(self, matrix_client):
+        c = matrix_client
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        c.run("install . -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install . -s build_type=Debug --build=missing "
+              "-c tools.cmake.cmakedeps:new=will_break_next")
+
+        c.run_command("cmake --preset conan-default")
+        c.run_command("cmake --build --preset conan-release")
+        c.run_command("cmake --build --preset conan-debug")
+
+        c.run_command("build\\Release\\app")
+        assert "matrix/1.0: Hello World Release!" in c.out
+        assert "app/0.1: Hello World Release!" in c.out
+        c.run_command("build\\Debug\\app")
+        assert "matrix/1.0: Hello World Debug!" in c.out
+        assert "app/0.1: Hello World Debug!" in c.out
+
+    @pytest.mark.tool("ninja")
+    @pytest.mark.tool("cmake")  # Need to repeat for precedence
+    def test_cross_config(self, matrix_client):
+        # Release dependencies, but compiling app in Debug
+        c = matrix_client
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        c.run("install . -s &:build_type=Debug -c tools.cmake.cmakedeps:new=will_break_next "
+              "-c tools.cmake.cmaketoolchain:generator=Ninja")
+
+        c.run_command("cmake --preset conan-debug")
+        c.run_command("cmake --build --preset conan-debug")
+
+        c.run_command(os.path.join("build", "Debug", "app"))
+        assert "matrix/1.0: Hello World Release!" in c.out
+        assert "app/0.1: Hello World Debug!" in c.out
+
+    @pytest.mark.tool("ninja")
+    @pytest.mark.tool("cmake")  # Need to repeat for precedence
+    def test_cross_config_implicit(self, matrix_client):
+        # Release dependencies, but compiling app in Debug, without specifying it
+        c = matrix_client
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        c.run("install . -c tools.cmake.cmakedeps:new=will_break_next "
+              "-c tools.cmake.cmaketoolchain:generator=Ninja")
+        script = r"build\Release\generators\conanbuild.bat" if platform.system() == "Windows" else \
+            ". build/Release/generators/conanbuild.sh"
+
+        # Now we can force the Debug build, even if dependencies are Release
+        c.run_command(f"{script} && cmake . -G Ninja "
+                      "-DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake "
+                      "-DCMAKE_BUILD_TYPE=Debug -B build")
+        c.run_command("cmake --build build --config Debug")
+
+        cmd = os.path.join("build", "Debug", "app") if platform.system() == "Windows" else \
+            "./build/app"
+        c.run_command(cmd)
+        assert "matrix/1.0: Hello World Release!" in c.out
+        assert "app/0.1: Hello World Debug!" in c.out

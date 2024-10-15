@@ -35,8 +35,13 @@ class TargetsTemplate2:
             message(STATUS "Configuring Targets for {{ ref }}")
 
             # Load information for each installed configuration.
-            file(GLOB _cmake_config_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-Targets-*.cmake")
-            foreach(_cmake_config_file IN LISTS _cmake_config_files)
-              include("${_cmake_config_file}")
+            file(GLOB _target_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-Targets-*.cmake")
+            foreach(_target_file IN LISTS _target_files)
+              include("${_target_file}")
             endforeach()
-        """)
+
+            file(GLOB _build_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-TargetsBuild-*.cmake")
+            foreach(_build_file IN LISTS _build_files)
+              include("${_build_file}")
+            endforeach()
+            """)
