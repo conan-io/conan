@@ -73,75 +73,65 @@ jobs:
       - name: Build CMake old versions of CMake
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          @echo off
-          setlocal enabledelayedexpansion
-          set CMAKE_BUILD_VERSIONS=3.15.7
-          for %%v in (%CMAKE_BUILD_VERSIONS%) do (
-              echo Downloading CMake version %%v for Windows...
-              set "destination=C:\Tools\CMake\%%v"
-              if not exist "!destination!" (
-                  mkdir "!destination!"
-              )
-              for /f "tokens=1,2 delims=." %%a in ("%%v") do (
-                  set "version_major_minor=%%a.%%b"
-              )
-              set "url=https://cmake.org/files/v!version_major_minor!/cmake-%%v-win64-x64.zip"
-              curl -L -o "cmake-%%v-windows-x86_64.zip" !url!
-              tar -xf "cmake-%%v-windows-x86_64.zip" -C "!destination!"
-              del "cmake-%%v-windows-x86_64.zip"
-          )
-          endlocal
+          CMAKE_BUILD_VERSIONS = "3.15.7"
+          foreach ($version in CMAKE_BUILD_VERSIONS) {
+            Write-Host "Downloading CMake version $version for Windows..."
+            $destination = "C:\Tools\CMake\$version"
+            if (-not (Test-Path $destination)) {
+                New-Item -Path $destination -ItemType Directory
+            }
+            $major_minor_version = ($version -split '\.')[0..1] -join '.'
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-win64-x64.zip"
+            $zipFile = "cmake-$version-windows-x86_64.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipFile
+            Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+            Remove-Item $zipFile
+          }
 
       - name: Install modern CMake versions
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          @echo off
-          setlocal enabledelayedexpansion
-          set CMAKE_BUILD_VERSIONS=3.19.7 3.23.5
-          for %%v in (%CMAKE_BUILD_VERSIONS%) do (
-              echo Downloading CMake version %%v for Windows...
-              set "destination=C:\Tools\CMake\%%v"
-              if not exist "!destination!" (
-                  mkdir "!destination!"
-              )
-              for /f "tokens=1,2 delims=." %%a in ("%%v") do (
-                  set "version_major_minor=%%a.%%b"
-              )
-              set "url=https://cmake.org/files/v!version_major_minor!/cmake-%%v-windows-x86_64.zip"
-              curl -L -o "cmake-%%v-windows-x86_64.zip" !url!
-              tar -xf "cmake-%%v-windows-x86_64.zip" -C "!destination!"
-              del "cmake-%%v-windows-x86_64.zip"
-          )
-          endlocal
+          CMAKE_BUILD_VERSIONS = "3.19.7", "3.23.5"
+          foreach ($version in CMAKE_BUILD_VERSIONS) {
+            Write-Host "Downloading CMake version $version for Windows..."
+            $destination = "C:\Tools\CMake\$version"
+            if (-not (Test-Path $destination)) {
+                New-Item -Path $destination -ItemType Directory
+            }
+            $major_minor_version = ($version -split '\.')[0..1] -join '.'
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-windows-x86_64.zip"
+            $zipFile = "cmake-$version-windows-x86_64.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipFile
+            Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+            Remove-Item $zipFile
+          }
       - name: Install Bazel versions
         if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          @echo off
-          setlocal enabledelayedexpansion
-          set BAZEL_BUILD_VERSIONS=6.3.2 7.1.2
-          for %%v in (%BAZEL_BUILD_VERSIONS%) do (
-              echo Downloading Bazel version %%v for Windows...
-              set "destination=C:\Tools\bazel\%%v"
-              if not exist "!destination!" (
-                  mkdir "!destination!"
-              )
-              set "url=https://github.com/bazelbuild/bazel/releases/download/%%v/bazel-%%v-windows-x86_64.zip"
-              curl -L -o "bazel-%%v-windows-x86_64.zip" !url!
-              tar -xf "bazel-%%v-windows-x86_64.zip" -C "!destination!"
-              del "bazel-%%v-windows-x86_64.zip"
-          )
-          endlocal
+          $BAZEL_BUILD_VERSIONS = "6.3.2", "7.1.2"
+          foreach ($version in $BAZEL_BUILD_VERSIONS) {
+              Write-Host "Downloading Bazel version $version for Windows..."
+              $destination = "C:\Tools\bazel\$version"
+              if (-not (Test-Path $destination)) {
+                  New-Item -Path $destination -ItemType Directory
+              }
+              $major_minor_version = ($version -split '\.')[0..1] -join '.'
+              $url = "https://github.com/bazelbuild/bazel/releases/download/$version/bazel-$version-windows-x86_64.zip"
+              $zipFile = "bazel-$version-windows-x86_64.zip"
+              Invoke-WebRequest -Uri $url -OutFile $zipFile
+              Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+              Remove-Item $zipFile
+          }
       - name: Run Tests
         run: |
-          @echo off
-          setlocal
-          for /f "tokens=2 delims==" %%a in ('wmic cpu get NumberOfCores /value ^| find "="') do set NUM_CPUS=%%a
-          echo Number of CPUs available: %NUM_CPUS%
-          if "%{{ matrix.test-type }}%"=="unittests" (
-              pytest test/unittests --durations=20 -n %NUM_CPUS%
-          ) else if "%{{ matrix.test-type }}%"=="integration" (
-              pytest test/integration --durations=20 -n %NUM_CPUS%
-          ) else if "%{{ matrix.test-type }}%"=="functional" (
-              pytest test/functional --durations=20 -n %NUM_CPUS%
-          )
-          endlocal
+          $NUM_CPUS = (Get-WmiObject -Class Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
+          Write-Host "Number of CPUs available: $NUM_CPUS"
+          $matrixTestType = "{{ matrix.test-type }}"
+          if ($matrixTestType -eq "unittests") {
+              pytest test/unittests --durations=20 -n $NUM_CPUS
+          } elseif ($matrixTestType -eq "integration") {
+              pytest test/integration --durations=20 -n $NUM_CPUS
+          } elseif ($matrixTestType -eq "functional") {
+              pytest test/functional --durations=20 -n $NUM_CPUS
+          }
+
