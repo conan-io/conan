@@ -753,7 +753,6 @@ class TestProtobuf:
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run(os.path.join(self.cpp.build.bindir, "myapp"))
             """)
         c = protobuf
         c.save({"conanfile.py": consumer})
@@ -764,9 +763,13 @@ class TestProtobuf:
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
+        assert "protobuf: Release!" in c.out
+        assert "protobuf: Debug!" not in c.out
 
-        assert "conanfile.py: RUN: Debug" in c.out
+        cmd = "./build/Debug/myapp" if platform.system() != "Windows" else r"build\Debug\myapp"
+        c.run_command(cmd)
         assert "protobuf: Debug!" in c.out
+        assert "protobuf: Release!" not in c.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -791,7 +794,7 @@ class TestConfigs:
         assert "app/0.1: Hello World Debug!" in c.out
 
     @pytest.mark.tool("ninja")
-    @pytest.mark.tool("cmake")  # Need to repeat for precedence
+    @pytest.mark.tool("cmake", "3.23")  # Need to repeat for precedence
     def test_cross_config(self, matrix_client):
         # Release dependencies, but compiling app in Debug
         c = matrix_client
