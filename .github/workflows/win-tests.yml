@@ -38,28 +38,28 @@ jobs:
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: C:\Users\runneradmin\AppData\Local\pip\Cache
+          path: C:\Users\runneradmin\AppData\Local\pip\cache
           key: pip-packages-${{ runner.os }}-${{ hashFiles('conans/requirements*.txt') }}
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
-      - name: Cache Chocolatey packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: C:\ProgramData\chocolatey\lib
-          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            chocolatey-packages-${{ runner.os }}-
-
-      - name: Cache Cygwin packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: C:\cygwin64\etc\setup
-          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('installed.db') }}
-          restore-keys: |
-            cygwin-packages-${{ runner.os }}-
+#      - name: Cache Chocolatey packages
+#        if: matrix.test-type == 'functional'
+#        uses: actions/cache@v4
+#        with:
+#          path: C:\ProgramData\chocolatey\lib
+#          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+#          restore-keys: |
+#            chocolatey-packages-${{ runner.os }}-
+#
+#      - name: Cache Cygwin packages
+#        if: matrix.test-type == 'functional'
+#        uses: actions/cache@v4
+#        with:
+#          path: C:\cygwin64\etc\setup
+#          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('installed.db') }}
+#          restore-keys: |
+#            cygwin-packages-${{ runner.os }}-
 
       - name: Install Python requirements
         run: |
@@ -75,9 +75,9 @@ jobs:
           choco install pkgconfiglite --version 0.28 -y --accept-license
           choco install ninja --version 1.10.2 -y --accept-license
           choco install mingw -y --accept-license
-          choco install visualstudio2017community -y --accept-license --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.ATL --add Microsoft.VisualStudio.Component.VC.v141.ATLMFC --force
+          choco install visualstudio2017community -y --accept-license --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.ATL --add Microsoft.VisualStudio.Component.VC.v141.ATLMFC
           choco install cygwin -y --accept-license
-          choco install cyg-get -y --accept-license --force
+          choco install cyg-get -y --accept-license
 
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
