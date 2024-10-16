@@ -38,7 +38,7 @@ jobs:
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: C:\Users\${{ runner.user }}\AppData\Local\pip\Cache
+          path: C:\Users\runneradmin\AppData\Local\pip\Cache
           key: pip-packages-${{ runner.os }}-${{ hashFiles('conans/requirements*.txt') }}
           restore-keys: |
             pip-packages-${{ runner.os }}-
