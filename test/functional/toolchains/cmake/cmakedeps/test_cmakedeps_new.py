@@ -769,7 +769,7 @@ class TestProtobuf:
         assert "protobuf: Debug!" in c.out
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 class TestConfigs:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC multi-conf")
     def test_multi_config(self, matrix_client):
@@ -806,25 +806,29 @@ class TestConfigs:
         assert "matrix/1.0: Hello World Release!" in c.out
         assert "app/0.1: Hello World Debug!" in c.out
 
-    @pytest.mark.tool("ninja")
-    @pytest.mark.tool("cmake")  # Need to repeat for precedence
+    @pytest.mark.skipif(platform.system() == "Windows", reason="This doesn't work in MSVC")
     def test_cross_config_implicit(self, matrix_client):
         # Release dependencies, but compiling app in Debug, without specifying it
         c = matrix_client
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
-        c.run("install . -c tools.cmake.cmakedeps:new=will_break_next "
-              "-c tools.cmake.cmaketoolchain:generator=Ninja")
-        script = r"build\Release\generators\conanbuild.bat" if platform.system() == "Windows" else \
-            ". build/Release/generators/conanbuild.sh"
+        c.run("install . -c tools.cmake.cmakedeps:new=will_break_next")
 
+        # With modern CMake > 3.26 not necessary set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+            set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+            find_package(matrix CONFIG REQUIRED)
+
+            add_executable(app src/app.cpp src/main.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+            """)
+
+        c.save({"CMakeLists.txt": cmake})
         # Now we can force the Debug build, even if dependencies are Release
-        c.run_command(f"{script} && cmake . -G Ninja "
-                      "-DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake "
-                      "-DCMAKE_BUILD_TYPE=Debug -B build")
-        c.run_command("cmake --build build --config Debug")
-
-        cmd = os.path.join("build", "Debug", "app") if platform.system() == "Windows" else \
-            "./build/app"
-        c.run_command(cmd)
+        c.run_command("cmake . -DCMAKE_BUILD_TYPE=Debug -B build "
+                      "-DCMAKE_PREFIX_PATH=build/Release/generators")
+        c.run_command("cmake --build build")
+        c.run_command("./build/app")
         assert "matrix/1.0: Hello World Release!" in c.out
         assert "app/0.1: Hello World Debug!" in c.out
