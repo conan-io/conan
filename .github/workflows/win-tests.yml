@@ -43,24 +43,24 @@ jobs:
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
-      - name: Cache Chocolatey packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: |
-            C:\ProgramData\chocolatey\.chocolatey
-          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
-          restore-keys: |
-            chocolatey-packages-${{ runner.os }}-
-
-      - name: Cache Cygwin packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: C:\tools\cygwin\bin
-          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
-          restore-keys: |
-            cygwin-packages-${{ runner.os }}-
+#      - name: Cache Chocolatey packages
+#        if: matrix.test-type == 'functional'
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            C:\ProgramData\chocolatey\.chocolatey
+#          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
+#          restore-keys: |
+#            chocolatey-packages-${{ runner.os }}-
+#
+#      - name: Cache Cygwin packages
+#        if: matrix.test-type == 'functional'
+#        uses: actions/cache@v4
+#        with:
+#          path: C:\tools\cygwin\bin
+#          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
+#          restore-keys: |
+#            cygwin-packages-${{ runner.os }}-
 
       - name: Install Python requirements
         run: |
@@ -79,8 +79,8 @@ jobs:
           choco install visualstudio2017community
           choco install visualstudio2017-workload-nativedesktop
           choco install cygwin
-          choco install cyg-get --force
-          choco list > choco_installed_packages.lock
+          choco install cyg-get
+#          choco list > choco_installed_packages.lock
 
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
@@ -158,5 +158,5 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20"
           } elseif ($matrixTestType -eq "functional") {
-              Write-Host "pytest test/functional --durations=20"
+              pytest test/functional --durations=20
           }
