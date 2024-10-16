@@ -793,16 +793,14 @@ class TestConfigs:
         assert "matrix/1.0: Hello World Debug!" in c.out
         assert "app/0.1: Hello World Debug!" in c.out
 
-    @pytest.mark.tool("ninja")
-    @pytest.mark.tool("cmake", "3.23")  # Need to repeat for precedence
     def test_cross_config(self, matrix_client):
         # Release dependencies, but compiling app in Debug
         c = matrix_client
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
-        c.run("install . -s &:build_type=Debug -c tools.cmake.cmakedeps:new=will_break_next "
-              "-c tools.cmake.cmaketoolchain:generator=Ninja")
+        c.run("install . -s &:build_type=Debug -c tools.cmake.cmakedeps:new=will_break_next")
 
-        c.run_command("cmake --preset conan-debug")
+        preset = "conan-default" if platform.system() == "Windows" else "conan-debug"
+        c.run_command(f"cmake --preset {preset}")
         c.run_command("cmake --build --preset conan-debug")
 
         c.run_command(os.path.join("build", "Debug", "app"))
