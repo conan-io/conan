@@ -76,7 +76,7 @@ jobs:
           choco install ninja --version 1.10.2 -y --accept-license
           choco install mingw -y --accept-license
           choco install visualstudio2017community -y --accept-license --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.x86.x64 --add Microsoft.VisualStudio.Component.VC.v141.ATL --add Microsoft.VisualStudio.Component.VC.v141.ATLMFC
-          choco install cygwin
+          choco install cygwin -y --accept-license
           choco install cyg-get -y --accept-license --force
 
       - name: Install Cygwin extra packages
