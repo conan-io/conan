@@ -130,3 +130,47 @@ jobs:
         shell: bash
         run: |
           pytest -m docker_runner --durations=20 -rs
+
+  deploy_to_pypi_test:
+    needs: [build_container, linux_test_suite, linux_docker_tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop2'
+    name: Deploy to TestPyPI
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install twine
+
+      - name: Bump Dev Version
+        run: |
+          python .ci/bump_dev_version.py
+
+      - name: Build Package
+        run: |
+          python setup.py sdist
+
+      - name: Upload to TestPyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+        run: |
+          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+
+      - name: Deploy conan-server to TestPyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_SERVER_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_SERVER_PASSWORD }}
+        run: |
+          rm -rf dist/
+          mv setup_server.py setup.py
+          python setup.py sdist
+          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
