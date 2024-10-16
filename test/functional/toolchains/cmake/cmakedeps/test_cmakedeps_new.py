@@ -713,7 +713,7 @@ class TestProtobuf:
             add_executable(myapp myapp.cpp out.c)
             target_link_libraries(myapp PRIVATE protobuf::protobuf)
             get_target_property(imported_configs Protobuf::Protocompile IMPORTED_CONFIGURATIONS)
-            message(STATUS "Protoc imported configurations: ${imported_configs}")
+            message(STATUS "Protoc imported configurations: ${imported_configs}!!!")
             """)
         myapp = textwrap.dedent("""
             #include <iostream>
@@ -735,6 +735,7 @@ class TestProtobuf:
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
+        assert 'Protoc imported configurations: RELEASE!!!' in c.out
 
     def test_both(self, protobuf):
         consumer = textwrap.dedent("""
@@ -758,6 +759,7 @@ class TestProtobuf:
         c.save({"conanfile.py": consumer})
         c.run("build . -s:h build_type=Debug --build=missing "
               "-c tools.cmake.cmakedeps:new=will_break_next")
+        print(c.out)
 
         # FIXME: This is appending twice the DEBUG to IMPORTED_CONFIGURATIONS
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
@@ -765,11 +767,29 @@ class TestProtobuf:
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
         assert "protobuf: Release!" in c.out
         assert "protobuf: Debug!" not in c.out
+        assert 'Protoc imported configurations: RELEASE!!!' in c.out
 
         cmd = "./build/Debug/myapp" if platform.system() != "Windows" else r"build\Debug\myapp"
         c.run_command(cmd)
         assert "protobuf: Debug!" in c.out
         assert "protobuf: Release!" not in c.out
+
+        c.run("build . --build=missing "
+              "-c tools.cmake.cmakedeps:new=will_break_next")
+        print(c.out)
+
+        # FIXME: This is appending twice the DEBUG to IMPORTED_CONFIGURATIONS
+        assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
+        assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
+        assert "Protoc RELEASE generating out.c!!!!!" in c.out
+        assert "protobuf: Release!" in c.out
+        assert "protobuf: Debug!" not in c.out
+        assert 'Protoc imported configurations: RELEASE!!!' in c.out
+
+        cmd = "./build/Release/myapp" if platform.system() != "Windows" else r"build\Release\myapp"
+        c.run_command(cmd)
+        assert "protobuf: Debug!" not in c.out
+        assert "protobuf: Release!" in c.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -798,6 +818,18 @@ class TestConfigs:
         c = matrix_client
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
         c.run("install . -s &:build_type=Debug -c tools.cmake.cmakedeps:new=will_break_next")
+
+        # With modern CMake > 3.26 not necessary set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+            set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+            find_package(matrix CONFIG REQUIRED)
+
+            add_executable(app src/app.cpp src/main.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+            """)
+        c.save({"CMakeLists.txt": cmake})
 
         preset = "conan-default" if platform.system() == "Windows" else "conan-debug"
         c.run_command(f"cmake --preset {preset}")

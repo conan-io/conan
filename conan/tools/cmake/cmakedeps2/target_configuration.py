@@ -66,7 +66,8 @@ class TargetConfigurationTemplate2:
     def _context(self):
         cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
         pkg_name = self._conanfile.ref.name
-        config = self._cmakedeps.configuration.upper()
+        config = self._conanfile.settings.get_safe("build_type")
+        config = config.upper() if config else None
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER_{config}"
 
@@ -84,7 +85,8 @@ class TargetConfigurationTemplate2:
                 "pkg_folder_var": pkg_folder_var,
                 "config": config,
                 "exes": exes,
-                "libs": libs}
+                "libs": libs,
+                "context": self._conanfile.context}
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
         libs = {}
@@ -229,8 +231,8 @@ class TargetConfigurationTemplate2:
         ################# Libs information ##############
         {% for lib, lib_info in libs.items() %}
         #################### {{lib}} ####################
-        message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
         if(NOT TARGET {{ lib }})
+            message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
         {% if lib_info.get("includedirs") %}
@@ -280,12 +282,23 @@ class TargetConfigurationTemplate2:
         ################# Exes information ##############
         {% for exe, location in exes.items() %}
         #################### {{exe}} ####################
-        message(STATUS "Conan: Target declared imported executable '{{exe}}'")
         if(NOT TARGET {{ exe }})
+            message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
             add_executable({{exe}} IMPORTED)
+        else()
+            get_property(_context TARGET {{exe}} PROPERTY CONAN_CONTEXT)
+            if(NOT $${_context} STREQUAL "{{context}}")
+                message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
+                get_property(_configurations TARGET {{exe}} PROPERTY IMPORTED_CONFIGURATIONS)
+                message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                foreach(_config ${_configurations})
+                    set_property(TARGET {{exe}} PROPERTY IMPORTED_LOCATION_${_config})
+                endforeach()
+                set_property(TARGET {{exe}} PROPERTY IMPORTED_CONFIGURATIONS)
+            endif()
         endif()
         set_property(TARGET {{exe}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{exe}} PROPERTIES IMPORTED_LOCATION_{{config}} "{{location}}")
-
+        set_property(TARGET {{exe}} PROPERTY CONAN_CONTEXT "{{context}}")
         {% endfor %}
         """)
