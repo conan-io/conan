@@ -2152,7 +2152,7 @@ def test_cmake_toolchain_language_c():
     if platform.system() == "Windows":
         # compiler.version=191 is already the default now
         client.run("build . -s compiler.cstd=11 -s compiler.version=191", assert_error=True)
-        assert "The provided compiler.cstd=11 requires at least msvc>=192 but version 191 provided" \
+        assert "The provided compiler.cstd=11 is not supported by msvc 191. Supported values are: []" \
                in client.out
     else:
         client.run("build . -s compiler.cppstd=11")
