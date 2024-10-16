@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\tools\cygwin\bin
-          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
+          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('cygwin-installed-packages.lock') }}
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
 
@@ -87,6 +87,7 @@ jobs:
         if: matrix.test-type == 'functional'
         run: |
           cyg-get default automake gcc-g++ make binutils
+          Copy-Item "C:\tools\cygwin\etc\setup\installed.db" -Destination "cygwin-installed-packages.lock"
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
