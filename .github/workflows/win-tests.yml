@@ -93,7 +93,7 @@ jobs:
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
         run: |
-          cyg-get default automake gcc-g++ make binutils
+          C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
 
       - name: Install VS 17 Community edition
         if: matrix.test-type == 'functional'
@@ -108,14 +108,6 @@ jobs:
               "--add", "Microsoft.Component.MSBuild", `
               "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project" `
               -NoNewWindow -Wait
-
-      - name: Verify MSBuild
-        if: matrix.test-type == 'functional'
-        run: |
-          msbuild -version
-
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
