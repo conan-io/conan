@@ -88,6 +88,7 @@ BUILT_IN_CONFS = {
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
     "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
+    "tools.graph:skip_build": "(Experimental) Skip the computation of build_requires (tool, test)_requires",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
