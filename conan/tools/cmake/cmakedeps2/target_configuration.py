@@ -26,7 +26,9 @@ class TargetConfigurationTemplate2:
     @property
     def filename(self):
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        config = self._conanfile.settings.get_safe("build_type", "none").lower()
+        # Fallback to consumer configuration if it doesn't have build_type
+        config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
+        config = (config or "none").lower()
         build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
         return f"{f}-Targets{build}-{config}.cmake"
 
@@ -68,7 +70,8 @@ class TargetConfigurationTemplate2:
     def _context(self):
         cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
         pkg_name = self._conanfile.ref.name
-        config = self._conanfile.settings.get_safe("build_type")
+        # fallback to consumer configuration if it doesn't have build_type
+        config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
         config = config.upper() if config else None
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         config_folder = f"_{config}" if config else ""

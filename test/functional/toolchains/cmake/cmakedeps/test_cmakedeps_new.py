@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -243,6 +244,32 @@ class TestLibs:
         assert "gamelib/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
 
+
+class TestLibsLinkageTraits:
+    def test_linkage_shared_static(self):
+        """
+        the static library is skipped
+        """
+        c = TestClient()
+        c.run("new cmake_lib -d name=matrix -d version=0.1")
+        c.run("create . -c tools.cmake.cmakedeps:new=will_break_next -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
+        c.run("create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new=will_break_next -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
+        c.run("create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new=will_break_next "
+              "-c tools.compilation:verbosity=verbose")
+        assert re.search(r"Skipped binaries(\s*)matrix/0.1", c.out)
+        assert "matrix/0.1: Hello World Release!"
+        assert "engine/0.1: Hello World Release!"
+        assert "game/0.1: Hello World Release!"
+
+
+@pytest.mark.tool("cmake")
+class TestLibsComponents:
     def test_libs_components(self, matrix_client_components):
         """
         explicit usage of components
@@ -599,12 +626,7 @@ class TestHeaders:
             #ifndef MY_MATRIX_HEADERS_DEFINE2
             #error "Fatal error MY_MATRIX_HEADERS_DEFINE2 not defined"
             #endif
-            #ifdef _WIN32
-              #define ENGINE_EXPORT __declspec(dllexport)
-            #else
-              #define ENGINE_EXPORT
-            #endif
-            ENGINE_EXPORT void engine(){ std::cout << "Engine!" <<std::endl; matrix(); }
+            void engine(){ std::cout << "Engine!" <<std::endl; matrix(); }
             """)
 
         c.save({"conanfile.py": conanfile,
@@ -637,6 +659,78 @@ class TestHeaders:
         c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+    def test_conditional_header(self):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class EngineHeader(ConanFile):
+                name = "engine"
+                exports_sources = "*.h"
+                def package(self):
+                    copy(self, "*.h", src=self.source_folder, dst=self.package_folder)
+                def package_info(self):
+                    self.cpp_info.defines = ["MY_MATRIX_HEADERS_{version}_DEFINE=1"]
+            """)
+        engine_h = textwrap.dedent("""
+            #pragma once
+            #include <iostream>
+
+            #ifndef MY_MATRIX_HEADERS_{version}_DEFINE
+            #error "Fatal error MY_MATRIX_HEADERS_{version}_DEFINE not defined"
+            #endif
+            void engine(){{ std::cout << "Engine {version}!" <<std::endl; }}
+            """)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile.format(version="1_0"),
+                "include/engine.h": engine_h.format(version="1_0")})
+        c.run("create . --version=1_0")
+        c.save({"conanfile.py": conanfile.format(version="1_1"),
+                "include/engine.h": engine_h.format(version="1_1")})
+        c.run("create . --version=1_1")
+
+        app = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
+            class EngineHeader(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "CMakeDeps", "CMakeToolchain"
+                def requirements(self):
+                    v = "1_0" if self.settings.build_type == "Debug" else "1_1"
+                    self.requires(f"engine/{v}")
+                def layout(self):
+                    cmake_layout(self)
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run(os.path.join(self.cpp.build.bindir, "app"))
+             """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+            find_package(engine CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE engine::engine)
+            """)
+        c.save({"conanfile.py": app,
+                "CMakeLists.txt": cmake,
+                "src/app.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"])},
+               clean_first=True)
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "engine/1_1" in c.out
+        assert "engine/1_0" not in c.out
+        assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
+        assert "Engine 1_1!" in c.out
+
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next -s build_type=Debug")
+        assert "engine/1_1" not in c.out
+        assert "engine/1_0" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
+        assert "Engine 1_0!" in c.out
 
 
 @pytest.mark.tool("cmake")
