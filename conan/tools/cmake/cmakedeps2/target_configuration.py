@@ -13,9 +13,10 @@ class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile):
+    def __init__(self, cmakedeps, conanfile, require):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
+        self._require = require
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -113,13 +114,16 @@ class TargetConfigurationTemplate2:
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
         requires = " ".join(self._requires(info, components))
+        defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # TODO: Missing link language
-        # FIXME: Filter by traits!!!!!
+        # FIXME: Filter by lib traits!!!!!
+        if not self._require.headers:  # If not depending on headers, paths and
+            includedirs = defines = None
         system_libs = " ".join(info.system_libs)
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
-                  "defines": " ".join(info.defines),
+                  "defines": defines,
                   "requires": requires,
                   "cxxflags": " ".join(info.cxxflags),
                   "cflags": " ".join(info.cflags),

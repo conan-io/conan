@@ -61,7 +61,7 @@ class CMakeDeps2:
 
             targets = TargetsTemplate2(self, dep)
             ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(self, dep)
+            target_configuration = TargetConfigurationTemplate2(self, dep, require)
             ret[target_configuration.filename] = target_configuration.content()
         return ret
 

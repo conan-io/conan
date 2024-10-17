@@ -268,7 +268,6 @@ class TestLibs:
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
-        print(c.out)
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         if platform.system() == "Windows":
@@ -584,8 +583,9 @@ class TestHeaders:
                         self.cpp_info.cflags = ["/Zc:__cplusplus"]
                         self.cpp_info.system_libs = ["ws2_32"]
                     else:
-                        self.cpp_info.system_libs = ["m"]
+                        self.cpp_info.system_libs = ["m", "dl"]
                         # Just to verify CMake don't break
+                    if self.settings.compiler == "gcc":
                         self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
                         self.cpp_info.exelinkflags = ["-z now", "-z relro"]
              """)
@@ -841,9 +841,7 @@ class TestProtobuf:
         c.save({"conanfile.py": consumer})
         c.run("build . -s:h build_type=Debug --build=missing "
               "-c tools.cmake.cmakedeps:new=will_break_next")
-        print(c.out)
 
-        # FIXME: This is appending twice the DEBUG to IMPORTED_CONFIGURATIONS
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
@@ -858,9 +856,7 @@ class TestProtobuf:
 
         c.run("build . --build=missing "
               "-c tools.cmake.cmakedeps:new=will_break_next")
-        print(c.out)
 
-        # FIXME: This is appending twice the DEBUG to IMPORTED_CONFIGURATIONS
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
