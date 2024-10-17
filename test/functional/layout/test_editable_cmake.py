@@ -91,7 +91,7 @@ def test_editable_cmake_linux(generator):
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
 
@@ -154,6 +154,6 @@ def test_editable_cmake_linux_exe(generator):
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_osx_exe(generator):
     editable_cmake_exe(generator)
