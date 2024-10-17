@@ -48,8 +48,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            C:\ProgramData\chocolatey\lib
-            C:\ProgramData\chocolatey\bin
+            C:\ProgramData\chocolatey
           key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
           restore-keys: |
             chocolatey-packages-${{ runner.os }}-
@@ -58,12 +57,12 @@ jobs:
         if: matrix.test-type == 'functional'
         uses: actions/cache@v4
         with:
-          path: C:\tools\cygwin\bin
+          path: C:\tools\cygwin
           key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
 
-      - name: Cache Visual Studio 17 folder
+      - name: Cache Visual Studio 15 2017 folder
         if: matrix.test-type == 'functional'
         uses: actions/cache@v4
         with:
@@ -89,21 +88,22 @@ jobs:
           choco install cygwin
           choco install cyg-get
           choco list > choco_installed_packages.lock
+#          C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
 
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
         run: |
           C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
 
-      - name: Install VS 17 Community edition
+      - name: Install VS 15 2017 Community edition
         if: matrix.test-type == 'functional'
         run: |
-          Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_community.exe" -OutFile "vs_installer.exe"
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
               "--quiet", "--wait", "--norestart", "--nocache", `
               "--add", "Microsoft.VisualStudio.Workload.VCTools", `
               "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-              "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041", `
+              "--add", "Microsoft.VisualStudio.Component.Windows10SDK.16299.Desktop", `
               "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
               "--add", "Microsoft.Component.MSBuild", `
               "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project" `
