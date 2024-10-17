@@ -120,8 +120,7 @@ class CMakeToolchain:
                                        ("variables", VariablesBlock),
                                        ("preprocessor", PreprocessorBlock)])
 
-        # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
-        self.find_builddirs = True
+        self.conan_cmakedeps_paths = False  # Opt-in to new CMakeDeps generated paths
         self.user_presets_path = "CMakeUserPresets.json"
         self.presets_prefix = "conan"
         self.presets_build_environment = None
@@ -132,13 +131,8 @@ class CMakeToolchain:
         """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
-
         blocks = self.blocks.process_blocks()
-        ctxt_toolchain = {
-
-            "conan_blocks": blocks
-        }
-
+        ctxt_toolchain = {"conan_blocks": blocks}
         return ctxt_toolchain
 
     @property

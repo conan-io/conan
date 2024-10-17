@@ -7,6 +7,7 @@ from conan.api.output import Color
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -48,6 +49,41 @@ class CMakeDeps(object):
         for generator_file, content in generator_files.items():
             save(self._conanfile, generator_file, content)
         self.generate_aggregator()
+        self._generate_paths()
+
+    def _generate_paths(self):
+        content = []
+        host_req = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
+
+        # gen_folder = self._conanfile.generators_folder.replace("\\", "/")
+        # if not, test_cmake_add_subdirectory test fails
+        # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
+        for req, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
+            if req.build and dep.ref.name not in self.build_context_activated:
+                continue
+
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
+            cmake_find_mode = cmake_find_mode.lower()
+
+            t = CMakeDepsFileTemplate(self, req, dep)
+            pkg_name = t.file_name
+
+            if cmake_find_mode == FIND_MODE_NONE:
+                pkg_folder = dep.package_folder.replace("\\", "/") if dep.package_folder else None
+                if pkg_folder:
+                    content.append(f'set({pkg_name}_ROOT "{pkg_folder}")')
+                continue
+
+            # If CMakeDeps generated, the folder is this one
+            # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
+            content.append(f'set({pkg_name}_ROOT "${{CMAKE_CURRENT_LIST_DIR}}")')
+
+        # content.append(f'list(APPEND CMAKE_MODULE_PATH "{gen_folder}")')
+        content = "\n".join(content)
+        save(self._conanfile, "conan_cmakedeps_paths.cmake", content)
 
     @property
     def content(self):
@@ -73,8 +109,6 @@ class CMakeDeps(object):
         # Iterate all the transitive requires
         direct_configs = []
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
-            # Require is not used at the moment, but its information could be used,
-            # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if require.build and dep.ref.name not in self.build_context_activated:
                 continue
