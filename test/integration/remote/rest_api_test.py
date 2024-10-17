@@ -9,7 +9,7 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
 from conans.model.conf import ConfDefinition
 from conan.test.utils.env import environment_update
-from conans.client.userio import UserInput
+from conan.api.input import UserInput
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

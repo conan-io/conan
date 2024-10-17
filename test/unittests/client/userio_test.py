@@ -1,16 +1,14 @@
-# coding=utf-8
-
 import unittest
 
 from mock import mock
 
-from conans.client.userio import UserInput
+from conan.api.input import UserInput
 
 
 class UserInputTest(unittest.TestCase):
 
-    @mock.patch("conans.client.userio.UserInput.get_username", return_value="username")
-    @mock.patch("conans.client.userio.UserInput.get_password", return_value="passwd")
+    @mock.patch("conan.api.input.UserInput.get_username", return_value="username")
+    @mock.patch("conan.api.input.UserInput.get_password", return_value="passwd")
     def test_request_login(self, m1, m2):
         user_input = UserInput(non_interactive=False)
 

@@ -6,7 +6,6 @@ from threading import Lock
 
 from colorama import Fore, Style
 
-from conans.client.userio import color_enabled
 from conan.errors import ConanException
 
 LEVEL_QUIET = 80  # -q
@@ -50,6 +49,40 @@ if os.environ.get("CONAN_COLOR_DARK"):
     Color.BRIGHT_GREEN = Fore.GREEN
 
 
+def init_colorama(stream):
+    import colorama
+    if _color_enabled(stream):
+        if os.getenv("CLICOLOR_FORCE", "0") != "0":
+            # Otherwise it is not really forced if colorama doesn't feel it
+            colorama.init(strip=False, convert=False)
+        else:
+            colorama.init()
+
+
+def _color_enabled(stream):
+    """
+    NO_COLOR: No colors
+
+    https://no-color.org/
+
+    Command-line software which adds ANSI color to its output by default should check for the
+    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
+    prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
+    """
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
+        return True
+
+    if os.getenv("NO_COLOR") is not None:
+        return False
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
 class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
@@ -62,7 +95,7 @@ class ConanOutput:
         self._scope = scope
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
-        self._color = color_enabled(self.stream)
+        self._color = _color_enabled(self.stream)
 
     @classmethod
     def define_silence_warnings(cls, warnings):
@@ -253,7 +286,7 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
 
     fg_ = fg or ''
     bg_ = bg or ''
-    if (fg or bg) and color_enabled(sys.stdout):
+    if (fg or bg) and _color_enabled(sys.stdout):
         data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
     else:
         data = f"{' ' * indentation}{data}{endline}"
