@@ -115,6 +115,7 @@ class TargetConfigurationTemplate2:
         requires = " ".join(self._requires(info, components))
         # TODO: Missing escaping?
         # TODO: Missing link language
+        # FIXME: Filter by traits!!!!!
         system_libs = " ".join(info.system_libs)
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
@@ -262,12 +263,12 @@ class TargetConfigurationTemplate2:
         {% endif %}
         {% if lib_info.get("sharedlinkflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>"
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>")
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{config_wrapper(config, lib_info["exelinkflags"])}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{config_wrapper(config, lib_info["exelinkflags"])}}>")
         {% endif %}
 
         {% if lib_info.get("location") %}

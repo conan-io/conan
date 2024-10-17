@@ -560,7 +560,7 @@ class TestLibs:
 
 @pytest.mark.tool("cmake")
 class TestHeaders:
-    def test_libs(self, matrix_client):
+    def test_header_lib(self, matrix_client):
         c = matrix_client
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -576,7 +576,8 @@ class TestHeaders:
                 def package_id(self):
                     self.info.clear()
                 def package_info(self):
-                    self.cpp_info.defines = ["MY_MATRIX_HEADERS_DEFINE=1"]
+                    self.cpp_info.defines = ["MY_MATRIX_HEADERS_DEFINE=1",
+                                             "MY_MATRIX_HEADERS_DEFINE2=1"]
                     # Few flags to cover that CMakeDeps doesn't crash with them
                     if self.settings.compiler == "msvc":
                         self.cpp_info.cxxflags = ["/Zc:__cplusplus"]
@@ -594,6 +595,9 @@ class TestHeaders:
             #include "matrix.h"
             #ifndef MY_MATRIX_HEADERS_DEFINE
             #error "Fatal error MY_MATRIX_HEADERS_DEFINE not defined"
+            #endif
+            #ifndef MY_MATRIX_HEADERS_DEFINE2
+            #error "Fatal error MY_MATRIX_HEADERS_DEFINE2 not defined"
             #endif
             #ifdef _WIN32
               #define ENGINE_EXPORT __declspec(dllexport)
