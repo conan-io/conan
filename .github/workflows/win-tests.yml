@@ -48,7 +48,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            C:\ProgramData\chocolatey
+            C:\ProgramData\chocolatey\lib
+            C:\ProgramData\chocolatey\bin
+            C:\ProgramData\chocolatey\extensions
           key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
           restore-keys: |
             chocolatey-packages-${{ runner.os }}-
@@ -86,7 +88,7 @@ jobs:
           choco install ninja --version 1.10.2
           choco install mingw
           choco install cygwin
-          choco install cyg-get
+          choco install cyg-get --force
           choco list > choco_installed_packages.lock
 #          C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
 
