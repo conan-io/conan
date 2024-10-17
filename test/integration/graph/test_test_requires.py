@@ -198,6 +198,38 @@ def test_requires_transitive_diamond_components():
     assert "libc/0.1: Created package" in c.out
 
 
+def test_requires_transitive_diamond_components_order():
+    """
+    like the above, but in different order
+     libc  --(test-requires)---> liba
+       |-----> libb -----------/
+    https://github.com/conan-io/conan/issues/17164
+    """
+    c = TestClient(light=True)
+    libc = textwrap.dedent("""
+        from conan import ConanFile
+        class LibC(ConanFile):
+            name = "libc"
+            version = "0.1"
+
+            def requirements(self):
+                self.test_requires("liba/1.0")
+                self.requires("libb/1.0")
+
+            def package_info(self):
+                 self.cpp_info.components["comp"].libs = ["libc"]
+                 self.cpp_info.components["comp"].requires.append("libb::libb")
+        """)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "1.0"),
+            "libb/conanfile.py": GenConanfile("libb", "1.0").with_requires("liba/1.0"),
+            "libc/conanfile.py": libc})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    # This used to crash due to component not defined to liba
+    assert "libc/0.1: Created package" in c.out
+
+
 def test_test_requires_options():
     """ the default_options = {} values also propagate to ``test_requires()`` """
     c = TestClient(light=True)
