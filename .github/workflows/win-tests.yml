@@ -48,7 +48,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            C:\ProgramData\chocolatey\extensions
             C:\ProgramData\chocolatey\lib
             C:\ProgramData\chocolatey\bin
           key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
@@ -97,15 +96,18 @@ jobs:
           cyg-get default automake gcc-g++ make binutils
 
       - name: Install VS 17 Community edition
+        if: matrix.test-type == 'functional'
         run: |
-          Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_community.exe' -OutFile 'vs_installer.exe'
-          ./vs_installer.exe --quiet --wait --norestart --nocache \
-            --add Microsoft.VisualStudio.Workload.VCTools \
-            --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
-            --add Microsoft.VisualStudio.Component.Windows10SDK.19041 \
-            --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core \
-            --add Microsoft.Component.MSBuild \
-            --add Microsoft.VisualStudio.Component.VC.CMake.Project
+          Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_community.exe" -OutFile "vs_installer.exe"
+          Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
+              "--quiet", "--wait", "--norestart", "--nocache", `
+              "--add", "Microsoft.VisualStudio.Workload.VCTools", `
+              "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+              "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041", `
+              "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
+              "--add", "Microsoft.Component.MSBuild", `
+              "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project" `
+              -NoNewWindow -Wait
 
       - name: Verify MSBuild
         if: matrix.test-type == 'functional'
