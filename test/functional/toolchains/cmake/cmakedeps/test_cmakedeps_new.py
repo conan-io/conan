@@ -268,6 +268,7 @@ class TestLibs:
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
+        print(c.out)
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         if platform.system() == "Windows":
@@ -555,6 +556,83 @@ class TestLibs:
         assert "vector: Release!" in c.out
         assert "module: Release!" in c.out
         assert "vector: Release!" in c.out
+
+
+@pytest.mark.tool("cmake")
+class TestHeaders:
+    def test_libs(self, matrix_client):
+        c = matrix_client
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class EngineHeader(ConanFile):
+                name = "engine"
+                version = "1.0"
+                requires = "matrix/1.0"
+                exports_sources = "*.h"
+                settings = "compiler"
+                def package(self):
+                    copy(self, "*.h", src=self.source_folder, dst=self.package_folder)
+                def package_id(self):
+                    self.info.clear()
+                def package_info(self):
+                    self.cpp_info.defines = ["MY_MATRIX_HEADERS_DEFINE=1"]
+                    # Few flags to cover that CMakeDeps doesn't crash with them
+                    if self.settings.compiler == "msvc":
+                        self.cpp_info.cxxflags = ["/Zc:__cplusplus"]
+                        self.cpp_info.cflags = ["/Zc:__cplusplus"]
+                        self.cpp_info.system_libs = ["ws2_32"]
+                    else:
+                        self.cpp_info.system_libs = ["m"]
+                        # Just to verify CMake don't break
+                        self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
+                        self.cpp_info.exelinkflags = ["-z now", "-z relro"]
+             """)
+        engine_h = textwrap.dedent("""
+            #pragma once
+            #include <iostream>
+            #include "matrix.h"
+            #ifndef MY_MATRIX_HEADERS_DEFINE
+            #error "Fatal error MY_MATRIX_HEADERS_DEFINE not defined"
+            #endif
+            #ifdef _WIN32
+              #define ENGINE_EXPORT __declspec(dllexport)
+            #else
+              #define ENGINE_EXPORT
+            #endif
+            ENGINE_EXPORT void engine(){ std::cout << "Engine!" <<std::endl; matrix(); }
+            """)
+
+        c.save({"conanfile.py": conanfile,
+                "include/engine.h": engine_h})
+        c.run("create .")
+
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class EngineHeader(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "engine/1.0"
+                generators = "CMakeDeps", "CMakeToolchain"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+             """)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app CXX)
+            find_package(engine CONFIG REQUIRED)
+            add_executable(app src/app.cpp)
+            target_link_libraries(app PRIVATE engine::engine)
+            """)
+        c.save({"conanfile.py": app,
+                "CMakeLists.txt": cmake,
+                "src/app.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"])},
+               clean_first=True)
+        c.run("build . -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+        assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
 
 
 @pytest.mark.tool("cmake")

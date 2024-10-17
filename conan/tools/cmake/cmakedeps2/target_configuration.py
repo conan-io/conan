@@ -25,8 +25,9 @@ class TargetConfigurationTemplate2:
     @property
     def filename(self):
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        config = self._conanfile.settings.get_safe("build_type", "none").lower()
         build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
-        return f"{f}-Targets{build}-{self._cmakedeps.configuration.lower()}.cmake"
+        return f"{f}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
         result = []
@@ -69,7 +70,8 @@ class TargetConfigurationTemplate2:
         config = self._conanfile.settings.get_safe("build_type")
         config = config.upper() if config else None
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
-        pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER_{config}"
+        config_folder = f"_{config}" if config else ""
+        pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER{config_folder}"
 
         libs = {}
         # The BUILD context does not generate libraries targets atm
@@ -217,6 +219,13 @@ class TargetConfigurationTemplate2:
     def _template(self):
         # TODO: Check why not set_property instead of target_link_libraries
         return textwrap.dedent("""\
+        {%- macro config_wrapper(config, value) -%}
+             {% if config -%}
+             $<$<CONFIG:{{config}}>:{{value}}>
+             {%- else -%}
+             {{value}}
+             {%- endif %}
+        {%- endmacro -%}
         set({{pkg_folder_var}} "{{pkg_folder}}")
 
         # Dependencies finding
@@ -237,28 +246,28 @@ class TargetConfigurationTemplate2:
         endif()
         {% if lib_info.get("includedirs") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{config}}>:{{lib_info["includedirs"]}}>)
+                     {{config_wrapper(config, lib_info["includedirs"])}})
         {% endif %}
         {% if lib_info.get("defines") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{config}}>:{{lib_info["defines"]}}>)
+                     {{config_wrapper(config, lib_info["defines"])}})
         {% endif %}
         {% if lib_info.get("cxxflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:{{config}}>:{{lib_info["cxxflags"]}}>>)
+                     $<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>)
         {% endif %}
         {% if lib_info.get("cflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:{{config}}>:{{lib_info["cflags"]}}>>)
+                     $<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>)
         {% endif %}
         {% if lib_info.get("sharedlinkflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:$<$<CONFIG:{{config}}>:{{lib_info["sharedlinkflags"]}}>>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:$<$<CONFIG:{{config}}>:{{lib_info["sharedlinkflags"]}}>>)
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{config_wrapper(config, lib_info["sharedlinkflags"])}}>)
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:$<$<CONFIG:{{config}}>:{{lib_info["exelinkflags"]}}>>)
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{config_wrapper(config, lib_info["exelinkflags"])}}>)
         {% endif %}
 
         {% if lib_info.get("location") %}

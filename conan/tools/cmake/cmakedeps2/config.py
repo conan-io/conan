@@ -34,16 +34,12 @@ class ConfigTemplate2:
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
         return {"pkg_name": pkg_name,
-                "config_suffix": self._cmakedeps.config_suffix,
                 "targets_include_file": targets_include,
                 "build_modules_paths": build_modules_paths}
 
     @property
     def _template(self):
         return textwrap.dedent("""\
-        {%- macro pkg_var(pkg_name, var, config_suffix) -%}
-             {{'${'+pkg_name+'_'+var+config_suffix+'}'}}
-        {%- endmacro -%}
         # Requires CMake > 3.15
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")

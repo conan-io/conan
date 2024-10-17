@@ -110,10 +110,6 @@ class CMakeDeps2:
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
-    @property
-    def config_suffix(self):
-        return "_{}".format(self.configuration.upper()) if self.configuration else ""
-
     def _get_find_mode(self, dep):
         """
         :param dep: requirement
