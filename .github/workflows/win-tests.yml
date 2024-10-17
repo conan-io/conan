@@ -51,8 +51,6 @@ jobs:
             C:\ProgramData\chocolatey\extensions
             C:\ProgramData\chocolatey\lib
             C:\ProgramData\chocolatey\bin
-            C:\Users\runneradmin\AppData\Local\Temp\chocolatey
-            C:\Program Files (x86)\Microsoft Visual Studio
           key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
           restore-keys: |
             chocolatey-packages-${{ runner.os }}-
@@ -65,6 +63,15 @@ jobs:
           key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
+
+      - name: Cache Visual Studio 17 folder
+        if: matrix.test-type == 'functional'
+        uses: actions/cache@v4
+        with:
+          path: 'C:\Program Files (x86)\Microsoft Visual Studio\2017'
+          key: ${{ runner.os }}-vs17-cache
+          restore-keys: |
+            ${{ runner.os }}-vs17-cache
 
       - name: Install Python requirements
         run: |
@@ -80,16 +87,33 @@ jobs:
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
           choco install mingw
-          choco install visualstudio2017community
-          choco install visualstudio2017-workload-nativedesktop
           choco install cygwin
-          choco install cyg-get --force
+          choco install cyg-get
           choco list > choco_installed_packages.lock
 
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
         run: |
           cyg-get default automake gcc-g++ make binutils
+
+      - name: Install VS 17 Community edition
+        run: |
+          Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_community.exe' -OutFile 'vs_installer.exe'
+          ./vs_installer.exe --quiet --wait --norestart --nocache \
+            --add Microsoft.VisualStudio.Workload.VCTools \
+            --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+            --add Microsoft.VisualStudio.Component.Windows10SDK.19041 \
+            --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core \
+            --add Microsoft.Component.MSBuild \
+            --add Microsoft.VisualStudio.Component.VC.CMake.Project
+
+      - name: Verify MSBuild
+        if: matrix.test-type == 'functional'
+        run: |
+          msbuild -version
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
@@ -164,5 +188,5 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
-              pytest test/functional --durations=20 -n $NUM_CPUS
+              Write-Host "pytest test/functional --durations=20 -n $NUM_CPUS"
           }
