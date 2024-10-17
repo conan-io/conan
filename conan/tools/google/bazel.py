@@ -14,7 +14,8 @@ class Bazel(object):
         # Use BazelToolchain generated file if exists
         self._conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
         self._use_conan_config = os.path.exists(self._conan_bazelrc)
-        self._bazel_base_command = f"bazel {self._get_startup_command_options()}"
+        startup_opts = self._get_startup_command_options()
+        self._bazel_base_command = f"bazel {startup_opts}" if startup_opts else "bazel"
 
     def _safe_run_command(self, command):
         """
@@ -36,11 +37,7 @@ class Bazel(object):
         # See more info in https://bazel.build/run/bazelrc
         bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
                                                       check_type=list))
-        startup_options = ""
-        for rc in bazelrc_paths:
-            rc = rc.replace("\\", "/")
-            startup_options += f" --bazelrc={rc}"
-        return startup_options
+        return " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
 
     def build(self, args=None, target="//...", clean=True):
         """
