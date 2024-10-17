@@ -88,6 +88,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                      message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
                      set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION${config_suffix} ${CONAN_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
                    endif()
+                   string(REGEX REPLACE "^_" "" _CONFIG ${config_suffix})
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_CONFIGURATIONS ${_CONFIG})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()
