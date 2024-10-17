@@ -36,7 +36,8 @@ class UserInput:
             self._out.write("Remote '%s' username: " % remote_name)
             username = self.get_username()
 
-        self._out.write('Please enter a password for "%s" account: ' % username)
+        self._out.write("Please enter a password for user '%s' on remote '%s': "
+                        % (username, remote_name))
         try:
             pwd = self.get_password()
         except ConanException:
