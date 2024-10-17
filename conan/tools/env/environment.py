@@ -646,9 +646,15 @@ class ProfileEnvironment:
         return result
 
 
-def create_env_script(conanfile, content, filename, scope):
+def create_env_script(conanfile, content, filename, scope="build"):
     """
-    Create a file with any content which will be registered as a new script for the defined "group".
+    Create a file with any content which will be registered as a new script for the defined "scope".
+
+    Args:
+        conanfile: The Conanfile instance.
+        content (str): The content of the script to write into the file.
+        filename (str): The name of the file to be created in the generators folder.
+        scope (str): The scope or environment group for which the script will be registered.
     """
     path = os.path.join(conanfile.generators_folder, filename)
     save(path, content)
@@ -657,11 +663,16 @@ def create_env_script(conanfile, content, filename, scope):
         register_env_script(conanfile, path, scope)
 
 
-def register_env_script(conanfile, env_script_path, scope):
+def register_env_script(conanfile, env_script_path, scope="build"):
     """
-    Add the "env_script_path" to the current list of registered scripts for defined "group"
+    Add the "env_script_path" to the current list of registered scripts for defined "scope"
     These will be mapped to files:
     - conan{group}.bat|sh = calls env_script_path1,... env_script_pathN
+
+    Args:
+        conanfile: The Conanfile instance.
+        env_script_path (str): The full path of the script to register.
+        scope (str): The scope ('build' or 'host') for which the script will be registered.
     """
     existing = conanfile.env_scripts.setdefault(scope, [])
     if env_script_path not in existing:

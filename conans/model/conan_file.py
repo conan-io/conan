@@ -74,6 +74,7 @@ class ConanFile:
     buildenv_info = None
     runenv_info = None
     conf_info = None
+    generator_info = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name

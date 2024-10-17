@@ -89,6 +89,10 @@ class ConanFileInterface:
         return self._conanfile.conf_info
 
     @property
+    def generator_info(self):
+        return self._conanfile.generator_info
+
+    @property
     def dependencies(self):
         return self._conanfile.dependencies
 
