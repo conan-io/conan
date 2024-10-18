@@ -55,25 +55,6 @@ jobs:
           restore-keys: |
             chocolatey-packages-${{ runner.os }}-
 
-      - name: Cache Cygwin packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: C:\tools\cygwin
-          key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
-          restore-keys: |
-            cygwin-packages-${{ runner.os }}-
-
-      - name: Cache VS 15 2017 Community edition
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community'
-          key: vs15-community-${{ runner.os }}
-          restore-keys: |
-            vs15-community-${{ runner.os }}
-
-
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -88,7 +69,7 @@ jobs:
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
           choco install mingw
-          choco install cygwin
+          choco install cygwin --force
           choco install cyg-get --force
           choco list > choco_installed_packages.lock
 #          C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
