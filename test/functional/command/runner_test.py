@@ -36,6 +36,7 @@ def dockerfile_path(name=None):
     return path
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared():
     """
@@ -79,6 +80,7 @@ def test_create_docker_runner_cache_shared():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_from_cache():
     """
@@ -122,6 +124,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_folder():
     """
@@ -165,6 +168,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
@@ -235,6 +239,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_profile_default_folder():
     """
@@ -280,6 +285,7 @@ def test_create_docker_runner_profile_default_folder():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_file_path():
     """
@@ -324,9 +330,9 @@ def test_create_docker_runner_dockerfile_file_path():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
     conanfile = textwrap.dedent("""
     import os
@@ -389,6 +395,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile():
     """
@@ -443,6 +450,7 @@ def test_create_docker_runner_from_configfile():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile_with_args():
     """
@@ -499,6 +507,7 @@ def test_create_docker_runner_from_configfile_with_args():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_default_build_profile():
     """
