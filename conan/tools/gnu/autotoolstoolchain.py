@@ -231,6 +231,12 @@ class AutotoolsToolchain:
                         # https://github.com/conan-io/conan/issues/13780
                         compiler = unix_path(self._conanfile, compiler)
                         env.define(env_var, compiler)
+            compiler_setting = self._conanfile.settings.get_safe("compiler")
+            if compiler_setting == "msvc":
+                # None of them defined, if one is defined by user, user should define the other too
+                if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                    env.define("CC", "cl")
+                    env.define("CXX", "cl")
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
