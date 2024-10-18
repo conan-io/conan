@@ -93,12 +93,17 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
-              "--quiet", "--wait", "--norestart", "--nocache", `
-              "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-              "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64", `
-              "--add", "Microsoft.VisualStudio.Component.VC.v141.ATL", `
-              "--add", "Microsoft.VisualStudio.Component.VC.v141.ATLMFC", `
-              -NoNewWindow -Wait
+           "--quiet",  "--wait", "--norestart", "--nocache", `
+           "--add", "Microsoft.VisualStudio.Workload.VCTools", `
+           "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+           "--add", "Microsoft.VisualStudio.Component.Windows10SDK.16299.Desktop", `
+           "--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763", `
+           "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
+           "--add", "Microsoft.Component.MSBuild", `
+           "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
+           "--add", "Microsoft.VisualStudio.Workload.NativeDesktop", `
+           "--add", "Microsoft.VisualStudio.Component.VC.CoreBuildTools", `
+           "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC"
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
