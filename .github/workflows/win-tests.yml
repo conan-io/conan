@@ -103,7 +103,7 @@ jobs:
            "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
            "--add", "Microsoft.VisualStudio.Workload.NativeDesktop", `
            "--add", "Microsoft.VisualStudio.Component.VC.CoreBuildTools", `
-           "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC"
+           "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC" -Wait
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
