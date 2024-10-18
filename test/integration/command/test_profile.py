@@ -129,6 +129,8 @@ def test_shorthand_syntax():
                                          'compiler.version': '11',
                                          'os': 'Linux'},
                             'tool_requires': {}}}
+    tc.run("profile show -o:shared=True", assert_error=True)
+    assert 'Invalid empty package name in options. Use a pattern like `mypkg/*:shared`' in tc.out
 
 
 def test_profile_show_json():
