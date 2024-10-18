@@ -192,12 +192,15 @@ class DepsGraphBuilder(object):
 
     def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
         result = []
-        skip = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
+        skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
+        skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
         for require in node.conanfile.requires.values():
-            if skip and (require.build or require.test) \
-                    and not require.visible and not require.package_id_mode:
-                node.skipped_build_requires = True
-                continue
+            if not require.visible and not require.package_id_mode:
+                if skip_build and require.build:
+                    node.skipped_build_requires = True
+                    continue
+                if skip_test and require.test:
+                    continue
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:

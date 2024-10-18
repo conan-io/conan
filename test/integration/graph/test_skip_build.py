@@ -4,7 +4,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_private_skip():
+def test_graph_skip_build_test():
     # app -> pkg -(test)-> gtest
     #         \---(tool)-> cmake
     c = TestClient(light=True)
@@ -15,9 +15,6 @@ def test_private_skip():
             version = "1.0"
             test_requires = "gtest/1.0"
             tool_requires = "cmake/1.0"
-            def build(self):
-                assert self.dependencies.build["cmake"]
-                assert self.dependencies["gtest"]
         """)
     c.save({"gtest/conanfile.py": GenConanfile("gtest", "1.0"),
             "cmake/conanfile.py": GenConanfile("cmake", "1.0"),
@@ -26,15 +23,21 @@ def test_private_skip():
     c.run("create gtest")
     c.run("create cmake")
     c.run("create pkg")
-    c.run("create app -c tools.graph:skip_build=True")
+    c.run("create app -c tools.graph:skip_build=True -c tools.graph:skip_test=True")
     assert "cmake" not in c.out
     assert "gtest" not in c.out
+    c.run("create app -c tools.graph:skip_test=True")
+    assert "cmake" in c.out
+    assert "gtest" not in c.out
+    c.run("create app -c tools.graph:skip_build=True")
+    assert "cmake" not in c.out
+    assert "gtest" in c.out
 
     c.run("install app")
     assert "cmake" in c.out
     assert "gtest" in c.out
 
-    c.run("install app -c tools.graph:skip_build=True")
+    c.run("install app -c tools.graph:skip_build=True -c tools.graph:skip_test=True")
     assert "cmake" not in c.out
     assert "gtest" not in c.out
 
