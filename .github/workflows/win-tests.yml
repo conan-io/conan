@@ -64,15 +64,6 @@ jobs:
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
 
-      - name: Cache Visual Studio 15 2017 folder
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        with:
-          path: 'C:\Program Files (x86)\Microsoft Visual Studio\2017'
-          key: ${{ runner.os }}-vs17-cache
-          restore-keys: |
-            ${{ runner.os }}-vs17-cache
-
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
