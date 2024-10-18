@@ -217,5 +217,5 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
-              Write-Host "pytest test/functional --durations=20 -n $NUM_CPUS"
+              pytest test/functional --durations=20 -n $NUM_CPUS
           }
