@@ -11,8 +11,7 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.skipif(platform.system() == "Windows", reason="Uses UNIX commands")
 def test_rosenv():
     """
-    Test that the amentdeps generator generates conan_<name> folders and place CMake files
-    in the correct path
+    Test that the ROSEnv generator generates the environment files and that the environment variables are correctly set
     """
     client = TestClient()
     conanfile3 = textwrap.dedent('''
