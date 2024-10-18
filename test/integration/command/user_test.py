@@ -154,7 +154,7 @@ class ConanLib(ConanFile):
         client.save_home({"global.conf": conan_conf})
         client.run('remote login default admin -p', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
-        self.assertNotIn("Please enter a password for \"admin\" account:", client.out)
+        self.assertNotIn("Please enter a password for user 'admin'", client.out)
         client.run("remote list-users")
         self.assertIn("default:\n  No user", client.out)
 

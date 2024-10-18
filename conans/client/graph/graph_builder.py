@@ -11,7 +11,7 @@ from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, 
     GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options, _PackageOptions
 from conans.model.pkg_type import PackageType

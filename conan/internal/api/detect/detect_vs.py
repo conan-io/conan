@@ -3,7 +3,7 @@ import os
 from shutil import which
 
 from conan.tools.build import cmd_args_to_string
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def vs_installation_path(version):

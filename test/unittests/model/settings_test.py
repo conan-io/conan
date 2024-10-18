@@ -4,7 +4,7 @@ import unittest
 import pytest
 
 from conan.internal.default_settings import default_settings_yml
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field
 
 

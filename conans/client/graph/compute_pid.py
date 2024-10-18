@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    conanfile_remove_attr, ConanException
+from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
+from conan.errors import ConanException, ConanInvalidConfiguration
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 from conans.client.conanfile.implementations import auto_header_only_package_id
 

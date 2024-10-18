@@ -1,11 +1,12 @@
 import json
 import os
+import shlex
 import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanException, ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -72,7 +73,8 @@ class _InstallPackageReference:
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
-            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+            scope = "" if self.context == "host" else ":b"
+            cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
@@ -283,7 +285,8 @@ class _InstallConfiguration:
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
-            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+            scope = "" if self.context == "host" else ":b"
+            cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
@@ -331,17 +334,41 @@ class _InstallConfiguration:
                 self.filenames.append(d)
 
 
+class ProfileArgs:
+    def __init__(self, args):
+        self._args = args
+
+    @staticmethod
+    def from_args(args):
+        pr_args = []
+        for context in "host", "build":
+            for f in "profile", "settings", "options", "conf":
+                s = "pr" if f == "profile" else f[0]
+                pr_args += [f'-{s}:{context[0]}="{v}"' for v in
+                            getattr(args, f"{f}_{context}") or []]
+        return ProfileArgs(" ".join(pr_args))
+
+    @staticmethod
+    def deserialize(data):
+        return ProfileArgs(data.get("args"))
+
+    def serialize(self):
+        return {"args": self._args}
+
+
 class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph, order_by=None):
+    def __init__(self, deps_graph, order_by=None, profile_args=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
         order_by = order_by or "recipe"
         self._order = order_by
         self._node_cls = _InstallRecipeReference if order_by == "recipe" else _InstallConfiguration
         self._is_test_package = False
         self.reduced = False
+        self._profiles = {"self": profile_args} if profile_args is not None else {}
+        self._filename = None
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
             self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
@@ -368,15 +395,24 @@ class InstallGraph:
                 self._nodes[ref] = install_node
             else:
                 existing.merge(install_node)
+        # Make sure that self is also updated
+        current = self._profiles.pop("self", None)
+        if current is not None:
+            self._profiles[self._filename] = current
+        new = other._profiles.get("self")
+        if new is not None:
+            self._profiles[other._filename] = new
 
     @staticmethod
     def deserialize(data, filename):
         legacy = isinstance(data, list)
-        order, data, reduced = ("recipe", data, False) if legacy else \
-            (data["order_by"], data["order"], data["reduced"])
+        order, data, reduced, profiles = ("recipe", data, False, {}) if legacy else \
+            (data["order_by"], data["order"], data["reduced"], data.get("profiles", {}))
         result = InstallGraph(None, order_by=order)
         result.reduced = reduced
         result.legacy = legacy
+        result._filename = filename
+        result._profiles = {k: ProfileArgs.deserialize(v) for k, v in profiles.items()}
         for level in data:
             for item in level:
                 elem = result._node_cls.deserialize(item, filename)
@@ -461,17 +497,19 @@ class InstallGraph:
         install_order = self.install_order()
         result = {"order_by": self._order,
                   "reduced": self.reduced,
-                  "order": [[n.serialize() for n in level] for level in install_order]}
+                  "order": [[n.serialize() for n in level] for level in install_order],
+                  "profiles": {k: v.serialize() for k, v in self._profiles.items()}
+                  }
         return result
 
     def _get_missing_invalid_packages(self):
         missing, invalid = [], []
 
-        def analyze_package(package):
-            if package.binary == BINARY_MISSING:
-                missing.append(package)
-            elif package.binary == BINARY_INVALID:
-                invalid.append(package)
+        def analyze_package(pkg):
+            if pkg.binary == BINARY_MISSING:
+                missing.append(pkg)
+            elif pkg.binary == BINARY_INVALID:
+                invalid.append(pkg)
         for _, install_node in self._nodes.items():
             if self._order == "recipe":
                 for package in install_node.packages.values():
@@ -505,7 +543,8 @@ class InstallGraph:
             return "\n".join(errors)
         return None
 
-    def _raise_invalid(self, invalid):
+    @staticmethod
+    def _raise_invalid(invalid):
         msg = ["There are invalid packages:"]
         for package in invalid:
             node = package.nodes[0]

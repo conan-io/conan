@@ -2112,3 +2112,48 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
     c.run('build . --profile:host=android')
     assert 'VERSION ".0" format invalid.' not in c.out
     assert 'sdk: 1.0.0' in c.out
+
+
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_language_c():
+    client = TestClient()
+
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+            languages = "C"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg C)
+        """)
+
+    client.save(
+        {
+            "conanfile.py": conanfile,
+            "CMakeLists.txt": cmakelists,
+        },
+        clean_first=True,
+    )
+
+    if platform.system() == "Windows":
+        # compiler.version=191 is already the default now
+        client.run("build . -s compiler.cstd=11 -s compiler.version=191", assert_error=True)
+        assert "The provided compiler.cstd=11 is not supported by msvc 191. Supported values are: []" \
+               in client.out
+    else:
+        client.run("build . -s compiler.cppstd=11")
+        # It doesn't fail

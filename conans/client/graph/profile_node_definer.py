@@ -1,5 +1,5 @@
 from conans.client.graph.graph import CONTEXT_BUILD
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 

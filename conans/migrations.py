@@ -3,7 +3,7 @@ import os
 from conan import conan_version
 from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
-from conans.errors import ConanException, ConanMigrationError
+from conan.errors import ConanException, ConanMigrationError
 from conans.model.version import Version
 from conans.util.files import load, save
 
