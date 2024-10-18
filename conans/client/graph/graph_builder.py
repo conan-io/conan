@@ -40,10 +40,10 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
+        rs = self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
-        open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
+        open_requires = deque((r, root_node) for r in rs)
         try:
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
@@ -56,10 +56,9 @@ class DepsGraphBuilder(object):
                                  or new_node.recipe == RECIPE_EDITABLE or
                                  new_node.conanfile.conf.get("tools.graph:vendor",
                                                              choices=("build",))):
-                    self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
-                                              profile_host)
-                    open_requires.extendleft((r, new_node)
-                                             for r in reversed(new_node.conanfile.requires.values()))
+                    newr = self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                                                     profile_host)
+                    open_requires.extendleft((r, new_node) for r in reversed(newr))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
         except GraphError as e:
@@ -192,7 +191,17 @@ class DepsGraphBuilder(object):
                                                          raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
+        result = []
+        skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
+        skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
         for require in node.conanfile.requires.values():
+            if not require.visible and not require.package_id_mode:
+                if skip_build and require.build:
+                    node.skipped_build_requires = True
+                    continue
+                if skip_test and require.test:
+                    continue
+            result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
                 resolved = False
@@ -205,6 +214,7 @@ class DepsGraphBuilder(object):
             if graph_lock:
                 graph_lock.resolve_overrides(require)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
+        return result
 
     def _resolve_alias(self, node, require, alias, graph):
         # First try cached
