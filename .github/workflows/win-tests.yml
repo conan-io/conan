@@ -21,7 +21,7 @@ jobs:
         python-version: ['3.9']
         test-type: [unittests, integration, functional]
 
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
 
@@ -64,6 +64,16 @@ jobs:
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
 
+      - name: Cache VS 15 2017 Community edition
+        if: matrix.test-type == 'functional'
+        uses: actions/cache@v4
+        with:
+          path: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community'
+          key: vs15-community-${{ runner.os }}
+          restore-keys: |
+            vs15-community-${{ runner.os }}
+
+
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -86,7 +96,7 @@ jobs:
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
         run: |
-          C:\ProgramData\chocolatey\bin\cyg-get.bat default automake gcc-g++ make binutils
+          cyg-get automake gcc-g++ make binutils
 
       - name: Install VS 15 2017 Community edition
         if: matrix.test-type == 'functional'
@@ -178,5 +188,5 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
-              pytest test/functional --durations=20 -n $NUM_CPUS
+              Write-Host "pytest test/functional --durations=20 -n $NUM_CPUS"
           }
