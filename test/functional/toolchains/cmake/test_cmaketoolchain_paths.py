@@ -222,7 +222,6 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
     client.run("create . --name=hello --version=0.1 {}".format(settings))
-    print(client.out)
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)

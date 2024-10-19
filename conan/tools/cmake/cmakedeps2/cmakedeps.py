@@ -140,15 +140,20 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
 
             pkg_name = self.get_cmake_filename(dep)
+            # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
-                pkg_folder = dep.package_folder.replace("\\", "/") if dep.package_folder else None
+                try:
+                    build_dir = dep.cpp_info.builddirs[0]
+                except IndexError:
+                    build_dir = dep.package_folder
+                pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    content.append(f'set({pkg_name}_ROOT "{pkg_folder}")')
+                    content.append(f'set({pkg_name}_DIR "{pkg_folder}")')
                 continue
 
             # If CMakeDeps generated, the folder is this one
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
-            content.append(f'set({pkg_name}_ROOT "${{CMAKE_CURRENT_LIST_DIR}}")')
+            content.append(f'set({pkg_name}_DIR "${{CMAKE_CURRENT_LIST_DIR}}")')
 
         # content.append(f'list(APPEND CMAKE_MODULE_PATH "{gen_folder}")')
         content = "\n".join(content)
