@@ -39,6 +39,7 @@ class CMakeDeps2:
         generator_files = self._content()
         for generator_file, content in generator_files.items():
             save(self._conanfile, generator_file, content)
+        self._generate_paths()
 
     def _content(self):
         host_req = self._conanfile.dependencies.host
@@ -123,3 +124,35 @@ class CMakeDeps2:
     def get_transitive_requires(self, conanfile):
         # Prepared to filter transitive tool-requires with visible=True
         return get_transitive_requires(self._conanfile, conanfile)
+
+    def _generate_paths(self):
+        content = []
+        host_req = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
+
+        # gen_folder = self._conanfile.generators_folder.replace("\\", "/")
+        # if not, test_cmake_add_subdirectory test fails
+        # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
+        for req, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
+            if req.build and dep.ref.name not in self.build_context_activated:
+                continue
+
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
+            cmake_find_mode = cmake_find_mode.lower()
+
+            pkg_name = self.get_cmake_filename(dep)
+            if cmake_find_mode == FIND_MODE_NONE:
+                pkg_folder = dep.package_folder.replace("\\", "/") if dep.package_folder else None
+                if pkg_folder:
+                    content.append(f'set({pkg_name}_ROOT "{pkg_folder}")')
+                continue
+
+            # If CMakeDeps generated, the folder is this one
+            # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
+            content.append(f'set({pkg_name}_ROOT "${{CMAKE_CURRENT_LIST_DIR}}")')
+
+        # content.append(f'list(APPEND CMAKE_MODULE_PATH "{gen_folder}")')
+        content = "\n".join(content)
+        save(self._conanfile, "conan_cmakedeps_paths.cmake", content)
