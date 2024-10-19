@@ -22,7 +22,9 @@ def test_basic_inspect():
                      "    shared: ['True', 'False']",
                      'package_type: None',
                      'requires: []',
-                     'revision_mode: hash']
+                     'revision_mode: hash',
+                     'vendor: False'
+                     ]
 
 
 def test_options_description():
@@ -92,6 +94,7 @@ def test_normal_inspect():
                                    'package_type: None',
                                    'requires: []',
                                    'revision_mode: hash',
+                                   'vendor: False',
                                    'version: 1.0']
 
 
@@ -137,7 +140,8 @@ def test_requiremens_inspect():
             "False, 'test': False, 'force': False, 'direct': True, 'build': "
             "False, 'transitive_headers': None, 'transitive_libs': None, 'headers': "
             "True, 'package_id_mode': None, 'visible': True}]",
-            'revision_mode: hash'] == tc.out.splitlines()
+            'revision_mode: hash',
+            'vendor: False'] == tc.out.splitlines()
 
 
 def test_pythonrequires_remote():

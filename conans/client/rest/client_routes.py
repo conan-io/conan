@@ -49,9 +49,6 @@ class ClientV2Router:
         url = _format_ref(route, ref)
         return self.base_url + url
 
-    def oauth_authenticate(self):
-        return self.base_url + self.routes.oauth_authenticate
-
     def common_authenticate(self):
         return self.base_url + self.routes.common_authenticate
 

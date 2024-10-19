@@ -39,8 +39,9 @@ class TestCacheCompatibles:
         package_id = client.created_package_id("dep/0.1")
 
         client.run("install consumer -s build_type=Debug")
-        assert "dep/0.1: Main binary package '9e186f6d94c008b544af1569d1a6368d8339efc5' missing. "\
-               f"Using compatible package '{package_id}'" in client.out
+        assert "dep/0.1: Main binary package '9e186f6d94c008b544af1569d1a6368d8339efc5' missing"\
+               in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
 
     def test_compatible_recipe_reference(self, client):
         """ check that the recipe name can be used to filter
@@ -86,12 +87,14 @@ def test_cppstd():
 
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package 'ec174bec4a5ee2d44d3e33d9f4fdacd9b65a6772' missing. "\
-           f"Using compatible package '{package_id}'" in client.out
+    assert "dep/0.1: Main binary package 'ec174bec4a5ee2d44d3e33d9f4fdacd9b65a6772' missing" \
+           in client.out
+    assert f"Found compatible package '{package_id}'" in client.out
 
     client.run(f"install consumer {base_settings} -s build_type=Debug -s compiler.cppstd=17")
-    assert "dep/0.1: Main binary package '94758b7bbcb365aaf355913b35431c0da6ed6da5' missing. " \
-           f"Using compatible package '{package_id}'" in client.out
+    assert "dep/0.1: Main binary package '94758b7bbcb365aaf355913b35431c0da6ed6da5' missing" \
+           in client.out
+    assert f"Found compatible package '{package_id}'" in client.out
 
 
 def test_cppstd_validated():
@@ -151,8 +154,9 @@ def test_cppstd_server():
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
     assert "dep/0.1: Compatible configurations not found in cache, checking servers" in c.out
-    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
-           "Using compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" \
+           in c.out
+    assert "Found compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
            "compiler.cppstd=20" in c.out
     c.assert_listed_binary({"dep/0.1": ("326c500588d969f55133fdda29506ef61ef03eee",
                                         "Download (default)")})
@@ -160,8 +164,8 @@ def test_cppstd_server():
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
     assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
-    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
-           "Using compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" in c.out
+    assert "Found compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
            "compiler.cppstd=20" in c.out
     c.assert_listed_binary({"dep/0.1": ("326c500588d969f55133fdda29506ef61ef03eee", "Cache")})
 
@@ -174,8 +178,8 @@ def test_cppstd_server():
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17 --update")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
     assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
-    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. " \
-           "Using compatible package 'ce92fac7c26ace631e30875ddbb3a58a190eb601': " \
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" in c.out
+    assert "Found compatible package 'ce92fac7c26ace631e30875ddbb3a58a190eb601': " \
            "compiler.cppstd=14" in c.out
     c.assert_listed_binary({"dep/0.1": ("ce92fac7c26ace631e30875ddbb3a58a190eb601",
                                         "Download (default)")})
@@ -247,7 +251,7 @@ class TestDefaultCompat:
 
         c.run("create . --build=missing -s compiler.cppstd=17")
         assert "mylib/1.0: Main binary package" in c.out
-        assert " missing. Using compatible package" in c.out
+        assert "Found compatible package" in c.out
         assert "Possible options are ['shared', 'header_only']" not in c.out
         assert "mylib/1.0: WARN: WITH_FMT_ALIAS=False" in c.out
 
@@ -312,7 +316,11 @@ class TestDefaultCompat:
         assert "pkg/0.1: CPPSTD: 17" in c.out
 
     def test_check_min_cstd(self):
+<<<<<<< HEAD
         """ test that the check_min_cstd works fine wiht compatibility
+=======
+        """ test that the check_min_cstd works fine with compatibility
+>>>>>>> develop2
         """
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -331,7 +339,11 @@ class TestDefaultCompat:
 
         c = TestClient()
         c.save({"conanfile.py": conanfile})
+<<<<<<< HEAD
         settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+=======
+        settings = "-s compiler=gcc -s compiler.version=14 -s compiler.libcxx=libstdc++11"
+>>>>>>> develop2
         c.run(f"create .  {settings} -s compiler.cstd=17")
         assert "pkg/0.1: valid standard!!" in c.out
         assert "pkg/0.1: CSTD: 17" in c.out
@@ -427,6 +439,13 @@ class TestDefaultCompat:
               "-s compiler.version=194 -s compiler.cppstd=14 "
               "-s compiler.runtime=dynamic -pr:b=profile_build")
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
+               f"Using compatible package '{package_id1}'"
+
+        c.run("install --requires=mylib/1.0@ -s os=Windows -s arch=x86_64 -s build_type=Release "
+              "-s compiler=msvc "
+              "-s compiler.version=194 -s compiler.cppstd=17 "
+              "-s compiler.runtime=dynamic -pr:b=profile_build")
+        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing." \
                f"Using compatible package '{package_id1}'"
 
 

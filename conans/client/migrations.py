@@ -4,6 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.api.subapi.config import ConfigAPI
+from conan.internal.default_settings import migrate_settings_file
 from conans.migrations import Migrator
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save
@@ -44,17 +45,34 @@ class ClientMigrator(Migrator):
         # Migrate the settings if they were the default for that version
         # Time for migrations!
         # Update settings.yml
-        from conans.client.conf import migrate_settings_file
         migrate_settings_file(self.cache_folder)
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
         from conans.client.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
-        from conans.client.profile_loader import migrate_profile_plugin
+        from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
 
         if old_version and old_version < "2.0.14-":
             _migrate_pkg_db_lru(self.cache_folder, old_version)
+
+        # let the back migration files be stored
+        # if there was not a previous install (old_version==None)
+        if old_version is None or old_version < "2.4":
+            _migrate_default_compatibility(self.cache_folder)
+
+
+def _migrate_default_compatibility(cache_folder):
+    # just the back migration
+    undo = textwrap.dedent("""\
+        import os
+
+        def migrate(home_folder):
+            from conans.client.graph.compatibility import migrate_compatibility_files
+            migrate_compatibility_files(home_folder)
+        """)
+    path = os.path.join(cache_folder, "migrations", "2.4_1-migrate.py")
+    save(path, undo)
 
 
 def _migrate_pkg_db_lru(cache_folder, old_version):

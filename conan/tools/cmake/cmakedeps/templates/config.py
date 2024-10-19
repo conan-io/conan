@@ -25,7 +25,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     @property
     def additional_variables_prefixes(self):
         prefix_list = (
-            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile) or [])
+            self.cmakedeps.get_property("cmake_additional_variables_prefixes", self.conanfile, check_type=list) or [])
         return list(set([self.file_name] + prefix_list))
 
     @property
@@ -83,7 +83,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         {% endfor %}
 
-        # Only the first installed configuration is included to avoid the collision
+        # Only the last installed configuration BUILD_MODULES are included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})

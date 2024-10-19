@@ -284,3 +284,18 @@ class ToolCopyTest(unittest.TestCase):
         with chdir(sources):
             copy(None, "*", "..", dst=".")  # This used to crash
             assert "file.h" in os.listdir(sources)
+
+    def test_keep_path_false(self):
+        folder1 = temp_folder()
+        save(os.path.join(folder1, "file1.txt"), "file1")
+        save(os.path.join(folder1, "sub1", "file2.txt"), "file2")
+        save(os.path.join(folder1, "sub1", "file3.txt"), "file3")
+        save(os.path.join(folder1, "sub1", "sub12", "file4.txt"), "file4")
+        save(os.path.join(folder1, "sub2", "file5.txt"), "file5")
+        save(os.path.join(folder1, "sub2", "sub22", "file6.txt"), "file6")
+        save(os.path.join(folder1, "sub2", "sub22", "sub23", "file7.txt"), "file7")
+
+        folder2 = temp_folder()
+        copy(None, "*.txt", folder1, folder2, keep_path=False)
+        for file_number in range(1, 8):
+            assert load(os.path.join(folder2, f"file{file_number}.txt")) == f"file{file_number}"

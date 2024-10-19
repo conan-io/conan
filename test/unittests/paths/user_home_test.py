@@ -1,15 +1,9 @@
 import os
-import platform
 from pathlib import Path
 
-from conans.paths import get_conan_user_home, DEFAULT_CONAN_HOME
+from conan.internal.paths import get_conan_user_home
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import chdir
-
-if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user
-else:
-    conan_expand_user = os.path.expanduser
 
 
 def test_conanrc_abs_path_get_conan_user_home():
@@ -71,10 +65,6 @@ def test_conanrc_wrong_format():
         with open(os.path.join(_temp_folder, ".conanrc"), 'w+') as file:
             file.write(f'ronan_jome={_temp_folder}\n')
         conan_home = get_conan_user_home()
-
-        real_conan_home = os.getenv("CONAN_HOME") or os.path.join(conan_expand_user("~"),
-                                                                  DEFAULT_CONAN_HOME)
-        assert real_conan_home == conan_home
         assert _temp_folder not in conan_home
 
 
@@ -82,7 +72,4 @@ def test_conanrc_not_existing():
     _temp_folder = temp_folder(path_with_spaces=True)
     with chdir(_temp_folder):
         conan_home = get_conan_user_home()
-
-    real_conan_home = os.getenv("CONAN_HOME") or os.path.join(conan_expand_user("~"),
-                                                              DEFAULT_CONAN_HOME)
-    assert real_conan_home == conan_home
+        assert _temp_folder not in conan_home

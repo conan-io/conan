@@ -3,8 +3,8 @@ import unittest
 
 import pytest
 
-from conans.client.conf import default_settings_yml
-from conans.errors import ConanException
+from conan.internal.default_settings import default_settings_yml
+from conan.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field
 
 
@@ -426,7 +426,7 @@ def test_possible_values():
     settings.compiler = "gcc"
     sot = settings.compiler.cppstd.possible_values()
     assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
-                   'gnu20', '23', 'gnu23']
+                   'gnu20', '23', 'gnu23', '26', 'gnu26']
 
     # We cannot access the child definition of a non declared setting
     with pytest.raises(Exception) as e:
@@ -481,3 +481,25 @@ def test_settings_intel_cppstd_03():
     settings.compiler = "intel-cc"
     # This doesn't crash, it used to crash due to "03" not quoted in setting.yml
     settings.compiler.cppstd = "03"
+
+
+def test_set_value_non_existing_values():
+    data = {
+        "compiler": {
+            "gcc": {
+                "version": ["4.8", "4.9"],
+                "arch": {"x86": {"speed": ["A", "B"]},
+                         "x64": {"speed": ["C", "D"]}}}
+        },
+        "os": ["Windows", "Linux"]
+    }
+    settings = Settings(data)
+    with pytest.raises(ConanException) as cm:
+        settings.update_values([("foo", "A")])
+    assert "'settings.foo' doesn't exist for 'settings'" in str(cm.value)
+    with pytest.raises(ConanException) as cm:
+        settings.update_values([("foo.bar", "A")])
+    assert "'settings.foo' doesn't exist for 'settings'" in str(cm.value)
+    # it does not raise any error
+    settings.update_values([("foo", "A")], raise_undefined=False)
+    settings.update_values([("foo.bar", "A")], raise_undefined=False)

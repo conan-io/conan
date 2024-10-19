@@ -44,6 +44,9 @@ def test_install(client):
 def test_info(client):
     client.run("graph info --requires=dep/0.1")
     assert "RUNNING SOURCE" not in client.out
+    # Even if the package is to be built, it shouldn't download sources unless the conf is defined
+    client.run("graph info --requires=dep/0.1 --build=dep*")
+    assert "RUNNING SOURCE" not in client.out
     client.run("graph info --requires=dep/0.1 -c tools.build:download_source=True")
     assert "RUNNING SOURCE" in client.out
     client.run("graph info --requires=dep/0.1 -c tools.build:download_source=True")

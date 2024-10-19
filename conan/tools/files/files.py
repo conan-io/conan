@@ -11,8 +11,7 @@ from shutil import which
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.util.files import rmdir as _internal_rmdir, human_size
-from conans.util.sha import check_with_algorithm_sum
+from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -66,7 +65,7 @@ def rmdir(conanfile, path):
     _internal_rmdir(path)
 
 
-def rm(conanfile, pattern, folder, recursive=False):
+def rm(conanfile, pattern, folder, recursive=False, excludes=None):
     """
     Utility functions to remove files matching a ``pattern`` in a ``folder``.
 
@@ -74,10 +73,17 @@ def rm(conanfile, pattern, folder, recursive=False):
     :param pattern: Pattern that the files to be removed have to match (fnmatch).
     :param folder: Folder to search/remove the files.
     :param recursive: If ``recursive`` is specified it will search in the subfolders.
+    :param excludes: (Optional, defaulted to None) A tuple/list of fnmatch patterns or even a
+                     single one to be excluded from the remove pattern.
     """
+    if excludes and not isinstance(excludes, (tuple, list)):
+        excludes = (excludes,)
+    elif not excludes:
+        excludes = []
+
     for root, _, filenames in os.walk(folder):
         for filename in filenames:
-            if fnmatch(filename, pattern):
+            if fnmatch(filename, pattern) and not any(fnmatch(filename, it) for it in excludes):
                 fullname = os.path.join(root, filename)
                 os.unlink(fullname)
         if not recursive:
@@ -86,7 +92,7 @@ def rm(conanfile, pattern, folder, recursive=False):
 
 def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
-        auth=None, headers=None, strip_root=False):
+        auth=None, headers=None, strip_root=False, extract_filter=None):
     """
     High level download and decompressing of a tgz, zip or other compressed format file.
     Just a high level wrapper for download, unzip, and remove the temporary zip file once unzipped.
@@ -109,6 +115,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     :param auth:  forwarded to ``tools.file.download()``.
     :param headers:  forwarded to ``tools.file.download()``.
     :param strip_root: forwarded to ``tools.file.unzip()``.
+    :param extract_filter: forwarded to ``tools.file.unzip()``.
     """
 
     if not filename:  # deduce filename from the URL
@@ -122,7 +129,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
              retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(conanfile, filename, destination=destination, keep_permissions=keep_permissions,
-          pattern=pattern, strip_root=strip_root)
+          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter)
     os.unlink(filename)
 
 
@@ -256,7 +263,7 @@ def chdir(conanfile, newdir):
 
 
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
-          strip_root=False):
+          strip_root=False, extract_filter=None):
     """
     Extract different compressed formats
 
@@ -271,13 +278,18 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
            This should be a Unix shell-style wildcard, see fnmatch documentation for more details.
     :param strip_root: (Optional, Defaulted to False) If True, and all the unzipped contents are
            in a single folder it will flat the folder moving all the contents to the parent folder.
+    :param extract_filter: (Optional, defaulted to None). When extracting a tar file,
+           use the tar extracting filters define by Python in
+           https://docs.python.org/3/library/tarfile.html
     """
 
     output = conanfile.output
+    extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
+    output.info(f"Unzipping {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, strip_root)
+        return untargz(filename, destination, pattern, strip_root, extract_filter)
     if filename.endswith(".gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
@@ -288,7 +300,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 shutil.copyfileobj(fin, fout)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root)
+        return untargz(filename, destination, pattern, strip_root, extract_filter)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -356,10 +368,12 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None, strip_root=False):
+def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+        f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
+        tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:

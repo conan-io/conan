@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.test.utils.tools import TestClient
 
 
@@ -76,3 +76,17 @@ class TestProfileDetectAPI:
             user.confvar:libc_version={libc_version}
             """)
         assert expected in client.out
+
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+    def test_profile_detect_darwin_sdk(self):
+        client = TestClient()
+        tpl1 = textwrap.dedent("""\
+            [settings]
+            os = "Macos"
+            os.sdk_version = {{ detect_api.detect_sdk_version(sdk="macosx")  }}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+        sdk_version = detect_api.detect_sdk_version(sdk="macosx")
+        assert f"os.sdk_version={sdk_version}" in client.out

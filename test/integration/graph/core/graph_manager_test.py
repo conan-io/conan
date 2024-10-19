@@ -2,7 +2,7 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
-from conans.errors import ConanException
+from conan.errors import ConanException
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
 
@@ -349,24 +349,23 @@ class TestLinear(GraphManagerTest):
         _check_transitive(app, [(libb, True, True, False, False)])
         _check_transitive(libb, [(liba, False, False, True, True)])
 
-    def test_generic_build_require_adjust_run_with_package_type(self):
-        # FIXME: parametrize when superclass is not unittest
-        for package_type in ["application", "shared-library", "static-library",
-                             "header-library", "build-scripts", None]:
-            # app --br-> cmake (app)
-            self.recipe_conanfile("cmake/0.1", GenConanfile().with_package_type(package_type))
-            # build require with run=None by default
-            consumer = self.recipe_consumer("app/0.1", build_requires=["cmake/0.1"])
+    @parameterized.expand([("application",), ("shared-library",), ("static-library",),
+                           ("header-library",), ("build-scripts",), (None,)])
+    def test_generic_build_require_adjust_run_with_package_type(self, package_type):
+        # app --br-> cmake (app)
+        self.recipe_conanfile("cmake/0.1", GenConanfile().with_package_type(package_type))
+        # build require with run=None by default
+        consumer = self.recipe_consumer("app/0.1", build_requires=["cmake/0.1"])
 
-            deps_graph = self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer)
 
-            self.assertEqual(2, len(deps_graph.nodes))
-            app = deps_graph.root
-            cmake = app.dependencies[0].dst
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        cmake = app.dependencies[0].dst
 
-            # node, headers, lib, build, run
-            run = package_type in ("application", "shared-library", "build-scripts")
-            _check_transitive(app, [(cmake, False, False, True, run)])
+        # node, headers, lib, build, run
+        run = package_type in ("application", "shared-library", "build-scripts")
+        _check_transitive(app, [(cmake, False, False, True, run)])
 
     def test_direct_header_only(self):
         # app -> liba0.1 (header_only)

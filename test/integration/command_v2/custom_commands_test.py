@@ -7,7 +7,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class TestCustomCommands:
@@ -344,6 +344,32 @@ class TestCommandAPI:
         c.run("mycmd1")
         assert "MYCMD1!!!!!" in c.out
         assert "MYCMD2!!!!!" in c.out
+
+    def test_command_verbosity_leak(self):
+        mycommand = textwrap.dedent(f"""
+                    import json
+                    from conan.cli.command import conan_command
+                    from conan.api.output import ConanOutput
+
+                    @conan_command(group="custom commands")
+                    def mycommand(conan_api, parser, *args, **kwargs):
+                        \""" mycommand help \"""
+                        parser.add_argument("foo", help="foo")
+                        args = parser.parse_args(*args)
+
+                        out = ConanOutput()
+                        out.title("This is my first title")
+                        conan_api.command.run("config home")
+                        out.title("This is my second title")
+                    """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand})
+        c.run("mycommand foo -vquiet")
+        assert "This is my first title" not in c.out
+        assert "This is my second title" not in c.out
 
     def test_command_reuse_interface_create(self):
         mycommand = textwrap.dedent("""

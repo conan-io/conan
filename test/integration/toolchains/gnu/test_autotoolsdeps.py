@@ -89,7 +89,6 @@ def test_cpp_info_aggregation():
         from conan.tools.gnu import AutotoolsDeps
 
         class HelloConan(ConanFile):
-            generators = "AutotoolsDeps"
             requires = "dep1/1.0", "dep2/1.0"
             settings = "os", "arch", "build_type", "compiler"
 
@@ -110,8 +109,8 @@ def test_cpp_info_aggregation():
                                       "-ldep2_onesystemlib -ldep2_twosystemlib "\
                                       "-ldep1_onesystemlib -ldep1_twosystemlib"
 
-                assert env["LDFLAGS"].startswith('dep1_shared_link_flag dep2_exe_link_flag dep1_exe_link_flag -framework dep2_oneframework -framework dep2_twoframework ' \
-                                     '-framework dep1_oneframework -framework dep1_twoframework ')
+                assert 'dep1_shared_link_flag dep2_exe_link_flag dep1_exe_link_flag -framework dep2_oneframework -framework dep2_twoframework ' \
+                                     '-framework dep1_oneframework -framework dep1_twoframework ' in env["LDFLAGS"]
                 assert 'OtherSuperStuff' in env["LDFLAGS"]
     """)
 

@@ -24,7 +24,7 @@ import platform
 import re
 
 from conan.tools.build import cmd_args_to_string
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 WINDOWS = "windows"
 MSYS2 = 'msys2'
@@ -72,6 +72,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     if not shell_path:
         raise ConanException("The config 'tools.microsoft.bash:path' is "
                              "needed to run commands in a Windows subsystem")
+    shell_path = shell_path.replace("\\", "/")  # Should work in all terminals
     env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
@@ -82,6 +83,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         # - CHERE_INVOKING is necessary to keep the CWD and not change automatically to the user home
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        msys2_mode_env.unset("ORIGINAL_PATH")
         # So --login do not change automatically to the user home
         msys2_mode_env.define("CHERE_INVOKING", "1")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")

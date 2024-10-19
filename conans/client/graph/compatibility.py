@@ -4,7 +4,8 @@ from collections import OrderedDict
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
-from conans.errors import conanfile_exception_formatter, ConanException, scoped_traceback
+from conan.internal.errors import conanfile_exception_formatter, scoped_traceback
+from conan.errors import ConanException
 
 # TODO: Define other compatibility besides applications
 _default_compat = """\
@@ -35,14 +36,13 @@ def cppstd_compat(conanfile):
     cppstd = conanfile.settings.get_safe("compiler.cppstd")
     if not compiler or not compiler_version:
         return []
-    base = dict(conanfile.settings.values_list)
     factors = []  # List of list, each sublist is a potential combination
     if cppstd is not None and extension_properties.get("compatibility_cppstd") is not False:
         cppstd_possible_values = supported_cppstd(conanfile)
         if cppstd_possible_values is None:
             conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
-        else:
-            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values if v != cppstd])
+        else: # The current cppst must be included in case there is other factor
+            factors.append([{"compiler.cppstd": v} for v in cppstd_possible_values])
 
     cstd = conanfile.settings.get_safe("compiler.cstd")
     if cstd is not None and extension_properties.get("compatibility_cstd") is not False:
@@ -65,16 +65,14 @@ def cppstd_compat(conanfile):
         new_combinations = []
         for comb in combinations:
             for f in factor:
-                comb = comb.copy()
-                comb.update(f)
-                new_combinations.append(comb)
-        combinations = new_combinations
+                new_comb = comb.copy()
+                new_comb.update(f)
+                new_combinations.append(new_comb)
+        combinations.extend(new_combinations)
 
     ret = []
     for comb in combinations:
-        configuration = base.copy()
-        configuration.update(comb)
-        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
+        ret.append({"settings": [(k, v) for k, v in comb.items()]})
     return ret
 """
 
@@ -144,14 +142,15 @@ class BinaryCompatibility:
         if compatibles:
             for elem in compatibles:
                 compat_info = conanfile.original_info.clone()
+                compat_info.compatibility_delta = elem
                 settings = elem.get("settings")
                 if settings:
-                    compat_info.settings.update_values(settings)
+                    compat_info.settings.update_values(settings, raise_undefined=False)
                 options = elem.get("options")
                 if options:
                     compat_info.options.update(options_values=OrderedDict(options))
                 result.append(compat_info)
                 settings_target = elem.get("settings_target")
                 if settings_target and compat_info.settings_target:
-                    compat_info.settings_target.update_values(settings_target)
+                    compat_info.settings_target.update_values(settings_target, raise_undefined=False)
         return result

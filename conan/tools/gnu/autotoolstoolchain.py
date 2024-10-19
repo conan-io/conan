@@ -1,3 +1,5 @@
+import os
+
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
@@ -60,18 +62,24 @@ class AutotoolsToolchain:
         self._build = self._conanfile.conf.get("tools.gnu:build_triplet")
         self._target = None
 
-        is_cross_building = cross_building(self._conanfile)
-        if is_cross_building:
-            os_host = conanfile.settings.get_safe("os")
-            arch_host = conanfile.settings.get_safe("arch")
-            os_build = conanfile.settings_build.get_safe('os')
-            arch_build = conanfile.settings_build.get_safe('arch')
-
+        self.android_cross_flags = {}
+        self._is_cross_building = cross_building(self._conanfile)
+        if self._is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
-            if not self._host:
+            # If cross-building and tools.android:ndk_path is defined, let's try to guess the Android
+            # cross-building flags
+            self.android_cross_flags = self._resolve_android_cross_compilation()
+            # Host triplet
+            if self.android_cross_flags:
+                self._host = self.android_cross_flags.pop("host")
+            elif not self._host:
+                os_host = conanfile.settings.get_safe("os")
+                arch_host = conanfile.settings.get_safe("arch")
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)["triplet"]
             # Build triplet
             if not self._build:
+                os_build = conanfile.settings_build.get_safe('os')
+                arch_build = conanfile.settings_build.get_safe('arch')
                 self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)["triplet"]
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
@@ -84,16 +92,62 @@ class AutotoolsToolchain:
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
         # Apple stuff
-        is_cross_building_osx = (is_cross_building
+        is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
                                  and is_apple_os(conanfile))
-        min_flag, arch_flag, isysroot_flag = resolve_apple_flags(conanfile,
-                                                                 is_cross_building=is_cross_building_osx)
+        min_flag, arch_flag, isysroot_flag = (
+            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx)
+        )
         # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
         self.apple_arch_flag = arch_flag
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
+
+    def _resolve_android_cross_compilation(self):
+        # Issue related: https://github.com/conan-io/conan/issues/13443
+        ret = {}
+        if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
+            return ret
+        ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
+        if ndk_path:
+            if self._conanfile.conf.get("tools.build:compiler_executables"):
+                self._conanfile.output.warning("tools.build:compiler_executables conf has no effect"
+                                               " when tools.android:ndk_path is defined too.")
+            arch = self._conanfile.settings.get_safe("arch")
+            os_build = self._conanfile.settings_build.get_safe("os")
+            ndk_os_folder = {
+                'Macos': 'darwin',
+                'iOS': 'darwin',
+                'watchOS': 'darwin',
+                'tvOS': 'darwin',
+                'visionOS': 'darwin',
+                'FreeBSD': 'linux',
+                'Linux': 'linux',
+                'Windows': 'windows',
+                'WindowsCE': 'windows',
+                'WindowsStore': 'windows'
+            }.get(os_build, "linux")
+            ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
+                                   f"{ndk_os_folder}-x86_64", "bin")
+            android_api_level = self._conanfile.settings.get_safe("os.api_level")
+            android_target = {'armv7': 'armv7a-linux-androideabi',
+                              'armv8': 'aarch64-linux-android',
+                              'x86': 'i686-linux-android',
+                              'x86_64': 'x86_64-linux-android'}.get(arch)
+            os_build = self._conanfile.settings_build.get_safe('os')
+            ext = ".cmd" if os_build == "Windows" else ""
+            ret = {
+                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
+                "LD": os.path.join(ndk_bin, "ld"),
+                "STRIP": os.path.join(ndk_bin, "llvm-strip"),
+                "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
+                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "AR": os.path.join(ndk_bin, "llvm-ar"),
+                "host": android_target
+            }
+        return ret
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -102,7 +156,8 @@ class AutotoolsToolchain:
         return flag
 
     def _msvc_extra_flags(self):
-        if is_msvc(self._conanfile) and check_min_vs(self._conanfile, "180", raise_invalid=False):
+        if is_msvc(self._conanfile) and check_min_vs(self._conanfile, "180",
+                                                     raise_invalid=False):
             return ["-FS"]
         return []
 
@@ -157,21 +212,41 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
-        if compilers_by_conf:
-            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC", "rc": "RC"}
-            for comp, env_var in compilers_mapping.items():
-                if comp in compilers_by_conf:
-                    compiler = compilers_by_conf[comp]
-                    # https://github.com/conan-io/conan/issues/13780
-                    compiler = unix_path(self._conanfile, compiler)
-                    env.define(env_var, compiler)
+        # Setting Android cross-compilation flags (if exist)
+        if self.android_cross_flags:
+            for env_var, env_value in self.android_cross_flags.items():
+                unix_env_value = unix_path(self._conanfile, env_value)
+                env.define(env_var, unix_env_value)
+        else:
+            # Setting user custom compiler executables flags
+            compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
+                                                         default={},
+                                                         check_type=dict)
+            if compilers_by_conf:
+                compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                                     "rc": "RC"}
+                for comp, env_var in compilers_mapping.items():
+                    if comp in compilers_by_conf:
+                        compiler = compilers_by_conf[comp]
+                        # https://github.com/conan-io/conan/issues/13780
+                        compiler = unix_path(self._conanfile, compiler)
+                        env.define(env_var, compiler)
+
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        # Issue related: https://github.com/conan-io/conan/issues/15486
+        if self._is_cross_building and self._conanfile.conf_build:
+            compilers_build_mapping = (
+                self._conanfile.conf_build.get("tools.build:compiler_executables", default={},
+                                               check_type=dict)
+            )
+            if "c" in compilers_build_mapping:
+                env.define("CC_FOR_BUILD", compilers_build_mapping["c"])
+            if "cpp" in compilers_build_mapping:
+                env.define("CXX_FOR_BUILD", compilers_build_mapping["cpp"])
         return env
 
     def vars(self):

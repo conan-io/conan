@@ -151,15 +151,26 @@ def _apple_clang_supported_cstd(version):
 
 
 def _gcc_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "4.7":
+        return ["99", "gnu99"]
+    if version < "8":
+        return ["99", "gnu99", "11", "gnu11"]
+    if version < "14":
+        return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]
 
 
 def _msvc_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "192":
+        return []
     return ["11", "17"]
 
 
 def _clang_supported_cstd(version):
-    # TODO: Per-version support
+    if version < "3":
+        return ["99", "gnu99"]
+    if version < "6":
+        return ["99", "gnu99", "11", "gnu11"]
+    if version < "18":
+        return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]

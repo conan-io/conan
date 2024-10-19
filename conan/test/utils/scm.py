@@ -2,7 +2,7 @@ import os
 
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save_files, chdir
-from conans.util.runners import check_output_runner
+from conans.util.runners import detect_runner
 
 
 def git_create_bare_repo(folder=None, reponame="repo.git"):
@@ -10,7 +10,7 @@ def git_create_bare_repo(folder=None, reponame="repo.git"):
     cwd = os.getcwd()
     try:
         os.chdir(folder)
-        check_output_runner('git init --bare {}'.format(reponame))
+        detect_runner('git init --bare {}'.format(reponame))
         return os.path.join(folder, reponame).replace("\\", "/")
     finally:
         os.chdir(cwd)
@@ -24,7 +24,8 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
 
     def _run(cmd, p):
         with chdir(p):
-            return check_output_runner("git {}".format(cmd)).strip()
+            _, out = detect_runner("git {}".format(cmd))
+            return out.strip()
 
     _run("init .", tmp)
     _run('config user.name "Your Name"', tmp)
@@ -56,9 +57,10 @@ def git_add_changes_commit(folder, msg="fix"):
     try:
         os.chdir(folder)
         # Make sure user and email exist, otherwise it can error
-        check_output_runner('git config user.name "Your Name"')
-        check_output_runner('git config user.email "you@example.com"')
-        check_output_runner('git add . && git commit -m "{}"'.format(msg))
-        return check_output_runner("git rev-parse HEAD").strip()
+        detect_runner('git config user.name "Your Name"')
+        detect_runner('git config user.email "you@example.com"')
+        detect_runner('git add . && git commit -m "{}"'.format(msg))
+        _, out = detect_runner("git rev-parse HEAD")
+        return out.strip()
     finally:
         os.chdir(cwd)

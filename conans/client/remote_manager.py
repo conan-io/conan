@@ -10,13 +10,13 @@ from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    PackageNotFoundException
+from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
+from conan.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir, human_size
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
 
 
@@ -49,8 +49,7 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        layout = self._cache.get_or_create_ref_layout(ref)
-        layout.export_remove()
+        layout = self._cache.create_ref_layout(ref)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
@@ -132,8 +131,7 @@ class RemoteManager:
 
         assert pref.revision is not None
 
-        pkg_layout = self._cache.get_or_create_pkg_layout(pref)
-        pkg_layout.package_remove()  # Remove first the destination folder
+        pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, output, metadata)
 

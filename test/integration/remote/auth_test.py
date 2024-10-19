@@ -5,16 +5,16 @@ import unittest
 
 from requests.models import Response
 
-from conans.client.store.localdb import LocalDB
-from conans.errors import AuthenticationException
+from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.test.utils.tools import TestRequester
 from conan.test.utils.tools import TestServer
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
 
 conan_content = """
@@ -56,9 +56,9 @@ class AuthorizeTest(unittest.TestCase):
         ref = copy.copy(self.ref)
         ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-        self.assertIn('Please enter a password for "bad"', self.conan.out)
-        self.assertIn('Please enter a password for "bad2"', self.conan.out)
-        self.assertIn('Please enter a password for "nacho@gmail.com"', self.conan.out)
+        self.assertIn("Please enter a password for user 'bad'", self.conan.out)
+        self.assertIn("Please enter a password for user 'bad2'", self.conan.out)
+        self.assertIn("Please enter a password for user 'nacho@gmail.com'", self.conan.out)
 
     def test_auth_with_env(self):
 
@@ -128,7 +128,8 @@ class AuthorizeTest(unittest.TestCase):
         ref = copy.copy(self.ref)
         ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-        self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
+        self.assertIn("Please enter a password for user 'some_random.special!characters' on remote 'default'",
+                      client.out)
 
     def test_authorize_disabled_remote(self):
         tc = TestClient(servers=self.servers)
@@ -139,6 +140,7 @@ class AuthorizeTest(unittest.TestCase):
         tc.run("remote disable default")
         tc.run("remote login default pepe -p pepepass")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
+
 
 class AuthenticationTest(unittest.TestCase):
 
@@ -158,17 +160,17 @@ class AuthenticationTest(unittest.TestCase):
                 elif "ping" in url:
                     resp_basic_auth.headers = {"Content-Type": "application/json",
                                                "X-Conan-Server-Capabilities": "revisions"}
-                    token = getattr(kwargs["auth"], "token", None)
+                    bearer = getattr(kwargs["auth"], "bearer", None)
                     password = getattr(kwargs["auth"], "password", None)
-                    if token and token != "TOKEN":
+                    if bearer and bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
-                    if not token and not password:
+                    if not bearer and not password:
                         raise AuthenticationException(
                             "I'm an Artifactory without anonymous access that "
                             "requires authentication for the ping endpoint and "
                             "I don't return the capabilities")
                 elif "search" in url:
-                    if kwargs["auth"].token != "TOKEN":
+                    if kwargs["auth"].bearer != "Bearer TOKEN":
                         raise Exception("Bad JWT Token")
                     resp_basic_auth._content = b'{"results": []}'
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
@@ -201,9 +203,9 @@ def test_token_expired():
        */*@*/*: admin
        """)
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
-    server = TestServer(base_path=server_folder, users={"admin": "password"})
+    server = TestServer(base_path=server_folder, users={"admin": "password", "other": "pass"})
 
-    c = TestClient(servers={"default": server}, inputs=["admin", "password"])
+    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"])
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
@@ -215,13 +217,12 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    conan_conf = "core:non_interactive=True"
-    c.save_home({"global.conf": conan_conf})
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")
+    assert "Remote 'default' needs authentication, obtaining credentials" in c.out
     user, token, _ = localdb.get_login(server.fake_url)
-    assert user == "admin"
-    assert token is None
+    assert user == "other"
+    assert token is not None
 
 
 def test_auth_username_space():

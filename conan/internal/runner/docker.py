@@ -9,8 +9,7 @@ from conan.api.output import Color, ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
-from conans.client.profile_loader import ProfileLoader
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 
 
@@ -65,42 +64,32 @@ class DockerRunner:
         import docker
         import docker.api.build
         try:
-            self.docker_client = docker.from_env()
-            self.docker_api = docker.APIClient()
+            docker_base_urls = [
+                None, # Default docker configuration, let the python library detect the socket
+                os.environ.get('DOCKER_HOST'), # Connect to socket defined in DOCKER_HOST
+                'unix:///var/run/docker.sock', # Default linux socket
+                f'unix://{os.path.expanduser("~")}/.rd/docker.sock' # Rancher linux socket
+            ]
+            for base_url in docker_base_urls:
+                try:
+                    ConanOutput().verbose(f'Trying to connect to docker "{base_url or "default"}" socket')
+                    self.docker_client = docker.DockerClient(base_url=base_url, version='auto')
+                    ConanOutput().verbose(f'Connected to docker "{base_url or "default"}" socket')
+                    break
+                except:
+                    continue
+            self.docker_api = self.docker_client.api
             docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
             raise ConanException("Docker Client failed to initialize."
                                  "\n - Check if docker is installed and running"
-                                 "\n - Run 'pip install pip install conan[runners]'")
+                                 "\n - Run 'pip install conan[runners]'")
         self.conan_api = conan_api
         self.build_profile = build_profile
         self.args = args
         self.abs_host_path = make_abs_path(args.path)
         if args.format:
             raise ConanException("format argument is forbidden if running in a docker runner")
-
-        # Runner config
-        self.abs_runner_home_path = os.path.join(self.abs_host_path, '.conanrunner')
-        self.abs_docker_path = os.path.join('/root/conanrunner', os.path.basename(self.abs_host_path)).replace("\\","/")
-
-        # Update conan command and some paths to run inside the container
-        raw_args[raw_args.index(args.path)] = self.abs_docker_path
-        self.profiles = []
-        if self.args.profile_build and self.args.profile_host:
-            profile_list = set(self.args.profile_build + self.args.profile_host)
-        else:
-            profile_list = self.args.profile_host or self.args.profile_build
-
-        # Update the profile paths
-        for i, raw_arg in enumerate(raw_args):
-            for i, raw_profile in enumerate(profile_list):
-                _profile = ProfileLoader.get_profile_path(os.path.join(ConfigAPI(self.conan_api).home(), 'profiles'), raw_profile, os.getcwd())
-                _name = f'{os.path.basename(_profile)}_{i}'
-                if raw_profile in raw_arg:
-                    raw_args[raw_args.index(raw_arg)] = raw_arg.replace(raw_profile, os.path.join(self.abs_docker_path, '.conanrunner/profiles', _name))
-                self.profiles.append([_profile, os.path.join(self.abs_runner_home_path, 'profiles', _name)])
-
-        self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
 
         # Container config
         # https://containers.dev/implementors/json_reference/
@@ -115,6 +104,15 @@ class DockerRunner:
         self.remove = str(host_profile.runner.get('remove', 'false')).lower() == 'true'
         self.cache = str(host_profile.runner.get('cache', 'clean'))
         self.container = None
+
+        # Runner config>
+        self.abs_runner_home_path = os.path.join(self.abs_host_path, '.conanrunner')
+        self.docker_user_name = self.configfile.run.user or 'root'
+        self.abs_docker_path = os.path.join(f'/{self.docker_user_name}/conanrunner', os.path.basename(self.abs_host_path)).replace("\\","/")
+
+        # Update conan command and some paths to run inside the container
+        raw_args[raw_args.index(args.path)] = self.abs_docker_path
+        self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
 
     def run(self):
         """
@@ -194,10 +192,11 @@ class DockerRunner:
                         if stream:
                             ConanOutput().status(stream.strip())
 
-    def run_command(self, command, log=True):
+    def run_command(self, command, workdir=None, log=True):
+        workdir = workdir or self.abs_docker_path
         if log:
             _docker_info(f'Running in container: "{command}"')
-        exec_instance = self.docker_api.exec_create(self.container.id, f"/bin/bash -c '{command}'", tty=True)
+        exec_instance = self.docker_api.exec_create(self.container.id, f"/bin/bash -c '{command}'", workdir=workdir, tty=True)
         exec_output = self.docker_api.exec_start(exec_instance['Id'], tty=True, stream=True, demux=True,)
         stderr_log, stdout_log = '', ''
         try:
@@ -226,21 +225,21 @@ class DockerRunner:
         shutil.rmtree(self.abs_runner_home_path, ignore_errors=True)
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
         environment = {'CONAN_RUNNER_ENVIRONMENT': '1'}
-        if self.cache == 'shared':
-            volumes[ConfigAPI(self.conan_api).home()] = {'bind': '/root/.conan2', 'mode': 'rw'}
-        if self.cache in ['clean', 'copy']:
-            os.mkdir(self.abs_runner_home_path)
-            os.mkdir(os.path.join(self.abs_runner_home_path, 'profiles'))
 
-            # Copy all conan config files to docker workspace
+        if self.cache == 'shared':
+            volumes[self.conan_api.home_folder] = {'bind': f'/{self.docker_user_name}/.conan2', 'mode': 'rw'}
+
+        if self.cache in ['clean', 'copy']:
+            # Copy all conan profiles and config files to docker workspace
+            os.mkdir(self.abs_runner_home_path)
+            shutil.copytree(
+                os.path.join(self.conan_api.home_folder, 'profiles'),
+                os.path.join(self.abs_runner_home_path, 'profiles')
+            )
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
-                src_file = os.path.join(ConfigAPI(self.conan_api).home(), file_name)
+                src_file = os.path.join(self.conan_api.home_folder, file_name)
                 if os.path.exists(src_file):
                     shutil.copy(src_file, os.path.join(self.abs_runner_home_path, file_name))
-
-            # Copy all profiles to docker workspace
-            for current_path, new_path in self.profiles:
-                shutil.copy(current_path, new_path)
 
             if self.cache == 'copy':
                 tgz_path = os.path.join(self.abs_runner_home_path, 'local_cache_save.tgz')

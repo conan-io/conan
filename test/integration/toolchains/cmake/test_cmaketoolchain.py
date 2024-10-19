@@ -68,7 +68,7 @@ def test_cross_build_linux_to_macos():
     macos_profile = textwrap.dedent("""
         [settings]
         os=Macos
-        os.sdk_version=13.1
+        os.version=13.1
         arch=x86_64
         compiler=apple-clang
         compiler.version=13
@@ -85,7 +85,7 @@ def test_cross_build_linux_to_macos():
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 13.1)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
 
 
@@ -119,8 +119,16 @@ def test_cross_build_user_toolchain():
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert "CMAKE_SYSTEM_NAME " not in toolchain
-    assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
+    # Fixed in https://github.com/conan-io/conan/issues/16807
+    expected = textwrap.dedent("""\
+        # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_NAME Linux)
+        endif()
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+        endif()""")
+    assert expected in toolchain
 
 
 def test_cross_build_user_toolchain_confs():
@@ -437,7 +445,7 @@ def test_cmaketoolchain_cmake_system_processor_cross_apple():
     client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
     toolchain = client.load("conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 21)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 
@@ -1128,7 +1136,8 @@ def test_set_linker_scripts():
                 "profile": profile})
     client.run("install . -pr:b profile -pr:h profile")
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS -T"/usr/local/src/flash.ld" -T"C:/local/extra_data.ld")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS ' \
+           r'" -T\"/usr/local/src/flash.ld\" -T\"C:/local/extra_data.ld\"")' in toolchain
 
 
 def test_test_package_layout():
@@ -1276,6 +1285,32 @@ def test_build_folder_vars_self_name_version():
     presets = load(os.path.join(build_folder,
                                 "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
     assert "conan-windows-pkg-0.1-debug" in presets
+
+
+def test_build_folder_vars_constants_user():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "dep"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"const.myvalue\"]'"
+    settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
+    c.run("install . -c={} {}".format(conf, settings))
+    assert "cmake --preset conan-myvalue-debug" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "build", "myvalue", "Debug"))
+    presets = load(os.path.join(c.current_folder,
+                                "build/myvalue/Debug/generators/CMakePresets.json"))
+    assert "conan-myvalue-debug" in presets
 
 
 def test_extra_flags():
@@ -1575,3 +1610,118 @@ def test_output_dirs_gnudirs_local_custom():
     c.run("build .")
     _assert_install(c.out)
     assert "CMAKE_INSTALL_PREFIX" not in c.out
+
+
+def test_toolchain_extra_variables():
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:extra_variables={'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': '42' }
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
+                 "windows": windows_profile})
+
+    # Test passing extra_variables from pro ile
+    client.run("install . --profile:host=windows")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
+    assert 'set(FOO "42")' in toolchain
+
+    # Test input from command line passing dict between doble quotes
+    client.run(textwrap.dedent(r"""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CMAKE_GENERATOR_INSTANCE': '${GENERATOR_INSTANCE}/buildTools/', 'FOO': 42.2, 'DICT': {'value': 1}, 'CACHE_VAR': {'value': 'hello world', 'cache': True, 'type': 'BOOL', 'docstring': 'test variable'}}"
+    """)
+    )
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in toolchain
+    assert 'set(FOO 42.2)' in toolchain
+    assert 'set(DICT 1)' in toolchain
+    assert 'set(CACHE_VAR "hello world" CACHE BOOL "test variable")' in toolchain
+
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': 'true'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "cache" must be a boolean' in client.out
+
+    # Test invalid force
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'force': True}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "force" is only allowed for cache variables' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'force': 'true'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" "force" must be a boolean' in client.out
+
+    # Test invalid cache variable
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" needs "type" defined for cache variable' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'type': 'INVALID_TYPE'}}"
+    """) , assert_error=True)
+    assert 'tools.cmake.cmaketoolchain:extra_variables "myVar" invalid type "INVALID_TYPE" for cache variable. Possible types: BOOL, FILEPATH, PATH, STRING, INTERNAL' in client.out
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'CACHE_VAR_DEFAULT_DOC': {'value': 'hello world', 'cache': True, 'type': 'PATH'}}"
+    """))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in toolchain
+
+    client.run(textwrap.dedent("""
+        install . -c tools.cmake.cmaketoolchain:extra_variables="{'myVar': {'value': 'hello world', 'cache': True, 'type': 'PATH', 'docstring': 'My cache variable', 'force': True}}"
+    """))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(myVar "hello world" CACHE PATH "My cache variable" FORCE)' in toolchain
+
+
+def test_variables_wrong_scaping():
+    # https://github.com/conan-io/conan/issues/16432
+    c = TestClient()
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "pkg/conanfile.txt": "[tool_requires]\ntool/0.1\n[generators]\nCMakeToolchain"})
+    c.run("create tool")
+    c.run("install pkg")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f'list(PREPEND CMAKE_PROGRAM_PATH "{cache_folder}' in toolchain
+
+    c.run("install pkg --deployer=full_deploy")
+    toolchain = c.load("pkg/conan_toolchain.cmake")
+    assert 'list(PREPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/full_deploy' in toolchain
+
+
+def test_tricore():
+    # making sure the arch ``tc131`` is there
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    c.run("install . -s os=baremetal -s compiler=gcc -s arch=tc131")
+    content = c.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_SYSTEM_NAME Generic-ELF)' in content
+    assert 'set(CMAKE_SYSTEM_PROCESSOR tricore)' in content
+    assert 'string(APPEND CONAN_CXX_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_C_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " -mtc131")' in content
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " -mtc131")' in content
+
+
+def test_declared_stdlib_and_passed():
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=Cstd")' in tc
+
+    client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
+    tc = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " -library=stdcxx4")' in tc

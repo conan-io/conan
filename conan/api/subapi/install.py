@@ -1,9 +1,12 @@
+import os
+
+from conan.internal.api.install.generators import write_generators
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
-from conans.client.generators import write_generators
+
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.installer import BinaryInstaller
-from conans.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration
 
 
 class InstallAPI:
@@ -36,7 +39,8 @@ class InstallAPI:
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes):
-        """ Install sources for dependency graph
+        """ Install sources for dependency graph of packages to BUILD or packages that match
+        tools.build:download_source conf
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
@@ -47,7 +51,7 @@ class InstallAPI:
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_package=None, deploy_folder=None):
+                         deploy=False, deploy_package=None, deploy_folder=None, envs_generation=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -60,8 +64,8 @@ class InstallAPI:
             msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
 
-        if root_node.cant_build and root_node.should_build:
-            binary, reason = "Cannot build for this configuration", root_node.cant_build
+        if conanfile.info is not None and conanfile.info.cant_build and root_node.should_build:
+            binary, reason = "Cannot build for this configuration", conanfile.info.cant_build
             msg = "{}: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
 
@@ -69,7 +73,9 @@ class InstallAPI:
 
         # The previous .set_base_folders has already decided between the source_folder and output
         if deploy or deploy_package:
-            base_folder = deploy_folder or conanfile.folders.base_build
+            # Issue related: https://github.com/conan-io/conan/issues/16543
+            base_folder = os.path.abspath(deploy_folder) if deploy_folder \
+                else conanfile.folders.base_build
             do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
 
         final_generators = []
@@ -82,4 +88,4 @@ class InstallAPI:
                 final_generators.append(gen)
         conanfile.generators = final_generators
         app = ConanApp(self.conan_api)
-        write_generators(conanfile, app)
+        write_generators(conanfile, app, envs_generation=envs_generation)

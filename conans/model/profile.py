@@ -7,7 +7,7 @@ from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 
 
-class Profile(object):
+class Profile:
     """A profile contains a set of setting (with values), environment variables
     """
 
@@ -37,7 +37,7 @@ class Profile(object):
         def _serialize_tool_requires():
             return {pattern: [repr(ref) for ref in refs]
                     for pattern, refs in self.tool_requires.items()}
-        return {
+        result = {
             "settings": self.settings,
             "package_settings": self.package_settings,
             "options": self.options.serialize(),
@@ -46,6 +46,20 @@ class Profile(object):
             # FIXME: Perform a serialize method for ProfileEnvironment
             "build_env": self.buildenv.dumps()
         }
+
+        if self.replace_requires:
+            result["replace_requires"] = {str(pattern): str(replace) for pattern, replace in
+                                          self.replace_requires.items()}
+        if self.replace_tool_requires:
+            result["replace_tool_requires"] = {str(pattern): str(replace) for pattern, replace in
+                                               self.replace_tool_requires.items()}
+        if self.platform_tool_requires:
+            result["platform_tool_requires"] = [str(t) for t in self.platform_tool_requires]
+
+        if self.platform_requires:
+            result["platform_requires"] = [str(t) for t in self.platform_requires]
+
+        return result
 
     @property
     def package_settings_values(self):
@@ -85,6 +99,16 @@ class Profile(object):
         if self.platform_requires:
             result.append("[platform_requires]")
             result.extend(str(t) for t in self.platform_requires)
+
+        if self.replace_requires:
+            result.append("[replace_requires]")
+            for pattern, ref in self.replace_requires.items():
+                result.append(f"{pattern}: {ref}")
+
+        if self.replace_tool_requires:
+            result.append("[replace_tool_requires]")
+            for pattern, ref in self.replace_tool_requires.items():
+                result.append(f"{pattern}: {ref}")
 
         if self.conf:
             result.append("[conf]")

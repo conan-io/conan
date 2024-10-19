@@ -1,18 +1,18 @@
 import os
 import platform
-import subprocess
 import textwrap
 import unittest
 
 import pytest
 
-from conans.client.conf.detect import detect_defaults_settings
+from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import TestClient, redirect_output
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 from conans.util.files import save
-from conans.util.runners import check_output_runner
+from conans.util.runners import detect_runner
 from conan.tools.microsoft.visual import vcvars_command
+
 
 class TestProfile(unittest.TestCase):
 
@@ -100,7 +100,7 @@ class DetectCompilersTest(unittest.TestCase):
         Test if gcc in Mac OS X is using apple-clang as frontend
         """
         # See: https://github.com/conan-io/conan/issues/2231
-        output = check_output_runner("gcc --version", stderr=subprocess.STDOUT)
+        _, output = detect_runner("gcc --version")
 
         if "clang" not in output:
             # Not test scenario gcc should display clang in output

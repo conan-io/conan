@@ -1,15 +1,17 @@
 import hashlib
 import os
+import re
 import shutil
 import uuid
+from fnmatch import translate
 from typing import List
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB, \
-    ConanException
+from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
@@ -138,31 +140,29 @@ class PkgCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
-    def get_or_create_ref_layout(self, ref: RecipeReference):
-        """ called by RemoteManager.get_recipe()
+    def create_ref_layout(self, ref: RecipeReference):
+        """ called exclusively by:
+        - RemoteManager.get_recipe()
+        - cache restore
         """
-        try:
-            return self.recipe_layout(ref)
-        except ConanReferenceDoesNotExistInDB:
-            assert ref.revision, "Recipe revision must be known to create the package layout"
-            reference_path = self._get_path(ref)
-            self._db.create_recipe(reference_path, ref)
-            self._create_path(reference_path, remove_contents=False)
-            return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
+        assert ref.revision, "Recipe revision must be known to create the package layout"
+        reference_path = self._get_path(ref)
+        self._db.create_recipe(reference_path, ref)
+        self._create_path(reference_path, remove_contents=False)
+        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
-    def get_or_create_pkg_layout(self, pref: PkgReference):
-        """ called by RemoteManager.get_package() and  BinaryInstaller
+    def create_pkg_layout(self, pref: PkgReference):
+        """ called by:
+         - RemoteManager.get_package()
+         - cacje restpre
         """
-        try:
-            return self.pkg_layout(pref)
-        except ConanReferenceDoesNotExistInDB:
-            assert pref.ref.revision, "Recipe revision must be known to create the package layout"
-            assert pref.package_id, "Package id must be known to create the package layout"
-            assert pref.revision, "Package revision should be known to create the package layout"
-            package_path = self._get_path_pref(pref)
-            self._db.create_package(package_path, pref, None)
-            self._create_path(package_path, remove_contents=False)
-            return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
+        assert pref.package_id, "Package id must be known to create the package layout"
+        assert pref.revision, "Package revision should be known to create the package layout"
+        package_path = self._get_path_pref(pref)
+        self._db.create_package(package_path, pref, None)
+        self._create_path(package_path, remove_contents=False)
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -171,8 +171,15 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def all_refs(self):
-        return self._db.list_references()
+    def search_recipes(self, pattern=None, ignorecase=True):
+        # Conan references in main storage
+        if pattern:
+            if isinstance(pattern, RecipeReference):
+                pattern = repr(pattern)
+            pattern = translate(pattern)
+            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+
+        return self._db.list_references(pattern)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

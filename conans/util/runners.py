@@ -5,7 +5,7 @@ import tempfile
 from contextlib import contextmanager
 from io import StringIO
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load
 
 

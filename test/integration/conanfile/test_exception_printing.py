@@ -1,5 +1,6 @@
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 conanfile = """
@@ -56,3 +57,14 @@ def test_complete_traceback_trace():
     client = TestClient()
     client.run("install --requires=pkg/1.0 -vvv", assert_error=True)
     assert "Traceback (most recent call last)" in client.out
+
+
+def test_notracebacks_cmakedeps():
+    """
+    CMakeDeps prints traceback
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_generator("CMakeDeps")})
+    c.run("install .", assert_error=True)
+    assert "Traceback" not in c.out
+    assert "ERROR: Error in generator 'CMakeDeps'" in c.out

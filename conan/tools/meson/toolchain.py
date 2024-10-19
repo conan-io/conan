@@ -200,7 +200,17 @@ class MesonToolchain(object):
             if vscrt:
                 self._b_vscrt = str(vscrt).lower()
 
-        #: Dict-like object that defines Meson``properties`` with ``key=value`` format
+        # Extra flags
+        #: List of extra ``CXX`` flags. Added to ``cpp_args``
+        self.extra_cxxflags = []
+        #: List of extra ``C`` flags. Added to ``c_args``
+        self.extra_cflags = []
+        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
+        self.extra_ldflags = []
+        #: List of extra preprocessor definitions. Added to ``c_args`` and ``cpp_args`` with the
+        #: format ``-D[FLAG_N]``.
+        self.extra_defines = []
+        #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
@@ -250,6 +260,11 @@ class MesonToolchain(object):
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
+
+        # Read configuration for sys_root property (honoring existing conf)
+        self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
+        if self._sys_root:
+            self.properties["sys_root"] = self._sys_root
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
@@ -409,12 +424,14 @@ class MesonToolchain(object):
         exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[], check_type=list)
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
-        defines = [f"-D{d}" for d in self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)]
+        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         return {
-            "cxxflags": cxxflags,
-            "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags,
-            "defines": defines
+            "cxxflags": cxxflags + sys_root + self.extra_cxxflags,
+            "cflags": cflags + sys_root + self.extra_cflags,
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
+                       + sys_root + self.extra_ldflags,
+            "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }
 
     @staticmethod

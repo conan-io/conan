@@ -5,7 +5,7 @@ import os
 from conan import conan_version
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 def test_profile_template():
@@ -198,6 +198,17 @@ class TestProfileDetectAPI:
             os={the_os}
             """)
         assert expected in client.out
+
+    def test_profile_detect_compiler_missing_error(self):
+        client = TestClient(light=True)
+        tpl1 = textwrap.dedent("""
+                    {% set compiler, version, compiler_exe = detect_api.detect_clang_compiler(compiler_exe="not-existing-compiler") %}
+                    {% set version = detect_api.default_compiler_version(compiler, version) %}
+                    """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1", assert_error=True)
+        assert "No version provided to 'detect_api.default_compiler_version()' for None compiler" in client.out
 
 
 def test_profile_jinja_error():

@@ -5,11 +5,12 @@ import textwrap
 import pytest
 
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Darwin")
-@pytest.mark.tool("bazel")
+@pytest.mark.tool("bazel", "6.3.2")  # not working for Bazel 7.x
 def test_bazel_simple_cross_compilation():
     profile = textwrap.dedent("""
     [settings]
@@ -53,7 +54,6 @@ def test_bazel_simple_cross_compilation():
             bazel.build()
     """)
     BUILD = textwrap.dedent("""
-    load("@rules_cc//cc:defs.bzl", "cc_library")
     cc_library(
         name = "myapp",
         srcs = ["myapp.cpp"],
@@ -61,11 +61,13 @@ def test_bazel_simple_cross_compilation():
     )
     """)
     client = TestClient(path_with_spaces=False)
+    bazel_root_dir = temp_folder(path_with_spaces=False).replace("\\", "/")
     client.save({
         "profile": profile,
         "profile_host": profile_host,
         "conanfile.py": conanfile,
         "WORKSPACE": "",
+        ".bazelrc": f"startup --output_user_root={bazel_root_dir}",
         "main/BUILD": BUILD,
         "main/myapp.cpp": gen_function_cpp(name="myapp"),
         "main/myapp.h": gen_function_h(name="myapp"),

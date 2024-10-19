@@ -3,18 +3,25 @@ import pytest
 from conans.model.version_range import VersionRange
 
 values = [
+    # empty / any ranges
+    ['', "", ">=0.0.0"],
+    ['*', "*", ">=0.0.0"],
     # single lower limits bounds
     ['>1.0', ">1.0", ">1.0"],
     ['>=1.0', ">1.0", ">1.0"],
     ['>1.0', ">1.1", ">1.1"],
     ['>1.0', ">=1.1", ">=1.1"],
     ['>=1.0', ">=1.1", ">=1.1"],
+    ['', ">1.0", ">1.0"],
+    ['>1.0', "", ">1.0"],
     # single upper limits bounds
     ['<2.0', "<2.0", "<2.0"],
     ['<=1.0', "<1.0", "<1.0"],
     ['<2.0', "<2.1", "<2.0"],
     ['<2.0', "<=1.1", "<=1.1"],
     ['<=1.0', "<=1.1", "<=1.0"],
+    ['', "<2.0", ">=0.0.0 <2.0"],
+    ['<2.0', "", ">=0.0.0 <2.0"],
     # One lower limit, one upper
     ['>=1.0', "<2.0", ">=1.0 <2.0"],
     ['>=1', '<=1', ">=1 <=1"],
@@ -80,3 +87,38 @@ def test_range_intersection_incompatible(range1, range2):
     assert inter is None
     inter = r2.intersection(r1)  # Test reverse order, result should be the same
     assert inter is None
+
+
+prerelease_values = [
+    [", include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease"],
+    [">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease"],
+    [">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.12 <1.0-pre.98, include_prerelease",
+     ">=1.0-pre.12 <1.0-pre.98, include_prerelease"],
+    [">=1.0-pre.12 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.98, include_prerelease",
+     ">=1.0-pre.12 <1.0-pre.98, include_prerelease"],
+    [">=1.0-pre.1 <1.0-pre.99",
+     ">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.1 <1.0-pre.99"],
+    [">=1.0-pre.1 <1.0-pre.99, include_prerelease",
+     ">=1.0-pre.12 <1.0-pre.98",
+     ">=1.0-pre.12 <1.0-pre.98"],
+    [">=1.0-pre.12 <1.0-pre.99",
+     ">=1.0-pre.1 <1.0-pre.98",
+     ">=1.0-pre.12 <1.0-pre.98"]
+]
+
+
+@pytest.mark.parametrize("range1, range2, result", prerelease_values)
+def test_range_intersection_prerelease(range1, range2, result):
+    r1 = VersionRange(range1)
+    r2 = VersionRange(range2)
+    inter = r1.intersection(r2)
+    assert str(inter.version()) == f'[{result}]'
+    inter = r2.intersection(r1)  # Test reverse order, result should be the same
+    assert str(inter.version()) == f'[{result}]'

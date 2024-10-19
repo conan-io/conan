@@ -6,7 +6,7 @@ import fnmatch
 
 from collections import OrderedDict
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
@@ -52,6 +52,7 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
+    "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -73,6 +74,8 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_cuda": "(Experimental) Path to a CUDA toolset to use, or version if installed at the system level",
     "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
+    "tools.cmake.cmaketoolchain:extra_variables": "Dictionary with variables to be injected in CMakeToolchain (potential override of CMakeToolchain defined variables)",
+    "tools.cmake.cmaketoolchain:enabled_blocks": "Select the specific blocks to use in the conan_toolchain.cmake",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
@@ -82,6 +85,8 @@ BUILT_IN_CONFS = {
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
+    "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
+    "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
     "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
@@ -93,6 +98,7 @@ BUILT_IN_CONFS = {
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
+    "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
@@ -113,7 +119,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers if os=Windows",
     # Compilers/Flags configurations
-    "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc', 'ld', 'ar'}",
+    "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -267,6 +273,7 @@ class _ConfValue(object):
 class Conf:
     # Putting some default expressions to check that any value could be false
     boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
+    boolean_true_expressions = ("1", '"1"', "true", '"true"', "on")
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
@@ -316,8 +323,12 @@ class Conf:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
-                # Perhaps, user has introduced a "false", "0" or even "off"
-                return str(v).lower() not in Conf.boolean_false_expressions
+                if str(v).lower() in Conf.boolean_false_expressions:
+                    return False
+                if str(v).lower() in Conf.boolean_true_expressions:
+                    return True
+                raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
+                                     f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif v is None:  # value was unset

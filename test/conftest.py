@@ -6,7 +6,7 @@ from shutil import which
 
 import pytest
 
-from conans.client.conf.detect_vs import vswhere
+from conan.internal.api.detect.detect_vs import vswhere
 
 """
 To override these locations with your own in your dev machine:
@@ -132,7 +132,7 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+        "system": {"path": {'Windows': r"C:\msys64\usr\bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
@@ -155,9 +155,13 @@ tools_locations = {
         "system": {"path": {'Windows': "C:/cygwin64/bin"}},
     },
     'bazel': {
-        "default": "system",
-        "system": {"path": {'Windows': 'C:/bazel/bin',
-                            "Darwin": '/Users/jenkins/bin'}},
+        "default": "6.3.2",
+        "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
+                           'Windows': 'C:/bazel-6.3.2/bin',
+                           'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
+        "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
+                           'Windows': 'C:/bazel-7.1.2/bin',
+                           'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
         "exe": "premake5",
@@ -177,6 +181,7 @@ tools_locations = {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
         }
     },
+    "qbs": {"disabled": True},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

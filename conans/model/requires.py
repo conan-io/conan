@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -254,7 +254,11 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
-        # TODO: self.package_id_mode => Choose more restrictive?
+        self.is_test = self.is_test or other.is_test
+        # package_id_mode is not being propagated downstream. So it is enough to check if the
+        # current require already defined it or not
+        if self.package_id_mode is None:
+            self.package_id_mode = other.package_id_mode
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
@@ -270,15 +274,18 @@ class Requirement:
 
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
+            # Build-requires will propagate its main trait for running exes/shared to downstream
+            # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
+            # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=False, direct=False)
+                                                 run=True, visible=self.visible, direct=False)
                 return downstream_require
             return
 
@@ -338,6 +345,7 @@ class Requirement:
 
         if self.test:
             downstream_require.test = True
+        downstream_require.is_test = require.is_test
 
         # If the current one is resolving conflicts, the downstream one will be too
         downstream_require.force = require.force

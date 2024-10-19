@@ -7,9 +7,9 @@ from jinja2 import Template
 
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.conf import default_settings_yml
-from conans.client.profile_loader import ProfileLoader
-from conans.errors import ConanException
+from conan.internal.api.profile.profile_loader import ProfileLoader
+from conan.internal.default_settings import default_settings_yml
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.settings import Settings
 from conan.test.utils.test_files import temp_folder

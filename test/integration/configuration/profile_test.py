@@ -9,7 +9,7 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
-from conans.paths import CONANFILE
+from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.profiles import create_profile as _create_profile
 from conan.test.utils.test_files import temp_folder
@@ -574,3 +574,42 @@ def test_consumer_specific_settings_from_profile():
     client.save({"conanfile.py": conanfile, "my_profile.txt": profile})
     client.run("install . --profile my_profile.txt")
     assert "I'm hello and my build type is Debug" in client.out
+
+
+def test_consumer_invalid_profile_multiple_groups():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/16448
+    """
+    client = TestClient()
+    conanfile = GenConanfile(name="hello", version="1.0").with_settings("os", "arch",
+                                                                        "build_type", "compiler")
+    prof1 = textwrap.dedent("""\
+    [settings]
+    arch=x86_64
+    os=Linux
+    build_type=Release
+    compiler=clang
+    compiler.libcxx=libstdc++11
+    compiler.version=18
+    compiler.cppstd=20
+
+    [conf]
+    tools.build:compiler_executables={'c': '/usr/bin/clang-18', 'cpp': '/usr/bin/clang++-18'}
+
+    [settings]
+    # Empty and duplicated section
+
+    [options]
+    package/*:option=Whatever
+
+    [conf]
+    # Another one
+    """)
+    client.save({
+        "conanfile.py": conanfile,
+        "myprofs/myprofile": prof1
+    })
+    client.run("build . --profile:host myprofs/myprofile -g CMakeToolchain",
+               assert_error=True)
+    assert ("ERROR: Error reading 'myprofs/myprofile' profile: ConfigParser: "
+            "Duplicated section: [settings]") in client.out

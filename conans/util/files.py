@@ -11,8 +11,7 @@ import time
 
 from contextlib import contextmanager
 
-
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
@@ -91,7 +90,6 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
-# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -105,6 +103,17 @@ def _generic_algorithm_sum(file_path, algorithm_name):
                 break
             m.update(data)
         return m.hexdigest()
+
+
+def check_with_algorithm_sum(algorithm_name, file_path, signature):
+    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_signature != signature.lower():
+        raise ConanException("%s signature failed for '%s' file. \n"
+                             " Provided signature: %s  \n"
+                             " Computed signature: %s" % (algorithm_name,
+                                                          os.path.basename(file_path),
+                                                          signature,
+                                                          real_signature))
 
 
 def save(path, content, encoding="utf-8"):
@@ -286,15 +295,9 @@ def tar_extract(fileobj, destination_dir):
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
     # the_tar.errorlevel = 2  # raise exception if any error
+    the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
     the_tar.extractall(path=destination_dir)
     the_tar.close()
-
-
-def exception_message_safe(exc):
-    try:
-        return str(exc)
-    except Exception:
-        return repr(exc)
 
 
 def merge_directories(src, dst):
@@ -306,12 +309,15 @@ def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
     for root, dirs, files in os.walk(folder):
+        if root != folder and not dirs and not files:  # empty folder
+            rel_path = root[len(folder) + 1:].replace("\\", "/")
+            symlinked_folders[rel_path] = root
+            continue
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
                 rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
                 symlinked_folders[rel_path] = abs_path
-                continue
         for f in files:
             if f == ".DS_Store":
                 continue

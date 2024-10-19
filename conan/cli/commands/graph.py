@@ -8,13 +8,15 @@ from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
+from conan.cli.formatters.graph.build_order_html import format_build_order_html
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
+from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
-from conans.client.graph.install_graph import InstallGraph
-from conans.errors import NotFoundException
+from conans.client.graph.install_graph import InstallGraph, ProfileArgs
+from conan.internal.errors import NotFoundException
 from conans.model.recipe_ref import ref_matches, RecipeReference
 
 
@@ -44,8 +46,9 @@ def graph(conan_api, parser, *args):
     """
 
 
-def cli_build_order(build_order):
+def cli_build_order(result):
     # TODO: Very simple cli output, probably needs to be improved
+    build_order = result["build_order"]
     build_order = build_order["order"] if isinstance(build_order, dict) else build_order
     for level in build_order:
         for item in level:
@@ -58,11 +61,12 @@ def cli_build_order(build_order):
                 cli_out_write(f"{item['ref']}:{item['package_id']} - {item['binary']}")
 
 
-def json_build_order(build_order):
-    cli_out_write(json.dumps(build_order, indent=4))
+def json_build_order(result):
+    cli_out_write(json.dumps(result["build_order"], indent=4))
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
     Compute the build order of a dependency graph.
@@ -113,7 +117,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out = ConanOutput()
     out.title("Computing the build order")
 
-    install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    install_graph = InstallGraph(deps_graph, order_by=args.order_by,
+                                 profile_args=ProfileArgs.from_args(args))
     if args.reduce:
         if args.order_by is None:
             raise ConanException("--reduce needs --order-by argument defined")
@@ -126,10 +131,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
-    return install_order_serialized
+    return {"build_order": install_order_serialized,
+            "conan_error": install_graph.get_errors()}
 
 
-@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
+                              "html": format_build_order_html})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merge more than 1 build-order file.
@@ -156,7 +163,9 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     install_order_serialized = result.install_build_order()
     if getattr(result, "legacy"):
         install_order_serialized = install_order_serialized["order"]
-    return install_order_serialized
+
+    return {"build_order": install_order_serialized,
+            "conan_error": result.get_errors()}
 
 
 @conan_subcommand(formatters={"text": format_graph_info,
@@ -175,7 +184,10 @@ def graph_info(conan_api, parser, subparser, *args):
     subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
-                           help='Deploy using the provided deployer to the output folder')
+                           help="Deploy using the provided deployer to the output folder. "
+                                "Built-in deployers: 'full_deploy', 'direct_deploy'. Deployers "
+                                "will only deploy recipes, as 'conan graph info' do not retrieve "
+                                "binaries")
     subparser.add_argument("-df", "--deployer-folder",
                            help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
@@ -199,6 +211,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
 
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
@@ -231,7 +244,10 @@ def graph_info(conan_api, parser, subparser, *args):
     return {"graph": deps_graph,
             "field_filter": args.filter,
             "package_filter": args.package_filter,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": str(deps_graph.error) if deps_graph.error else None,
+            # Do not compute graph errors if there are dependency errors
+            "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
 
 
 @conan_subcommand(formatters={"text": explain_formatter_text,

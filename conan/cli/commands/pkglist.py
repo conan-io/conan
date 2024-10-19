@@ -6,7 +6,7 @@ from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import print_list_text, print_list_json
 from conan.cli.formatters.list import list_packages_html
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 
 
 @conan_command(group="Consumer")

@@ -3,7 +3,7 @@ from io import StringIO
 
 from conan import ConanFile
 from conan.internal.conan_app import ConanFileHelpers
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
@@ -92,6 +92,7 @@ class ConanFileMock(ConanFile):
         self.options = options or Options()
         self.generators = []
         self.conf = Conf()
+        self.conf_build = Conf()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_export_sources(".")

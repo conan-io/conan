@@ -72,3 +72,14 @@ def test_toolchain_flags():
     assert "OTHER_LDFLAGS = $(inherited) flag3 flag4" in conan_global_flags
     conan_global_file = client.load("conan_config.xcconfig")
     assert '#include "conan_global_flags.xcconfig"' in conan_global_file
+
+
+def test_flags_generated_if_only_defines():
+    # https://github.com/conan-io/conan/issues/16422
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
+    client.run("install . -c 'tools.build:defines=[\"MYDEFINITION\"]'")
+    conan_global_flags = client.load("conan_global_flags.xcconfig")
+    assert "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MYDEFINITION" in conan_global_flags
+    conan_global_file = client.load("conan_config.xcconfig")
+    assert '#include "conan_global_flags.xcconfig"' in conan_global_file
