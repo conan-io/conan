@@ -6,7 +6,7 @@ def test_auto_cppstd(matrix_c_interface_client):
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(myapp C CXX)
+        project(myapp C)
 
         find_package(matrix REQUIRED)
 

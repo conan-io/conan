@@ -40,7 +40,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
                 "set_interface_link_directories": auto_link and is_win,
-                "link_languages": link_languages}
+                "link_languages": None}
 
     @property
     def template(self):
