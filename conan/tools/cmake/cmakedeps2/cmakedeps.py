@@ -135,9 +135,6 @@ class CMakeDeps2:
         # if not, test_cmake_add_subdirectory test fails
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
         for req, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
-            if req.build and dep.ref.name not in self.build_context_activated:
-                continue
-
             cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
