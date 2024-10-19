@@ -49,7 +49,6 @@ class ConanFile:
     package_type = None
     vendor = False
     languages = []
-
     implements = []
 
     provides = None
