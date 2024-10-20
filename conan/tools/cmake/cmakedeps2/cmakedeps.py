@@ -1,3 +1,5 @@
+import os
+
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
@@ -148,7 +150,9 @@ class CMakeDeps2:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    content.append(f'set({pkg_name}_DIR "{pkg_folder}")')
+                    config_file = ConfigTemplate2(self, dep).filename
+                    if os.path.isfile(os.path.join(pkg_folder, config_file)):
+                        content.append(f'set({pkg_name}_DIR "{pkg_folder}")')
                 continue
 
             # If CMakeDeps generated, the folder is this one
