@@ -83,12 +83,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-              C:/msys64/mingw32
-              C:/msys64/ucrt64
-              C:/msys64/mingw64
-              C:/msys64/usr
-              C:/msys64/clang64
-              C:/msys64/mingw64
+              C:\msys64\mingw32
+              C:\msys64\ucrt64
+              C:\msys64\mingw64
+              C:\msys64\usr
+              C:\msys64\clang64
+              C:\msys64\mingw64
           key: msys2-packages-${{ runner.os }}-${{ hashFiles('msys-installed-packages.lock') }}
           restore-keys: |
             msys2-packages-${{ runner.os }}-
@@ -135,8 +135,7 @@ jobs:
            "--quiet",  "--wait", "--norestart", "--nocache", `
            "--add", "Microsoft.VisualStudio.Workload.VCTools", `
            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-           "--add", "Microsoft.VisualStudio.Component.Windows10SDK.16299.Desktop", `
-           "--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763", `
+           "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
            "--add", "Microsoft.Component.MSBuild", `
            "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
@@ -150,11 +149,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            C:\Tools\CMake\3.15.7
-            C:\Tools\CMake\3.19.7
-            C:\Tools\CMake\3.23.5
-            C:\Tools\bazel\6.3.2
-            C:\Tools\bazel\7.1.2
+            C:\tools\cmake\3.15.7
+            C:\tools\cmake\3.19.7
+            C:\tools\cmake\3.23.5
+            C:\tools\bazel\6.3.2
+            C:\tools\bazel\7.1.2
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions of CMake
@@ -163,7 +162,7 @@ jobs:
           $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
-            $destination = "C:\Tools\CMake\$version"
+            $destination = "C:\tools\cmake\$version"
             if (-not (Test-Path $destination)) {
                 New-Item -Path $destination -ItemType Directory
             }
@@ -179,7 +178,7 @@ jobs:
         run: |
           $CMAKE_BUILD_VERSIONS = "3.23.5"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
-            $destination = "C:\Tools\CMake\$version"
+            $destination = "C:\tools\cmake\$version"
             if (-not (Test-Path $destination)) {
                 New-Item -Path $destination -ItemType Directory
             }
@@ -196,7 +195,7 @@ jobs:
           $BAZEL_BUILD_VERSIONS = "6.3.2", "7.1.2"
           foreach ($version in $BAZEL_BUILD_VERSIONS) {
               Write-Host "Downloading Bazel version $version for Windows..."
-              $destination = "C:\Tools\bazel\$version"
+              $destination = "C:\tools\bazel\$version"
               if (-not (Test-Path $destination)) {
                   New-Item -Path $destination -ItemType Directory
               }

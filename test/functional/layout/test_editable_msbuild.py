@@ -13,7 +13,7 @@ from conan.test.utils.tools import TestClient
 def test_editable_msbuild():
     c = TestClient()
     with c.chdir("dep"):
-        c.run("new msbuild_lib -d name=dep -d version=0.1")
+        c.run("new msbuild_lib -d name=dep -d version=0.1 -c 'tools.microsoft.msbuild:vs_version=10.0'")
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
 

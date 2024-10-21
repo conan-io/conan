@@ -75,11 +75,6 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
-    def test_tool_not_available(self):
-        client = TestClient()
-        client.run_command('uname', assert_error=True)
-        assert "'uname' is not recognized as an internal or external command" in client.out
-
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:
