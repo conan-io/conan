@@ -57,22 +57,22 @@ jobs:
           restore-keys: |
             chocolatey-packages-${{ runner.os }}-
 
-      - name: Cache VS 15 2017 packages
-        if: matrix.test-type == 'functional'
-        uses: actions/cache@v4
-        id: vs15
-        with:
-          path: C:\Program Files (x86)\Microsoft Visual Studio\2017
-          key: vs15-community-${{ runner.os }}
-          restore-keys: |
-            vs15-community-${{ runner.os }}
+#      - name: Cache VS 15 2017 packages
+#        if: matrix.test-type == 'functional'
+#        uses: actions/cache@v4
+#        id: vs15
+#        with:
+#          path: C:\Program Files (x86)\Microsoft Visual Studio\2017
+#          key: vs15-community-${{ runner.os }}
+#          restore-keys: |
+#            vs15-community-${{ runner.os }}
 
       - name: Cache Cygwin packages
         if: matrix.test-type == 'functional'
         id: cygwin-tool
         uses: actions/cache@v4
         with:
-          path: C:\tools\cygwin\bin
+          path: C:\tools\cygwin
           key: cygwin-packages-${{ runner.os }}-${{ hashFiles('C:\tools\cygwin\etc\setup\installed.db') }}
           restore-keys: |
             cygwin-packages-${{ runner.os }}-
@@ -128,7 +128,7 @@ jobs:
           C:\msys64\usr\bin\pacman -Q > msys-installed-packages.lock
 
       - name: Install VS 15 2017 Community edition
-        if: matrix.test-type == 'functional' && steps.vs15.outputs.cache-hit != 'true'
+        if: matrix.test-type == 'functional'
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
