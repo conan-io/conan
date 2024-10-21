@@ -1,4 +1,8 @@
 import os
+import re
+import textwrap
+
+from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
@@ -8,7 +12,7 @@ from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
-
+from conans.util.files import load
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
@@ -17,6 +21,7 @@ FIND_MODE_BOTH = "both"
 
 
 class CMakeDeps2:
+    _conan_cmakedeps_paths = "conan_cmakedeps_paths.cmake"
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -128,7 +133,15 @@ class CMakeDeps2:
         return get_transitive_requires(self._conanfile, conanfile)
 
     def _generate_paths(self):
-        content = []
+        template = textwrap.dedent("""\
+            {% for pkg_name, folder in pkg_paths.items() %}
+            set({{pkg_name}}_DIR "{{folder}}")
+            {% endfor %}
+            {% if host_runtime_dirs %}
+            set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
+            {% endif %}
+            """)
+
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
@@ -136,6 +149,7 @@ class CMakeDeps2:
         # gen_folder = self._conanfile.generators_folder.replace("\\", "/")
         # if not, test_cmake_add_subdirectory test fails
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
+        pkg_paths = {}
         for req, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
@@ -152,13 +166,42 @@ class CMakeDeps2:
                 if pkg_folder:
                     config_file = ConfigTemplate2(self, dep).filename
                     if os.path.isfile(os.path.join(pkg_folder, config_file)):
-                        content.append(f'set({pkg_name}_DIR "{pkg_folder}")')
+
+                        pkg_paths[pkg_name] = pkg_folder
                 continue
 
             # If CMakeDeps generated, the folder is this one
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
-            content.append(f'set({pkg_name}_DIR "${{CMAKE_CURRENT_LIST_DIR}}")')
+            pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
 
-        # content.append(f'list(APPEND CMAKE_MODULE_PATH "{gen_folder}")')
-        content = "\n".join(content)
-        save(self._conanfile, "conan_cmakedeps_paths.cmake", content)
+        context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
+                   "pkg_paths": pkg_paths}
+        content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
+        save(self._conanfile, self._conan_cmakedeps_paths, content)
+
+    def _get_host_runtime_dirs(self):
+        host_runtime_dirs = {}
+
+        # Get the previous configuration
+        if os.path.exists(self._conan_cmakedeps_paths):
+            existing_toolchain = load(self._conan_cmakedeps_paths)
+            pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+            variable_match = re.search(pattern_lib_dirs, existing_toolchain)
+            if variable_match:
+                capture = variable_match.group(1)
+                matches = re.findall(r'"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>"', capture)
+                for config, paths in matches:
+                    host_runtime_dirs.setdefault(config, []).append(paths)
+
+        is_win = self._conanfile.settings.get_safe("os") == "Windows"
+        for req in self._conanfile.dependencies.host.values():
+            config = req.settings.get_safe("build_type", self.configuration)
+            cppinfo = req.cpp_info.aggregated_components()
+            runtime_dirs = cppinfo.bindirs if is_win else cppinfo.libdirs
+            for d in runtime_dirs:
+                d = d.replace("\\", "/")
+                existing = host_runtime_dirs.setdefault(config, [])
+                if d not in existing:
+                    existing.append(d)
+
+        return ' '.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in host_runtime_dirs.items() for i in v)

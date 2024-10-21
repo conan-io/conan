@@ -1,3 +1,4 @@
+import re
 import textwrap
 
 import pytest
@@ -70,3 +71,27 @@ def test_cmake_in_package(client):
     c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
     assert "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake" in c.out
     assert "Hello from dep dep-Config.cmake!!!!!" in c.out
+
+
+class TestRuntimeDirs:
+
+    def test_runtime_lib_dirs_multiconf(self):
+        client = TestClient()
+        app = GenConanfile().with_requires("dep/1.0").with_generator("CMakeDeps")\
+            .with_settings("build_type")
+        client.save({"lib/conanfile.py": GenConanfile(),
+                     "dep/conanfile.py": GenConanfile("dep").with_requires("onelib/1.0",
+                                                                           "twolib/1.0"),
+                     "app/conanfile.py": app})
+        client.run("create lib --name=onelib --version=1.0")
+        client.run("create lib --name=twolib --version=1.0")
+        client.run("create dep  --version=1.0")
+
+        client.run(f'install app -s build_type=Release -c tools.cmake.cmakedeps:new={new_value}')
+        client.run(f'install app -s build_type=Debug -c tools.cmake.cmakedeps:new={new_value}')
+
+        contents = client.load("app/conan_cmakedeps_paths.cmake")
+        pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+        runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+        assert "<CONFIG:Release>" in runtime_lib_dirs
+        assert "<CONFIG:Debug>" in runtime_lib_dirs

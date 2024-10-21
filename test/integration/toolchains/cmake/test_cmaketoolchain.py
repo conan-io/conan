@@ -392,6 +392,7 @@ def test_runtime_lib_dirs_single_conf(lib_dir_setup):
 
     client.run(f'install . -s build_type=Release {generator}')
     contents = client.load("conan_toolchain.cmake")
+    print(contents)
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
     pattern_lib_dirs = r'set\(CONAN_RUNTIME_LIB_DIRS (.*) \)'
 
@@ -415,6 +416,7 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
     client.run(f'install . -s build_type=Debug {generator}')
 
     contents = client.load("conan_toolchain.cmake")
+    print(contents)
     pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
     runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
 
