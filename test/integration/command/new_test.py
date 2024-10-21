@@ -36,15 +36,6 @@ class TestNewCommand:
         client.run("export . --user=myuser --channel=testing")
         assert "pkg/1.3@myuser/testing" in client.out
 
-    def test_new_missing_definitions(self):
-        client = TestClient()
-        client.run("new cmake_lib", assert_error=True)
-        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
-        client.run("new cmake_lib -d name=myname", assert_error=True)
-        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
-        client.run("new cmake_lib -d version=myversion", assert_error=True)
-        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
-
     def test_new_basic_template(self):
         tc = TestClient()
         tc.run("new basic")
@@ -55,6 +46,20 @@ class TestNewCommand:
         assert 'self.requires("math/1.0")' in conanfile
         assert 'self.requires("ai/1.0")' in conanfile
         assert 'name = "mygame"' in conanfile
+
+    def test_new_defaults(self):
+        c = TestClient()
+        for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib", "msbuild_exe",
+                  "bazel_lib", "bazel_exe", "autotools_lib", "autotools_exe"):
+            c.run(f"new {t} -f")
+            conanfile = c.load("conanfile.py")
+            assert 'name = "mypkg"' in conanfile
+            assert 'version = "0.1"' in conanfile
+
+            c.run(f"new {t} -d name=mylib -f")
+            conanfile = c.load("conanfile.py")
+            assert 'name = "mylib"' in conanfile
+            assert 'version = "0.1"' in conanfile
 
 
 class TestNewCommandUserTemplate:
@@ -151,5 +156,5 @@ class TestNewErrors:
         assert "ERROR: name argument can't be multiple: ['hello', '0.1']" in client.out
 
         # It will create a list and assign to it, but it will not fail ugly
-        client.run("new cmake_lib -d name=pkg -d version=0.1 -d version=0.2")
-        assert "['0.1', '0.2']" in client.load("conanfile.py")
+        client.run("new cmake_lib -d name=pkg -d version=0.1 -d version=0.2", assert_error=True)
+        assert "ERROR: version argument can't be multiple: ['0.1', '0.2']" in client.out
