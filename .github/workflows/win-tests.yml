@@ -114,14 +114,14 @@ jobs:
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
            "--quiet",  "--wait", "--norestart", "--nocache", `
            "--add", "Microsoft.VisualStudio.Workload.VCTools", `
-           "--add", "Microsoft.VisualStudio.Component.VC.v140.Tools.x86.x64", `
+           "--add", "Microsoft.VisualStudio.Component.VC.v141.Tools.x86.x64", `
            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
            "--add", "Microsoft.Component.MSBuild", `
            "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
            "--add", "Microsoft.VisualStudio.Workload.NativeDesktop", `
-           "--add", "Microsoft.VisualStudio.Component.VC.v140.CoreBuildTools", `
-           "--add", "Microsoft.VisualStudio.Component.VC.v140.ATLMFC" -Wait
+           "--add", "Microsoft.VisualStudio.Component.VC.v141.CoreBuildTools", `
+           "--add", "Microsoft.VisualStudio.Component.VC.v141.ATLMFC" -Wait
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
@@ -196,5 +196,5 @@ jobs:
           } elseif ($matrixTestType -eq "integration") {
               Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
           } elseif ($matrixTestType -eq "functional") {
-              pytest test/functional --durations=20 -n $NUM_CPUS
+              pytest test/functional --durations=20 -vvv
           }
