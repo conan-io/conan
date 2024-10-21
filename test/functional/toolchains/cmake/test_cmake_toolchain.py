@@ -630,8 +630,8 @@ class TestWinSDKVersion:
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
         client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1")
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+                   "-c tools.microsoft:winsdk_version=17.11")
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 17.11" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
 
@@ -648,10 +648,10 @@ class TestWinSDKVersion:
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
         client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1 "
+                   "-c tools.microsoft:winsdk_version=17.11 "
                    '-c tools.cmake.cmaketoolchain:generator="Visual Studio 17"')
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
-        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=8.1" in client.out
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 17.11" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=17.11" in client.out
 
 
 @pytest.mark.tool("cmake", "3.23")
