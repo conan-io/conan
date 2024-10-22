@@ -76,7 +76,8 @@ class TargetConfigurationTemplate2:
         config = config.upper() if config else None
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         config_folder = f"_{config}" if config else ""
-        pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER{config_folder}"
+        build = "_BUILD" if self._conanfile.context == CONTEXT_BUILD else ""
+        pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER{config_folder}{build}"
 
         libs = {}
         # The BUILD context does not generate libraries targets atm
@@ -84,6 +85,19 @@ class TargetConfigurationTemplate2:
             libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
+
+        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
+                                                self._conanfile, check_type=list) or []
+        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        prefixes = [f] + prefixes
+        include_dirs = definitions = libraries = None
+        if not self._require.build:  # To add global variables for try_compile and legacy
+            cppinfo = self._conanfile.cpp_info.aggregated_components()
+            # FIXME: Proper escaping of paths for CMake and relativization
+            include_dirs = ";".join(i.replace("\\", "/") for i in cppinfo.includedirs)
+            definitions = ""
+            root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+            libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
         # TODO: Missing find_modes
         dependencies = self._get_dependencies()
@@ -93,7 +107,14 @@ class TargetConfigurationTemplate2:
                 "config": config,
                 "exes": exes,
                 "libs": libs,
-                "context": self._conanfile.context}
+                "context": self._conanfile.context,
+                # Extra global variables
+                "additional_variables_prefixes": prefixes,
+                "version": self._conanfile.ref.version,
+                "include_dirs": include_dirs,
+                "definitions": definitions,
+                "libraries": libraries
+                }
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
         libs = {}
@@ -205,10 +226,7 @@ class TargetConfigurationTemplate2:
     def _get_dependencies(self):
         """ transitive dependencies Filenames for find_dependency()
         """
-        # TODO: Filter build requires
-        # if self._require.build:
-        #    return []
-
+        # Build requires are already filtered by the get_transitive_requires
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
@@ -305,6 +323,21 @@ class TargetConfigurationTemplate2:
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
 
+        {% endfor %}
+
+        ################# Global variables for try compile and legacy ##############
+        {% for prefix in additional_variables_prefixes %}
+        set({{ prefix }}_VERSION_STRING "{{ version }}")
+        {% if include_dirs is not none %}
+        set({{ prefix }}_INCLUDE_DIRS "{{ include_dirs }}" )
+        set({{ prefix }}_INCLUDE_DIR "{{ include_dirs }}" )
+        {% endif %}
+        {% if libraries is not none %}
+        set({{ prefix }}_LIBRARIES {{ libraries }} )
+        {% endif %}
+        {% if definitions is not none %}
+        set({{ prefix }}_DEFINITIONS {{ definitions}} )
+        {% endif %}
         {% endfor %}
 
         ################# Exes information ##############

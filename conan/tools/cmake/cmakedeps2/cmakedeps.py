@@ -165,7 +165,7 @@ class _PathGenerator:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    config_file = ConfigTemplate2(self, dep).filename
+                    config_file = ConfigTemplate2(self._cmakedeps, dep).filename
                     if os.path.isfile(os.path.join(pkg_folder, config_file)):
 
                         pkg_paths[pkg_name] = pkg_folder

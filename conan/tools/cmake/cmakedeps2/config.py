@@ -30,24 +30,12 @@ class ConfigTemplate2:
         pkg_name = self._conanfile.ref.name
         build_modules_paths = self._cmakedeps.get_property("cmake_build_modules", self._conanfile,
                                                            check_type=list) or []
-        # FIXME: Proper escaping of paths for CMake
+        # FIXME: Proper escaping of paths for CMake and relativization
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
-        global_cppinfo = self._conanfile.cpp_info.aggregated_components()
-        # FIXME: Proper escaping of paths for CMake and relativization
-        include_dirs = ";".join(i.replace("\\", "/") for i in global_cppinfo.includedirs)
-        definitions = ""
-        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
-                                                self._conanfile, check_type=list) or []
-        prefixes = [f] + prefixes
         return {"pkg_name": pkg_name,
                 "targets_include_file": targets_include,
-                "build_modules_paths": build_modules_paths,
-                # variables ones,
-                "additional_variables_prefixes": prefixes,
-                "version": self._conanfile.ref.version,
-                "include_dirs": include_dirs,
-                "definitions": definitions}
+                "build_modules_paths": build_modules_paths}
 
     @property
     def _template(self):
@@ -64,14 +52,6 @@ class ConfigTemplate2:
            message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
         endif()
-
-        {% for prefix in additional_variables_prefixes %}
-        set({{ prefix }}_VERSION_STRING "{{ version }}")
-        set({{ prefix }}_INCLUDE_DIRS "{{ include_dirs }}" )
-        set({{ prefix }}_INCLUDE_DIR "{{ include_dirs }}" )
-        set({{ prefix }}_LIBRARIES {{pkg_name}}::{{pkg_name}} )
-        set({{ prefix }}_DEFINITIONS {{ definitions}} )
-        {% endfor %}
 
         # build_modules_paths comes from last configuration only
         {% for build_module in build_modules_paths %}

@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
@@ -734,6 +735,23 @@ class TestHeaders:
         assert "engine/1_0" in c.out
         assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
         assert "Engine 1_0!" in c.out
+
+
+class TestToolRequires:
+    def test_tool_requires(self):
+        """ tool-requires should not define the try-compile or global variables
+        for includedirs, libraries, definitions, otherwise the build-context would
+        override the host context"""
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_settings("build_type")
+                                                              .with_tool_requires("tool/0.1")})
+        c.run("create tool")
+        c.run(f"install pkg -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        tool_config = c.load("pkg/tool-config.cmake")
+        assert 'set(tool_INCLUDE_DIRS' not in tool_config
+        assert 'set(tool_INCLUDE_DIR' not in tool_config
+        assert 'set(tool_LIBRARIES' not in tool_config
 
 
 @pytest.mark.tool("cmake")
