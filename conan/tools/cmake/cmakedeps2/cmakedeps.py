@@ -21,23 +21,18 @@ FIND_MODE_BOTH = "both"
 
 
 class CMakeDeps2:
-    _conan_cmakedeps_paths = "conan_cmakedeps_paths.cmake"
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
-        # Activate the build config files for the specified libraries
+        # These are just for legacy compatibility, but not use at al
         self.build_context_activated = []
-        # By default, the build modules are generated for host context only
         self.build_context_build_modules = []
-        # If specified, the files/targets/variables for the build context will be renamed appending
-        # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
-
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
+
         self._properties = {}
 
     def generate(self):
@@ -46,7 +41,7 @@ class CMakeDeps2:
         generator_files = self._content()
         for generator_file, content in generator_files.items():
             save(self._conanfile, generator_file, content)
-        self._generate_paths()
+        _PathGenerator(self, self._conanfile).generate()
 
     def _content(self):
         host_req = self._conanfile.dependencies.host
@@ -76,8 +71,7 @@ class CMakeDeps2:
     def set_property(self, dep, prop, value, build_context=False):
         """
         Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
-        the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
-        `cmake_find_mode`, `cmake_module_file_name` and `cmake_module_target_name` properties.
+        the Conan recipes from the consumer.
 
         :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
          components use the syntax: ``dep_name::component_name``.
@@ -92,14 +86,13 @@ class CMakeDeps2:
 
     def get_property(self, prop, dep, comp_name=None, check_type=None):
         dep_name = dep.ref.name
-        build_suffix = "&build" if str(
-            dep_name) in self.build_context_activated and dep.context == "build" else ""
+        build_suffix = "&build" if dep.context == "build" else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
             value = self._properties[f"{dep_comp}{build_suffix}"][prop]
             if check_type is not None and not isinstance(value, check_type):
-                raise ConanException(
-                    f'The expected type for {prop} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+                raise ConanException(f'The expected type for {prop} is "{check_type.__name__}", '
+                                     f'but "{type(value).__name__}" was found')
             return value
         except KeyError:
             return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
@@ -132,7 +125,15 @@ class CMakeDeps2:
         # Prepared to filter transitive tool-requires with visible=True
         return get_transitive_requires(self._conanfile, conanfile)
 
-    def _generate_paths(self):
+
+class _PathGenerator:
+    _conan_cmakedeps_paths = "conan_cmakedeps_paths.cmake"
+
+    def __init__(self, cmakedeps, conanfile):
+        self._conanfile = conanfile
+        self._cmakedeps = cmakedeps
+
+    def generate(self):
         template = textwrap.dedent("""\
             {% for pkg_name, folder in pkg_paths.items() %}
             set({{pkg_name}}_DIR "{{folder}}")
@@ -151,11 +152,11 @@ class CMakeDeps2:
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
         pkg_paths = {}
         for req, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
-            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = self._cmakedeps.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
 
-            pkg_name = self.get_cmake_filename(dep)
+            pkg_name = self._cmakedeps.get_cmake_filename(dep)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
                 try:
@@ -195,7 +196,7 @@ class CMakeDeps2:
 
         is_win = self._conanfile.settings.get_safe("os") == "Windows"
         for req in self._conanfile.dependencies.host.values():
-            config = req.settings.get_safe("build_type", self.configuration)
+            config = req.settings.get_safe("build_type", self._cmakedeps.configuration)
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs = cppinfo.bindirs if is_win else cppinfo.libdirs
             for d in runtime_dirs:

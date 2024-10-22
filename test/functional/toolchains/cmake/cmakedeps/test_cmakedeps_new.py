@@ -580,7 +580,7 @@ class TestLibsComponents:
         assert "Conan: Target declared imported STATIC library 'matrix::_vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::_module'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'MyMatrix::MyMatrix'" in c.out
-        assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+        assert "matrix::matrix" not in c.out
 
         assert "vector: Release!" in c.out
         assert "module: Release!" in c.out

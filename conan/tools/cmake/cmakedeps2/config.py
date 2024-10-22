@@ -33,7 +33,6 @@ class ConfigTemplate2:
         # FIXME: Proper escaping of paths for CMake
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
-        # FIXME: Empty
         global_cppinfo = self._conanfile.cpp_info.aggregated_components()
         # FIXME: Proper escaping of paths for CMake and relativization
         include_dirs = ";".join(i.replace("\\", "/") for i in global_cppinfo.includedirs)
