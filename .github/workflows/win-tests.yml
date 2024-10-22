@@ -43,36 +43,6 @@ jobs:
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
-#      - name: Cache Chocolatey packages
-#        if: matrix.test-type == 'functional'
-#        uses: actions/cache@v4
-#        id: choco-packages
-#        with:
-#          path: |
-#            C:\ProgramData\chocolatey\lib
-#            C:\ProgramData\chocolatey\bin
-#            C:\ProgramData\chocolatey\extensions
-#            C:\ProgramData\mingw64
-#          key: chocolatey-packages-${{ runner.os }}-${{ hashFiles('choco_installed_packages.lock') }}
-#          restore-keys: |
-#            chocolatey-packages-${{ runner.os }}-
-
-      - name: Cache msys2 packages
-        if: matrix.test-type == 'functional'
-        id: msys2-tool
-        uses: actions/cache@v4
-        with:
-          path: |
-              C:\msys64\mingw32
-              C:\msys64\ucrt64
-              C:\msys64\mingw64
-              C:\msys64\usr
-              C:\msys64\clang64
-              C:\msys64\mingw64
-          key: msys2-packages-${{ runner.os }}-${{ hashFiles('msys-installed-packages.lock') }}
-          restore-keys: |
-            msys2-packages-${{ runner.os }}-
-
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -89,15 +59,10 @@ jobs:
           choco install mingw
           choco install cygwin
           choco install cyg-get
-          choco list > choco_installed_packages.lock
-
-      - name: Install Cygwin extra packages
-        if: matrix.test-type == 'functional'
-        run: |
-          cyg-get automake autotools autoconf libtool gcc-g++ make binutils
+          cyg-get automake gcc-g++ make binutils cmake
 
       - name: Install Pacman extra packages
-        if: matrix.test-type == 'functional' && steps.msys2-tool.outputs.cache-hit != 'true'
+        if: matrix.test-type == 'functional'
         run: |
           C:\msys64\usr\bin\pacman -Syuu --noconfirm
           C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
@@ -105,7 +70,6 @@ jobs:
           C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
           C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
           C:\msys64\usr\bin\pacman -S automake --noconfirm
-          C:\msys64\usr\bin\pacman -Q > msys-installed-packages.lock
 
       - name: Install VS 15 2017 Community edition
         if: matrix.test-type == 'functional'
@@ -189,9 +153,9 @@ jobs:
         run: |
           $matrixTestType = "${{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
-              Write-Host "pytest test/unittests --durations=20 -n auto"
+              Write-Host "pytest test/unittests --durations=20 --numprocesses=auto"
           } elseif ($matrixTestType -eq "integration") {
-              Write-Host "pytest test/integration --durations=20 -n auto"
+              Write-Host "pytest test/integration --durations=20 --numprocesses=auto"
           } elseif ($matrixTestType -eq "functional") {
               pytest `
                 test/functional/subsystems_build_test.py::TestSubsystemsCMakeBuild::test_cygwin `
@@ -200,5 +164,5 @@ jobs:
                 test/functional/toolchains/test_nmake_toolchain.py::test_toolchain_nmake `
                 test/functional/toolchains/cmake `
                 test/functional/toolchains/microsoft `
-              --durations=20 -n auto
+              --durations=20 --numprocesses=auto -vvv
           }
