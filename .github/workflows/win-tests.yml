@@ -94,7 +94,7 @@ jobs:
       - name: Install Cygwin extra packages
         if: matrix.test-type == 'functional'
         run: |
-          cyg-get automake gcc-g++ make binutils
+          cyg-get automake autotools autoconf libtool gcc-g++ make binutils
 
       - name: Install Pacman extra packages
         if: matrix.test-type == 'functional' && steps.msys2-tool.outputs.cache-hit != 'true'
