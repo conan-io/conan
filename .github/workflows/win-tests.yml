@@ -59,7 +59,7 @@ jobs:
           choco install mingw
           choco install cygwin
           choco install cyg-get
-          cyg-get automake gcc-g++ make binutils cmake
+          cyg-get automake gcc-g++ make binutils
 
       - name: Install Pacman extra packages
         if: matrix.test-type == 'functional'
