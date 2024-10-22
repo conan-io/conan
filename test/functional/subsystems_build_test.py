@@ -354,7 +354,7 @@ class TestSubsystemsAutotoolsBuild:
         posix-compatible, intended to be run only in Cygwin environment (not in pure Windows)
         # install autotools, autoconf, libtool, "gcc-c++" and "make" packages
         """
-        client = TestClient()
+        client = TestClient(path_with_spaces=False)
         self._build(client)
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")

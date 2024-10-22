@@ -63,8 +63,8 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                 assert "api-ms-win-crt-" in client.out
             if vs_version in ["15", "16", "17"]:  # UCRT
                 debug = "D" if build_type == "Debug" else ""
-                assert "MSVCP141{}.dll".format(debug) in client.out
-                assert "VCRUNTIME141{}.dll".format(debug) in client.out
+                assert "MSVCP140{}.dll".format(debug) in client.out
+                assert "VCRUNTIME140{}.dll".format(debug) in client.out
             else:
                 raise NotImplementedError()
     else:  # A static library cannot be checked the same

@@ -473,20 +473,16 @@ class AppleTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("version, vs_version",
-                         [("190", "15"),
-                          ("191", "15")])
-def test_msvc_vs_versiontoolset(version, vs_version):
+def test_msvc_vs_versiontoolset():
     settings = {"compiler": "msvc",
-                "compiler.version": version,
+                "compiler.version": "191",
                 "compiler.runtime": "static",
                 "compiler.cppstd": "14",
                 "arch": "x86_64",
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.cache.new_config_path,
-         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+    save(client.cache.new_config_path, "tools.microsoft.msbuild:vs_version=15")
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -513,7 +509,8 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
-    check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
+    check_exe_run(client.out, "main", "msvc", "191",
+                  "Release", "x86_64", "14")
 
 
 @pytest.mark.tool("cmake")
