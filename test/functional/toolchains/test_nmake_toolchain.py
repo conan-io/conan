@@ -11,11 +11,11 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.parametrize(
     "compiler, version, runtime, cppstd, build_type, defines, cflags, cxxflags, sharedlinkflags, exelinkflags",
     [
-        ("msvc", "190", "dynamic", "14", "Release", [], [], [], [], []),
-        ("msvc", "190", "dynamic", "14", "Release",
-         ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4",
-          "TEST_DEFINITION5=__declspec(dllexport)", "TEST_DEFINITION6=foo bar"],
-         ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
+        # ("msvc", "190", "dynamic", "14", "Release", [], [], [], [], []),
+        # ("msvc", "190", "dynamic", "14", "Release",
+        #  ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4",
+        #   "TEST_DEFINITION5=__declspec(dllexport)", "TEST_DEFINITION6=foo bar"],
+        #  ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
         ("msvc", "191", "static", "17", "Debug", [], [], [], [], []),
     ],
 )

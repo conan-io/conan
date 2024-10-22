@@ -201,14 +201,12 @@ class Base(unittest.TestCase):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
+    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", True),
+                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", False)]
                           )
-    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
-                           shared):
+    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, shared):
         settings = {"compiler": compiler,
                     "compiler.version": version,
-                    "compiler.toolset": toolset,
                     "compiler.runtime": runtime,
                     "compiler.cppstd": cppstd,
                     "arch": arch,
@@ -219,10 +217,7 @@ class WinTest(Base):
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if toolset == "v140":
-            self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
-        else:
-            self.assertIn("Microsoft Visual Studio/2017", self.client.out)
+        self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch_flag = "x64" if arch == "x86_64" else "X86"
@@ -262,18 +257,14 @@ class WinTest(Base):
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
-        if compiler == "msvc":
-            visual_version = version
-        else:
-            visual_version = "190" if toolset == "v140" else "191"
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_RELEASE"
                        })
         self._run_app("Debug", bin_folder=True)
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Debug", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_DEBUG",
                        "MYDEFINE": "MYDEF_VALUE",

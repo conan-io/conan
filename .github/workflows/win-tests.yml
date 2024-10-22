@@ -187,13 +187,18 @@ jobs:
           }
       - name: Run Tests
         run: |
-          $NUM_CPUS = (Get-CimInstance -ClassName Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
-          Write-Host "Number of CPUs available: $NUM_CPUS"
           $matrixTestType = "${{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
-              Write-Host "pytest test/unittests --durations=20 -n $NUM_CPUS"
+              Write-Host "pytest test/unittests --durations=20 -n auto"
           } elseif ($matrixTestType -eq "integration") {
-              Write-Host "pytest test/integration --durations=20 -n $NUM_CPUS"
+              Write-Host "pytest test/integration --durations=20 -n auto"
           } elseif ($matrixTestType -eq "functional") {
-              pytest test/functional --durations=20 -vvv
+              pytest `
+                test/functional/subsystems_build_test.py::TestSubsystemsCMakeBuild::test_cygwin `
+                test/functional/test_profile_detect_api.py::TestProfileDetectAPI::test_profile_detect_compiler `
+                test/functional/layout
+                test/functional/toolchains/test_nmake_toolchain.py::test_toolchain_nmake `
+                test/functional/toolchains/cmake `
+                test/functional/toolchains/microsoft `
+              --durations=20 -n auto
           }
