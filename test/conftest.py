@@ -241,7 +241,7 @@ def _get_individual_tool(name, version):
         if tool_version.get("disabled"):
             return False
         if name == "visual_studio":
-            if vswhere():  # TODO: Missing version detection
+            if vswhere(version=tool_version):  # TODO: Missing version detection
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
