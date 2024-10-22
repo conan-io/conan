@@ -726,6 +726,32 @@ def test_cmakedeps_set_legacy_variable_name():
     for variable in cmake_variables:
         assert f"CMakeFileName_{variable}" in dep_config
 
+    consumer_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type", "arch", "compiler"
+
+            def requirements(self):
+                self.requires("dep/1.0")
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+                deps.generate()
+        """)
+
+    client.save({"consumer/conanfile.py": consumer_conanfile})
+    client.run("install consumer")
+
+    dep_config = client.load(os.path.join("consumer", "CMakeFileNameConfig.cmake"))
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+
     conanfile = base_conanfile + """
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
