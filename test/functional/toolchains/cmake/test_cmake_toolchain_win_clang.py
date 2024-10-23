@@ -85,7 +85,7 @@ class TestLLVMClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__16" in client.out
+        assert "main __clang_major__17" in client.out
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -106,7 +106,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__16" in client.out
+        assert "main __clang_major__17" in client.out
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -128,7 +128,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__16" in client.out
+        assert "main __clang_major__17" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER192" in client.out
         assert "main _MSVC_LANG2017" in client.out
@@ -155,7 +155,7 @@ class TestVSClangCL:
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
         # My local is 17, but CI ClangCL still 16
-        assert "main __clang_major__16" in client.out
+        assert "main __clang_major__17" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2017" in client.out

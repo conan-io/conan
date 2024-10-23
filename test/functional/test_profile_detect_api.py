@@ -29,7 +29,7 @@ class TestProfileDetectAPI:
 
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1")
-        update = detect_api.detect_msvc_update("193")
+        update = detect_api.detect_msvc_update("194")
         expected = textwrap.dedent(f"""\
             Host profile:
             [settings]
@@ -38,7 +38,7 @@ class TestProfileDetectAPI:
             compiler.runtime=dynamic
             compiler.runtime_type=Release
             compiler.update={update}
-            compiler.version=193
+            compiler.version=194
             [conf]
             tools.microsoft.msbuild:vs_version=17
             """)
