@@ -14,8 +14,11 @@ def vs_detect_update(version):
     version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     full_version = _vs_installation_path(version)[1]
     components = full_version.split(".")
+    # 17.10 --> 1940
+    # 17.11 --> 1941
+    # etc...    
     if len(components) > 1:
-        return components[1]
+        return str(int(components[1]) % 10)
 
 
 def _vs_installation_path(version):
