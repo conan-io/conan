@@ -170,10 +170,4 @@ jobs:
           $env:CONAN_TEST_FOLDER = $randomFolder
           $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
           Remove-Item 'C:\Strawberry' -Recurse
-          pytest `
-            test/functional/test_profile_detect_api.py `
-            test/functional/toolchains/cmake/test_cmake_toolchain_win_clang.py `
-            test/integration/toolchains/microsoft/vcvars_test.py `
-            test/functional/toolchains/microsoft/test_msbuild.py `
-            test/functional/toolchains/microsoft/test_v2_msbuild_template.py `
-            -vvv
+          pytest test/ -vvv -n auto
