@@ -1,7 +1,9 @@
 import argparse
+import os
 
 from conan.cli.command import OnceArgument
 from conan.errors import ConanException
+from conan.internal.cache.home_paths import HomePaths
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed.
@@ -80,7 +82,7 @@ def add_profiles_args(parser):
                                  f'By default, or if specifying -{short}:h (--{long}:host), it applies to the host context. '
                                  f'Use -{short}:b (--{long}:build) to specify the build context, '
                                  f'or -{short}:a (--{long}:all) to specify both contexts at once'
-                                   + ('' if not example else f". Example: {example}"))
+                                 + ('' if not example else f". Example: {example}"))
         for context in contexts:
             parser.add_argument(f"-{short}:{context[0]}", f"--{long}:{context}",
                                 default=None,
@@ -137,3 +139,18 @@ def validate_common_graph_args(args):
                              f"[path] '{args.path}' argument")
     if not args.path and args.build_require:
         raise ConanException("--build-require should only be used with <path> argument")
+
+
+def sbom_graph_args(parser, conan_api):
+    sbom_manifest = HomePaths(conan_api.cache_folder).sbom_manifest_plugin_path
+    choices = []
+    if os.path.exists(sbom_manifest):
+        if not os.path.isdir(sbom_manifest):
+            raise ConanException(f"SBOM manifest plugin path '{sbom_manifest}' is not a directory")
+
+        for manifest_format in os.listdir(sbom_manifest):
+            if not manifest_format.startswith("_"):
+                choices.append(manifest_format.replace(".py", ""))
+
+    parser.add_argument("--manifest", choices=choices, default="spdx",
+                        help="Output format for the SBOM")

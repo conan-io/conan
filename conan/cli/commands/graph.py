@@ -4,19 +4,22 @@ import os
 from conan.api.model import ListPattern
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
-from conan.cli.args import common_graph_args, validate_common_graph_args
+from conan.cli.args import common_graph_args, validate_common_graph_args, sbom_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
+from conan.cli.formatters import default_json_formatter
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.build_order_html import format_build_order_html
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 from conan.internal.errors import NotFoundException
+from conans.client.loader import load_python_file
 from conans.model.recipe_ref import ref_matches, RecipeReference
 
 
@@ -416,6 +419,40 @@ def graph_outdated(conan_api, parser, subparser, *args):
             filtered_nodes[node_name] = node
 
     return filtered_nodes
+
+
+@conan_subcommand(formatters={"text": print_serial, "json": default_json_formatter})
+def graph_sbom(conan_api, parser, subparser, *args):
+    """
+    Generate a Software Bill of Materials (SBOM) for the dependency graph
+    """
+    common_graph_args(subparser)
+    sbom_graph_args(subparser, conan_api)
+    args = parser.parse_args(*args)
+    validate_common_graph_args(args)
+
+    cwd = os.getcwd()
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    if path:
+        deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                         args.user, args.channel,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update)
+    else:
+        deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update)
+
+    generated_sbom = conan_api.graph.sbom(deps_graph, args.manifest)
+    return generated_sbom
 
 
 def _find_in_remotes(conan_api, dict_nodes, remotes):
