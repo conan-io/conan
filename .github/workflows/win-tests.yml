@@ -158,7 +158,6 @@ jobs:
             test/functional/test_profile_detect_api.py `
             test/functional/toolchains/cmake/test_cmake_toolchain_win_clang.py `
             test/integration/toolchains/microsoft/vcvars_test.py `
-            test/performance/test_large_graph.py `
             test/functional/toolchains/microsoft/test_msbuild.py `
             test/functional/toolchains/microsoft/test_v2_msbuild_template.py `
             -vvv
