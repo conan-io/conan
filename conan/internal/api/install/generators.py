@@ -159,6 +159,8 @@ def _receive_generators(conanfile):
     """  Collect generators_info from the immediate build_requires"""
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.generator_info:
+            if not isinstance(build_require.generator_info, list):
+                raise ConanException(f"{conanfile} 'generator_info' must be a list")
             conanfile.generators = build_require.generator_info + conanfile.generators
 
 
