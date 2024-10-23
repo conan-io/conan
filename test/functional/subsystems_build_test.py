@@ -390,10 +390,8 @@ class TestSubsystemsCMakeBuild:
                            " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\" -G \"{}\" .".format(cmake_compiler,
                                                                                   toolset,
                                                                                   generator))
-        print(client.out)
         build_out = client.out
         client.run_command("cmake --build . --verbose")
-        print(client.out)
         app = "app" if "Visual" not in generator else r"Debug\app"
         client.run_command(app)
         return build_out
