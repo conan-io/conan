@@ -174,8 +174,9 @@ jobs:
               Write-Host "pytest test/integration --durations=20 --numprocesses=auto"
           } elseif ($matrixTestType -eq "functional") {
               $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
+              Remove-Item 'C:\Strawberry' -Recurse
               pytest `
-                test\functional\subsystems_build_test.py `
+                test/functional/subsystems_build_test.py::TestSubsystemsCMakeBuild::test_cygwin `
                --durations=20 --numprocesses=auto -vvv
           }
 #                test\functional\test_profile_detect_api.py `
