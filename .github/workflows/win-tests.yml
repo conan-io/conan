@@ -82,7 +82,22 @@ jobs:
            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
            "--add", "Microsoft.Component.MSBuild", `
            "--add", "Microsoft.VisualStudio.Component.VC.140", `
-           "--add", "Microsoft.VisualStudio.Component.VC.v14.3.x86.x64" -Wait
+           "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
+
+      - name: Check Visual Studio installations and toolsets
+        run: |
+          # List all Visual Studio installations
+          & 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe' -all -products * -format json | ConvertFrom-Json | ForEach-Object {
+              Write-Host "Installation Path: $_.installationPath"
+              Write-Host "Product: $_.catalog_productDisplayName"
+              Write-Host "Version: $_.catalog_productLineVersion"
+          }
+
+          # List the available toolsets in Visual Studio
+          $vsInstallationPath = (Get-Item 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community').FullName
+          $vcvarsPath = "$vsInstallationPath\VC\Auxiliary\Build\vcvarsall.bat"
+          Write-Host "Toolsets in Visual Studio:"
+          cmd.exe /c "$vcvarsPath -help"
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
