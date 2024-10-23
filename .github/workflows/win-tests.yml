@@ -149,17 +149,20 @@ jobs:
               Expand-Archive -Path $zipFile -DestinationPath $destination -Force
               Remove-Item $zipFile
           }
+
       - name: Run Tests
         run: |
+          $shortGuid = [System.Guid]::NewGuid().ToString().Substring(0, 4)
+          $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
+          New-Item -ItemType Directory -Force -Path $randomFolder
+          $env:CONAN_TEST_FOLDER = $randomFolder
           $matrixTestType = "${{ matrix.test-type }}"
           if ($matrixTestType -eq "unittests") {
-              Write-Host "pytest test/unittests --durations=20 --numprocesses=auto"
+              pytest test/unittests --durations=20 --numprocesses=auto
           } elseif ($matrixTestType -eq "integration") {
-              Write-Host "pytest test/integration --durations=20 --numprocesses=auto"
+              pytest test/integration --durations=20 --numprocesses=auto
           } elseif ($matrixTestType -eq "functional") {
               $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
               Remove-Item 'C:\Strawberry' -Recurse
-              pytest `
-                test\functional\subsystems_build_test.py `
-              --durations=20 --numprocesses=auto -vvv
+              pytest test/functional --durations=20 --numprocesses=auto
           }
