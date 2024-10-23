@@ -10,6 +10,7 @@ class PackageType(Enum):
     HEADER = "header-library"
     BUILD_SCRIPTS = "build-scripts"
     APP = "application"
+    APP_LIB = "application-with-library"  # Support applications with libraries (e.g., GCC, Flex, etc.)
     PYTHON = "python-require"
     CONF = "configuration"
     UNKNOWN = "unknown"
@@ -50,6 +51,9 @@ class PackageType(Enum):
         if conanfile_type is not None:  # Explicit definition in recipe
             try:
                 conanfile_type = PackageType(conanfile_type)
+                if conanfile_type == PackageType.APP_LIB:
+                    # Treat 'application-with-library' as an alias for 'library'
+                    conanfile_type = PackageType.LIBRARY
             except ValueError:
                 raise ConanException(f"{conanfile}: Invalid package type '{conanfile_type}'. "
                                      f"Valid types: {[i.value for i in PackageType]}")
