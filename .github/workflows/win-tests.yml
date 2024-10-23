@@ -19,11 +19,10 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ['3.9']
-        test-type: [unittests, integration, functional]
 
     runs-on: windows-2022
 
-    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
+    name: Conan (${{ matrix.python-version }})
 
     steps:
 
@@ -52,7 +51,6 @@ jobs:
           pip install meson
 
       - name: Install Chocolatey packages
-        if: matrix.test-type == 'functional'
         run: |
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
@@ -62,7 +60,6 @@ jobs:
           cyg-get automake gcc-g++ make binutils --verbose
 
       - name: Install Pacman extra packages
-        if: matrix.test-type == 'functional'
         run: |
           C:\msys64\usr\bin\pacman -Syuu --noconfirm
           C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
@@ -72,8 +69,6 @@ jobs:
           C:\msys64\usr\bin\pacman -S automake --noconfirm
 
       - name: Install VS 15 2017 Community edition
-        # FIXME: should not install visual always, just to check if integration tests pass
-        #if: matrix.test-type == 'functional'
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
@@ -88,7 +83,6 @@ jobs:
            "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC" -Wait
 
       - name: Cache CMake and Bazel installations
-        if: matrix.test-type == 'functional'
         id: cache-tools
         uses: actions/cache@v4
         with:
@@ -101,7 +95,7 @@ jobs:
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions of CMake
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
@@ -118,7 +112,7 @@ jobs:
             Remove-Item $zipFile
           }
       - name: Install modern CMake versions
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           $CMAKE_BUILD_VERSIONS = "3.23.5"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
@@ -134,7 +128,7 @@ jobs:
             Remove-Item $zipFile
           }
       - name: Install Bazel versions
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           $BAZEL_BUILD_VERSIONS = "6.3.2", "7.1.2"
           foreach ($version in $BAZEL_BUILD_VERSIONS) {
@@ -157,13 +151,4 @@ jobs:
           $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
           New-Item -ItemType Directory -Force -Path $randomFolder
           $env:CONAN_TEST_FOLDER = $randomFolder
-          $matrixTestType = "${{ matrix.test-type }}"
-          if ($matrixTestType -eq "unittests") {
-              pytest test/unittests --durations=20 --numprocesses=auto
-          } elseif ($matrixTestType -eq "integration") {
-              pytest test/integration --durations=20 --numprocesses=auto
-          } elseif ($matrixTestType -eq "functional") {
-              $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
-              Remove-Item 'C:\Strawberry' -Recurse
-              pytest test/functional --durations=20 --numprocesses=auto
-          }
+          pytest test/ --durations=20 --numprocesses=auto
