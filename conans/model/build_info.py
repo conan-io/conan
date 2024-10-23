@@ -80,6 +80,7 @@ class _Component:
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
         self._exe = None  # application executable, only 1 allowed, following CPS
+        self._languages = None
 
         self._sysroot = None
         self._requires = None
@@ -123,7 +124,8 @@ class _Component:
             "exe": self._exe,  # single exe, incompatible with libs
             "type": self._type,
             "location": self._location,
-            "link_location": self._link_location
+            "link_location": self._link_location,
+            "languages": self._languages
         }
 
     @staticmethod
@@ -298,6 +300,14 @@ class _Component:
     @link_location.setter
     def link_location(self, value):
         self._link_location = value
+
+    @property
+    def languages(self):
+        return self._languages
+
+    @languages.setter
+    def languages(self, value):
+        self._languages = value
 
     @property
     def defines(self):

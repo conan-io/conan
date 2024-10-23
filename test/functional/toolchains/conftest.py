@@ -155,3 +155,83 @@ def matrix_client_components(_matrix_client_components):
     c.cache_folder = os.path.join(temp_folder(), ".conan2")
     shutil.copytree(_matrix_client_components.cache_folder, c.cache_folder)
     return c
+
+
+@pytest.fixture(scope="session")
+def _matrix_c_interface_client():
+    c = TestClient()
+    matrix_h = textwrap.dedent("""\
+        #pragma once
+        #ifdef __cplusplus
+        extern "C" {
+        #endif
+            void matrix();
+        #ifdef __cplusplus
+        }
+        #endif
+        """)
+    matrix_cpp = textwrap.dedent("""\
+        #include "matrix.h"
+        #include <iostream>
+        #include <string>
+        void matrix(){
+            std::cout<< std::string("Hello Matrix!") <<std::endl;
+        }
+        """)
+    # Having here the config.cmake code to be able to manually check what CMake generates
+    cmake = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 3.15)
+        project(matrix C CXX)
+        add_library(matrix STATIC src/matrix.cpp)
+        target_include_directories(matrix PUBLIC
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:include>
+        )
+        set_target_properties(matrix PROPERTIES PUBLIC_HEADER "include/matrix.h")
+        install(TARGETS matrix EXPORT matrixConfig)
+        export(TARGETS matrix
+            NAMESPACE matrix::
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/matrixConfig.cmake"
+        )
+        install(EXPORT matrixConfig
+            DESTINATION "${CMAKE_INSTALL_PREFIX}/matrix/cmake"
+            NAMESPACE matrix::
+        )
+        """)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
+        class Recipe(ConanFile):
+            name = "matrix"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            package_type = "static-library"
+            generators = "CMakeToolchain"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+            languages = "C++"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+            def layout(self):
+                cmake_layout(self)
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+            def package_info(self):
+                self.cpp_info.libs = ["matrix"]
+        """)
+    c.save({"include/matrix.h": matrix_h,
+            "src/matrix.cpp": matrix_cpp,
+            "conanfile.py": conanfile,
+            "CMakeLists.txt": cmake})
+    c.run("create .")
+    return c
+
+
+@pytest.fixture()
+def matrix_c_interface_client(_matrix_c_interface_client):
+    c = TestClient()
+    c.cache_folder = os.path.join(temp_folder(), ".conan2")
+    shutil.copytree(_matrix_c_interface_client.cache_folder, c.cache_folder)
+    return c

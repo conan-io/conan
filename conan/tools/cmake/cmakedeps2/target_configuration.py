@@ -173,6 +173,9 @@ class TargetConfigurationTemplate2:
             target["type"] = lib_type
             target["location"] = location
             target["link_location"] = link_location
+            link_languages = info.languages or self._conanfile.languages or []
+            link_languages = ["CXX" if c == "C++" else c for c in link_languages]
+            target["link_languages"] = link_languages
 
         return target
 
@@ -307,6 +310,17 @@ class TargetConfigurationTemplate2:
                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
         {% endif %}
 
+        {% if lib_info.get("link_languages") %}
+        get_property(_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+        {% for lang in lib_info["link_languages"] %}
+        if(NOT "{{lang}}" IN_LIST _languages)
+            message(SEND_ERROR
+                    "Target {{lib}} has {{lang}} linkage but {{lang}} not enabled in project()")
+        endif()
+        set_property(TARGET {{lib}} APPEND PROPERTY
+                     IMPORTED_LINK_INTERFACE_LANGUAGES_{{config}} {{lang}})
+        {% endfor %}
+        {% endif %}
         {% if lib_info.get("location") %}
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
