@@ -21,7 +21,8 @@ class TestProfileDetectAPI:
             compiler.version={{detect_api.default_compiler_version(compiler, version)}}
             compiler.runtime={{runtime}}
             compiler.cppstd={{detect_api.default_cppstd(compiler, version)}}
-            compiler.update={{detect_api.detect_msvc_update(version)}}
+            # FIXME: check if we can do something better than this, we have a problem with updates
+            compiler.update={{str(int(detect_api.detect_msvc_update(version)) % 10)}}
 
             [conf]
             tools.microsoft.msbuild:vs_version={{detect_api.default_msvc_ide_version(version)}}
