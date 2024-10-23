@@ -35,14 +35,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-#      - name: Cache pip packages
-#        uses: actions/cache@v4
-#        with:
-#          path: C:\Users\runneradmin\AppData\Local\pip\cache
-#          key: pip-packages-${{ runner.os }}-${{ hashFiles('conans/requirements*.txt') }}
-#          restore-keys: |
-#            pip-packages-${{ runner.os }}-
-#
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\AppData\Local\pip\cache
+          key: pip-packages-${{ runner.os }}-${{ hashFiles('conans/requirements*.txt') }}
+          restore-keys: |
+            pip-packages-${{ runner.os }}-
+
 #      - name: Cache msys2 packages
 #        if: matrix.test-type == 'functional'
 #        id: msys2-tool
@@ -59,13 +59,13 @@ jobs:
 #          restore-keys: |
 #            msys2-packages-${{ runner.os }}-
 #
-#      - name: Install Python requirements
-#        run: |
-#          pip install --upgrade pip
-#          pip install -r conans/requirements.txt
-#          pip install -r conans/requirements_server.txt
-#          pip install -r conans/requirements_dev.txt
-#          pip install meson
+      - name: Install Python requirements
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
 
       - name: Install Chocolatey packages
         if: matrix.test-type == 'functional'
