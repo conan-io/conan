@@ -9,7 +9,7 @@ from conan.api.output import Color, ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 
 
@@ -64,13 +64,26 @@ class DockerRunner:
         import docker
         import docker.api.build
         try:
-            self.docker_client = docker.from_env()
-            self.docker_api = docker.APIClient()
+            docker_base_urls = [
+                None, # Default docker configuration, let the python library detect the socket
+                os.environ.get('DOCKER_HOST'), # Connect to socket defined in DOCKER_HOST
+                'unix:///var/run/docker.sock', # Default linux socket
+                f'unix://{os.path.expanduser("~")}/.rd/docker.sock' # Rancher linux socket
+            ]
+            for base_url in docker_base_urls:
+                try:
+                    ConanOutput().verbose(f'Trying to connect to docker "{base_url or "default"}" socket')
+                    self.docker_client = docker.DockerClient(base_url=base_url, version='auto')
+                    ConanOutput().verbose(f'Connected to docker "{base_url or "default"}" socket')
+                    break
+                except:
+                    continue
+            self.docker_api = self.docker_client.api
             docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
             raise ConanException("Docker Client failed to initialize."
                                  "\n - Check if docker is installed and running"
-                                 "\n - Run 'pip install pip install conan[runners]'")
+                                 "\n - Run 'pip install conan[runners]'")
         self.conan_api = conan_api
         self.build_profile = build_profile
         self.args = args
@@ -243,6 +256,7 @@ class DockerRunner:
             raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
         if self.cache != 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
+            self.run_command('cp -r "'+self.abs_docker_path+'/.conanrunner/profiles/." ${HOME}/.conan2/profiles/.', log=False)
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 if os.path.exists( os.path.join(self.abs_runner_home_path, file_name)):
                     self.run_command('cp "'+self.abs_docker_path+'/.conanrunner/'+file_name+'" ${HOME}/.conan2/'+file_name, log=False)

@@ -8,8 +8,8 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
-from conans.errors import NotFoundException, ConanException, AuthenticationException, \
-    ForbiddenException
+from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException
+from conan.errors import ConanException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
 
 
@@ -20,7 +20,8 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name)
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name,
+                                               source_credentials=True)
         self._home_folder = helpers.home_folder
         self._output = conanfile.output
         self._conanfile = conanfile

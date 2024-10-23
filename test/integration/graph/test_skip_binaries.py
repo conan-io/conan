@@ -1,4 +1,5 @@
 import re
+import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -196,10 +197,53 @@ def test_skip_visible_build():
     assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
 
 
+def test_skip_tool_requires_context():
+    c = TestClient()
+    cmake = textwrap.dedent("""
+        from conan import ConanFile
+        class CMake(ConanFile):
+            name = "cmake"
+            version = "1.0"
+            def package_info(self):
+                self.buildenv_info.define("MYVAR", "MYVALUE")
+            """)
+    gtest = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import load
+        class gtest(ConanFile):
+            name = "gtest"
+            version = "1.0"
+            settings = "os"
+            package_type = "static-library"
+            def build(self):
+                env = load(self, "conanbuildenv.sh")
+                self.output.info(f"MYENV: {env}")
+        """)
+    c.save({"cmake/conanfile.py": cmake,
+            "gtest/conanfile.py": gtest,
+            "lib/conanfile.py": GenConanfile("lib", "1.0").with_package_type("static-library")
+                                                          .with_test_requires("gtest/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_settings("os")
+                                                          .with_requires("lib/1.0"),
+            "profile": "[tool_requires]\ncmake/[>=1.0]"})
+
+    c.run("create cmake")
+    c.run("create gtest -s:a os=Linux")
+    c.run("create lib -s:a os=Linux")
+
+    c.run("remove gtest:* -c")
+    c.run("install app -s:a os=Linux -pr=profile -c=tools.graph:skip_binaries=False --build=missing")
+    assert 'export MYVAR="MYVALUE"' in c.out
+    assert "gtest/1.0: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' built" in c.out
+
+
 def test_skip_intermediate_static():
     # https://github.com/conan-io/conan/issues/16402
     # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
     #  \------------------------------------------------/
+    # libb could be skipped in theory, but it is not, algorithm is not that smart
+    # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
+    # This libb0.1 cannot be skipped because it is necessary its lib-config.cmake for transitivity
     c = TestClient(light=True)
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
@@ -214,5 +258,8 @@ def test_skip_intermediate_static():
     # c.run("remove libb:* -c")  # Removing this will make it fail. libb is intermediate and can
     # not be skipped
     c.run("install app")
-    assert "Skipped binaries" not in c.out
-    assert "libb/0.1: Already installed!" in c.out
+    print(c.out)
+    assert re.search(r"Skipped binaries(\s*)libb/0.1", c.out)
+    assert "libb/0.1: Already installed!" not in c.out
+    assert "liba/0.1: Already installed!" in c.out
+    assert "libc/0.1: Already installed!" in c.out

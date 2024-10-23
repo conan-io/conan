@@ -40,6 +40,10 @@ class ConanFileInterface:
         return self._conanfile.package_folder
 
     @property
+    def immutable_package_folder(self):
+        return self._conanfile.immutable_package_folder
+
+    @property
     def package_metadata_folder(self):
         return self._conanfile.package_metadata_folder
 
@@ -83,6 +87,10 @@ class ConanFileInterface:
     @property
     def conf_info(self):
         return self._conanfile.conf_info
+
+    @property
+    def generator_info(self):
+        return self._conanfile.generator_info
 
     @property
     def dependencies(self):

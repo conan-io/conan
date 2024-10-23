@@ -52,7 +52,7 @@ class VirtualRunEnv:
         if self.configuration:
             f += "-" + self.configuration.replace(".", "_")
         if self.arch:
-            f += "-" + self.arch.replace(".", "_")
+            f += "-" + self.arch.replace(".", "_").replace("|", "_")
         return f
 
     def environment(self):

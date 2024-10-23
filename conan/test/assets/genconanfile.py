@@ -27,6 +27,7 @@ class GenConanfile(object):
         self._provides = None
         self._deprecated = None
         self._package_lines = None
+        self._finalize_lines = None
         self._package_files = None
         self._package_files_env = None
         self._package_files_link = None
@@ -47,6 +48,8 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
+
+        self._is_tested_ref_build_require = None
 
     def with_package_type(self, value):
         self._package_type = value
@@ -143,6 +146,10 @@ class GenConanfile(object):
             self._test_requires.append(ref_str)
         return self
 
+    def with_test_reference_as_build_require(self):
+        self._is_tested_ref_build_require = True
+        return self
+
     def with_build_requirement(self, ref, **kwargs):
         self._build_requirements = self._build_requirements or []
         ref_str = self._get_full_ref_str(ref)
@@ -155,9 +162,10 @@ class GenConanfile(object):
         self._tool_requirements.append((ref_str, kwargs))
         return self
 
-    def with_import(self, i):
-        if i not in self._imports:
-            self._imports.append(i)
+    def with_import(self, *imports):
+        for i in imports:
+            if i not in self._imports:
+                self._imports.append(i)
         return self
 
     def with_setting(self, setting):
@@ -207,6 +215,12 @@ class GenConanfile(object):
             self._package_lines.append(line)
         return self
 
+    def with_finalize(self, *lines):
+        self._finalize_lines = self._finalize_lines or []
+        for line in lines:
+            self._finalize_lines.append(line)
+        return self
+
     def with_build_msg(self, msg):
         self._build_messages = self._build_messages or []
         self._build_messages.append(msg)
@@ -222,14 +236,16 @@ class GenConanfile(object):
             self._package_info["env_info"] = env_info
         return self
 
-    def with_package_id(self, line):
+    def with_package_id(self, *lines):
         self._package_id_lines = self._package_id_lines or []
-        self._package_id_lines.append(line)
+        for line in lines:
+            self._package_id_lines.append(line)
         return self
 
-    def with_test(self, line):
+    def with_test(self, *lines):
         self._test_lines = self._test_lines or []
-        self._test_lines.append(line)
+        for line in lines:
+            self._test_lines.append(line)
         return self
 
     def with_cmake_build(self):
@@ -361,6 +377,10 @@ class GenConanfile(object):
                 self._package_files_link)
 
     @property
+    def _finalize_method(self):
+        return self._finalize_lines
+
+    @property
     def _package_method_render(self):
         lines = []
         if self._package_lines:
@@ -387,6 +407,19 @@ class GenConanfile(object):
     def package(self):
 {}
     """.format("\n".join(lines))
+
+    @property
+    def _finalize_method_render(self):
+        lines = []
+        if self._finalize_lines:
+            lines.extend("        {}".format(line) for line in self._finalize_lines)
+
+        if not lines:
+            return ""
+        return """
+    def finalize(self):
+{}
+        """.format("\n".join(lines))
 
     @property
     def _build_render(self):
@@ -432,11 +465,20 @@ class GenConanfile(object):
 
     @property
     def _test_lines_render(self):
-        lines = ["",
-                 "    def requirements(self):",
-                 '         self.requires(self.tested_reference_str)',
-                 "",
-                 '    def test(self):'] + ['        %s' % m for m in self._test_lines]
+        if self._is_tested_ref_build_require:
+            lines = ["",
+                     "    def build_requirements(self):",
+                     '         self.tool_requires(self.tested_reference_str)',
+                     "",
+                     '    def test(self):']
+        else:
+            lines = ["",
+                     "    def requirements(self):",
+                     '         self.requires(self.tested_reference_str)',
+                     "",
+                     '    def test(self):']
+
+        lines += ['        %s' % m for m in self._test_lines]
         return "\n".join(lines)
 
     @property
@@ -463,7 +505,8 @@ class GenConanfile(object):
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
-                       "package_method", "package_info", "package_id_lines", "test_lines"
+                       "package_method", "package_info", "package_id_lines", "test_lines",
+                       "finalize_method"
                        ):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?

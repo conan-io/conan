@@ -6,7 +6,7 @@ from conan.api.output import Color, cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.dates import timestamp_to_str
 
 
@@ -184,8 +184,9 @@ def prepare_pkglist_compact(pkglist):
             pkg_common_options = compute_common_options(prefs)
             pkg_common_options = pkg_common_options if len(pkg_common_options) > 4 else None
             for pref, pref_contents in prefs.items():
-                pref_info = pref_contents.pop("info")
-                pref_contents.update(compact_format_info(pref_info, pkg_common_options))
+                pref_info = pref_contents.pop("info", None)
+                if pref_info is not None:
+                    pref_contents.update(compact_format_info(pref_info, pkg_common_options))
                 diff_info = pref_contents.pop("diff", None)
                 if diff_info is not None:
                     pref_contents["diff"] = compact_diff(diff_info)

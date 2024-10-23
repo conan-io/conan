@@ -4,10 +4,10 @@ import pytest
 from mock import Mock
 
 from conan import ConanFile
+from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
-from conans.client.conf import get_default_settings_yml
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
@@ -32,6 +32,7 @@ def conanfile():
     c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -58,10 +59,16 @@ def test_remove(conanfile):
     assert "_CMAKE_IN_TRY_COMPILE" in content
 
 
-def test_filter(conanfile):
+def test_select_blocks(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.select("generic_system")
     content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" not in content
+    assert "########## 'libcxx' block #############" not in content
+    # These are not removed by default, to not break behavior
+    assert "########## 'variables' block #############" in content
+    assert "########## 'preprocessor' block #############" in content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" not in content
     assert "_CMAKE_IN_TRY_COMPILE" not in content
@@ -70,9 +77,51 @@ def test_filter(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.select("generic_system", "cmake_flags_init")
     content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" in content
+    assert "########## 'libcxx' block #############" not in content
+    # These are not removed by default, to not break behavior
+    assert "########## 'variables' block #############" in content
+    assert "########## 'preprocessor' block #############" in content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" in content
     assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.enabled("generic_system")
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+
+def test_enabled_blocks_conf(conanfile):
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["generic_system"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" not in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    # remove multiple
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks",
+                          ["generic_system", "cmake_flags_init"])
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert "########## 'generic_system' block #############" in content
+    assert "########## 'cmake_flags_init' block #############" in content
+    assert "########## 'libcxx' block #############" not in content
+    assert "########## 'variables' block #############" not in content
+    assert "########## 'preprocessor' block #############" not in content
+
+    conanfile.conf.define("tools.cmake.cmaketoolchain:enabled_blocks", ["potato"])
+    toolchain = CMakeToolchain(conanfile)
+    with pytest.raises(ConanException) as e:
+        _ = toolchain.content
+    assert "Block 'potato' defined in tools.cmake.cmaketoolchain:enabled_blocks doesn't" in str(e)
 
 
 def test_dict_keys(conanfile):
@@ -181,6 +230,8 @@ def conanfile_apple():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    # FIXME: Repeated fix pattern
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -210,6 +261,7 @@ def conanfile_msvc():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -284,6 +336,7 @@ def test_older_msvc_toolset():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
@@ -312,6 +365,7 @@ def test_older_msvc_toolset_update():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v142,version=14.29"' in content
@@ -337,6 +391,7 @@ def test_msvc_xp_toolsets():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v110_xp"' in content
@@ -363,6 +418,7 @@ def conanfile_linux():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -394,6 +450,7 @@ def conanfile_linux_shared():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -434,6 +491,7 @@ def conanfile_windows_fpic():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -465,6 +523,7 @@ def conanfile_linux_fpic():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -485,7 +544,7 @@ def test_fpic_enabled(conanfile_linux_fpic):
 def test_libcxx_abi_flag():
     c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
-    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings = Settings.loads(default_settings_yml)
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -499,6 +558,7 @@ def test_libcxx_abi_flag():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -533,7 +593,7 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     """
     c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
-    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings = Settings.loads(default_settings_yml)
     c.settings.os = os
     if os_sdk:
         c.settings.os.sdk = os_sdk
@@ -549,6 +609,7 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -567,7 +628,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
     """
     c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
-    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings = Settings.loads(default_settings_yml)
     c.settings.os = os
     c.settings.build_type = "Release"
     c.settings.arch = arch
@@ -602,10 +663,12 @@ def test_compilers_block(conanfile):
 
 
 def test_linker_scripts_block(conanfile):
-    conanfile.conf.define("tools.build:linker_scripts", ["path_to_first_linker_script", "path_to_second_linker_script"])
+    conanfile.conf.define("tools.build:linker_scripts",
+                          ["path_to_first_linker_script", "path_to_second_linker_script"])
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
-    assert f'string(APPEND CONAN_EXE_LINKER_FLAGS -T"path_to_first_linker_script" -T"path_to_second_linker_script")' in content
+    assert r'string(APPEND CONAN_EXE_LINKER_FLAGS " -T\"path_to_first_linker_script\" ' \
+           r'-T\"path_to_second_linker_script\"")' in content
 
 
 class TestCrossBuild:
@@ -630,6 +693,7 @@ class TestCrossBuild:
         c._conan_node = Mock()
         c._conan_node.dependencies = []
         c._conan_node.transitive_deps = {}
+        c._conan_node.replaced_requires = {}
         return c
 
     def test_cmake_system_name(self, conanfile_cross):

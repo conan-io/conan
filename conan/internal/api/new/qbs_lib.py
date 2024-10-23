@@ -19,14 +19,13 @@ class {{package_name}}Recipe(ConanFile):
 
     def build(self):
         qbs = Qbs(self)
-        qbs.profile = ""
         qbs_config = {"products.{{name}}.isShared": "true" if self.options.shared else "false"}
         qbs.add_configuration("default", qbs_config)
+        qbs.resolve()
         qbs.build()
 
     def package(self):
         qbs = Qbs(self)
-        qbs.profile = ""
         qbs.install()
 
     def package_info(self):
@@ -69,7 +68,7 @@ class {{package_name}}TestConan(ConanFile):
 
     def build(self):
         qbs = Qbs(self)
-        qbs.profile = ""
+        qbs.resolve()
         qbs.build()
         qbs.install()
 

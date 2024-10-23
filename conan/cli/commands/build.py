@@ -23,11 +23,14 @@ def build(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-d", "--deployer", action="append",
-                        help='Deploy using the provided deployer to the output folder')
+                        help="Deploy using the provided deployer to the output folder. "
+                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
+    parser.add_argument("--envs-generation", default=None, choices=["false"],
+                        help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(parser)
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
@@ -63,7 +66,8 @@ def build(conan_api, parser, *args):
 
     out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                       deploy=args.deployer, deploy_folder=deployer_folder)
+                                       deploy=args.deployer, deploy_folder=deployer_folder,
+                                       envs_generation=args.envs_generation)
 
     out.title("Calling build()")
     conanfile = deps_graph.root.conanfile

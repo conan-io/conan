@@ -1,10 +1,12 @@
 import copy
+import glob
 import json
 import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
+from conans.model.pkg_type import PackageType
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -91,6 +93,11 @@ class _Component:
             self.libdirs = ["lib"]
             self.bindirs = ["bin"]
 
+        # CPS
+        self._type = None
+        self._location = None
+        self._link_location = None
+
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -111,7 +118,10 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._properties
+            "properties": self._properties,
+            "type": self._type,
+            "location": self._location,
+            "link_location": self._link_location
         }
 
     @staticmethod
@@ -194,22 +204,28 @@ class _Component:
     @property
     def bindir(self):
         bindirs = self.bindirs
-        assert bindirs
-        assert len(bindirs) == 1
+        if not bindirs or len(bindirs) != 1:
+            raise ConanException(f"The bindir property is undefined because bindirs "
+                                 f"{'is empty' if not bindirs else 'has more than one element'}."
+                                 f" Consider using the bindirs property.")
         return bindirs[0]
 
     @property
     def libdir(self):
         libdirs = self.libdirs
-        assert libdirs
-        assert len(libdirs) == 1
+        if not libdirs or len(libdirs) != 1:
+            raise ConanException(f"The libdir property is undefined because libdirs "
+                                 f"{'is empty' if not libdirs else 'has more than one element'}."
+                                 f" Consider using the libdirs property.")
         return libdirs[0]
 
     @property
     def includedir(self):
         includedirs = self.includedirs
-        assert includedirs
-        assert len(includedirs) == 1
+        if not includedirs or len(includedirs) != 1:
+            raise ConanException(f"The includedir property is undefined because includedirs "
+                                 f"{'is empty' if not includedirs else 'has more than one element'}."
+                                 f" Consider using the includedirs property.")
         return includedirs[0]
 
     @property
@@ -241,6 +257,30 @@ class _Component:
     @libs.setter
     def libs(self, value):
         self._libs = value
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value
+
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, value):
+        self._location = value
+
+    @property
+    def link_location(self):
+        return self._link_location
+
+    @link_location.setter
+    def link_location(self, value):
+        self._link_location = value
 
     @property
     def defines(self):
@@ -324,7 +364,7 @@ class _Component:
 
     @property
     def required_component_names(self):
-        """ Names of the required components of the same package (not scoped with ::)"""
+        """ Names of the required INTERNAL components of the same package (not scoped with ::)"""
         if self.requires is None:
             return []
         return [r for r in self.requires if "::" not in r]
@@ -334,11 +374,15 @@ class _Component:
             self._properties = {}
         self._properties[property_name] = value
 
-    def get_property(self, property_name):
+    def get_property(self, property_name, check_type=None):
         if self._properties is None:
             return None
         try:
-            return self._properties[property_name]
+            value = self._properties[property_name]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {property_name} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             pass
 
@@ -409,6 +453,67 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
+    def deduce_cps(self, pkg_type):
+        if self._location or self._link_location:
+            if self._type is None or self._type is PackageType.HEADER:
+                raise ConanException("Incorrect cpp_info defining location without type or header")
+            return
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+            return
+
+        # Recipe didn't specify things, need to auto deduce
+        libdirs = [x.replace("\\", "/") for x in self.libdirs]
+        bindirs = [x.replace("\\", "/") for x in self.bindirs]
+
+        if len(self.libs) != 1:
+            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+
+        # TODO: Do a better handling of pre-defined type
+        libname = self.libs[0]
+        static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
+        shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
+                           f"lib{libname}.*dylib"]
+        dll_patterns = [f"{libname}.dll"]
+
+        def _find_matching(patterns, dirs):
+            matches = set()
+            for pattern in patterns:
+                for d in dirs:
+                    matches.update(glob.glob(f"{d}/{pattern}"))
+            if len(matches) == 1:
+                return next(iter(matches))
+
+        static_location = _find_matching(static_patterns, libdirs)
+        shared_location = _find_matching(shared_patterns, libdirs)
+        dll_location = _find_matching(dll_patterns, bindirs)
+        if static_location:
+            if shared_location:
+                ConanOutput().warning(f"Lib {libname} has both static {static_location} and "
+                                      f"shared {shared_location} in the same package")
+                if pkg_type is PackageType.STATIC:
+                    self._location = static_location
+                    self._type = PackageType.STATIC
+                else:
+                    self._location = shared_location
+                    self._type = PackageType.SHARED
+            elif dll_location:
+                self._location = dll_location
+                self._link_location = static_location
+                self._type = PackageType.SHARED
+            else:
+                self._location = static_location
+                self._type = PackageType.STATIC
+        elif shared_location:
+            self._location = shared_location
+            self._type = PackageType.SHARED
+        elif dll_location:
+            # Only .dll but no link library
+            self._location = dll_location
+            self._type = PackageType.SHARED
+        if self._type != pkg_type:
+            ConanOutput().warning(f"Lib {libname} deduced as '{self._type}, "
+                                  f"but 'package_type={pkg_type}'")
+
 
 class CppInfo:
 
@@ -477,21 +582,6 @@ class CppInfo:
         for component in self.components.values():
             component.deploy_base_folder(package_folder, deploy_folder)
 
-    def _raise_circle_components_requires_error(self):
-        """
-        Raise an exception because of a requirements loop detection in components.
-        The exception message gives some information about the involved components.
-        """
-        deps_set = set()
-        for comp_name, comp in self.components.items():
-            for dep_name, dep in self.components.items():
-                for require in dep.required_component_names:
-                    if require == comp_name:
-                        deps_set.add("   {} requires {}".format(dep_name, comp_name))
-        dep_mesg = "\n".join(deps_set)
-        raise ConanException(f"There is a dependency loop in "
-                             f"'self.cpp_info.components' requires:\n{dep_mesg}")
-
     def get_sorted_components(self):
         """
         Order the components taking into account if they depend on another component in the
@@ -499,22 +589,28 @@ class CppInfo:
 
         :return: ``OrderedDict`` {component_name: component}
         """
-        processed = []  # Names of the components ordered
-        # TODO: Cache the sort
-        while len(self.components) > len(processed):
-            cached_processed = processed[:]
-            for name, c in self.components.items():
-                req_processed = [n for n in c.required_component_names if n not in processed]
-                if not req_processed and name not in processed:
-                    processed.append(name)
-            # If cached_processed did not change then detected cycle components requirements!
-            if cached_processed == processed:
-                self._raise_circle_components_requires_error()
-
-        return OrderedDict([(cname, self.components[cname]) for cname in processed])
+        result = OrderedDict()
+        opened = self.components.copy()
+        while opened:
+            new_open = OrderedDict()
+            for name, c in opened.items():
+                if not any(n in opened for n in c.required_component_names):
+                    result[name] = c
+                else:
+                    new_open[name] = c
+            if len(opened) == len(new_open):
+                msg = ["There is a dependency loop in 'self.cpp_info.components' requires:"]
+                for name, c in opened.items():
+                    loop_reqs = ", ".join(n for n in c.required_component_names if n in opened)
+                    msg.append(f"   {name} requires {loop_reqs}")
+                raise ConanException("\n".join(msg))
+            opened = new_open
+        return result
 
     def aggregated_components(self):
-        """Aggregates all the components as global values, returning a new CppInfo"""
+        """Aggregates all the components as global values, returning a new CppInfo
+        Used by many generators to obtain a unified, aggregated view of all components
+        """
         # This method had caching before, but after a ``--deployer``, the package changes
         # location, and this caching was invalid, still pointing to the Conan cache instead of
         # the deployed
@@ -535,7 +631,7 @@ class CppInfo:
         return aggregated
 
     def check_component_requires(self, conanfile):
-        """ quality check for component requires:
+        """ quality check for component requires, called by BinaryInstaller after package_info()
         - Check that all recipe ``requires`` are used if consumer recipe explicit opt-in to use
           component requires
         - Check that component external dep::comp dependency "dep" is a recipe "requires"
@@ -545,21 +641,18 @@ class CppInfo:
         if not self.has_components and not self._package.requires:
             return
         # Accumulate all external requires
-        external = set(r.split("::")[0] for r in self._package.requires if "::" in r)
-        internal = set(r for r in self._package.requires if "::" not in r)
-        # TODO: Cache this, this is computed in different places
-        for key, comp in self.components.items():
-            external.update(r.split("::")[0] for r in comp.requires if "::" in r)
-            internal.update(r for r in comp.requires if "::" not in r)
-
-        missing_internal = list(internal.difference(self.components))
+        comps = self.required_components
+        missing_internal = [c[1] for c in comps if c[0] is None and c[1] not in self.components]
         if missing_internal:
             raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
+        external = [c[0] for c in comps if c[0] is not None]
         if not external:
             return
         # Only direct host (not test) dependencies can define required components
-        direct_dependencies = [d.ref.name for d in conanfile.requires.values()
-                               if not d.build and not d.is_test and d.visible and not d.override]
+        # We use conanfile.dependencies to use the already replaced ones by "replace_requires"
+        # So consumers can keep their ``self.cpp_info.requires = ["pkg_name::comp"]``
+        direct_dependencies = [r.ref.name for r, d in conanfile.dependencies.items() if r.direct
+                               and not r.build and not r.is_test and r.visible and not r.override]
 
         for e in external:
             if e not in direct_dependencies:

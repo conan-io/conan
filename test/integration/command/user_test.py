@@ -5,9 +5,9 @@ import unittest
 from collections import OrderedDict
 from datetime import timedelta
 
-from conans.client.store.localdb import LocalDB
+from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.env import environment_update
+from conan.test.utils.env import environment_update
 
 
 class UserTest(unittest.TestCase):
@@ -154,7 +154,7 @@ class ConanLib(ConanFile):
         client.save_home({"global.conf": conan_conf})
         client.run('remote login default admin -p', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
-        self.assertNotIn("Please enter a password for \"admin\" account:", client.out)
+        self.assertNotIn("Please enter a password for user 'admin'", client.out)
         client.run("remote list-users")
         self.assertIn("default:\n  No user", client.out)
 
@@ -418,7 +418,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=1)
+        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=2)
         c = TestClient(servers={"default": server}, inputs=["myuser", "password",
                                                             "myotheruser", "otherpass",
                                                             "user", "pass", "user", "pass",
@@ -429,10 +429,10 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # Token should expire
-        time.sleep(2)
+        time.sleep(3)
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Token should expire
-        time.sleep(2)
+        time.sleep(3)
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out

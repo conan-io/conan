@@ -2,11 +2,11 @@ import copy
 import os
 import unittest
 
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANINFO, CONAN_MANIFEST
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.service.authorize import BasicAuthorizer
 from conans.server.service.v2.search import SearchService
 from conans.server.service.v2.service_v2 import ConanServiceV2
@@ -39,7 +39,7 @@ class ConanServiceTest(unittest.TestCase):
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
-        write_perms = []
+        write_perms = [("*/*@*/*", "*")]
         authorizer = BasicAuthorizer(read_perms, write_perms)
 
         self.fake_url = "http://url"

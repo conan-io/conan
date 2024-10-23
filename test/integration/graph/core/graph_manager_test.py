@@ -3,7 +3,7 @@ from parameterized import parameterized
 
 from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
-from conans.errors import ConanException
+from conan.errors import ConanException
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
 
@@ -873,9 +873,10 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, False, False, False, False),
                                 (liba, False, True, False, False)])
 
-    def test_incorrect_static_propagation_linear(self):
+    def test_static_propagation_linear(self):
         # https://github.com/conan-io/conan/issues/16402
         # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
+        # The propagation of traits is correct, it is only the "skip-binaries" not able to skip
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
         self.recipe_conanfile("libb/0.1",  GenConanfile().with_package_type("static-library")
                                                          .with_requirement("liba/0.1"))

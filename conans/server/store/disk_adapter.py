@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 import fasteners
 
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 from conans.util.files import md5sum, rmdir
 from conans.server.utils.files import path_exists, relative_dirs
 

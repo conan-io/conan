@@ -5,17 +5,18 @@ import time
 
 from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
-from conans.errors import ConanException, NotFoundException, AuthenticationException, \
-    ForbiddenException, ConanConnectionError, RequestErrorException
-from conans.util.files import human_size
-from conans.util.sha import check_with_algorithm_sum
+from conan.internal.errors import ConanConnectionError, RequestErrorException, AuthenticationException, \
+    ForbiddenException, NotFoundException
+from conan.errors import ConanException
+from conans.util.files import human_size, check_with_algorithm_sum
 
 
 class FileDownloader:
 
-    def __init__(self, requester, scope=None):
+    def __init__(self, requester, scope=None, source_credentials=None):
         self._output = ConanOutput(scope=scope)
         self._requester = requester
+        self._source_credentials = source_credentials
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
@@ -74,7 +75,8 @@ class FileDownloader:
 
         try:
             response = self._requester.get(url, stream=True, verify=verify_ssl, auth=auth,
-                                           headers=headers)
+                                           headers=headers,
+                                           source_credentials=self._source_credentials)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 
@@ -82,7 +84,7 @@ class FileDownloader:
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                if auth is None or (hasattr(auth, "bearer") and auth.bearer is None):
                     # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))

@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import textwrap
+from unittest.mock import patch
 
 import pytest
 
@@ -8,6 +9,8 @@ from conan import conan_version
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
+from conans.client.migrations import ClientMigrator
+from conans.model.version import Version
 from conans.util.files import save, load
 
 
@@ -131,3 +134,24 @@ def test_back_migrations():
         assert not os.path.exists(os.path.join(t.cache_folder, f"file{number}.txt"))
         migration_file = os.path.join(t.cache_folder, "migrations", f"2.100.0_{number}-migrate.py")
         assert not os.path.exists(migration_file)
+
+
+def test_back_default_compatibility_migration():
+    t = TestClient()
+
+    version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
+
+    # emulate a clean install, no previous version
+    os.remove(version_txt_file_path)
+
+    t.run("-v")  # Fire the backward migration
+    migration_file = os.path.join(t.cache_folder, "migrations", "2.4_1-migrate.py")
+    assert os.path.exists(migration_file)
+
+    # downgrade from a clean latest conan_version to 2.3.2
+    # simulate that we are in 2.3.2 and the old one is latest conan_version
+    migrator = ClientMigrator(t.cache_folder, Version("2.3.2"))
+
+    with patch('conan.api.conan_api.ClientMigrator', new=lambda *args, **kwargs: migrator):
+        t.run("-v")  # Fire the backward migration
+        assert f"WARN: Downgrading cache from Conan {conan_version} to 2.3.2" in t.out
