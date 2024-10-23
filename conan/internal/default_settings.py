@@ -111,7 +111,7 @@ compiler:
         cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
     msvc:
         version: [170, 180, 190, 191, 192, 193, 194]
-        update: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        update: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         runtime: [static, dynamic]
         runtime_type: [Debug, Release]
         cppstd: [null, 14, 17, 20, 23]
