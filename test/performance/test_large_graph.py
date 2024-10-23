@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 
 def test_large_graph():
-    c = TestClient(cache_folder="T:/mycache")
+    c = TestClient()
     num_test = 40
     num_pkgs = 40
 
