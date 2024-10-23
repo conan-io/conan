@@ -80,7 +80,8 @@ jobs:
            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
-           "--add", "Microsoft.Component.MSBuild" -Wait
+           "--add", "Microsoft.Component.MSBuild", `
+           "--add", "Microsoft.VisualStudio.Component.VC.v14.3.x86.x64" -Wait
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
