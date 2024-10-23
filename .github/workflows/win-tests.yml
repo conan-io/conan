@@ -72,7 +72,8 @@ jobs:
           C:\msys64\usr\bin\pacman -S automake --noconfirm
 
       - name: Install VS 15 2017 Community edition
-        if: matrix.test-type == 'functional'
+        # FIXME: should not install visual always, just to check if integration tests pass
+        #if: matrix.test-type == 'functional'
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
           Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
