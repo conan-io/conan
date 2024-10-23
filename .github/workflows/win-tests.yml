@@ -59,14 +59,17 @@ jobs:
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 
-      - name: Install Pacman extra packages
-        run: |
-          C:\msys64\usr\bin\pacman -Syuu --noconfirm
-          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
-          C:\msys64\usr\bin\pacman -S mingw-w64-i686-toolchain --noconfirm
-          C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
-          C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
-          C:\msys64\usr\bin\pacman -S automake --noconfirm
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: false
+          install: >
+            mingw-w64-x86_64-toolchain
+            mingw-w64-i686-toolchain
+            base-devel
+            gcc
+            autoconf-wrapper
+            automake
 
       - name: Install VS 15 2017 Community edition
         run: |
