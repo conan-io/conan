@@ -29,6 +29,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Remove installed CMake version
+        run: |
+            Remove-Item -Recurse -Force "C:/Program Files/CMake"
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -147,4 +151,6 @@ jobs:
           $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
           New-Item -ItemType Directory -Force -Path $randomFolder
           $env:CONAN_TEST_FOLDER = $randomFolder
+          $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
+          Remove-Item 'C:\Strawberry' -Recurse
           pytest test/ --durations=20 --numprocesses=auto
