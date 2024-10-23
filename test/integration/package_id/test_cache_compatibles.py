@@ -316,7 +316,7 @@ class TestDefaultCompat:
         assert "pkg/0.1: CPPSTD: 17" in c.out
 
     def test_check_min_cstd(self):
-        """ test that the check_min_cstd works fine wiht compatibility
+        """ test that the check_min_cstd works fine with compatibility
         """
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -335,7 +335,7 @@ class TestDefaultCompat:
 
         c = TestClient()
         c.save({"conanfile.py": conanfile})
-        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        settings = "-s compiler=gcc -s compiler.version=14 -s compiler.libcxx=libstdc++11"
         c.run(f"create .  {settings} -s compiler.cstd=17")
         assert "pkg/0.1: valid standard!!" in c.out
         assert "pkg/0.1: CSTD: 17" in c.out

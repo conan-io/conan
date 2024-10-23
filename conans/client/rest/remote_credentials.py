@@ -4,12 +4,13 @@ import platform
 
 from jinja2 import Template
 
+from conan.api.input import UserInput
 from conan.internal.cache.home_paths import HomePaths
 
 from conans.client.loader import load_python_file
 from conan.api.output import ConanOutput
-from conans.client.userio import UserInput
-from conans.errors import ConanException, scoped_traceback
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
 from conans.util.files import load
 
 
@@ -43,13 +44,13 @@ class RemoteCredentials:
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
                 raise ConanException(msg)
             if plugin_user and plugin_password:
-                return plugin_user, plugin_password
+                return plugin_user, plugin_password, False
 
         # Then prioritize the cache "credentials.json" file
         creds = self._urls.get(remote.name)
         if creds is not None:
             try:
-                return creds["user"], creds["password"]
+                return creds["user"], creds["password"], False
             except KeyError as e:
                 raise ConanException(f"Authentication error, wrong credentials.json: {e}")
 
@@ -58,12 +59,12 @@ class RemoteCredentials:
         if env_passwd is not None:
             if env_user is None:
                 raise ConanException("Found password in env-var, but not defined user")
-            return env_user, env_passwd
+            return env_user, env_passwd, False
 
         # If not found, then interactive prompt
         ui = UserInput(self._global_conf.get("core:non_interactive", check_type=bool))
         input_user, input_password = ui.request_login(remote.name, user)
-        return input_user, input_password
+        return input_user, input_password, True
 
     @staticmethod
     def _get_env(remote, user):

@@ -7,7 +7,7 @@ from conan import ConanFile
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
@@ -32,6 +32,7 @@ def conanfile():
     c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -229,6 +230,8 @@ def conanfile_apple():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    # FIXME: Repeated fix pattern
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -258,6 +261,7 @@ def conanfile_msvc():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -332,6 +336,7 @@ def test_older_msvc_toolset():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
@@ -360,6 +365,7 @@ def test_older_msvc_toolset_update():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v142,version=14.29"' in content
@@ -385,6 +391,7 @@ def test_msvc_xp_toolsets():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert 'CMAKE_GENERATOR_TOOLSET "v110_xp"' in content
@@ -411,6 +418,7 @@ def conanfile_linux():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -442,6 +450,7 @@ def conanfile_linux_shared():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -482,6 +491,7 @@ def conanfile_windows_fpic():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -513,6 +523,7 @@ def conanfile_linux_fpic():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
     return c
 
 
@@ -547,6 +558,7 @@ def test_libcxx_abi_flag():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -597,6 +609,7 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -680,6 +693,7 @@ class TestCrossBuild:
         c._conan_node = Mock()
         c._conan_node.dependencies = []
         c._conan_node.transitive_deps = {}
+        c._conan_node.replaced_requires = {}
         return c
 
     def test_cmake_system_name(self, conanfile_cross):

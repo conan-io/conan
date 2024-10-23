@@ -7,7 +7,8 @@ from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
 from conan.internal.conan_app import ConanApp
 from conan.internal.paths import CONANINFO
-from conans.errors import ConanException, NotFoundException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
@@ -149,7 +150,6 @@ class ListAPI:
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
-            refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:
