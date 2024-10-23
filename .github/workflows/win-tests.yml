@@ -43,22 +43,22 @@ jobs:
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
-#      - name: Cache msys2 packages
-#        if: matrix.test-type == 'functional'
-#        id: msys2-tool
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#              C:\msys64\mingw32\bin
-#              C:\msys64\ucrt64\bin
-#              C:\msys64\mingw64\bin
-#              C:\msys64\usr\bin
-#              C:\msys64\clang64\bin
-#              C:\msys64\mingw64\bin
-#          key: msys2-packages-${{ runner.os }}-${{ hashFiles('msys-installed-packages.lock') }}
-#          restore-keys: |
-#            msys2-packages-${{ runner.os }}-
-#
+      - name: Cache msys2 packages
+        if: matrix.test-type == 'functional'
+        id: msys2-tool
+        uses: actions/cache@v4
+        with:
+          path: |
+              C:\msys64\mingw32\bin
+              C:\msys64\ucrt64\bin
+              C:\msys64\mingw64\bin
+              C:\msys64\usr\bin
+              C:\msys64\clang64\bin
+              C:\msys64\mingw64\bin
+          key: msys2-packages-${{ runner.os }}-${{ hashFiles('msys-installed-packages.lock') }}
+          restore-keys: |
+            msys2-packages-${{ runner.os }}-
+
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -77,30 +77,30 @@ jobs:
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 
-#      - name: Install Pacman extra packages
-#        if: matrix.test-type == 'functional' && steps.msys2-tool.outputs.cache-hit != 'true'
-#        run: |
-#          C:\msys64\usr\bin\pacman -Syuu --noconfirm
-#          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
-#          C:\msys64\usr\bin\pacman -S mingw-w64-i686-toolchain --noconfirm
-#          C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
-#          C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
-#          C:\msys64\usr\bin\pacman -S automake --noconfirm
-#
-#      - name: Install VS 15 2017 Community edition
-#        if: matrix.test-type == 'functional'
-#        run: |
-#          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
-#          Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
-#           "--quiet",  "--wait", "--norestart", "--nocache", `
-#           "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-#           "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
-#           "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
-#           "--add", "Microsoft.Component.MSBuild", `
-#           "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
-#           "--add", "Microsoft.VisualStudio.Workload.NativeDesktop", `
-#           "--add", "Microsoft.VisualStudio.Component.VC.CoreBuildTools", `
-#           "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC" -Wait
+      - name: Install Pacman extra packages
+        if: matrix.test-type == 'functional' && steps.msys2-tool.outputs.cache-hit != 'true'
+        run: |
+          C:\msys64\usr\bin\pacman -Syuu --noconfirm
+          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
+          C:\msys64\usr\bin\pacman -S mingw-w64-i686-toolchain --noconfirm
+          C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
+          C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
+          C:\msys64\usr\bin\pacman -S automake --noconfirm
+
+      - name: Install VS 15 2017 Community edition
+        if: matrix.test-type == 'functional'
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_community.exe" -OutFile "vs_installer.exe"
+          Start-Process -FilePath ".\vs_installer.exe" -ArgumentList `
+           "--quiet",  "--wait", "--norestart", "--nocache", `
+           "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+           "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+           "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
+           "--add", "Microsoft.Component.MSBuild", `
+           "--add", "Microsoft.VisualStudio.Component.VC.CMake.Project", `
+           "--add", "Microsoft.VisualStudio.Workload.NativeDesktop", `
+           "--add", "Microsoft.VisualStudio.Component.VC.CoreBuildTools", `
+           "--add", "Microsoft.VisualStudio.Component.VC.ATLMFC" -Wait
 
       - name: Cache CMake and Bazel installations
         if: matrix.test-type == 'functional'
@@ -176,11 +176,10 @@ jobs:
               $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
               Remove-Item 'C:\Strawberry' -Recurse
               pytest `
-                test/functional/subsystems_build_test.py::TestSubsystemsCMakeBuild::test_cygwin `
-               --durations=20 --numprocesses=auto -vvv
+                test\functional\subsystems_build_test.py `
+                test\functional\test_profile_detect_api.py `
+                test\functional\layout\test_editable_cmake.py `
+                test\functional\layout\test_editable_cmake_components.py `
+                test\functional\layout\test_editable_msbuild.py `
+              --durations=20 --numprocesses=auto -vvv
           }
-#                test\functional\test_profile_detect_api.py `
-#                test\functional\layout\test_editable_cmake.py `
-#                test\functional\layout\test_editable_cmake_components.py `
-#                test\functional\layout\test_editable_msbuild.py `
-#              --durations=20 --numprocesses=auto -vvv
