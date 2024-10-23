@@ -475,7 +475,7 @@ class TestSubsystemsCMakeBuild:
         """
         Needs to install cmake from the cygwin setup.exe
         """
-        client = TestClient(path_with_spaces=False)
+        client = TestClient()
         # install "gcc-c++" and "make" packages
         self._build(client)
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")

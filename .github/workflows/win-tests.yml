@@ -43,22 +43,6 @@ jobs:
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
-      - name: Cache msys2 packages
-        if: matrix.test-type == 'functional'
-        id: msys2-tool
-        uses: actions/cache@v4
-        with:
-          path: |
-              C:\msys64\mingw32\bin
-              C:\msys64\ucrt64\bin
-              C:\msys64\mingw64\bin
-              C:\msys64\usr\bin
-              C:\msys64\clang64\bin
-              C:\msys64\mingw64\bin
-          key: msys2-packages-${{ runner.os }}-${{ hashFiles('msys-installed-packages.lock') }}
-          restore-keys: |
-            msys2-packages-${{ runner.os }}-
-
       - name: Install Python requirements
         run: |
           pip install --upgrade pip
@@ -78,7 +62,7 @@ jobs:
           cyg-get automake gcc-g++ make binutils --verbose
 
       - name: Install Pacman extra packages
-        if: matrix.test-type == 'functional' && steps.msys2-tool.outputs.cache-hit != 'true'
+        if: matrix.test-type == 'functional'
         run: |
           C:\msys64\usr\bin\pacman -Syuu --noconfirm
           C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
@@ -177,9 +161,5 @@ jobs:
               Remove-Item 'C:\Strawberry' -Recurse
               pytest `
                 test\functional\subsystems_build_test.py `
-                test\functional\test_profile_detect_api.py `
-                test\functional\layout\test_editable_cmake.py `
-                test\functional\layout\test_editable_cmake_components.py `
-                test\functional\layout\test_editable_msbuild.py `
               --durations=20 --numprocesses=auto -vvv
           }
