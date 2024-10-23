@@ -25,6 +25,10 @@ def test_inject_generators_conf():
 
     tc.run("create tool")
     tc.run("install --tool-requires=tool/0.1")
+    assert "WARN: experimental: Tool-require tool/0.1 adding generators: " \
+           "['CMakeToolchain', 'MyGenerator']" in tc.out
+    assert "Generator 'CMakeToolchain' calling 'generate()'" in tc.out
+    assert "Generator 'MyGenerator' calling 'generate()'" in tc.out
     assert "CMakeToolchain generated: conan_toolchain.cmake" in tc.out
     assert "MyGenerator generated" in tc.out
 
