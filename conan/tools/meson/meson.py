@@ -47,7 +47,7 @@ class Meson(object):
                 cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         # Issue related: https://github.com/mesonbuild/meson/issues/12880
-        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
+        cmd += f' --prefix={os.path.abspath("/")}'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
