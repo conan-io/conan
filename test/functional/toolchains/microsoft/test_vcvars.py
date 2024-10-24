@@ -17,7 +17,7 @@ def test_deactivate_vcvars_message():
                 settings = "os", "compiler", "arch", "build_type"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s compiler.version=193')
+    client.run('install . -s compiler.version=194')
     client.run_command(r'conanbuild.bat')
     assert "[vcvarsall.bat] Environment initialized" in client.out
     client.run_command(r'deactivate_conanvcvars.bat')
