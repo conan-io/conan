@@ -38,6 +38,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Check clock precision in Windows
+        run: |
+          python -c "import time; \
+          clock_info = time.get_clock_info('time'); \
+          print(f'Time clock precision: {clock_info.resolution} seconds'); \
+          perf_info = time.get_clock_info('perf_counter'); \
+          print(f'Perf counter precision: {perf_info.resolution} seconds')"
+
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
