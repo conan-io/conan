@@ -220,8 +220,12 @@ def test_build_modules_custom_script_editable(editable):
             exports_sources = ["*.cmake"]
 
             def build(self):
-                cmake = 'function(otherfunc)\nmessage("Hello otherfunc!!!!")\nendfunction()'
+                cmake = 'set(MY_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})\n'\
+                        'macro(otherfunc)\n'\
+                        'file(READ "${MY_CMAKE_PATH}/my.txt" c)\n'\
+                        'message("Hello ${c}!!!!")\nendmacro()'
                 save(self, "otherfuncs.cmake", cmake)
+                save(self, "my.txt", "contents of text file!!!!")
 
             def layout(self):
                 self.folders.source = "my_sources"
@@ -234,6 +238,7 @@ def test_build_modules_custom_script_editable(editable):
             def package(self):
                 copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "mods"))
                 copy(self, "*.cmake", self.build_folder, os.path.join(self.package_folder, "mods"))
+                copy(self, "*.txt", self.build_folder, os.path.join(self.package_folder, "mods"))
 
             def package_info(self):
                 self.cpp_info.set_property("cmake_build_modules", glob.glob("mods/*.cmake"))
@@ -277,4 +282,4 @@ def test_build_modules_custom_script_editable(editable):
         c.run("create functions")
     c.run("build app")
     assert "Hello myfunction!!!!" in c.out
-    assert "Hello otherfunc!!!!" in c.out
+    assert "Hello contents of text file!!!!" in c.out
