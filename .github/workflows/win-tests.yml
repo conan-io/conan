@@ -172,10 +172,15 @@ jobs:
 
       - name: Run Tests
         run: |
-          $gccDir = "C:\mingw64\bin"
-          $newPath = ($env:PATH -split ";") -ne $gccDir -join ";"
+          $mingw64Dir = "C:\mingw64\bin"
+          $newPath = ($env:PATH -split ";") -ne $mingw64Dir -join ";"
           [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
-          Write-Host "GCC removed from PATH. Current PATH: $env:PATH"
+          Write-Host "mingw64 removed from PATH. Current PATH: $env:PATH"
+
+          $strawberryDir = "C:\Strawberry\c\bin"
+          $newPath = ($env:PATH -split ";") -ne $strawberryDir -join ";"
+          [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
+          Write-Host "Strawberry removed from PATH. Current PATH: $env:PATH"
 
           $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
           if ($null -ne $gccPath) {
@@ -189,5 +194,5 @@ jobs:
           New-Item -ItemType Directory -Force -Path $randomFolder
           $env:CONAN_TEST_FOLDER = $randomFolder
           $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
-          Remove-Item 'C:\Strawberry' -Recurse
+
           pytest -k "test_cache_save_restore_multiple_revisions or test_cmake_toolchain_winsdk_version or test_deactivate_vcvars_message or test_toolchain_win_vs2022 or test_locally_build_msvc or test_locally_build_msvc_toolset" -vvv
