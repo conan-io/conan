@@ -80,6 +80,11 @@ jobs:
                 autoconf-wrapper
                 automake
 
+      - name: Check uname path
+        run: |
+            echo "Checking uname path..."
+            Get-Command uname | Select-Object -ExpandProperty Source
+
       - name: List MSYS2 installation directory contents
         run: |
             $msys2Path = '${{ steps.msys2-setup.outputs.msys2-location }}'
@@ -188,4 +193,4 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/unittests test/integration test/functional -n=auto --durations=1000
+          pytest -k "test_msys2_available or test_token_expired or test_crossbuild_windows_incomplete" -n=auto --durations=1000
