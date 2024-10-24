@@ -1,7 +1,4 @@
-import os
-
 from conan.api.output import ConanOutput
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD
@@ -9,7 +6,6 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conan.errors import ConanException
-from conans.client.loader import load_python_file
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -204,18 +200,3 @@ class GraphAPI:
         binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)
-
-    def sbom(self, graph, manifest):
-        ConanOutput().warning(f"generating sbom for {manifest} format")
-        sbom_manifest = HomePaths(self.conan_api.cache_folder).sbom_manifest_plugin_path
-        chosen_manifest_path = os.path.join(sbom_manifest, f"{manifest}.py")
-        mod, _ = load_python_file(chosen_manifest_path)
-
-        if not hasattr(mod, "generate_sbom"):
-            raise ConanException(
-                f"SBOM manifest plugin '{manifest}' does not have 'generate_sbom' method")
-        if not callable(mod.generate_sbom):
-            raise ConanException(
-                f"SBOM manifest plugin '{manifest}' 'generate_sbom' is not a function")
-
-        return mod.generate_sbom(self.conan_api, graph.serialize())
