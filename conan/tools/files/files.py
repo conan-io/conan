@@ -4,6 +4,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
@@ -353,18 +354,24 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 except Exception as e:
                     output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         else:  # duplicated for, to avoid a platform check for each zipped file
+            file_timestamps = []
             for file_ in zip_info:
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
+                    file_path = os.path.join(full_path, file_.filename)
+                    ts = time.mktime(file_.date_time + (0, 0, -1))
+                    file_timestamps.append((file_path, ts))
                     if keep_permissions:
                         # Could be dangerous if the ZIP has been created in a non nix system
                         # https://bugs.python.org/issue15795
                         perm = file_.external_attr >> 16 & 0xFFF
-                        os.chmod(os.path.join(full_path, file_.filename), perm)
+                        os.chmod(file_path, perm)
                 except Exception as e:
                     output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
+            for file_path, ts in file_timestamps:
+                os.utime(file_path, (ts, ts))
         output.writeln("")
 
 
