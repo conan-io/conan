@@ -45,6 +45,7 @@ tools_locations = {
 MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
 homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
 windows_choco_root = "C:/ProgramData/chocolatey/lib/"
+msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -103,40 +104,40 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw32/bin"}},
     },
     'ucrt64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/ucrt64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/ucrt64/bin"}},
     },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw64/bin"}},
     },
     'msys2': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/usr/bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw64/bin"}},
     },
     'cygwin': {
         "platform": "Windows",
