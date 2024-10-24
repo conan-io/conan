@@ -417,7 +417,12 @@ class _Component:
 
         if other._properties:
             current_values = self.get_init("_properties", {})
-            current_values.update(other._properties)
+            for k, v in other._properties.items():
+                existing = current_values.get(k)
+                if existing is not None and isinstance(existing, list) and not overwrite:
+                    existing.extend(v)
+                else:
+                    current_values[k] = v
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
