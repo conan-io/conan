@@ -16,13 +16,15 @@ class TestToolsCustomVersions:
         client.run_command('cmake --version')
         default_cmake_version = tools_locations["cmake"]["default"]
         assert "cmake version {}".format(default_cmake_version) in client.out
-
+    
+    @pytest.mark.skipif(platform.system() == "Darwin", reason="3.16 not installed in MacOS")
     @pytest.mark.tool("cmake", "3.16")
     def test_custom_cmake_3_16(self):
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.16" in client.out
 
+    @pytest.mark.skipif(platform.system() == "Darwin", reason="3.17 not installed in MacOS")
     @pytest.mark.tool("cmake", "3.17")
     def test_custom_cmake_3_17(self):
         client = TestClient()

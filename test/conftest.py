@@ -68,27 +68,25 @@ tools_locations = {
         "default": "3.15",
         "3.15": {
             "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
         "3.16": {
             "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
                      'Linux': '/usr/share/cmake-3.16.9/bin'}
         },
         "3.17": {
             "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
                      'Linux': '/usr/share/cmake-3.17.5/bin'}
         },
         "3.19": {
             "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
         "3.23": {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
         },
         "3.28": {
@@ -158,10 +156,10 @@ tools_locations = {
         "default": "6.3.2",
         "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
                            'Windows': 'C:/bazel-6.3.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
-        "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
+                           'Darwin': '/Users/runner/Applications/bazel/6.3.2'}},
+        "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2',
                            'Windows': 'C:/bazel-7.1.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
+                           'Darwin': '/Users/runner/Applications/bazel/7.1.2'}},
     },
     'premake': {
         "exe": "premake5",
@@ -178,7 +176,7 @@ tools_locations = {
         "exe": "ndk-build",
         "default": "system",
         "system": {
-            "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
+            "path": {'Darwin': os.getenv("ANDROID_NDK")}
         }
     },
     "qbs": {"disabled": True},

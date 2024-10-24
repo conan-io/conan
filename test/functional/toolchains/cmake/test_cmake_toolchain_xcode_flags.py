@@ -58,6 +58,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+@pytest.mark.tool("cmake", "3.19")
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
     ("watchOS", "8.1", "watchos", "armv7k"),
     ("tvOS", "13.2", "appletvos", "armv8")
