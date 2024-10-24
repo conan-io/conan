@@ -204,3 +204,77 @@ def test_build_modules_components_is_not_possible():
     client.save({"CMakeLists.txt": cmakelists.replace("crypto", "#crypto")})
     assert "ROOT MESSAGE:hello!" not in client.out
 
+
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("editable", [True, False])
+def test_build_modules_custom_script_editable(editable):
+    c = TestClient()
+    conanfile = textwrap.dedent(r"""
+        import os, glob
+        from conan import ConanFile
+        from conan.tools.files import copy, save
+
+        class Conan(ConanFile):
+            name = "myfunctions"
+            version = "1.0"
+            exports_sources = ["*.cmake"]
+
+            def build(self):
+                cmake = 'function(otherfunc)\nmessage("Hello otherfunc!!!!")\nendfunction()'
+                save(self, "otherfuncs.cmake", cmake)
+
+            def layout(self):
+                self.folders.source = "my_sources"
+                self.folders.build = "my_build"
+                src = glob.glob(os.path.join(self.recipe_folder, self.folders.source, "*.cmake"))
+                build = glob.glob(os.path.join(self.recipe_folder, self.folders.build, "*.cmake"))
+                self.cpp.source.set_property("cmake_build_modules", src)
+                self.cpp.build.set_property("cmake_build_modules", build)
+
+            def package(self):
+                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "mods"))
+                copy(self, "*.cmake", self.build_folder, os.path.join(self.package_folder, "mods"))
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_build_modules", glob.glob("mods/*.cmake"))
+        """)
+
+    myfunction = textwrap.dedent("""
+        function(myfunction)
+            message("Hello myfunction!!!!")
+        endfunction()
+        """)
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Conan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain", "CMakeDeps"
+            requires = "myfunctions/1.0"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test)
+        find_package(myfunctions CONFIG REQUIRED)
+        myfunction()
+        otherfunc()
+        """)
+    c.save({"functions/conanfile.py": conanfile,
+            "functions/my_sources/myfunction.cmake": myfunction,
+            "app/conanfile.py": consumer,
+            "app/CMakeLists.txt": cmakelists})
+
+    if editable:
+        c.run("editable add functions")
+        c.run("build functions")
+    else:
+        c.run("create functions")
+    c.run("build app")
+    assert "Hello myfunction!!!!" in c.out
+    assert "Hello otherfunc!!!!" in c.out
