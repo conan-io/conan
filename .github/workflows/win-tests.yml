@@ -54,6 +54,14 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
+      - name: "Set choco cache"
+        run: choco config set cacheLocation C:\choco-cache
+
+      - uses: actions/cache@v4
+        with:
+          path: C:\choco-cache
+          key: choco-cache
+
       - name: Install Chocolatey packages
         run: |
           choco install pkgconfiglite --version 0.28
