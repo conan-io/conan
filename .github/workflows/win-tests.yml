@@ -62,31 +62,31 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
-    #   - name: "Set choco cache"
-    #     run: choco config set cacheLocation C:\choco-cache
+      - name: "Set choco cache"
+        run: choco config set cacheLocation C:\choco-cache
 
-    #   - uses: actions/cache@v4
-    #     with:
-    #       path: C:\choco-cache
-    #       key: choco-cache
+      - uses: actions/cache@v4
+        with:
+          path: C:\choco-cache
+          key: choco-cache
 
-    #   - name: Install Chocolatey packages
-    #     run: |
-    #       choco install pkgconfiglite --version 0.28
-    #       choco install ninja --version 1.10.2
-    #       choco install mingw
-    #       choco install cygwin
-    #       choco install cyg-get
-    #       cyg-get automake gcc-g++ make binutils --verbose
+      - name: Install Chocolatey packages
+        run: |
+          choco install pkgconfiglite --version 0.28
+          choco install ninja --version 1.10.2
+          choco install mingw
+          choco install cygwin
+          choco install cyg-get
+          cyg-get automake gcc-g++ make binutils --verbose
 
-    #   - name: Install Pacman extra packages
-    #     run: |
-    #       C:\msys64\usr\bin\pacman -Syuu --noconfirm
-    #       C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
-    #       C:\msys64\usr\bin\pacman -S mingw-w64-i686-toolchain --noconfirm
-    #       C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
-    #       C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
-    #       C:\msys64\usr\bin\pacman -S automake --noconfirm
+      - name: Install Pacman extra packages
+        run: |
+          C:\msys64\usr\bin\pacman -Syuu --noconfirm
+          C:\msys64\usr\bin\pacman -S mingw-w64-x86_64-toolchain --noconfirm
+          C:\msys64\usr\bin\pacman -S mingw-w64-i686-toolchain --noconfirm
+          C:\msys64\usr\bin\pacman -S base-devel gcc --noconfirm
+          C:\msys64\usr\bin\pacman -S autoconf-wrapper --noconfirm
+          C:\msys64\usr\bin\pacman -S automake --noconfirm
 
       - name: Install VS 15 2017 Community edition
         run: |
@@ -99,21 +99,6 @@ jobs:
             "--add", "Microsoft.Component.MSBuild", `
             "--add", "Microsoft.VisualStudio.Component.VC.140", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
-
-      # - name: Check Visual Studio installations and toolsets
-      #   run: |
-      #     # List all Visual Studio installations
-      #     & 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe' -all -products * -format json | ConvertFrom-Json | ForEach-Object {
-      #         Write-Host "Installation Path: $_.installationPath"
-      #         Write-Host "Product: $_.catalog_productDisplayName"
-      #         Write-Host "Version: $_.catalog_productLineVersion"
-      #     }
-
-      #     # List the available toolsets in Visual Studio
-      #     $vsInstallationPath = (Get-Item 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community').FullName
-      #     $vcvarsPath = "$vsInstallationPath\VC\Auxiliary\Build\vcvarsall.bat"
-      #     Write-Host "Toolsets in Visual Studio:"
-      #     cmd.exe /c "$vcvarsPath -help"
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -203,4 +188,4 @@ jobs:
           $env:CONAN_TEST_FOLDER = $randomFolder
           $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
 
-          pytest -k "test_cache_save_restore_multiple_revisions" -vvv
+          pytest test -n=auto --durations=20
