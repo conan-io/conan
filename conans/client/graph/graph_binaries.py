@@ -487,7 +487,7 @@ class GraphBinariesAnalyzer:
                 for req, t in node.transitive_deps.items():
                     if req.files or (req.direct and is_consumer):
                         deps_required.add(t.node)
-                        deps_required.update(req.chain)
+                        deps_required.update(req.required_nodes)
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():

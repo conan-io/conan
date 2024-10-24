@@ -126,10 +126,11 @@ class Node(object):
             return
 
         down_require.defining_require = require.defining_require
-        # If the requirement propagates required files downstream, cannot be skipped, it is
-        # in the chain. But if the files are not needed in this chain, can be skipped (in this chain)
-        down_require.chain = require.chain.copy() if down_require.files else []
-        down_require.chain.append(self)
+        # If the requirement propagates .files downstream, cannot be skipped
+        # But if the files are not needed in this graph branch, can be marked "Skip"
+        if down_require.files:
+            down_require.required_nodes = require.required_nodes.copy()
+        down_require.required_nodes.append(self)
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
