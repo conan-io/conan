@@ -620,6 +620,8 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class TestWinSDKVersion:
+
+    @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version(self):
         # This test passes also with CMake 3.28, as long as cmake_minimum_required(VERSION 3.27)
         # is not defined

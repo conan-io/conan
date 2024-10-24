@@ -86,6 +86,7 @@ def test_locally_build_linux(build_type, shared, client):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
+@pytest.mark.tool("visual_studio", "15")
 @pytest.mark.tool("ninja")
 def test_locally_build_msvc(build_type, shared, client):
     msvc_version = "15"

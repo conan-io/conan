@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tarfile
+import time
 
 import pytest
 
@@ -157,9 +158,11 @@ def test_cache_save_restore_multiple_revisions():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
+    time.sleep(0.01)
     rrev1 = c.exported_recipe_revision()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=42")})
     c.run("create .")
+    time.sleep(0.01)
     rrev2 = c.exported_recipe_revision()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=123")})
     c.run("create .")
