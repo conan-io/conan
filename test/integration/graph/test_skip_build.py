@@ -27,6 +27,8 @@ def test_graph_skip_build_test():
     assert "cmake" not in c.out
     assert "gtest" not in c.out
     c.run("create app -c tools.graph:skip_test=True")
+    assert "WARN: experimental: Usage of 'tools.graph:skip_test'" in c.out
+    assert "WARN: tools.graph:skip_test set, but tools.build:skip_test is not" in c.out
     assert "cmake" in c.out
     assert "gtest" not in c.out
     c.run("create app -c tools.graph:skip_build=True")
