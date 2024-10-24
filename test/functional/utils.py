@@ -78,7 +78,6 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
 def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,
                   cxx11_abi=None, subsystem=None, extra_msg=""):
     output = str(output)
-    print(output)
     names = names if isinstance(names, list) else [names]
 
     for name in names:
