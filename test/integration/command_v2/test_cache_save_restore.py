@@ -160,19 +160,24 @@ def test_cache_save_restore_multiple_revisions():
     c.run("create .")
     rrev1 = c.exported_recipe_revision()
     print(c.out)
+    print("rrev1: ", rrev1)
     time.sleep(2)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=42")})
     c.run("create .")
     rrev2 = c.exported_recipe_revision()
     print(c.out)
+    print("rrev2: ", rrev2)
     time.sleep(2)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=123")})
     c.run("create .")
     rrev3 = c.exported_recipe_revision()
     print(c.out)
+    print("rrev3: ", rrev3)
+
 
     def check_ordered_revisions(client):
         client.run("list *#* --format=json")
+        print(client.stdout)
         revisions = json.loads(client.stdout)["Local Cache"]["pkg/0.1"]["revisions"]
         assert revisions[rrev1]["timestamp"] < revisions[rrev2]["timestamp"]
         assert revisions[rrev2]["timestamp"] < revisions[rrev3]["timestamp"]
