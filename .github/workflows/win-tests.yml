@@ -92,6 +92,13 @@ jobs:
             "--add", "Microsoft.VisualStudio.Component.VC.140", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
 
+      - name: Remove GCC from PATH
+        run: |
+          $gccDir = "C:\mingw64\bin"
+          $newPath = ($env:PATH -split ";") -ne $gccDir -join ";"
+          [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
+          Write-Host "GCC removed from PATH. Current PATH: $env:PATH"
+
       - name: Check if GCC is in PATH
         run: |
           $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
@@ -100,10 +107,6 @@ jobs:
           } else {
               Write-Host "GCC not found in PATH."
           }
-
-      - name: Verify Visual Studio installation
-        run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -property installationPath
 
       # - name: Check Visual Studio installations and toolsets
       #   run: |
