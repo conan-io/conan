@@ -430,7 +430,7 @@ class TestWin:
     @pytest.mark.tool("cmake", "3.23")
     @pytest.mark.tool("visual_studio", "17")
     @pytest.mark.parametrize("compiler,version,runtime,cppstd",
-                             [("msvc", "193", "static", "17")])
+                             [("msvc", "194", "static", "17")])
     def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd):
         self.check_toolchain_win(compiler, version, runtime, cppstd, ide_version=17)
 
