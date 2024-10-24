@@ -758,3 +758,47 @@ class TestConfigInstallPkg:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
+
+class TestConfigInstallPkgSettings:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            settings = "os"
+            package_type = "configuration"
+            def package(self):
+                f = "win" if self.settings.os == "Windows" else "nix"
+                copy(self, "*.conf", src=os.path.join(self.build_folder, f), dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "win/global.conf": "user.myteam:myconf=mywinvalue",
+                "nix/global.conf": "user.myteam:myconf=mynixvalue",
+                })
+        c.run("export-pkg . -s os=Windows")
+        c.run("export-pkg . -s os=Linux")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    def test_config_install_from_pkg(self, client):
+        # Now install it
+        c = client
+        c.run("config install-pkg myconf/[*] -s os=Windows")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -s os=Linux")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
