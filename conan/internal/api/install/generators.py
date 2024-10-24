@@ -3,6 +3,7 @@ import os
 import traceback
 import importlib
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
@@ -80,6 +81,9 @@ def write_generators(conanfile, app, envs_generation=None):
     global_generators = load_cache_generators(HomePaths(app.cache_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
+    # Generate sbom
+    _generate_sbom(conanfile._conan_helpers.home_folder, conanfile)
+
     if conanfile.generators:
         conanfile.output.highlight(f"Writing generators to {new_gen_folder}")
     # generators check that they are not present in the generators field,
@@ -150,6 +154,24 @@ def _receive_conf(conanfile):
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
             conanfile.conf.compose_conf(build_require.conf_info)
+
+
+def _generate_sbom(cache_folder, conanfile):
+    from conans.client.loader import load_python_file
+    sbom_plugin_path = HomePaths(cache_folder).sbom_manifest_plugin_path
+    if os.path.exists(sbom_plugin_path):
+        mod, _ = load_python_file(sbom_plugin_path)
+
+        if not hasattr(mod, "generate_sbom"):
+            raise ConanException(
+                f"SBOM manifest plugin does not have a 'generate_sbom' method")
+        if not callable(mod.generate_sbom):
+            raise ConanException(
+                f"SBOM manifest plugin 'generate_sbom' is not a function")
+
+        ConanOutput().warning(f"generating sbom")
+        # TODO think if this is conanfile or conanfile._conan_node
+        return mod.generate_sbom(conanfile)
 
 
 def _generate_aggregated_env(conanfile):

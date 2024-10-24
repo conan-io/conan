@@ -7,9 +7,6 @@ from conan.cli.command import conan_command
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conan.internal.cache.home_paths import HomePaths
-from conan.errors import ConanException
-from conans.client.loader import load_python_file
 
 
 @conan_command(group="Consumer", formatters={"json": format_graph_json})
@@ -88,31 +85,5 @@ def install(conan_api, parser, *args):
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
-    # Generate sbom
-    _generate_sbom(conan_api, deps_graph)
-
     return {"graph": deps_graph,
             "conan_api": conan_api}
-
-def _generate_sbom(conan_api, graph):
-    sbom_plugin_path = HomePaths(conan_api.cache_folder).sbom_manifest_plugin_path
-    sbom_model = "spdx_json.py"
-    if os.path.exists(sbom_plugin_path):
-        if not os.path.isdir(sbom_plugin_path):
-            raise ConanException(f"SBOM manifest plugin path '{sbom_plugin_path}' is not a directory")
-
-    chosen_manifest_path = os.path.join(sbom_plugin_path, sbom_model)
-    mod, _ = load_python_file(chosen_manifest_path)
-
-    if not hasattr(mod, "generate_sbom"):
-        raise ConanException(
-            f"SBOM manifest plugin '{sbom_model}' does not have 'generate_sbom' method")
-    if not callable(mod.generate_sbom):
-        raise ConanException(
-            f"SBOM manifest plugin '{sbom_model}' 'generate_sbom' is not a function")
-
-    ConanOutput().warning(f"generating sbom for {sbom_model} format")
-    return mod.generate_sbom(conan_api, graph.serialize())
-
-
-
