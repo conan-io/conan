@@ -92,22 +92,6 @@ jobs:
             "--add", "Microsoft.VisualStudio.Component.VC.140", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
 
-      - name: Remove GCC from PATH
-        run: |
-          $gccDir = "C:\mingw64\bin"
-          $newPath = ($env:PATH -split ";") -ne $gccDir -join ";"
-          [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
-          Write-Host "GCC removed from PATH. Current PATH: $env:PATH"
-
-      - name: Check if GCC is in PATH
-        run: |
-          $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
-          if ($null -ne $gccPath) {
-              Write-Host "GCC found in PATH at: $($gccPath.Path)"
-          } else {
-              Write-Host "GCC not found in PATH."
-          }
-
       # - name: Check Visual Studio installations and toolsets
       #   run: |
       #     # List all Visual Studio installations
@@ -188,6 +172,18 @@ jobs:
 
       - name: Run Tests
         run: |
+          $gccDir = "C:\mingw64\bin"
+          $newPath = ($env:PATH -split ";") -ne $gccDir -join ";"
+          [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
+          Write-Host "GCC removed from PATH. Current PATH: $env:PATH"
+
+          $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
+          if ($null -ne $gccPath) {
+              Write-Host "GCC found in PATH at: $($gccPath.Path)"
+          } else {
+              Write-Host "GCC not found in PATH."
+          }
+
           $shortGuid = [System.Guid]::NewGuid().ToString().Substring(0, 4)
           $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
           New-Item -ItemType Directory -Force -Path $randomFolder
