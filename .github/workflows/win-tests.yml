@@ -84,6 +84,15 @@ jobs:
             "--add", "Microsoft.VisualStudio.Component.VC.140", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
 
+      - name: Check if GCC is in PATH
+        run: |
+          $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
+          if ($null -ne $gccPath) {
+              Write-Host "GCC found in PATH at: $($gccPath.Path)"
+          } else {
+              Write-Host "GCC not found in PATH."
+          }
+
       - name: Verify Visual Studio installation
         run: |
           "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -property installationPath
