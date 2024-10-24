@@ -212,12 +212,14 @@ def test_build_modules_custom_script_editable(editable):
     conanfile = textwrap.dedent(r"""
         import os, glob
         from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
         from conan.tools.files import copy, save
 
         class Conan(ConanFile):
             name = "myfunctions"
             version = "1.0"
-            exports_sources = ["*.cmake"]
+            exports_sources = ["src/*.cmake"]
+            settings = "build_type", "arch"
 
             def build(self):
                 cmake = 'set(MY_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})\n'\
@@ -228,17 +230,19 @@ def test_build_modules_custom_script_editable(editable):
                 save(self, "my.txt", "contents of text file!!!!")
 
             def layout(self):
-                self.folders.source = "my_sources"
-                self.folders.build = "my_build"
+                cmake_layout(self, src_folder="src")
                 src = glob.glob(os.path.join(self.recipe_folder, self.folders.source, "*.cmake"))
                 build = glob.glob(os.path.join(self.recipe_folder, self.folders.build, "*.cmake"))
                 self.cpp.source.set_property("cmake_build_modules", src)
                 self.cpp.build.set_property("cmake_build_modules", build)
 
             def package(self):
-                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "mods"))
-                copy(self, "*.cmake", self.build_folder, os.path.join(self.package_folder, "mods"))
-                copy(self, "*.txt", self.build_folder, os.path.join(self.package_folder, "mods"))
+                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "mods"),
+                     keep_path=False)
+                copy(self, "*.cmake", self.build_folder, os.path.join(self.package_folder, "mods"),
+                     keep_path=False)
+                copy(self, "*.txt", self.build_folder, os.path.join(self.package_folder, "mods"),
+                     keep_path=False)
 
             def package_info(self):
                 self.cpp_info.set_property("cmake_build_modules", glob.glob("mods/*.cmake"))
@@ -271,15 +275,15 @@ def test_build_modules_custom_script_editable(editable):
         otherfunc()
         """)
     c.save({"functions/conanfile.py": conanfile,
-            "functions/my_sources/myfunction.cmake": myfunction,
+            "functions/src/myfunction.cmake": myfunction,
             "app/conanfile.py": consumer,
             "app/CMakeLists.txt": cmakelists})
 
     if editable:
         c.run("editable add functions")
-        c.run("build functions")
+        c.run('build functions -c tools.cmake.cmake_layout:build_folder_vars="[\'settings.arch\']"')
     else:
         c.run("create functions")
-    c.run("build app")
+    c.run('build app -c tools.cmake.cmake_layout:build_folder_vars="[\'settings.arch\']"')
     assert "Hello myfunction!!!!" in c.out
     assert "Hello contents of text file!!!!" in c.out
