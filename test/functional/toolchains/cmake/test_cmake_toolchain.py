@@ -621,7 +621,8 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class TestWinSDKVersion:
 
-    @pytest.mark.tool("visual_studio", "15")
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version(self):
         # This test passes also with CMake 3.28, as long as cmake_minimum_required(VERSION 3.27)
         # is not defined
@@ -631,7 +632,7 @@ class TestWinSDKVersion:
         cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86_64 -s compiler.version=191 "
+        client.run("create . -s arch=x86_64 -s compiler.version=194 "
                    "-c tools.microsoft:winsdk_version=10.0")
         assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 10.0" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
