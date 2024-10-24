@@ -85,7 +85,7 @@ class CPSComponent:
             cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
-        cpp_info.deduce_cps(pkg_type)
+        cpp_info.deduce_locations(pkg_type)
         cps_comp.type = CPSComponentType.from_conan(cpp_info.type)
         cps_comp.location = cpp_info.location
         cps_comp.link_location = cpp_info.link_location
