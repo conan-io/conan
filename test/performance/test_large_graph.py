@@ -3,11 +3,13 @@ import json
 import pstats
 import time
 from pstats import SortKey
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.skip(reason="This is a performance test, skip for normal runs")
 def test_large_graph():
     c = TestClient(cache_folder="T:/mycache")
     num_test = 40

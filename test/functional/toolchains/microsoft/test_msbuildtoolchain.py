@@ -44,7 +44,7 @@ def test_msbuildtoolchain_winsdk_version():
     client.run("new msbuild_lib -d name=hello -d version=0.1")
     #  conantoolchain.props is already imported in the msbuild_exe tempalte
     client.run("create . -s arch=x86_64 -s compiler.version=193 "
-               "-c tools.microsoft:winsdk_version=8.1")
+               "-c tools.microsoft:winsdk_version=10.0")
     # I have verified also opening VS IDE that the setting is correctly configured
     # because the test always run over vcvars that already activates it
-    assert "amd64 - winsdk_version=8.1 - vcvars_ver=14.3" in client.out
+    assert "amd64 - winsdk_version=10.0 - vcvars_ver=14.3" in client.out

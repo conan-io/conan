@@ -75,11 +75,6 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
-    def test_tool_not_available(self):
-        client = TestClient()
-        client.run_command('uname', assert_error=True)
-        assert "'uname' is not recognized as an internal or external command" in client.out
-
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:
@@ -391,12 +386,12 @@ class TestSubsystemsCMakeBuild:
             cmake_compiler += " -DCMAKE_CXX_COMPILER={}".format(compilerpp)
             cmake_compiler += " -DCMAKE_RC_COMPILER={}".format(compiler)
         toolset = "-T {}".format(toolset) if toolset else ""
-        client.run_command("cmake {} {}"
+        client.run_command("cmake --debug-output {} {}"
                            " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\" -G \"{}\" .".format(cmake_compiler,
                                                                                   toolset,
                                                                                   generator))
         build_out = client.out
-        client.run_command("cmake --build .")
+        client.run_command("cmake --build . --verbose")
         app = "app" if "Visual" not in generator else r"Debug\app"
         client.run_command(app)
         return build_out

@@ -49,11 +49,11 @@ def test_msbuild_lib_2022():
     assert "hello/0.1: _MSC_VER191" in client.out
 
     # Create works
-    client.run("create . -s compiler.version=193")
+    client.run("create . -s compiler.version=194")
     assert "hello/0.1: Hello World Release!" in client.out
     # This is the default compiler.version=191 in conftest
     assert "Activating environment Visual Studio 17" in client.out
-    assert "hello/0.1: _MSC_VER193" in client.out
+    assert "hello/0.1: _MSC_VER1941" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")

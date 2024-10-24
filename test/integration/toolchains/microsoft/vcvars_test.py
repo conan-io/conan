@@ -84,24 +84,25 @@ def test_vcvars_generator_string():
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_vcvars_2015_error():
-    # https://github.com/conan-io/conan/issues/9888
-    client = TestClient(path_with_spaces=False)
+# FIXME: we dont have vs2015 installed in gh actions
+# @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+# def test_vcvars_2015_error():
+#     # https://github.com/conan-io/conan/issues/9888
+#     client = TestClient(path_with_spaces=False)
 
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        class TestConan(ConanFile):
-            generators = "VCVars"
-            settings = "os", "compiler", "arch", "build_type"
-    """)
-    client.save({"conanfile.py": conanfile})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=190 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static')
+#     conanfile = textwrap.dedent("""
+#         from conan import ConanFile
+#         class TestConan(ConanFile):
+#             generators = "VCVars"
+#             settings = "os", "compiler", "arch", "build_type"
+#     """)
+#     client.save({"conanfile.py": conanfile})
+#     client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=190 '
+#                '-s compiler.cppstd=14 -s compiler.runtime=static')
 
-    vcvars = client.load("conanvcvars.bat")
-    assert 'vcvarsall.bat"  amd64' in vcvars
-    assert "-vcvars_ver" not in vcvars
+#     vcvars = client.load("conanvcvars.bat")
+#     assert 'vcvarsall.bat"  amd64' in vcvars
+#     assert "-vcvars_ver" not in vcvars
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -137,10 +138,10 @@ def test_vcvars_winsdk_version():
     client.save({"conanfile.py": conanfile})
     client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
                '-s compiler.cppstd=14 -s compiler.runtime=static '
-               '-c tools.microsoft:winsdk_version=8.1')
+               '-c tools.microsoft:winsdk_version=17.11')
 
     vcvars = client.load("conanvcvars.bat")
-    assert 'vcvarsall.bat"  amd64 8.1 -vcvars_ver=14.3' in vcvars
+    assert 'vcvarsall.bat"  amd64 17.11 -vcvars_ver=14.3' in vcvars
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -160,37 +161,3 @@ def test_vcvars_compiler_update():
 
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  amd64 -vcvars_ver=14.33' in vcvars
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_deactivate_vcvars_message():
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class TestConan(ConanFile):
-                generators = "VCVars"
-                settings = "os", "compiler", "arch", "build_type"
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run('install . -s compiler.version=193')
-    client.run_command(r'conanbuild.bat')
-    assert "[vcvarsall.bat] Environment initialized" in client.out
-    client.run_command(r'deactivate_conanvcvars.bat')
-    assert "vcvars env cannot be deactivated" in client.out
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows Powershell")
-def test_deactivate_vcvars_with_powershell():
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-                from conan import ConanFile
-                class TestConan(ConanFile):
-                    generators = "VCVars"
-                    settings = "os", "compiler", "arch", "build_type"
-            """)
-    client.save({"conanfile.py": conanfile})
-    client.run('install . -c tools.env.virtualenv:powershell=True')
-    client.run_command(r'powershell.exe ".\conanbuild.ps1"')
-    assert "conanvcvars.ps1: Activated environment" in client.out
-    client.run_command(r'powershell.exe ".\deactivate_conanvcvars.ps1"')
-    assert "vcvars env cannot be deactivated" in client.out

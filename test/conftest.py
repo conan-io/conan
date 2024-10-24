@@ -24,12 +24,12 @@ tools_locations = {
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
-        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
+        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin"}},
         # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
-        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin",
                           "Darwin": "skip-tests"}},
     },
     'ninja': {
@@ -44,7 +44,8 @@ tools_locations = {
 
 MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
 homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
-
+windows_choco_root = "C:/ProgramData/chocolatey/lib/"
+msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -58,7 +59,7 @@ tools_locations = {
         "0.28": {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Windows': f"{windows_choco_root}/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
                 'Darwin': f"{homebrew_root}/bin",
                 'Linux': "/usr/bin"
             }
@@ -67,27 +68,17 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+            "path": {'Windows': 'C:/tools/cmake/3.15.7/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
-        "3.16": {
-            "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
-                     'Linux': '/usr/share/cmake-3.16.9/bin'}
-        },
-        "3.17": {
-            "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
-                     'Linux': '/usr/share/cmake-3.17.5/bin'}
-        },
         "3.19": {
-            "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
+            "path": {'Windows': 'C:/tools/cmake/3.19.7/cmake-3.19.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
         "3.23": {
-            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+            "path": {'Windows': 'C:/tools/cmake/3.23.5/cmake-3.23.5-windows-x86_64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
         },
@@ -98,7 +89,7 @@ tools_locations = {
     'ninja': {
         "default": "1.10.2",
         "1.10.2": {
-            "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
+            "path": {'Windows': f'{windows_choco_root}/ninja/tools'}
         }
     },
     # This is the non-msys2 mingw, which is 32 bits x86 arch
@@ -107,60 +98,60 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/mingw"}},
+        "system": {"path": {'Windows': "C:/ProgramData/mingw64/mingw64/bin"}},
     },
     'mingw32': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw32/bin"}},
     },
     'ucrt64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/ucrt64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/ucrt64/bin"}},
     },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw64/bin"}},
     },
     'msys2': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': r"C:\msys64\usr\bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/usr/bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': f"{msys2_path}/mingw64/bin"}},
     },
     'cygwin': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/cygwin64/bin"}},
+        "system": {"path": {'Windows': "C:/tools/cygwin/bin"}},
     },
     'bazel': {
         "default": "6.3.2",
         "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
-                           'Windows': 'C:/bazel-6.3.2/bin',
+                           'Windows': 'C:/tools/bazel/6.3.2',
                            'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
         "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
-                           'Windows': 'C:/bazel-7.1.2/bin',
+                           'Windows': 'C:/tools/bazel/7.1.2',
                            'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
@@ -179,6 +170,7 @@ tools_locations = {
         "default": "system",
         "system": {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
+            # 'Windows': os.getenv("ANDROID_NDK_HOME"),
         }
     },
     "qbs": {"disabled": True},
@@ -257,7 +249,7 @@ def _get_individual_tool(name, version):
         tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
-        #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+        #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-windows-x86_64/bin',
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
         #                        'Linux': None}}
         #          }

@@ -17,7 +17,6 @@ def vs_detect_update(version):
     if len(components) > 1:
         return components[1]
 
-
 def _vs_installation_path(version):
     # TODO: Preference hardcoded, [conf] must be defined
     preference = ["Enterprise", "Professional", "Community", "BuildTools"]
