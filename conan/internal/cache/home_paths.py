@@ -68,6 +68,10 @@ class HomePaths:
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "sign", "sign.py")
 
     @property
+    def sbom_manifest_plugin_path(self):
+        return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "sbom")
+
+    @property
     def remotes_path(self):
         return os.path.join(self._home, "remotes.json")
 
