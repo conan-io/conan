@@ -2,7 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
-from conan.cli.args import common_graph_args, validate_common_graph_args, sbom_graph_args
+from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
@@ -41,7 +41,6 @@ def install(conan_api, parser, *args):
                         help='Whether the provided path is a build-require')
     parser.add_argument("--envs-generation", default=None, choices=["false"],
                         help="Generation strategy for virtual environment files for the root")
-    sbom_graph_args(parser, conan_api)
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
     # basic paths
@@ -85,10 +84,5 @@ def install(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-
-    # Generate sbom
-    if args.manifest:
-        conan_api.graph.sbom(deps_graph, args.manifest)
-
     return {"graph": deps_graph,
             "conan_api": conan_api}
