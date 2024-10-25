@@ -11,7 +11,7 @@ def test_conanfile_txt_deps_ranges(requires):
     """
     conanfile.txt locking it dependencies (with version ranges) using alias
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile("pkg"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/(latest)"})
     client.run("create pkg --version=0.1")
@@ -42,7 +42,7 @@ def test_conanfile_txt_deps_ranges_lock_revisions(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile("pkg"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/(latest)"})
     client.run("create pkg --version=0.1")
