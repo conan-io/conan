@@ -34,22 +34,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache Visual Studio Build Tools Installer
-        uses: actions/cache@v4
-        with:
-          path: C:\vs-cache\vs_buildtools.exe
-          key: vs-installer-${{ runner.os }}
-
-      - name: Download VS 2017 Build Tools Installer if Cache Miss
-        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Install Visual Studio Build Tools
         run: |
-            New-Item -ItemType Directory -Force -Path C:\vs-cache
-            Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "C:\vs-cache\vs_buildtools.exe"
-
-      - name: Install Minimal VS 2017 Build Tools for C++
-        run: |
-            Start-Process -FilePath "C:\vs-cache\vs_buildtools.exe" -ArgumentList `
-            "--quiet", "--wait", "--norestart", "--nocache", `
+            Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools.exe"
+            Start-Process -FilePath ".\vs_buildtools.exe" -ArgumentList `
+            "--quiet",  "--wait", "--norestart", "--nocache", `
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
             "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
             "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
