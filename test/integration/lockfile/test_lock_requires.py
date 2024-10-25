@@ -15,7 +15,7 @@ def test_conanfile_txt_deps_ranges(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
@@ -37,7 +37,7 @@ def test_conanfile_txt_deps_ranges(requires):
 @pytest.mark.parametrize("command", ["install", "create", "graph info", "export-pkg"])
 def test_lockfile_out(command):
     # Check that lockfile out is generated for different commands
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
     c.run("create dep")
@@ -48,7 +48,7 @@ def test_lockfile_out(command):
 
 def test_lockfile_out_export():
     # Check that lockfile out is generated for "conan export"
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("export pkg --lockfile-out=conan.lock")
     lock = c.load("conan.lock")
@@ -60,7 +60,7 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
     """
     conanfile.txt locking it dependencies and its transitive dependencies (with version ranges)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"dep/conanfile.py": GenConanfile(),
                  "pkg/conanfile.py": GenConanfile().with_requires("dep/[>0.0]@user/testing"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
@@ -88,7 +88,7 @@ def test_conanfile_txt_strict(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
@@ -128,7 +128,7 @@ def test_conditional_os(requires):
     conanfile.txt can lock conditional dependencies (conditional on OS for example),
     with consecutive calls to "conan lock create", augmenting the lockfile
     """
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent(f"""
         from conan import ConanFile
@@ -184,7 +184,7 @@ def test_conditional_os(requires):
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_same_package(requires):
     # What happens when a conditional requires different versions of the same package?
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -227,7 +227,7 @@ def test_conditional_same_package(requires):
 
 @pytest.mark.parametrize("requires", ["requires", "build_requires"])
 def test_conditional_incompatible_range(requires):
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -280,7 +280,7 @@ def test_conditional_incompatible_range(requires):
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_compatible_range(requires):
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -332,7 +332,7 @@ def test_partial_lockfile():
     make sure that a partial lockfile can be applied anywhere downstream without issues,
     as lockfiles by default are not strict
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[*]"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/[*]"),
@@ -358,7 +358,7 @@ def test_partial_lockfile():
 
 def test_ux_defaults():
     # Make sure the when explicit ``--lockfile`` argument, the file must exist, even if is conan.lock
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.txt": ""})
     c.run("install . --lockfile=conan.lock", assert_error=True)
     assert "ERROR: Lockfile doesn't exist" in c.out
@@ -485,7 +485,7 @@ class TestErrorDuplicates:
         Lockfiles do a ``require.ref`` update and that alters some dictionaries iteration, producing
         an infinite loop and blocking
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -507,7 +507,7 @@ class TestErrorDuplicates:
     def test_error_duplicates_reverse(self):
         """ Same as above, but order requires changed
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -530,7 +530,7 @@ class TestErrorDuplicates:
         """ 2 different revisions can be added without conflict, if they are not visible and not
         other conflicting traits
         """
-        c = TestClient()
+        c = TestClient(light=True)
         pkg = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -623,7 +623,7 @@ class TestLockfileUpdate:
 
 def test_error_test_explicit():
     # https://github.com/conan-io/conan/issues/14833
-    client = TestClient()
+    client = TestClient(light=True)
     test = GenConanfile().with_test("pass").with_class_attribute("test_type = 'explicit'")
     client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
                  "test_package/conanfile.py": test})
@@ -633,7 +633,7 @@ def test_error_test_explicit():
 
 def test_lock_error_create():
     # https://github.com/conan-io/conan/issues/15801
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_type("build-scripts")})
     c.run("lock create . -u --lockfile-out=none.lock")
     lock = json.loads(c.load("none.lock"))
