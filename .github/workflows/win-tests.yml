@@ -51,7 +51,10 @@ jobs:
             Start-Process -FilePath "C:\vs-cache\vs_buildtools.exe" -ArgumentList `
             "--quiet", "--wait", "--norestart", "--nocache", `
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
             "--add", "Microsoft.Component.MSBuild", `
+            "--add", "Microsoft.VisualStudio.Component.VC.140", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64" -Wait
 
       - name: Cache pip packages
