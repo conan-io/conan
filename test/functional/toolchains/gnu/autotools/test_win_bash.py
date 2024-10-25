@@ -21,7 +21,6 @@ def test_autotools_bash_complete():
         [conf]
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
-        tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
         """)
 
     main = gen_function_cpp(name="main")

@@ -726,6 +726,32 @@ def test_cmakedeps_set_legacy_variable_name():
     for variable in cmake_variables:
         assert f"CMakeFileName_{variable}" in dep_config
 
+    consumer_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type", "arch", "compiler"
+
+            def requirements(self):
+                self.requires("dep/1.0")
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+                deps.generate()
+        """)
+
+    client.save({"consumer/conanfile.py": consumer_conanfile})
+    client.run("install consumer")
+
+    dep_config = client.load(os.path.join("consumer", "CMakeFileNameConfig.cmake"))
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+
     conanfile = base_conanfile + """
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "NewCMakeFileName")
@@ -843,3 +869,42 @@ def test_cmakedeps_set_get_property_checktype():
     c.run("create dep")
     c.run("create app", assert_error=True)
     assert 'The expected type for foo is "list", but "int" was found' in c.out
+
+
+def test_alias_cmakedeps_set_property():
+    tc = TestClient()
+    tc.save({"dep/conanfile.py": textwrap.dedent("""
+
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].set_property("cmake_target_name", "dep::mycomponent")
+        """),
+             "conanfile.py": textwrap.dedent("""
+             from conan import ConanFile
+             from conan.tools.cmake import CMakeDeps, CMake
+             class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                requires = "dep/1.0"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_target_aliases", ["alias", "dep::other_name"])
+                    deps.set_property("dep::mycomp", "cmake_target_aliases", ["component_alias", "dep::my_aliased_component"])
+                    deps.generate()
+             """)})
+    tc.run("create dep")
+    tc.run("install .")
+    targetsData = tc.load("depTargets.cmake")
+    assert "add_library(dep::dep" in targetsData
+    assert "add_library(alias" in targetsData
+    assert "add_library(dep::other_name" in targetsData
+
+    assert "add_library(component_alias" in targetsData
+    assert "add_library(dep::my_aliased_component" in targetsData

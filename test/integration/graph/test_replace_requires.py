@@ -240,6 +240,8 @@ def test_replace_requires_consumer_components_options():
             def build(self):
                 self.output.info(f"DEP ZLIB build: {self.dependencies['zlib'].ref.name}!")
             def package_info(self):
+                self.output.info(f"zlib in deps?: {'zlib' in self.dependencies}")
+                self.output.info(f"zlib-ng in deps?: {'zlib-ng' in self.dependencies}")
                 self.output.info(f"DEP ZLIB package_info: {self.dependencies['zlib'].ref.name}!")
                 self.cpp_info.requires = ["zlib::myzlib"]
         """)
@@ -275,3 +277,5 @@ def test_replace_requires_consumer_components_options():
     assert "app/0.1: DEP ZLIB build: zlib-ng!" in c.out
     assert "find_package(ZLIB)" in c.out
     assert "target_link_libraries(... ZLIB::ZLIB)" in c.out
+    assert "zlib in deps?: True" in c.out
+    assert "zlib-ng in deps?: False" in c.out

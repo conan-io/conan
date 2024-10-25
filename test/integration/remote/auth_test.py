@@ -56,9 +56,9 @@ class AuthorizeTest(unittest.TestCase):
         ref = copy.copy(self.ref)
         ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-        self.assertIn('Please enter a password for "bad"', self.conan.out)
-        self.assertIn('Please enter a password for "bad2"', self.conan.out)
-        self.assertIn('Please enter a password for "nacho@gmail.com"', self.conan.out)
+        self.assertIn("Please enter a password for user 'bad'", self.conan.out)
+        self.assertIn("Please enter a password for user 'bad2'", self.conan.out)
+        self.assertIn("Please enter a password for user 'nacho@gmail.com'", self.conan.out)
 
     def test_auth_with_env(self):
 
@@ -128,7 +128,8 @@ class AuthorizeTest(unittest.TestCase):
         ref = copy.copy(self.ref)
         ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-        self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
+        self.assertIn("Please enter a password for user 'some_random.special!characters' on remote 'default'",
+                      client.out)
 
     def test_authorize_disabled_remote(self):
         tc = TestClient(servers=self.servers)
