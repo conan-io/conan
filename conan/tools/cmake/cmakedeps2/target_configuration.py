@@ -55,6 +55,8 @@ class TargetConfigurationTemplate2:
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
+                    # To check if the component exist, it is ok to use the standard cpp_info
+                    # No need to use the cpp_info = deduce_cpp_info(dep)
                     dep_comp = dep.cpp_info.components.get(required_comp)
                     if dep_comp is None:
                         # It must be the interface pkgname::pkgname target
@@ -92,9 +94,9 @@ class TargetConfigurationTemplate2:
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
-            cppinfo = self._conanfile.cpp_info.aggregated_components()
+            aggregated_cppinfo = cpp_info.aggregated_components()
             # FIXME: Proper escaping of paths for CMake and relativization
-            include_dirs = ";".join(i.replace("\\", "/") for i in cppinfo.includedirs)
+            include_dirs = ";".join(i.replace("\\", "/") for i in aggregated_cppinfo.includedirs)
             definitions = ""
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"

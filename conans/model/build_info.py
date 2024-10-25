@@ -136,6 +136,7 @@ class _Component:
         return result
 
     def clone(self):
+        # Necessary below for exploding a cpp_info.libs = [lib1, lib2] into components
         result = _Component()
         for k, v in vars(self).items():
             if k.startswith("_"):

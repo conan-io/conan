@@ -95,6 +95,8 @@ class CMakeDeps2:
                                      f'but "{type(value).__name__}" was found')
             return value
         except KeyError:
+            # Here we are not using the cpp_info = deduce_cpp_info(dep) because it is not
+            # necessary for the properties
             return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
                 else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
 
@@ -160,6 +162,8 @@ class _PathGenerator:
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
                 try:
+                    # This is irrespective of the components, it should be in the root cpp_info
+                    # To define the location of the pkg-config.cmake file
                     build_dir = dep.cpp_info.builddirs[0]
                 except IndexError:
                     build_dir = dep.package_folder
@@ -167,7 +171,6 @@ class _PathGenerator:
                 if pkg_folder:
                     config_file = ConfigTemplate2(self._cmakedeps, dep).filename
                     if os.path.isfile(os.path.join(pkg_folder, config_file)):
-
                         pkg_paths[pkg_name] = pkg_folder
                 continue
 
@@ -197,8 +200,8 @@ class _PathGenerator:
         is_win = self._conanfile.settings.get_safe("os") == "Windows"
         for req in self._conanfile.dependencies.host.values():
             config = req.settings.get_safe("build_type", self._cmakedeps.configuration)
-            cppinfo = req.cpp_info.aggregated_components()
-            runtime_dirs = cppinfo.bindirs if is_win else cppinfo.libdirs
+            aggregated_cppinfo = req.cpp_info.aggregated_components()
+            runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
             for d in runtime_dirs:
                 d = d.replace("\\", "/")
                 existing = host_runtime_dirs.setdefault(config, [])
