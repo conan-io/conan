@@ -156,7 +156,7 @@ def test_cache_save_restore_metadata():
 
 
 # FIXME: check the timestamps of the conan cache restore
-@pytest.mark.skipif(platform.system() != "Windows", reason="Fails in windows in ci because of the low precission of the clock")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Fails in windows in ci because of the low precission of the clock")
 def test_cache_save_restore_multiple_revisions():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
