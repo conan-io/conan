@@ -5,7 +5,6 @@ on:
     branches:
       - develop2
       - release/*
-      - windows-action-optimize
   pull_request:
     branches:
       - '*'
@@ -72,6 +71,9 @@ jobs:
         id: msys2-setup
         with:
             update: true
+            # It's important that the default environment that is used is MSYS
+            # we check this default in a test
+            msystem: MSYS
             install: >-
                 mingw-w64-x86_64-toolchain
                 mingw-w64-i686-toolchain
@@ -79,17 +81,6 @@ jobs:
                 gcc
                 autoconf-wrapper
                 automake
-
-      - name: Check uname path
-        run: |
-            echo "Checking uname path..."
-            Get-Command uname | Select-Object -ExpandProperty Source
-
-      - name: List MSYS2 installation directory contents
-        run: |
-            $msys2Path = '${{ steps.msys2-setup.outputs.msys2-location }}'
-            Write-Host "Listing contents of MSYS2 installation at: $msys2Path"
-            Get-ChildItem -Path $msys2Path
 
       - name: Install VS 15 2017 Community edition
         run: |
@@ -168,7 +159,11 @@ jobs:
 
       - name: Run Tests
         run: |
-          $pathsToRemove = @("C:\mingw64\bin", "C:\Strawberry\c\bin", "C:\Program Files\CMake\bin")
+          $pathsToRemove = @()
+          $pathsToRemove += "C:\mingw64\bin"                # To avoid that CMake finds gcc there
+          $pathsToRemove += "C:\Strawberry\c\bin"           
+          $pathsToRemove += "C:\Program Files\CMake\bin"    # Remove the default CMake version
+          $pathsToRemove += "C:\Program Files\Git\usr\bin"  # To avoid using uname and other tools from there
           foreach ($dir in $pathsToRemove) {
               $newPath = ($env:PATH -split ";") -ne $dir -join ";"
               [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
@@ -193,4 +188,4 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest -k "test_msys2_available or test_token_expired or test_crossbuild_windows_incomplete" -n=auto --durations=1000
+          pytest test/unittests test/integration test/functional -n=auto --durations=1000
