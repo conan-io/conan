@@ -9,7 +9,7 @@ from conans.util.files import load
 
 def test_transitive_py_requires():
     # https://github.com/conan-io/conan/issues/5529
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class PackageInfo(ConanFile):
@@ -41,7 +41,7 @@ def test_transitive_py_requires():
 
 
 def test_transitive_matching_ranges():
-    client = TestClient()
+    client = TestClient(light=True)
     tool = textwrap.dedent("""
         from conan import ConanFile
         class PackageInfo(ConanFile):
@@ -89,7 +89,7 @@ def test_transitive_matching_ranges():
 
 
 def test_lock_pyrequires_prereleases():
-    tc = TestClient()
+    tc = TestClient(light=True)
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0-0.1"),
              "app/conanfile.py": GenConanfile("app", "1.0").with_python_requires("dep/[>=0]")})
     tc.run("export dep")
@@ -106,7 +106,7 @@ def test_lock_pyrequires_prereleases():
 
 
 def test_lock_pyrequires_create():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")})
     c.run("create .  --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
@@ -114,7 +114,7 @@ def test_lock_pyrequires_create():
 
 
 def test_lock_pyrequires_export():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")})
     c.run("export .  --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
@@ -122,7 +122,7 @@ def test_lock_pyrequires_export():
 
 
 def test_lock_pyrequires_export_transitive():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")
                                                             .with_python_requires("dep/0.1")})
@@ -134,7 +134,7 @@ def test_lock_pyrequires_export_transitive():
 
 
 def test_lock_export_transitive_pyrequire():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1") .with_python_requires("dep/0.1")})
     c.run("export dep")
