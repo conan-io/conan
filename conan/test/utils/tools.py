@@ -456,7 +456,7 @@ class TestClient:
         # create default profile
         if light:
             text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.cache.settings_path, "os: [Linux]")
+            save(self.cache.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)

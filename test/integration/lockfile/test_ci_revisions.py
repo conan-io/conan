@@ -48,7 +48,7 @@ pkgapp_01_id = "dda63a9bddbbe704d4858d67156d5dad0361dc19"
 
 @pytest.fixture()
 def client_setup():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save_home({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"})
     pkb_requirements = """
     def requirements(self):
