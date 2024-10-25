@@ -1,49 +1,10 @@
 import getpass
-import os
 import sys
 
 from conan.errors import ConanException
 
 
-def is_terminal(stream):
-    return hasattr(stream, "isatty") and stream.isatty()
-
-
-def color_enabled(stream):
-    """
-    NO_COLOR: No colors
-
-    https://no-color.org/
-
-    Command-line software which adds ANSI color to its output by default should check for the
-    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
-    prevents the addition of ANSI color.
-
-    CLICOLOR_FORCE: Force color
-
-    https://bixense.com/clicolors/
-    """
-
-    if os.getenv("CLICOLOR_FORCE", "0") != "0":
-        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
-        return True
-
-    if os.getenv("NO_COLOR") is not None:
-        return False
-    return is_terminal(stream)
-
-
-def init_colorama(stream):
-    import colorama
-    if color_enabled(stream):
-        if os.getenv("CLICOLOR_FORCE", "0") != "0":
-            # Otherwise it is not really forced if colorama doesn't feel it
-            colorama.init(strip=False, convert=False)
-        else:
-            colorama.init()
-
-
-class UserInput(object):
+class UserInput:
     """Class to interact with the user, used to show messages and ask for information"""
 
     def __init__(self, non_interactive):
@@ -75,7 +36,8 @@ class UserInput(object):
             self._out.write("Remote '%s' username: " % remote_name)
             username = self.get_username()
 
-        self._out.write('Please enter a password for "%s" account: ' % username)
+        self._out.write("Please enter a password for user '%s' on remote '%s': "
+                        % (username, remote_name))
         try:
             pwd = self.get_password()
         except ConanException:

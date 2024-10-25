@@ -74,6 +74,7 @@ def load_cache_generators(path):
 def write_generators(conanfile, app, envs_generation=None):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
+    _receive_generators(conanfile)
 
     hook_manager = app.hook_manager
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
@@ -92,8 +93,12 @@ def write_generators(conanfile, app, envs_generation=None):
     conanfile.generators = []
     try:
         for generator_name in old_generators:
-            global_generator = global_generators.get(generator_name)
-            generator_class = global_generator or _get_generator_class(generator_name)
+            if isinstance(generator_name, str):
+                global_generator = global_generators.get(generator_name)
+                generator_class = global_generator or _get_generator_class(generator_name)
+            else:
+                generator_class = generator_name
+                generator_name = generator_class.__name__
             if generator_class:
                 try:
                     generator = generator_class(conanfile)
@@ -150,6 +155,18 @@ def _receive_conf(conanfile):
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
             conanfile.conf.compose_conf(build_require.conf_info)
+
+
+def _receive_generators(conanfile):
+    """  Collect generators_info from the immediate build_requires"""
+    for build_req in conanfile.dependencies.direct_build.values():
+        if build_req.generator_info:
+            if not isinstance(build_req.generator_info, list):
+                raise ConanException(f"{build_req} 'generator_info' must be a list")
+            names = [c.__name__ if not isinstance(c, str) else c for c in build_req.generator_info]
+            conanfile.output.warning(f"Tool-require {build_req} adding generators: {names}",
+                                     warn_tag="experimental")
+            conanfile.generators = build_req.generator_info + conanfile.generators
 
 
 def _generate_aggregated_env(conanfile):
