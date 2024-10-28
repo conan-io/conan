@@ -14,8 +14,7 @@ class Bazel(object):
         # Use BazelToolchain generated file if exists
         self._conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
         self._use_conan_config = os.path.exists(self._conan_bazelrc)
-        startup_opts = self._get_startup_command_options()
-        self._bazel_base_command = f"bazel {startup_opts}" if startup_opts else "bazel"
+        self._startup_opts = self._get_startup_command_options()
 
     def _safe_run_command(self, command):
         """
@@ -27,7 +26,7 @@ class Bazel(object):
             self._conanfile.run(command)
         finally:
             if platform.system() == "Windows":
-                self._conanfile.run(f"{self._bazel_base_command} shutdown")
+                self._conanfile.run("bazel" + self._startup_opts + " shutdown")
 
     def _get_startup_command_options(self):
         bazelrc_paths = []
@@ -37,7 +36,8 @@ class Bazel(object):
         # See more info in https://bazel.build/run/bazelrc
         bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
                                                       check_type=list))
-        return " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
+        opts = " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
+        return f" {opts}" if opts else ""
 
     def build(self, args=None, target="//...", clean=True):
         """
@@ -61,7 +61,7 @@ class Bazel(object):
         bazelrc_build_configs = []
         if self._use_conan_config:
             bazelrc_build_configs.append(BazelToolchain.bazelrc_config)
-        command = f"{self._bazel_base_command} build"
+        command = "bazel" + self._startup_opts + " build"
         bazelrc_build_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
                                                         check_type=list))
         for config in bazelrc_build_configs:
@@ -70,7 +70,7 @@ class Bazel(object):
             command += " ".join(f" {arg}" for arg in args)
         command += f" {target}"
         if clean:
-            self._safe_run_command(f"{self._bazel_base_command} clean")
+            self._safe_run_command("bazel" + self._startup_opts + " clean")
         self._safe_run_command(command)
 
     def test(self, target=None):
@@ -79,4 +79,4 @@ class Bazel(object):
         """
         if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
             return
-        self._safe_run_command(f"{self._bazel_base_command} test {target}")
+        self._safe_run_command("bazel" + self._startup_opts + f" test {target}")
