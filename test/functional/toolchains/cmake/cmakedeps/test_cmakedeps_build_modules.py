@@ -307,10 +307,9 @@ def test_build_modules_custom_script_editable_package(editable):
             settings = "build_type", "arch"
 
             def build(self):
-                # copy(self, "*.vis", src=self.source_folder, dst=self.build_folder, keep_path=False)
-                cmake = 'set(MY_CMAKE_PATH ${myfunctions_PACKAGE_FOLDER_RELEASE})\n'\
+                cmake = 'set(MY_CMAKE_PATH ${myfunctions_RES_DIRS_RELEASE})\n'\
                         'macro(otherfunc)\n'\
-                        'file(READ "${MY_CMAKE_PATH}/src/vis/my.vis" c)\n'\
+                        'file(READ "${MY_CMAKE_PATH}/my.vis" c)\n'\
                         'message("Hello ${c}!!!!")\nendmacro()'
                 save(self, "otherfuncs.cmake", cmake)
 
@@ -320,19 +319,18 @@ def test_build_modules_custom_script_editable_package(editable):
                 build = glob.glob(os.path.join(self.recipe_folder, self.folders.build, "*.cmake"))
                 self.cpp.source.set_property("cmake_build_modules", src)
                 self.cpp.build.set_property("cmake_build_modules", build)
+                self.cpp.source.resdirs = ["vis"]
 
             def package(self):
                 copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "mods"),
                      keep_path=False)
+                copy(self, "*.cmake", self.build_folder, os.path.join(self.package_folder, "mods"),
+                     keep_path=False)
                 copy(self, "*.vis", self.source_folder, os.path.join(self.package_folder, "mods"),
                      keep_path=False)
-                cmake = 'set(MY_CMAKE_PATH ${myfunctions_PACKAGE_FOLDER_RELEASE})\n'\
-                        'macro(otherfunc)\n'\
-                        'file(READ "${MY_CMAKE_PATH}/mods/my.vis" c)\n'\
-                        'message("Hello ${c}!!!!")\nendmacro()'
-                save(self, os.path.join(self.package_folder, "mods/otherfuncs.cmake"), cmake)
 
             def package_info(self):
+                self.cpp_info.resdirs = ["mods"]
                 self.cpp_info.set_property("cmake_build_modules", glob.glob("mods/*.cmake"))
         """)
 
