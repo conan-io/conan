@@ -38,6 +38,7 @@ def test_auto_package_type(conanfile):
     c.run("graph info . --filter package_type")
     assert "package_type: static-library" in c.out
     c.run("graph info . --filter package_type -o shared=True")
+    assert "The package_type will have precedence over the options" not in c.out
     assert "package_type: shared-library" in c.out
     c.run("graph info . --filter package_type -o shared=True -o header_only=False")
     assert "package_type: shared-library" in c.out
@@ -59,5 +60,7 @@ def test_package_type_and_header_library():
     """)})
     tc.run("graph info . --filter package_type -o &:header_only=False")
     assert "package_type: static-library" in tc.out
+    assert "The package_type will have precedence over the options" in tc.out
     tc.run("graph info . --filter package_type -o &:header_only=True")
     assert "package_type: static-library" in tc.out
+    assert "The package_type will have precedence over the options" in tc.out
