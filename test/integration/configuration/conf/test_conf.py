@@ -170,7 +170,7 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
     """
     Testing if you want to introduce a list/dict via cli
 
-    >> conan install . -c "tools.build.flags:ccflags+=['-Werror']"
+    >> conan install . -c "tools.build:cflags+=['-Werror']"
     >> conan install . -c "tools.microsoft.msbuildtoolchain:compile_options={'ExceptionHandling': 'Async'}"
 
     """
