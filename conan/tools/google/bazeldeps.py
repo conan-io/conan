@@ -72,13 +72,12 @@ def _get_requirements(conanfile, build_context_activated):
         yield require, dep
 
 
-def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
+def _get_libs(dep, cpp_info=None) -> list:
     """
     Get the static/shared library paths
 
     :param dep: normally a <ConanFileInterface obj>
     :param cpp_info: <CppInfo obj> of the component.
-    :param reference_name: <str> Package/Component's reference name. ``None`` by default.
     :return: list of tuples per static/shared library ->
              [(name, is_shared, lib_path, import_lib_path)]
              Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
@@ -132,7 +131,6 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
     is_shared = _is_shared()
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
-    ref_name = reference_name or dep.ref.name
     if hasattr(cpp_info, "aggregated_components"):
         # Global cpp_info
         total_libs_number = len(cpp_info.aggregated_components().libs)
