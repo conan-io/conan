@@ -161,6 +161,9 @@ class TargetConfigurationTemplate2:
                   "exelinkflags": " ".join(info.exelinkflags),
                   "system_libs": system_libs}
 
+        if info.frameworks:
+            self._conanfile.output.warning("frameworks not supported yet in new CMakeDeps generator")
+
         if info.libs:
             if len(info.libs) != 1:
                 raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
