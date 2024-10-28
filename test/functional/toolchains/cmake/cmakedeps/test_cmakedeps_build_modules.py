@@ -307,7 +307,8 @@ def test_build_modules_custom_script_editable_package(editable):
             settings = "build_type", "arch"
 
             def build(self):
-                cmake = 'set(MY_CMAKE_PATH ${myfunctions_RES_DIRS_RELEASE})\n'\
+                config = str(self.settings.build_type).upper()
+                cmake = f'set(MY_CMAKE_PATH ${{{self.name}_RES_DIRS_{config}}})\n'\
                         'macro(otherfunc)\n'\
                         'file(READ "${MY_CMAKE_PATH}/my.vis" c)\n'\
                         'message("Hello ${c}!!!!")\nendmacro()'
