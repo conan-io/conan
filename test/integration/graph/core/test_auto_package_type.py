@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 
 from conan.test.utils.tools import TestClient
@@ -43,3 +45,19 @@ def test_auto_package_type(conanfile):
     assert "package_type: header-library" in c.out
     c.run("graph info . --filter package_type -o header_only=True -o shared=False")
     assert "package_type: header-library" in c.out
+
+def test_package_type_and_header_library():
+    """ Show that forcing a package_type and header_only=True does not change the package_type"""
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        package_type = "static-library"
+        options = {"header_only": [True, False]}
+
+    """)})
+    tc.run("graph info . --filter package_type -o &:header_only=False")
+    assert "package_type: static-library" in tc.out
+    tc.run("graph info . --filter package_type -o &:header_only=True")
+    assert "package_type: static-library" in tc.out
