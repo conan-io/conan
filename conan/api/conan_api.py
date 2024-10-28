@@ -1,5 +1,6 @@
 import sys
 
+from conan.api.output import init_colorama
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
@@ -18,8 +19,7 @@ from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conans.client.migrations import ClientMigrator
-from conans.client.userio import init_colorama
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 from conan.internal.paths import get_conan_user_home
 from conans.model.version_range import validate_conan_version

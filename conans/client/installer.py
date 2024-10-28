@@ -10,7 +10,8 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
+from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
+from conan.errors import ConanException
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conan.internal.paths import CONANINFO

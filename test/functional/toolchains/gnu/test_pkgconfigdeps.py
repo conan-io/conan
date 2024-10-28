@@ -113,3 +113,21 @@ def test_pkgconfigdeps_bindir_and_meson():
     # Executing directly "meson test" fails if the bindir field does not exist
     client.run_command("meson test -C test_package/build-release")
     assert "1/1 ./src/example OK"
+
+
+def test_pkgconfigdeps_component_matches_package_name():
+    client = TestClient(path_with_spaces=False)
+    # Create library having build and test requires
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        class MyLib(ConanFile):
+            name = "hello"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].set_property("pkg_config_name", "hello")
+        ''')
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("export-pkg .")
+    client.run("install --requires=hello/0.1 -g PkgConfigDeps")
+    content = client.load("hello.pc")
+    assert "Conan component: hello-hello" in content

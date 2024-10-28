@@ -32,7 +32,8 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
-from conans.errors import NotFoundException, ConanException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
@@ -455,7 +456,7 @@ class TestClient:
         # create default profile
         if light:
             text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.cache.settings_path, "os: [Linux]")
+            save(self.cache.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)

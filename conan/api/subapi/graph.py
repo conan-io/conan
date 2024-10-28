@@ -5,7 +5,7 @@ from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIP
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
 

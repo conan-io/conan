@@ -10,7 +10,7 @@ from conan.internal.conan_app import ConanApp
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"

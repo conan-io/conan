@@ -5,7 +5,8 @@ from conan.internal.cache.home_paths import HomePaths
 
 from conans.client.loader import load_python_file
 from conan.internal.api.profile.profile_loader import ProfileLoader
-from conans.errors import ConanException, scoped_traceback
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
 from conans.model.profile import Profile
 
 DEFAULT_PROFILE_NAME = "default"
@@ -103,6 +104,11 @@ class ProfilesAPI:
                                   f"Use '&:{k}={v}' to refer to the current package.\n"
                                   f"Use '*:{k}={v}' or other pattern if the intent was to apply to "
                                   f"dependencies", warn_tag="legacy")
+        if profile.conf.get("tools.graph:skip_test", check_type=bool):
+            ConanOutput().warning("Usage of 'tools.graph:skip_test'", warn_tag="experimental")
+            if not profile.conf.get("tools.build:skip_test", check_type=bool):
+                ConanOutput().warning("tools.graph:skip_test set, but tools.build:skip_test is not, "
+                                      "probably you need to define it too")
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):

@@ -13,7 +13,8 @@ from conan.internal.cache.home_paths import HomePaths
 
 from conans import __version__ as client_version
 from conans.client.loader import load_python_file
-from conans.errors import ConanException, scoped_traceback
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
 
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning

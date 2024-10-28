@@ -1,4 +1,4 @@
-from conans.errors import conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter
 from conans.util.files import chdir, mkdir
 
 

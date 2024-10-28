@@ -7,7 +7,7 @@ from unittest.mock import PropertyMock
 
 from conan.tools.system.package_manager import Apt, Apk, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, \
     Zypper, PacMan, _SystemPackageManagerTool
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
@@ -36,8 +36,13 @@ def test_msys2():
         with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
             context_mock.return_value = "host"
             conanfile = ConanFileMock()
-            conanfile.settings = Settings()
+            conanfile.settings = Settings({"os": {"Windows": {"subsystem": ["msys2"]}}})
             conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
+            manager = _SystemPackageManagerTool(conanfile)
+            assert manager.get_default_tool() == "choco"
+
+            conanfile.settings.os = "Windows"
+            conanfile.settings.os.subsystem = "msys2"
             manager = _SystemPackageManagerTool(conanfile)
             assert manager.get_default_tool() == "pacman"
 
@@ -240,6 +245,7 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
 
     assert tool._conanfile.command == result
 
+
 @pytest.mark.parametrize("tool_class, arch_host, result", [
     # Install build machine package and not cross-compile -> do not add host architecture
     (Apk, 'x86_64', 'apk add --no-cache package1 package2'),
@@ -280,6 +286,7 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
             tool.install(["package1", "package2"], host_package=False)
 
     assert tool._conanfile.command == result
+
 
 @pytest.mark.parametrize("tool_class, result", [
     # cross-compile but arch_names=None -> do not add host architecture

@@ -1,7 +1,7 @@
 import sqlite3
 
 from conan.internal.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import timestamp_now
 
@@ -80,18 +80,12 @@ class RecipesDBTable(BaseDbTable):
 
     # returns all different conan references (name/version@user/channel)
     def all_references(self):
-        query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                    f'{self.columns.rrev}, ' \
-                    f'{self.columns.path} ,' \
-                    f'{self.columns.timestamp}, ' \
-                    f'{self.columns.lru} ' \
-                    f'FROM {self.table_name} ' \
-                    f'ORDER BY {self.columns.timestamp} DESC'
+        query = f'SELECT DISTINCT {self.columns.reference} FROM {self.table_name}'
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
-        return result
+            rows = r.fetchall()
+            return [RecipeReference.loads(row[0]) for row in rows]
 
     def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \

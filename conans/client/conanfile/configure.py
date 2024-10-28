@@ -1,4 +1,4 @@
-from conans.errors import conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
 from conans.client.conanfile.implementations import auto_shared_fpic_config_options, \

@@ -1,4 +1,3 @@
-# coding=utf-8
 import sys
 import unittest
 from unittest import mock
@@ -6,8 +5,7 @@ from unittest import mock
 import pytest
 from parameterized import parameterized
 
-from conan.api.output import ConanOutput
-from conans.client.userio import init_colorama
+from conan.api.output import ConanOutput, init_colorama
 
 
 class ConanOutputTest(unittest.TestCase):
