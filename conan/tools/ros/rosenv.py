@@ -31,12 +31,13 @@ class ROSEnv:
 
         # Add ROS required variables to VirtualBuildEnv
         rosbuildenv = Environment()
-        for k, v in self._variables.items():
+        for k, v in self.variables.items():
             rosbuildenv.define(k, v)
         self._virtualbuildenv._buildenv = rosbuildenv
         self._virtualbuildenv.generate()
 
         # Generate conanrosenv.sh script wrapper that calls conanbuild.sh and conanrun.sh
+        # TODO: Windows .bat/.ps1 files still not supported for the wrapper
         conanbuild_path = os.path.join(self._conanfile.generators_folder, "conanbuild.sh")
         conanrun_path = os.path.join(self._conanfile.generators_folder, "conanrun.sh")
         rosenv_wrapper_content = [f". \"{conanbuild_path}\"", f". \"{conanrun_path}\""]
