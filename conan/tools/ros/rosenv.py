@@ -38,12 +38,10 @@ class ROSEnv:
 
         # Generate conanrosenv.sh script wrapper that calls conanbuild.sh and conanrun.sh
         conanbuild_path = os.path.join(self._conanfile.generators_folder, "conanbuild.sh")
-        cmd_wrapper = [f". \"{conanbuild_path}\""]
         conanrun_path = os.path.join(self._conanfile.generators_folder, "conanrun.sh")
-        if os.path.exists(conanrun_path):
-            cmd_wrapper.append(f". \"{conanrun_path}\"")
+        rosenv_wrapper_content = [f". \"{conanbuild_path}\"", f". \"{conanrun_path}\""]
         conanrosenv_path = os.path.join(self._conanfile.generators_folder, self._rosenv_wrapper)
-        save(self._conanfile, conanrosenv_path, "\n".join(cmd_wrapper))
+        save(self._conanfile, conanrosenv_path, "\n".join(rosenv_wrapper_content))
 
         msg = f"Generated ROSEnv Conan file: conanrosenv.sh\n" + \
               f"Use 'source {conanrosenv_path}' to set the ROSEnv Conan before 'colcon build'"
