@@ -119,7 +119,7 @@ def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
                 shared_windows_libs[libs[0]] = formatted_path
             else:  # let's cross the fingers... This is the last chance.
                 for lib in libs:
-                    if ref_name in name and ref_name in lib and lib not in shared_windows_libs:
+                    if lib in name and lib not in shared_windows_libs:
                         shared_windows_libs[lib] = formatted_path
                         break
         elif lib_name is not None:

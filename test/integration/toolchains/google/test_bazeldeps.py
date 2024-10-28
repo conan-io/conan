@@ -1142,14 +1142,27 @@ def test_shared_windows_find_libraries():
     )
     """)
     zlib_expected = textwrap.dedent("""\
-    # Components precompiled libs
-    # Root package precompiled libs
     cc_import(
         name = "zdll_precompiled",
         shared_library = "bin/zlib1.dll",
         interface_library = "lib/zdll.lib",
     )
     """)
+    iconv_expected = textwrap.dedent("""\
+    cc_import(
+        name = "iconv_precompiled",
+        shared_library = "bin/iconv-2.dll",
+        interface_library = "lib/iconv.lib",
+    )
+    """)
+    charset_expected = textwrap.dedent("""\
+    cc_import(
+        name = "charset_precompiled",
+        shared_library = "bin/charset-1.dll",
+        interface_library = "lib/charset.lib",
+    )
+    """)
     assert libcurl_expected in libcurl_bazel_build
     assert zlib_expected in zlib_bazel_build
     assert openssl_expected in openssl_bazel_build
+    assert iconv_expected in libiconv_bazel_build and charset_expected in libiconv_bazel_build
