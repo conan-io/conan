@@ -79,6 +79,8 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
+        self._exe = None  # application executable, only 1 allowed, following CPS
+        self._languages = None
 
         self._sysroot = None
         self._requires = None
@@ -119,9 +121,11 @@ class _Component:
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
+            "exe": self._exe,  # single exe, incompatible with libs
             "type": self._type,
             "location": self._location,
-            "link_location": self._link_location
+            "link_location": self._link_location,
+            "languages": self._languages
         }
 
     @staticmethod
@@ -129,6 +133,14 @@ class _Component:
         result = _Component()
         for field, value in contents.items():
             setattr(result, f"_{field}", value)
+        return result
+
+    def clone(self):
+        # Necessary below for exploding a cpp_info.libs = [lib1, lib2] into components
+        result = _Component()
+        for k, v in vars(self).items():
+            if k.startswith("_"):
+                setattr(result, k, copy.copy(v))
         return result
 
     @property
@@ -259,6 +271,14 @@ class _Component:
         self._libs = value
 
     @property
+    def exe(self):
+        return self._exe
+
+    @exe.setter
+    def exe(self, value):
+        self._exe = value
+
+    @property
     def type(self):
         return self._type
 
@@ -281,6 +301,14 @@ class _Component:
     @link_location.setter
     def link_location(self, value):
         self._link_location = value
+
+    @property
+    def languages(self):
+        return self._languages
+
+    @languages.setter
+    def languages(self, value):
+        self._languages = value
 
     @property
     def defines(self):
@@ -453,7 +481,9 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def deduce_cps(self, pkg_type):
+    def deduce_locations(self, pkg_type):
+        if self._exe:   # exe is a new field, it should have the correct location
+            return
         if self._location or self._link_location:
             if self._type is None or self._type is PackageType.HEADER:
                 raise ConanException("Incorrect cpp_info defining location without type or header")
@@ -461,12 +491,15 @@ class _Component:
         if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
             return
 
-        # Recipe didn't specify things, need to auto deduce
-        libdirs = [x.replace("\\", "/") for x in self.libdirs]
-        bindirs = [x.replace("\\", "/") for x in self.bindirs]
+        if len(self.libs) == 0:
+            return
 
         if len(self.libs) != 1:
             raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+
+        # Recipe didn't specify things, need to auto deduce
+        libdirs = [x.replace("\\", "/") for x in self.libdirs]
+        bindirs = [x.replace("\\", "/") for x in self.bindirs]
 
         # TODO: Do a better handling of pre-defined type
         libname = self.libs[0]
@@ -519,6 +552,7 @@ class CppInfo:
 
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
+        self.default_components = None
         self._package = _Component(set_defaults)
 
     def __getattr__(self, attr):
@@ -526,19 +560,22 @@ class CppInfo:
         return getattr(self._package, attr)
 
     def __setattr__(self, attr, value):
-        if attr in ("components", "_package", "_aggregated"):
+        if attr in ("components", "default_components", "_package", "_aggregated"):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self._package, attr, value)
 
     def serialize(self):
         ret = {"root": self._package.serialize()}
+        if self.default_components:
+            ret["default_components"] = self.default_components
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
 
     def deserialize(self, content):
         self._package = _Component.deserialize(content.pop("root"))
+        self.default_components = content.get("default_components")
         for component_name, info in content.items():
             self.components[component_name] = _Component.deserialize(info)
         return self
@@ -678,3 +715,37 @@ class CppInfo:
         # Then split the names
         ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
+
+    def deduce_full_cpp_info(self, conanfile):
+        pkg_type = conanfile.package_type
+
+        result = CppInfo()  # clone it
+
+        if self.libs and len(self.libs) > 1:  # expand in multiple components
+            ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
+                                  "Define 'cpp_info.components' instead.")
+            assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
+            for lib in self.libs:
+                c = _Component()  # Do not do a full clone, we don't need the properties
+                c.type = self.type  # This should be a string
+                c.includedirs = self.includedirs
+                c.libdirs = self.libdirs
+                c.libs = [lib]
+                result.components[f"_{lib}"] = c
+
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            common.requires = list(result.components.keys()) + (self.requires or [])
+
+            result.components["_common"] = common
+        else:
+            result._package = self._package.clone()
+            result.default_components = self.default_components
+            result.components = {k: v.clone() for k, v in self.components.items()}
+
+        result._package.deduce_locations(pkg_type)
+        for comp in result.components.values():
+            comp.deduce_locations(pkg_type)
+
+        return result

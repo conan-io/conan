@@ -9,7 +9,7 @@ def test_options():
     the ``graph build-order`` applying a lockfile will return the necessary options to build
     it in order
     """
-    client = TestClient()
+    client = TestClient(light=True)
     ffmpeg = textwrap.dedent("""
         from conan import ConanFile
         class FfmpegConan(ConanFile):
