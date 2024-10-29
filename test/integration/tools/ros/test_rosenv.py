@@ -27,11 +27,14 @@ def test_rosenv():
 
     client.run("install conanfile3.txt --output-folder install/conan")
     assert "Generated ROSEnv Conan file: conanrosenv.sh" in client.out
-    conanrosenv_path = os.path.join(client.current_folder, "install", "conan", "conanrosenv.sh")
+    install_folder = os.path.join(client.current_folder, "install", "conan")
+    conanrosenv_path = os.path.join(install_folder, "conanrosenv.sh")
     assert os.path.exists(conanrosenv_path)
+    conanrosenvbuild_path = os.path.join(install_folder, "conanrosenv-build.sh")
+    assert os.path.exists(conanrosenvbuild_path)
     client.run_command(f". \"{conanrosenv_path}\" && env")
     toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
-    assert f"CMAKE_TOOLCHAIN_FILE={toolchain_path}" in client.out
+    assert f"CMAKE_TOOLCHAIN_FILE=\"{toolchain_path}\"" in client.out
     assert "CMAKE_BUILD_TYPE=Release" in client.out
 
 
