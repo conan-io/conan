@@ -832,6 +832,49 @@ class PyRequiresExtendTest(unittest.TestCase):
         assert "OptionBASE: True" in c.out
         assert "OptionDERIVED: False" in c.out
 
+    def test_options_default_update(self):
+        c = TestClient(light=True)
+        base = textwrap.dedent("""
+            from conan import ConanFile
+            class BaseConan:
+                options = {"base": [True, False]}
+                default_options = {"base": True}
+
+            class PyReq(ConanFile):
+                name = "base"
+                version = "1.0.0"
+                package_type = "python-require"
+                """)
+        derived = textwrap.dedent("""
+            import conan
+
+            class DerivedConan(conan.ConanFile):
+                name = "derived"
+                python_requires = "base/1.0.0"
+                python_requires_extend = "base.BaseConan"
+                options = {"derived": [True, False]}
+                default_options = {"derived": False}
+
+                def init(self):
+                    base = self.python_requires["base"].module.BaseConan
+                    self.options.update(base.options, base.default_options)
+                    self.options.base = False
+
+                def generate(self):
+                    self.output.info(f"OptionBASE: {self.options.base}")
+                    self.output.info(f"OptionDERIVED: {self.options.derived}")
+            """)
+        c.save({"base/conanfile.py": base,
+                "derived/conanfile.py": derived})
+        c.run("create base")
+        c.run("install derived")
+        assert "OptionBASE: False" in c.out
+        assert "OptionDERIVED: False" in c.out
+
+        c.run("install derived -o=&:base=True")
+        assert "OptionBASE: True" in c.out
+        assert "OptionDERIVED: False" in c.out
+
 
 def test_transitive_python_requires():
     # https://github.com/conan-io/conan/issues/8546
