@@ -802,3 +802,37 @@ class TestConfigInstallPkgSettings:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_config_install_from_pkg_profile(self, client):
+        # Now install it
+        c = client
+        c.save({"win.profile": "[settings]\nos=Windows",
+                "nix.profile": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_config_install_from_pkg_profile_default(self, client):
+        # Now install it
+        c = client
+        c.save_home({"profiles/default": "[settings]\nos=Windows"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.save_home({"profiles/default": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
