@@ -15,7 +15,7 @@ BUILT_IN_CONFS = {
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
     "core:skip_warnings": "Do not show warnings matching any of the patterns in this list. "
-                          "Current warning tags are 'network', 'deprecated'",
+                          "Current warning tags are 'network', 'deprecated', 'experimental'",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
@@ -88,6 +88,8 @@ BUILT_IN_CONFS = {
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
     "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
+    "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
+    "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",

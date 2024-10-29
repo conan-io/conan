@@ -879,6 +879,12 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                compilers["C"] = "cl"
+                compilers["CXX"] = "cl"
         return {"compilers": compilers}
 
 

@@ -1039,6 +1039,25 @@ def test_shared_windows_find_libraries():
             def package_info(self):
                 self.cpp_info.libs = ["zdll"]
             """)
+    libiconv = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Example(ConanFile):
+            name = "libiconv"
+            version = "1.0"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+            def package(self):
+                bindirs = os.path.join(self.package_folder, "bin")
+                libdirs = os.path.join(self.package_folder, "lib")
+                save(self, os.path.join(bindirs, "charset-1.dll"), "")
+                save(self, os.path.join(bindirs, "iconv-2.dll"), "")
+                save(self, os.path.join(libdirs, "charset.lib"), "")
+                save(self, os.path.join(libdirs, "iconv.lib"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["iconv", "charset"]
+            """)
     openssl = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -1081,20 +1100,25 @@ def test_shared_windows_find_libraries():
         zlib/1.0
         openssl/1.0
         libcurl/1.0
+        libiconv/1.0
         [options]
         *:shared=True
     """)
     c.save({"conanfile.txt": consumer,
             "zlib/conanfile.py": zlib,
             "openssl/conanfile.py": openssl,
-            "libcurl/conanfile.py": libcurl})
+            "libcurl/conanfile.py": libcurl,
+            "libiconv/conanfile.py": libiconv,
+    })
     c.run("export-pkg zlib -o:a shared=True")
     c.run("export-pkg openssl -o:a shared=True")
     c.run("export-pkg libcurl -o:a shared=True")
+    c.run("export-pkg libiconv -o:a shared=True")
     c.run("install . -g BazelDeps")
     libcurl_bazel_build = load(None, os.path.join(c.current_folder, "libcurl", "BUILD.bazel"))
     zlib_bazel_build = load(None, os.path.join(c.current_folder, "zlib", "BUILD.bazel"))
     openssl_bazel_build = load(None, os.path.join(c.current_folder, "openssl", "BUILD.bazel"))
+    libiconv_bazel_build = load(None, os.path.join(c.current_folder, "libiconv", "BUILD.bazel"))
     libcurl_expected = textwrap.dedent("""\
     # Components precompiled libs
     cc_import(
@@ -1118,14 +1142,27 @@ def test_shared_windows_find_libraries():
     )
     """)
     zlib_expected = textwrap.dedent("""\
-    # Components precompiled libs
-    # Root package precompiled libs
     cc_import(
         name = "zdll_precompiled",
         shared_library = "bin/zlib1.dll",
         interface_library = "lib/zdll.lib",
     )
     """)
+    iconv_expected = textwrap.dedent("""\
+    cc_import(
+        name = "iconv_precompiled",
+        shared_library = "bin/iconv-2.dll",
+        interface_library = "lib/iconv.lib",
+    )
+    """)
+    charset_expected = textwrap.dedent("""\
+    cc_import(
+        name = "charset_precompiled",
+        shared_library = "bin/charset-1.dll",
+        interface_library = "lib/charset.lib",
+    )
+    """)
     assert libcurl_expected in libcurl_bazel_build
     assert zlib_expected in zlib_bazel_build
     assert openssl_expected in openssl_bazel_build
+    assert iconv_expected in libiconv_bazel_build and charset_expected in libiconv_bazel_build
