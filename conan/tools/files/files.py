@@ -8,9 +8,10 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
 
-
-from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
+from conan.cps import CPS
+from conan.cps.cps import CPSComponent
 from conan.errors import ConanException
+from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
@@ -549,3 +550,132 @@ def move_folder_contents(conanfile, src_folder, dst_folder):
         os.rmdir(src_folder)
     except OSError:
         pass
+
+
+def _get_libraries(cps, libs, libdirs, mode_dll=False):
+
+    def _get_real_path(file_name, file_path):
+        # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+        if os.path.islink(file_path):
+            # Important! os.path.realpath returns the final path of the symlink even if it points
+            # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+            # then os.path.realpath("libmylib.dylib") == "libmylib.1.0.0.dylib"
+            # Note: os.readlink() returns the path which the symbolic link points to.
+            real_path = os.path.realpath(file_path)
+            file_path = real_path.replace("\\", "/")
+            file_name = os.path.basename(file_path)
+        name, ext = file_name.split('.', maxsplit=1)  # ext could be .if.lib
+        formatted_path = file_path.replace("\\", "/")
+        return name, ext, formatted_path
+
+    def _save_lib_path(file_name, file_path):
+        """Add each lib with its full library path"""
+        name, ext, formatted_path = _get_real_path(file_name, file_path)
+        lib_name = None
+        # Users may not name their libraries in a conventional way. For example, directly
+        # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+        # Issue related: https://github.com/conan-io/conan/issues/11331
+        if file_name in libs:  # let's ensure that it has any extension
+            lib_name = file_name
+        elif name in libs:
+            lib_name = name
+        elif name.startswith("lib"):
+            short_name = name[3:]  # libpkg -> pkg
+            if short_name in libs:
+                lib_name = short_name
+        # DLL check
+        if not lib_name and ext == "dll" or ext.endswith(".dll"):
+            if len(libs) == 1:  # first DLL should be the good one
+                lib_name = libs[0]
+            else:  # let's cross the fingers... This is the last chance.
+                for lib in libs:
+                    if lib in name and lib not in lib_paths:
+                        lib_name = lib
+                        break
+        if lib_name is not None:
+            # Let's save the lib
+            lib_paths[lib_name] = formatted_path
+            # Removing it from the global list to simplify the rest of the lib matches
+            libs.remove(lib_name)
+            return True
+        return False
+
+    lib_paths = {}
+    for libdir in libdirs:
+        if not os.path.exists(libdir):
+            continue
+        files = os.listdir(libdir)
+        for f in files:
+            full_path = os.path.join(libdir, f)
+            if not os.path.isfile(full_path):  # Make sure that directories are excluded
+                continue
+            _, extension = os.path.splitext(f)
+            if mode_dll and extension == ".dll":
+                _save_lib_path(f, full_path)
+            elif not mode_dll and extension in (".so", ".dylib", ".lib", ".a"):
+                _save_lib_path(f, full_path)
+            if not libs:
+                # Stopping here, we've found all the libraries defined
+                return lib_paths
+    return lib_paths
+
+def find_libraries(conanfile, cpp_info=None, raise_error=True) -> list[tuple[str, str, str, str]]:
+    """
+    Get the static/shared library paths
+
+    :param conanfile: normally a <ConanFileInterface obj>
+    :param cpp_info: <CppInfo obj> of the component.
+    :param raise_error: Raise if any exception, e.g., DLL not found.
+    :return: list of tuples per static/shared library ->
+             [(name, is_shared, lib_path, import_lib_path)]
+             Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
+                    Windows would have:
+                        * shared: library_path as DLL, and import_library_path as LIB
+                        * static: library_path as LIB, and import_library_path as None
+    """
+    def _is_shared():
+        """
+        Checking traits and shared option
+        """
+        default_value = conanfile.options.get_safe("shared") if conanfile.options else False
+        return {"shared-library": True,
+                "static-library": False}.get(str(conanfile.package_type), default_value)
+
+    libraries = []
+    # Let's load the CPS information
+    if cpp_info is None:
+        cps = CPS.from_conan(conanfile)
+    else:
+        cps = CPSComponent.from_cpp_info(cpp_info, conanfile.package_type)
+
+    libs = cpp_info.libs[:]  # copying the values
+    if not libs:  # no libraries declared, aborting!
+        return []
+
+    is_shared = _is_shared()
+    libdirs = cpp_info.libdirs  # ".so", ".dylib", ".lib", ".a"
+    dll_paths = {}  # only ".dll"
+    lib_paths = _get_libraries(cps, libs, libdirs, mode_dll=False)
+    if platform.system() == "Windows" and is_shared:
+        # Just want to get shared libraries (likely DLLs)
+        # Composing absolute folders if extra folders were passed
+        dll_paths = _get_libraries(cps, libs, cpp_info.bindirs, mode_dll=True)
+        if len(dll_paths) != len(lib_paths) and raise_error:
+            raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
+                                 f" Import libs found: {lib_paths}\n"
+                                 f" DLLs found: {dll_paths}")
+
+    # Save all the libraries
+    for name, lib_path in lib_paths.items():
+        if dll_paths:  # only Windows
+            lib_path = dll_paths[name]
+            import_lib_path = lib_path
+        else:
+            import_lib_path = None
+        libraries.append((name, is_shared, lib_path, import_lib_path))
+
+    # Gather all the libraries defined by all the components if they exist.
+    if getattr(cpp_info, "has_components") and cpp_info.has_components:
+        for comp_ref_name, comp_cpp_info in cpp_info.get_sorted_components().items():
+            libraries += find_libraries(conanfile, comp_cpp_info)
+    return libraries

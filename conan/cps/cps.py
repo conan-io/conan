@@ -52,9 +52,9 @@ class CPSComponent:
             component["definitions"] = self.definitions
         if self.location:  # TODO: @prefix@
             component["location"] = self.location
-        if self.link_location:
+        if self.link_location:  # import libraries in Windows .lib -> DLL
             component["link_location"] = self.link_location
-        if self.link_libraries:
+        if self.link_libraries:  # system libraries
             component["link_libraries"] = self.link_libraries
         return component
 
@@ -95,7 +95,7 @@ class CPSComponent:
         return cps_comp
 
     def update(self, conf, conf_def):
-        # TODO: conf not used at the moent
+        # TODO: conf not used at the moment
         self.location = self.location or conf_def.get("location")
         self.link_location = self.link_location or conf_def.get("link_location")
         self.link_libraries = self.link_libraries or conf_def.get("link_libraries")
