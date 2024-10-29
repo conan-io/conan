@@ -239,8 +239,33 @@ def test_skip_tool_requires_context():
     assert "gtest/1.0: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' built" in c.out
 
 
+def test_skip_intermediate_header():
+    # https://github.com/conan-io/conan/issues/16402
+    # Libb cannot be skipped in any case, because there is a link order libc->liba necessary
+    # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
+    #  \------------------------------------------------/
+    # libb
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("header-library"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("static-library"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_package_type("application")
+                                                          .with_requires("libc/0.1", "liba/0.1")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install app")
+    assert "Skipped binaries" not in c.out
+    assert "libb/0.1: Already installed!" in c.out
+    assert "liba/0.1: Already installed!" in c.out
+    assert "libc/0.1: Already installed!" in c.out
+
+
 def test_skip_intermediate_static():
     # https://github.com/conan-io/conan/issues/16402
+    # In this case, libb can be completely skipped, because there is no linkage relationship at all
     # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
     #  \------------------------------------------------/
     # libb
