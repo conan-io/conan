@@ -788,9 +788,12 @@ class TestConfigInstallPkgSettings:
         c.run("remove * -c")
         return c
 
-    def test_config_install_from_pkg(self, client):
+    @pytest.mark.parametrize("default_profile", [False, True])
+    def test_config_install_from_pkg(self, client, default_profile):
         # Now install it
         c = client
+        if not default_profile:
+            os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         c.run("config install-pkg myconf/[*] -s os=Windows")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
@@ -802,6 +805,13 @@ class TestConfigInstallPkgSettings:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_error_no_settings_defined(self, client):
+        c = client
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*]", assert_error=True)
+        assert "There are invalid packages:" in c.out
+        assert "myconf/0.1: Invalid: 'settings.os' value not defined" in c.out
 
     def test_config_install_from_pkg_profile(self, client):
         # Now install it
