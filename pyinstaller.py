@@ -22,7 +22,6 @@ import shutil
 import sys
 
 from conans import __version__
-from conans.util.files import save
 
 
 def _run_bin(pyinstaller_path):
@@ -121,6 +120,7 @@ def pyinstall(source_folder, onefile=False):
     else:
         win_ver_file = os.path.join(pyinstaller_path, 'windows-version-file')
         content = _windows_version_file(__version__)
+        from conans.util.files import save
         save(win_ver_file, content)
         win_ver = ["--version-file", win_ver_file]
 
