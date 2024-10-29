@@ -1,8 +1,6 @@
 import os
 import shutil
 
-from jinja2 import Environment, meta, exceptions
-
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.errors import ConanException
@@ -57,25 +55,7 @@ def new(conan_api, parser, *args):
     if not template_files and not non_template_files:
         raise ConanException("Template doesn't exist or not a folder: {}".format(args.template))
 
-    try:
-        template_files = conan_api.new.render(template_files, definitions)
-    except exceptions.UndefinedError:
-        def get_template_vars():
-            template_vars = []
-            for _, templ_str in template_files.items():
-                env = Environment()
-                ast = env.parse(templ_str)
-                template_vars.extend(meta.find_undeclared_variables(ast))
-
-            injected_vars = {"conan_version", "package_name", "as_name"}
-            optional_vars = {"requires", "tool_requires", "output_root_dir"}
-            template_vars = list(set(template_vars) - injected_vars - optional_vars)
-            template_vars.sort()
-            return template_vars
-
-        raise ConanException("Missing definitions for the template. "
-                             "Required definitions are: {}"
-                             .format(", ".join("'{}'".format(var) for var in get_template_vars())))
+    template_files = conan_api.new.render(template_files, definitions)
 
     # Saving the resulting files
     output = ConanOutput()

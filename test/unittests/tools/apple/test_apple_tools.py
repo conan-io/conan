@@ -3,7 +3,7 @@ import pytest
 import textwrap
 
 from conan.internal.internal_tools import is_universal_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conan.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conan.test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun

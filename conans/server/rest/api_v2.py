@@ -1,6 +1,6 @@
 from bottle import Bottle
 
-from conans.errors import EXCEPTION_CODE_MAPPING
+from conan.internal.errors import EXCEPTION_CODE_MAPPING
 from conans.server.rest.bottle_plugins.http_basic_authentication import HttpBasicAuthentication
 from conans.server.rest.bottle_plugins.jwt_authentication import JWTAuthentication
 from conans.server.rest.bottle_plugins.return_handler import ReturnHandlerPlugin

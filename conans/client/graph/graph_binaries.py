@@ -13,8 +13,9 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
-from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
+from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
+    PackageNotFoundException
+from conan.errors import ConanException
 from conans.model.info import RequirementInfo, RequirementsInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -348,8 +349,6 @@ class GraphBinariesAnalyzer:
                 self._get_package_from_remotes(node, remotes, update)
             except NotFoundException:
                 output.warning("Can't update, no package in remote")
-            except NoRemoteAvailable:
-                output.warning("Can't update, there are no remotes configured or enabled")
             else:
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
@@ -470,6 +469,9 @@ class GraphBinariesAnalyzer:
         required_nodes.add(graph.root)
         for node in graph.nodes:
             if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
+                if node.skipped_build_requires:
+                    raise ConanException(f"Package {node.ref} skipped its test/tool requires with "
+                                         f"tools.graph:skip_build, but was marked to be built ")
                 can_skip = node.conanfile.conf.get("tools.graph:skip_binaries",
                                                    check_type=bool, default=True)
                 # Only those that are forced to build, not only "missing"

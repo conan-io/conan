@@ -1,7 +1,7 @@
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 """
     foo-config-version.cmake

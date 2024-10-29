@@ -3,7 +3,7 @@ from pathlib import Path
 
 from conan.api.output import ConanOutput, Color
 from conans.client.subsystems import command_env_wrapper
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
@@ -74,6 +74,7 @@ class ConanFile:
     buildenv_info = None
     runenv_info = None
     conf_info = None
+    generator_info = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name

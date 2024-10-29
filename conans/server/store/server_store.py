@@ -1,7 +1,8 @@
 import os
 from os.path import join, normpath, relpath
 
-from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
+from conan.internal.errors import RecipeNotFoundException, PackageNotFoundException
+from conan.errors import ConanException
 from conan.internal.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

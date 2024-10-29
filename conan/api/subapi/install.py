@@ -6,7 +6,7 @@ from conan.internal.deploy import do_deploys
 
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.installer import BinaryInstaller
-from conans.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration
 
 
 class InstallAPI:

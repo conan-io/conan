@@ -6,7 +6,8 @@ from unittest import mock
 import pytest
 from bottle import static_file, HTTPError, request
 
-from conans.errors import NotFoundException, ConanException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, StoppableThreadBottle

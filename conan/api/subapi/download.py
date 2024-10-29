@@ -5,7 +5,7 @@ from typing import Optional, List
 from conan.api.model import Remote, PackagesList
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 

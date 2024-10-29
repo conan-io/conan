@@ -274,11 +274,11 @@ class CppStdBlock(Block):
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
         function(conan_modify_std_watch variable access value current_list_file stack)
-            set(conan_watched_std_variable {{ cppstd }})
+            set(conan_watched_std_variable "{{ cppstd }}")
             if (${variable} STREQUAL "CMAKE_C_STANDARD")
-                set(conan_watched_std_variable {{ cstd }})
+                set(conan_watched_std_variable "{{ cstd }}")
             endif()
-            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${conan_watched_std_variable})
+            if ("${access}" STREQUAL "MODIFIED_ACCESS" AND NOT "${value}" STREQUAL "${conan_watched_std_variable}")
                 message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${conan_watched_std_variable} has been modified to ${value} by ${current_list_file}")
             endif()
             unset(conan_watched_std_variable)
@@ -520,6 +520,10 @@ class AppleSystemBlock(Block):
 class FindFiles(Block):
     template = textwrap.dedent("""\
         # Define paths to find packages, programs, libraries, etc.
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake")
+          include("${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+        else()
 
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
@@ -578,6 +582,7 @@ class FindFiles(Block):
             set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         endif()
         {% endif %}
+        endif()
     """)
 
     def _runtime_dirs_value(self, dirs):
@@ -879,6 +884,12 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                compilers["C"] = "cl"
+                compilers["CXX"] = "cl"
         return {"compilers": compilers}
 
 
