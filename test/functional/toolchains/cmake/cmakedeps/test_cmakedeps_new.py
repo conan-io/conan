@@ -248,6 +248,29 @@ class TestLibs:
         assert "gamelib/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
 
+    def test_libs_no_location(self):
+        # https://github.com/conan-io/conan/issues/17256
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                settings = "build_type"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+            """)
+
+        c.save({"dep/conanfile.py": dep,
+                "app/conanfile.py": GenConanfile().with_requires("dep/0.1")
+                                                  .with_settings("build_type")})
+
+        c.run("create dep")
+        c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps",
+              assert_error=True)
+        assert "ERROR: Error in generator 'CMakeDeps': dep/0.1: Cannot obtain 'location' " \
+               "for library 'dep'" in c.out
+
 
 class TestLibsLinkageTraits:
     def test_linkage_shared_static(self):

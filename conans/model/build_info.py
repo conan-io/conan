@@ -481,7 +481,8 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def deduce_locations(self, pkg_type):
+    def deduce_locations(self, conanfile):
+        pkg_type = conanfile.package_type
         if self._exe:   # exe is a new field, it should have the correct location
             return
         if self._location or self._link_location:
@@ -519,10 +520,11 @@ class _Component:
         static_location = _find_matching(static_patterns, libdirs)
         shared_location = _find_matching(shared_patterns, libdirs)
         dll_location = _find_matching(dll_patterns, bindirs)
+        out = ConanOutput(scope=str(conanfile))
         if static_location:
             if shared_location:
-                ConanOutput().warning(f"Lib {libname} has both static {static_location} and "
-                                      f"shared {shared_location} in the same package")
+                out.warning(f"Lib {libname} has both static {static_location} and "
+                            f"shared {shared_location} in the same package")
                 if pkg_type is PackageType.STATIC:
                     self._location = static_location
                     self._type = PackageType.STATIC
@@ -543,9 +545,13 @@ class _Component:
             # Only .dll but no link library
             self._location = dll_location
             self._type = PackageType.SHARED
+        if not self._location:
+            raise ConanException(f"{conanfile}: Cannot obtain 'location' for library '{libname}' "
+                                 f"in {libdirs}. You can specify 'cpp_info.location' directly "
+                                 f"or report in github.com/conan-io/conan/issues if you think it "
+                                 f"should have been deduced correctly.")
         if self._type != pkg_type:
-            ConanOutput().warning(f"Lib {libname} deduced as '{self._type}, "
-                                  f"but 'package_type={pkg_type}'")
+            out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
 
 
 class CppInfo:
@@ -717,8 +723,6 @@ class CppInfo:
         return ret
 
     def deduce_full_cpp_info(self, conanfile):
-        pkg_type = conanfile.package_type
-
         result = CppInfo()  # clone it
 
         if self.libs and len(self.libs) > 1:  # expand in multiple components
@@ -744,8 +748,8 @@ class CppInfo:
             result.default_components = self.default_components
             result.components = {k: v.clone() for k, v in self.components.items()}
 
-        result._package.deduce_locations(pkg_type)
+        result._package.deduce_locations(conanfile)
         for comp in result.components.values():
-            comp.deduce_locations(pkg_type)
+            comp.deduce_locations(conanfile)
 
         return result
