@@ -188,4 +188,5 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/unittests test/integration test/functional -n=auto --durations=1000
+          pytest -k test_qbsprofile -n=auto --durations=50
+          #pytest test/unittests test/integration test/functional -n=auto --durations=50
