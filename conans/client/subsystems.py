@@ -128,6 +128,7 @@ def deduce_subsystem(conanfile, scope):
     - Aggregation of envfiles: to map each aggregated path to the subsystem
     - unix_path: util for recipes
     """
+    scope = scope or "build"  # let's assume build context is scope=None
     if scope.startswith("build"):
         the_os = conanfile.settings_build.get_safe("os")
         if the_os is None:
