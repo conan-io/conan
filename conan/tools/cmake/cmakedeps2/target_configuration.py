@@ -39,7 +39,11 @@ class TargetConfigurationTemplate2:
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            return [f"{d.ref.name}::{d.ref.name}" for d in transitive_reqs.values()]
+            targets = []
+            for d in transitive_reqs.values():
+                dep_target = self._cmakedeps.get_property("cmake_target_name", d)
+                targets.append(dep_target or f"{d.ref.name}::{d.ref.name}")
+            return targets
 
         for required_pkg, required_comp in requires:
             if required_pkg is None:  # Points to a component of same package

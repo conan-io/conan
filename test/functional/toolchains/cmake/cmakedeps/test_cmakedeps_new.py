@@ -254,7 +254,10 @@ class TestLibs:
         assert "gamelib/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
 
+
+class TestLibsIntegration:
     def test_libs_no_location(self):
+        # Integration test
         # https://github.com/conan-io/conan/issues/17256
         c = TestClient()
         dep = textwrap.dedent("""
@@ -276,6 +279,32 @@ class TestLibs:
               assert_error=True)
         assert "ERROR: Error in generator 'CMakeDeps': dep/0.1: Cannot obtain 'location' " \
                "for library 'dep'" in c.out
+
+    def test_custom_file_targetname(self):
+        # Integration test
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                settings = "build_type"
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_name", "MyDep")
+                    self.cpp_info.set_property("cmake_target_name", "MyTargetDep")
+                """)
+
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1"),
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+               .with_settings("build_type")})
+
+        c.run("create dep")
+        c.run("create pkg")
+        c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
+        targets_cmake = c.load("app/pkg-Targets-release.cmake")
+        assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
+        assert "target_link_libraries(pkg::pkg INTERFACE MyTargetDep)" in targets_cmake
 
 
 class TestLibsLinkageTraits:
