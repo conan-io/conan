@@ -4,6 +4,7 @@ import sys
 import time
 from threading import Lock
 
+import colorama
 from colorama import Fore, Style
 
 from conan.errors import ConanException
@@ -283,15 +284,15 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
     """
     Output to be used by formatters to dump information to stdout
     """
-
-    fg_ = fg or ''
-    bg_ = bg or ''
-    if (fg or bg) and _color_enabled(sys.stdout):
-        data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
+    if (fg or bg) and _color_enabled(sys.stdout):  # need color
+        data = f"{' ' * indentation}{fg or ''}{bg or ''}{data}{Style.RESET_ALL}{endline}"
+        sys.stdout.write(data)
     else:
         data = f"{' ' * indentation}{data}{endline}"
-
-    sys.stdout.write(data)
+        # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
+        colorama.deinit()
+        sys.stdout.write(data)
+        colorama.reinit()
 
 
 class TimedOutput:
