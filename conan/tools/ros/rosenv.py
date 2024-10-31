@@ -8,19 +8,24 @@ from conan.tools.files import save
 class ROSEnv:
     """
     Generator to serve as integration for Robot Operating System 2 development workspaces.
-    It generates a conanrosenv.sh file that when sources sets variables so the Conan
-    dependencies are found by CMake and the run environment is also set.
 
     IMPORTANT: This generator should be used together with CMakeDeps and CMakeToolchain generators.
     """
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.variables = {}
         self._build_script_file = "conanrosenv-build.sh"
         self._wrapper_script_file = "conanrosenv.sh"
 
     def generate(self):
+        """
+        Creates a ``conanrosenv.sh`` with the environment variables that are needed to build and
+        execute ROS packages with Conan dependencies.
+        """
         cmake_toolchain_path = os.path.join(self._conanfile.generators_folder,
                                             "conan_toolchain.cmake")
         self.variables["CMAKE_TOOLCHAIN_FILE"] = f"\"{cmake_toolchain_path}\""
