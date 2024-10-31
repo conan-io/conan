@@ -91,6 +91,8 @@ class TestExes:
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmake}, clean_first=True)
         c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(mytool)" in c.out
+        assert "target_link_libraries(..." not in c.out
         assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
         assert "Mytool generating out.c!!!!!" in c.out
 
@@ -197,6 +199,8 @@ class TestLibs:
         c = matrix_client
         c.run("new cmake_lib -d name=app -d version=0.1 -d requires=matrix/1.0")
         c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(matrix)" in c.out
+        assert "target_link_libraries(... matrix::matrix)" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
 
     @pytest.mark.parametrize("shared", [False, True])
@@ -205,6 +209,8 @@ class TestLibs:
         c.run("new cmake_lib -d name=app -d version=0.1 -d requires=engine/1.0")
         shared = "-o engine/*:shared=True" if shared else ""
         c.run(f"build . {shared} -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(engine)" in c.out
+        assert "target_link_libraries(... engine::engine)" in c.out
         if shared:
             assert "matrix::matrix" not in c.out  # It is hidden as static behind the engine
             assert "Conan: Target declared imported SHARED library 'engine::engine'" in c.out
@@ -322,6 +328,8 @@ class TestLibsComponents:
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(matrix)" in c.out
+        assert "target_link_libraries(... matrix::matrix)" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         if platform.system() == "Windows":
@@ -440,6 +448,7 @@ class TestLibsComponents:
                   cmake.install()
 
               def package_info(self):
+                  self.cpp_info.set_property("cmake_file_name", "MyEngine")
                   self.cpp_info.components["bots"].libs = ["bots"]
                   self.cpp_info.components["bots"].includedirs = ["include"]
                   self.cpp_info.components["bots"].libdirs = ["lib"]
@@ -493,7 +502,7 @@ class TestLibsComponents:
             cmake_minimum_required(VERSION 3.15)
             project(app CXX)
 
-            find_package(engine CONFIG REQUIRED)
+            find_package(MyEngine CONFIG REQUIRED)
 
             add_executable(app src/app.cpp)
             target_link_libraries(app PRIVATE engine::bots)
@@ -507,6 +516,7 @@ class TestLibsComponents:
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
         c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(MyEngine)" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::module'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out

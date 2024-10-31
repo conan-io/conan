@@ -192,6 +192,7 @@ class TargetConfigurationTemplate2:
         """
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
+        # TODO: What if an exe target is called like the pkg_name::pkg_name
         if libs and root_target_name not in libs:
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
