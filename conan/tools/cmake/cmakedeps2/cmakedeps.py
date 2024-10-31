@@ -71,6 +71,10 @@ class CMakeDeps2:
             target_configuration = TargetConfigurationTemplate2(self, dep, require)
             ret[target_configuration.filename] = target_configuration.content()
 
+        self._print_help(direct_deps)
+        return ret
+
+    def _print_help(self, direct_deps):
         if direct_deps:
             msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
             targets = []
@@ -85,7 +89,6 @@ class CMakeDeps2:
                 self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
             else:
                 self._conanfile.output.verbose("\n".join(msg))
-        return ret
 
     def set_property(self, dep, prop, value, build_context=False):
         """
