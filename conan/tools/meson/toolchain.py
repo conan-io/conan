@@ -156,7 +156,7 @@ class MesonToolchain(object):
         self._conanfile = conanfile
         self._native = native
         self._is_apple_system = is_apple_os(self._conanfile)
-        is_cross_building = cross_building(conanfile, skip_x64_x86=True)
+        is_cross_building = cross_building(conanfile)  # x86_64->x86 is considered cross-building
         if not is_cross_building and native:
             raise ConanException("You can only pass native=True if you're cross-building, "
                                  "otherwise, it could cause unexpected results.")
