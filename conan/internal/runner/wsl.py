@@ -1,6 +1,6 @@
 from pathlib import PurePosixPath, PureWindowsPath, Path
 from conan.api.output import Color, ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.runners import conan_run
 from conans.client.subsystems import subsystem_path
 from conan.tools.files import save
@@ -61,7 +61,7 @@ class WSLRunner:
                 create_json_wsl = subsystem_path("wsl", create_json)
                 pkglist_json = PureWindowsPath(tmp_dir).joinpath("pkglist.json").as_posix()
                 pkglist_json_wsl = subsystem_path("wsl", pkglist_json)
-                
+
                 saved_cache = PureWindowsPath(tmp_dir).joinpath("saved_cache.tgz").as_posix()
                 saved_cache_wsl = subsystem_path("wsl", saved_cache)
                 conan_run(f"wsl.exe --cd {tmp_dir_wsl} -- CONAN_RUNNER_ENVIRONMENT=1 CONAN_HOME={self.remote_conan_home} {self.remote_conan} list --graph={create_json_wsl} --format=json > {pkglist_json}")
@@ -89,7 +89,7 @@ class WSLRunner:
         self.remote_conan_home = conan_home
 
         has_conan = conan_run(f"wsl.exe CONAN_HOME={conan_home.as_posix()} {remote_conan} --version", stdout=stdout, stderr=stderr) == 0
-        
+
         if not has_conan:
             wsl_info("Bootstrapping Conan in remote")
             conan_run(f"wsl.exe mkdir -p {remote_home}/.conan2remote")
@@ -109,7 +109,7 @@ class WSLRunner:
         # If this command succeeds, great - if not because it already exists, ignore
         conan_run(f"wsl.exe CONAN_HOME={conan_home.as_posix()} {remote_conan} profile detect", stdout=stdout, stderr=stderr)
 
-       
+
         conf_content = f"core.cache:storage_path={self.remote_conan_cache}\n"  if self.shared_cache else ""
         with tempfile.TemporaryDirectory() as tmp:
             global_conf = os.path.join(tmp, "global.conf")
@@ -117,7 +117,7 @@ class WSLRunner:
             global_conf_wsl = subsystem_path("wsl", global_conf)
             remote_global_conf = self.remote_conan_home.joinpath("global.conf")
             conan_run(f"wsl.exe cp {global_conf_wsl} {remote_global_conf}")
- 
+
         self._copy_profiles()
 
     def _copy_profiles(self):
@@ -137,7 +137,7 @@ class WSLRunner:
                 save(None, path=outfile, content=contents)
                 outfile_wsl = subsystem_path("wsl", outfile)
                 remote_profile = self.remote_conan_home.joinpath("profiles").as_posix() + "/"
-                
+
                 # This works but copies the file with executable attribute
                 conan_run(f"wsl.exe cp {outfile_wsl} {remote_profile}")
 

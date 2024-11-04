@@ -123,3 +123,29 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1")
         self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+
+
+def test_config_options_override_behaviour():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "1.0"
+
+        options = {"foo": [1, 2, 3]}
+        default_options = {"foo": 1}
+
+        def config_options(self):
+            self.options.foo = 2
+
+        def build(self):
+            self.output.info(f"Foo: {self.options.foo}")
+    """)})
+
+    tc.run("create .")
+    assert "Foo: 2" in tc.out
+
+    tc.run("create . -o=&:foo=3")
+    assert "Foo: 3" in tc.out

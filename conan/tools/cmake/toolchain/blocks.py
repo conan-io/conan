@@ -274,11 +274,11 @@ class CppStdBlock(Block):
         # Define the C++ and C standards from 'compiler.cppstd' and 'compiler.cstd'
 
         function(conan_modify_std_watch variable access value current_list_file stack)
-            set(conan_watched_std_variable {{ cppstd }})
+            set(conan_watched_std_variable "{{ cppstd }}")
             if (${variable} STREQUAL "CMAKE_C_STANDARD")
-                set(conan_watched_std_variable {{ cstd }})
+                set(conan_watched_std_variable "{{ cstd }}")
             endif()
-            if (${access} STREQUAL "MODIFIED_ACCESS" AND NOT ${value} STREQUAL ${conan_watched_std_variable})
+            if ("${access}" STREQUAL "MODIFIED_ACCESS" AND NOT "${value}" STREQUAL "${conan_watched_std_variable}")
                 message(STATUS "Warning: Standard ${variable} value defined in conan_toolchain.cmake to ${conan_watched_std_variable} has been modified to ${value} by ${current_list_file}")
             endif()
             unset(conan_watched_std_variable)
@@ -520,6 +520,10 @@ class AppleSystemBlock(Block):
 class FindFiles(Block):
     template = textwrap.dedent("""\
         # Define paths to find packages, programs, libraries, etc.
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake")
+          include("${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+        else()
 
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
@@ -578,6 +582,7 @@ class FindFiles(Block):
             set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         endif()
         {% endif %}
+        endif()
     """)
 
     def _runtime_dirs_value(self, dirs):
@@ -700,6 +705,7 @@ class UserToolchain(Block):
         # Include one or more CMake user toolchain from tools.cmake.cmaketoolchain:user_toolchain
 
         {% for user_toolchain in paths %}
+        message(STATUS "Conan toolchain: Including user_toolchain: {{user_toolchain}}")
         include("{{user_toolchain}}")
         {% endfor %}
         """)
@@ -878,6 +884,12 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                compilers["C"] = "cl"
+                compilers["CXX"] = "cl"
         return {"compilers": compilers}
 
 
@@ -890,13 +902,19 @@ class GenericSystemBlock(Block):
         {% endif %}
         {% if cmake_system_name %}
         # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
+        endif()
         {% endif %}
         {% if cmake_system_version %}
+        if(NOT DEFINED CMAKE_SYSTEM_VERSION) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_VERSION {{ cmake_system_version }})
+        endif()
         {% endif %}
         {% if cmake_system_processor %}
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
+        endif()
         {% endif %}
 
         {% if generator_platform and not winsdk_version %}
@@ -1042,15 +1060,13 @@ class GenericSystemBlock(Block):
         return version_mapping.get(os_name, {}).get(str(os_version))
 
     def _get_cross_build(self):
-        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-
         system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         # try to detect automatically
-        if not user_toolchain and not is_universal_arch(self._conanfile.settings.get_safe("arch"),
-                                                        self._conanfile.settings.possible_values().get("arch")):
+        if not is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                                 self._conanfile.settings.possible_values().get("arch")):
             os_host = self._conanfile.settings.get_safe("os")
             os_host_version = self._conanfile.settings.get_safe("os.version")
             arch_host = self._conanfile.settings.get_safe("arch")
@@ -1073,7 +1089,6 @@ class GenericSystemBlock(Block):
                     else:
                         _system_processor = arch_host
                     _system_version = os_host_version
-
 
                 if system_name is not None and system_version is None:
                     system_version = _system_version

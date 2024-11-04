@@ -28,6 +28,57 @@ def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
     assert expected_import in toolchain
 
 
+@pytest.mark.parametrize(
+    "build_type,arch,configuration,exp_platform",
+    [
+        ("Release", "x86", "Release - Test", "Win32"),
+        ("Debug", "x86_64", "Debug - Test", "x64"),
+    ],
+)
+@pytest.mark.parametrize(
+    "config_key,platform_key",
+    [
+        ("GlobalConfiguration", "GlobalPlatform"),
+        (None, None),
+    ],
+)
+def test_msbuilddeps_import_condition(build_type, arch, configuration, exp_platform, config_key, platform_key):
+    client = TestClient()
+    app = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.microsoft import MSBuildDeps
+        class App(ConanFile):
+            requires = ("lib/0.1")
+            settings = "arch", "build_type"
+            options = {{"configuration": ["ANY"],
+                       "platform": ["Win32", "x64"]}}
+
+            def generate(self):
+                ms = MSBuildDeps(self)
+                ms.configuration_key = "{config_key}"
+                ms.configuration = self.options.configuration
+                ms.platform_key = "{platform_key}"
+                ms.platform = self.options.platform
+                ms.generate()
+        """)
+    
+    # Remove custom set of keys to test default values
+    app = app.replace(f'ms.configuration_key = "{config_key}"', "") if config_key is None else app
+    app = app.replace(f'ms.platform_key = "{platform_key}"', "") if platform_key is None else app
+    config_key_expected = "Configuration" if config_key is None else config_key
+    platform_key_expected = "Platform" if platform_key is None else platform_key
+    
+    client.save({"app/conanfile.py": app, 
+                 "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("header-library")})
+    client.run("create lib")
+    client.run(f'install app -s build_type={build_type} -s arch={arch} -o *:platform={exp_platform} -o *:configuration="{configuration}"')
+
+    assert os.path.exists(os.path.join(client.current_folder, "app", "conan_lib.props"))
+    dep = client.load(os.path.join(client.current_folder, "app", "conan_lib.props"))
+    expected_import = f"""<Import Condition="'$({config_key_expected})' == '{configuration}' And '$({platform_key_expected})' == '{exp_platform}'" Project="conan_lib_{configuration.lower()}_{exp_platform.lower()}.props"/>"""
+    assert expected_import in dep
+
+
 def test_msbuilddeps_format_names():
     c = TestClient()
     conanfile = textwrap.dedent("""

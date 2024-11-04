@@ -1,18 +1,17 @@
 import os
 import time
-from copy import copy
 
 from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
-from conans.errors import AuthenticationException, ConanException, \
-    NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
+from conan.internal.errors import InternalErrorException, RequestErrorException, AuthenticationException, \
+    ForbiddenException, NotFoundException
+from conan.errors import ConanException
 from conans.util.files import sha1sum
 
 
 class FileUploader(object):
 
     def __init__(self, requester, verify, config, source_credentials=None):
-        self._output = ConanOutput()
         self._requester = requester
         self._config = config
         self._verify_ssl = verify
@@ -27,7 +26,7 @@ class FileUploader(object):
             raise AuthenticationException(response_to_str(response))
 
         if response.status_code == 403:
-            if auth is None or auth.token is None:
+            if auth is None or auth.bearer is None:
                 raise AuthenticationException(response_to_str(response))
             raise ForbiddenException(response_to_str(response))
 
@@ -54,15 +53,14 @@ class FileUploader(object):
         return bool(response.ok)
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None, ref=None):
+               ref=None):
         retry = retry if retry is not None else self._config.get("core.upload:retry", default=1,
                                                                  check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
             self._config.get("core.upload:retry_wait", default=5, check_type=int)
 
         # Send always the header with the Sha1
-        headers = copy(headers) or {}
-        headers["X-Checksum-Sha1"] = sha1sum(abs_path)
+        headers = {"X-Checksum-Sha1": sha1sum(abs_path)}
         if dedup:
             response = self._dedup(url, headers, auth)
             if response:
@@ -78,9 +76,8 @@ class FileUploader(object):
                 if counter == retry:
                     raise
                 else:
-                    if self._output:
-                        self._output.warning(exc, warn_tag="network")
-                        self._output.info("Waiting %d seconds to retry..." % retry_wait)
+                    ConanOutput().warning(exc, warn_tag="network")
+                    ConanOutput().info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
     def _upload_file(self, url, abs_path, headers, auth, ref):

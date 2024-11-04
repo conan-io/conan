@@ -3,7 +3,7 @@ import fnmatch
 import re
 from functools import total_ordering
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 from conans.util.dates import timestamp_to_str
 
@@ -120,7 +120,7 @@ class RecipeReference:
                 user = channel = None
             return RecipeReference(name, version, user, channel, revision, timestamp)
         except Exception:
-            from conans.errors import ConanException
+            from conan.errors import ConanException
             raise ConanException(
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")

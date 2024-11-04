@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.conf import ConfDefinition
 
 

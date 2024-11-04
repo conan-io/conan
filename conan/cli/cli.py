@@ -18,7 +18,6 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
 from conan.internal.cache.home_paths import HomePaths
 from conans import __version__ as client_version
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
-from conans.util.files import exception_message_safe
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
@@ -231,8 +230,7 @@ class Cli:
 
         assert isinstance(exception, Exception)
         output.error(traceback.format_exc(), error_type="exception")
-        msg = exception_message_safe(exception)
-        output.error(msg, error_type="exception")
+        output.error(str(exception), error_type="exception")
         return ERROR_UNEXPECTED
 
 

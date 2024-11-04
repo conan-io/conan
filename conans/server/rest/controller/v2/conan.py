@@ -1,6 +1,6 @@
 from bottle import request
 
-from conans.errors import NotFoundException
+from conan.internal.errors import NotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controller.v2 import get_package_ref

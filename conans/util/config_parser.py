@@ -1,6 +1,6 @@
 import re
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class ConfigParser(object):

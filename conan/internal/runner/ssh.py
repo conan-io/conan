@@ -3,7 +3,7 @@ import pathlib
 import tempfile
 
 from conan.api.output import Color, ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 import os
 from io import BytesIO

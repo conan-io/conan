@@ -119,8 +119,16 @@ def test_cross_build_user_toolchain():
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert "CMAKE_SYSTEM_NAME " not in toolchain
-    assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
+    # Fixed in https://github.com/conan-io/conan/issues/16807
+    expected = textwrap.dedent("""\
+        # Cross building
+        if(NOT DEFINED CMAKE_SYSTEM_NAME) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_NAME Linux)
+        endif()
+        if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR) # It might have been defined by a user toolchain
+        set(CMAKE_SYSTEM_PROCESSOR aarch64)
+        endif()""")
+    assert expected in toolchain
 
 
 def test_cross_build_user_toolchain_confs():

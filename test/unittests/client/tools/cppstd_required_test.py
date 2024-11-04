@@ -4,7 +4,7 @@ from parameterized import parameterized
 
 from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd
 from conan.test.utils.mocks import MockSettings, ConanFileMock
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanException, ConanInvalidConfiguration
 
 
 def _create_conanfile(compiler, version, os, cppstd, libcxx=None):

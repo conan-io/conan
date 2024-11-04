@@ -1,6 +1,6 @@
 from bottle import response
 
-from conans.errors import AuthenticationException
+from conan.internal.errors import AuthenticationException
 
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.user_service import UserService

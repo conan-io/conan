@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 universal_arch_separator = '|'
 
