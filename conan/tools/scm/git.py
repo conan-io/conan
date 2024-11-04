@@ -92,10 +92,6 @@ class Git:
                     url = url.replace("\\", "/")
                 return url
 
-    def get_branch(self):
-        branch = self.run("branch --show-current")
-        return branch
-
     def commit_in_remote(self, commit, remote="origin"):
         """
         Checks that the given commit exists in the remote, with ``branch -r --contains <commit>``
@@ -241,20 +237,13 @@ class Git:
         self.run(f'fetch --depth 1 origin {commit}')
         self.run('checkout FETCH_HEAD')
 
-    def checkout(self, commit, branch=None):
+    def checkout(self, commit):
         """
         Checkouts the given commit using ``git checkout <commit>``.
 
         :param commit: Commit to checkout.
-        :param branch:
         """
         self._conanfile.output.info("Checkout: {}".format(commit))
-        if branch:
-            self._conanfile.output.info(f"Branch: {branch}")
-            self.run(f"checkout {branch}")
-            current_commit = self.get_commit()
-            if current_commit == commit:
-                return
         self.run('checkout {}'.format(commit))
 
     def included_files(self):

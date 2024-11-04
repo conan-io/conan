@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from conans.client.loader import load_python_file
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load, save
 
 

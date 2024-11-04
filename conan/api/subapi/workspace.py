@@ -5,8 +5,8 @@ from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conan.internal.workspace import Workspace
 from conan.tools.scm import Git
+from conan.errors import ConanException
 from conans.client.source import retrieve_exports_sources
-from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import merge_directories
 
@@ -55,7 +55,7 @@ class WorkspaceAPI:
             git = Git(conanfile, folder=cwd)
             git.clone(url=scm["url"], target=ref.name)
             git.folder = ref.name  # change to the cloned folder
-            git.checkout(commit=scm["commit"], branch=scm.get("branch"))
+            git.checkout(commit=scm["commit"])
         return dst_path
 
     def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,

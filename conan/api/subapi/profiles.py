@@ -118,9 +118,6 @@ class ProfilesAPI:
         """
         cwd = cwd or os.getcwd()
         profiles_folder = self._home_paths.profiles_path
-        workspace_config = self._conan_api.workspace.config_folder
-        if workspace_config:
-            profiles_folder = [workspace_config, profiles_folder]
         profile_path = ProfileLoader.get_profile_path(profiles_folder, profile, cwd, exists=exists)
         return profile_path
 

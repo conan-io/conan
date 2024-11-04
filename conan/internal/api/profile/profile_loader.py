@@ -79,7 +79,7 @@ class ProfileLoader:
     def __init__(self, cache_folder):
         self._home_paths = HomePaths(cache_folder)
 
-    def from_cli_args(self, profiles, settings, options, conf, cwd, extra_folders=None):
+    def from_cli_args(self, profiles, settings, options, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
@@ -88,27 +88,25 @@ class ProfileLoader:
 
         result = Profile()
         for p in profiles:
-            tmp = self.load_profile(p, cwd, extra_folders)
+            tmp = self.load_profile(p, cwd)
             result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
         return result
 
-    def load_profile(self, profile_name, cwd=None, extra_folders=None):
+    def load_profile(self, profile_name, cwd=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile = self._load_profile(profile_name, cwd, extra_folders)
+        profile = self._load_profile(profile_name, cwd)
         return profile
 
-    def _load_profile(self, profile_name, cwd, extra_folders):
+    def _load_profile(self, profile_name, cwd):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
         """
         profiles_folder = self._home_paths.profiles_path
-        if extra_folders:
-            profiles_folder = extra_folders
         profile_path = self.get_profile_path(profiles_folder, profile_name, cwd)
         try:
             text = load_user_encoded(profile_path)
@@ -134,11 +132,11 @@ class ProfileLoader:
                                  f"Check your Jinja2 syntax: {str(e)}")
 
         try:
-            return self._recurse_load_profile(text, profile_path, extra_folders)
+            return self._recurse_load_profile(text, profile_path)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
-    def _recurse_load_profile(self, text, profile_path, extra_folders):
+    def _recurse_load_profile(self, text, profile_path):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -150,7 +148,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.includes:
                 # Recursion !!
-                profile = self._load_profile(include, cwd, extra_folders)
+                profile = self._load_profile(include, cwd)
                 inherited_profile.compose_profile(profile)
 
             # Current profile before update with parents (but parent variables already applied)
@@ -175,10 +173,6 @@ class ProfileLoader:
         if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
             return valid_path(profile_path, profile_name)
-
-        if isinstance(profiles_path, list):
-            for profile_path in profiles_path:
-                full_path = os.path.join(profile_path, profile_name)
 
         default_folder = profiles_path
         if not os.path.exists(default_folder):

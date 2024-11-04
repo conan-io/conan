@@ -6,7 +6,7 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args
 from conan.cli.command import conan_command, conan_subcommand
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
@@ -62,6 +62,7 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
     cwd = os.getcwd()
     path = args.path
     if args.ref:
+        # TODO: Use path here to open in this path
         path = conan_api.workspace.open(args.ref, remotes, cwd=cwd)
     ref = conan_api.workspace.add(path,
                                   args.name, args.version, args.user, args.channel,
@@ -77,6 +78,7 @@ def workspace_remove(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument('path', help='Path to the package folder in the user workspace')
     args = parser.parse_args(*args)
     conan_api.workspace.remove(make_abs_path(args.path))
+    # TODO: Message
     ConanOutput().info("Removed {")
 
 
