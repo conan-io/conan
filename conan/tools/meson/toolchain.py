@@ -447,7 +447,8 @@ class MesonToolchain:
     def _sanitize_env_format(value):
         if value is None or isinstance(value, list):
             return value
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise ConanException(f"MesonToolchain: Value '{value}' should be a string")
         ret = [x.strip() for x in value.split() if x]
         return ret[0] if len(ret) == 1 else ret
 
