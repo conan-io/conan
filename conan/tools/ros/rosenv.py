@@ -28,7 +28,7 @@ class ROSEnv:
         """
         cmake_toolchain_path = os.path.join(self._conanfile.generators_folder,
                                             "conan_toolchain.cmake")
-        self.variables["CMAKE_TOOLCHAIN_FILE"] = f"\"{cmake_toolchain_path}\""
+        self.variables["CMAKE_TOOLCHAIN_FILE"] = cmake_toolchain_path
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type:
             self.variables["CMAKE_BUILD_TYPE"] = build_type
