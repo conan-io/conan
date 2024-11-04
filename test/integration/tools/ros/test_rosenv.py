@@ -34,7 +34,7 @@ def test_rosenv():
     assert os.path.exists(conanrosenvbuild_path)
     client.run_command(f". \"{conanrosenv_path}\" && env")
     toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
-    assert f"CMAKE_TOOLCHAIN_FILE=\"{toolchain_path}\"" in client.out
+    assert f"CMAKE_TOOLCHAIN_FILE={toolchain_path}" in client.out
     assert "CMAKE_BUILD_TYPE=Release" in client.out
 
 
