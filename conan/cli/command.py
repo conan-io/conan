@@ -105,6 +105,7 @@ class BaseConanCommand:
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
 
+
 class ConanArgumentParser(argparse.ArgumentParser):
 
     def __init__(self, conan_api, *args, **kwargs):
@@ -113,7 +114,7 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
         if args.core_conf:
