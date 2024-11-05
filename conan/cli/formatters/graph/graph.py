@@ -104,10 +104,10 @@ class _Grapher(object):
 def _render_graph(graph, error, template, template_folder):
     deps_graph = graph.serialize()
     graph = _Grapher(graph)
-    from conans import __version__ as client_version
+    from conan import __version__
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(deps_graph=deps_graph, graph=graph, error=error,
-                           base_template_path=template_folder, version=client_version)
+                           base_template_path=template_folder, version=__version__)
 
 
 def format_graph_html(result):

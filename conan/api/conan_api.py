@@ -5,7 +5,7 @@ from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
-from conans import __version__ as client_version
+from conan import conan_version
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.download import DownloadAPI
 from conan.api.subapi.export import ExportAPI
@@ -20,7 +20,6 @@ from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conans.client.migrations import ClientMigrator
 from conan.errors import ConanException
-from conans.model.version import Version
 from conan.internal.paths import get_conan_user_home
 from conans.model.version_range import validate_conan_version
 
@@ -37,7 +36,7 @@ class ConanAPI:
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
 
         # Migration system
-        migrator = ClientMigrator(self.cache_folder, Version(client_version))
+        migrator = ClientMigrator(self.cache_folder, conan_version)
         migrator.migrate()
 
         self.command = CommandAPI(self)

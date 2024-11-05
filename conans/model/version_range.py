@@ -1,9 +1,8 @@
 from functools import total_ordering
 from typing import Optional
 
+from conans.model.version import Version
 from conan.errors import ConanException
-from conans.model.recipe_ref import Version
-from conans import __version__ as client_version
 
 
 @total_ordering
@@ -229,7 +228,8 @@ class VersionRange:
 
 
 def validate_conan_version(required_range):
-    clientver = Version(client_version)
+    from conan import __version__  # To avoid circular imports
+    clientver = Version(__version__)
     version_range = VersionRange(required_range)
     for conditions in version_range.condition_sets:
         conditions.prerelease = True

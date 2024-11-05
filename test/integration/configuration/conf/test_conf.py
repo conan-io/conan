@@ -134,7 +134,7 @@ def test_new_config_file(client):
     assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
 
-@patch("conans.model.version_range.client_version", "1.26.0")
+@patch("conan.__version__", "1.26.0")
 def test_new_config_file_required_version():
     client = TestClient()
     conf = textwrap.dedent("""\

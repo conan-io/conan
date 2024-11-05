@@ -1,6 +1,6 @@
 import unittest
 
-from conans import REVISIONS
+from conan.internal import REVISIONS
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
 from collections import namedtuple
 
