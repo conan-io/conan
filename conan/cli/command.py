@@ -1,5 +1,4 @@
 import argparse
-import os
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -98,7 +97,8 @@ class BaseConanCommand:
 
         formatter(info)
 
-    def _dispatch_errors(self, info):
+    @staticmethod
+    def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
                 raise ConanException(info["conan_error"])
