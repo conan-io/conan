@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans import __version__ as client_version
+from conan import __version__
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
@@ -79,7 +79,7 @@ class TestNewCommandUserTemplate:
         conanfile = client.load("conanfile.py")
         assert 'name = "hello"' in conanfile
         assert 'version = "0.1"' in conanfile
-        assert 'conan_version = "{}"'.format(client_version) in conanfile
+        assert 'conan_version = "{}"'.format(__version__) in conanfile
 
     def test_user_template_abs(self):
         tmp_folder = temp_folder()

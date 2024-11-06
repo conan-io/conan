@@ -3,7 +3,7 @@ import copy
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
-from conans.client.conanfile.configure import run_configure_method
+from conan.internal.methods import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM

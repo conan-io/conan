@@ -4,6 +4,7 @@ import sys
 import time
 from threading import Lock
 
+import colorama
 from colorama import Fore, Style
 
 from conan.errors import ConanException
@@ -113,21 +114,26 @@ class ConanOutput:
 
         :param v: `str` or `None`, where `None` is the same as `verbose`.
         """
+        env_level = os.getenv("CONAN_LOG_LEVEL")
+        v = env_level or v
+        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
+                  "error": LEVEL_ERROR,  # -verror 70
+                  "warning": LEVEL_WARNING,  # -vwaring 60
+                  "notice": LEVEL_NOTICE,  # -vnotice 50
+                  "status": LEVEL_STATUS,  # -vstatus 40
+                  None: LEVEL_VERBOSE,  # -v 30
+                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                  "debug": LEVEL_DEBUG,  # -vdebug 20
+                  "v": LEVEL_DEBUG,  # -vv 20
+                  "trace": LEVEL_TRACE,  # -vtrace 10
+                  "vv": LEVEL_TRACE  # -vvv 10
+                  }
         try:
-            level = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                     "error": LEVEL_ERROR,  # -verror 70
-                     "warning": LEVEL_WARNING,  # -vwaring 60
-                     "notice": LEVEL_NOTICE,  # -vnotice 50
-                     "status": LEVEL_STATUS,  # -vstatus 40
-                     None: LEVEL_VERBOSE,  # -v 30
-                     "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                     "debug": LEVEL_DEBUG,  # -vdebug 20
-                     "v": LEVEL_DEBUG,  # -vv 20
-                     "trace": LEVEL_TRACE,  # -vtrace 10
-                     "vv": LEVEL_TRACE  # -vvv 10
-                     }[v]
+            level = levels[v]
         except KeyError:
-            raise ConanException(f"Invalid argument '-v{v}'")
+            msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
+            vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
+            raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
             cls._conan_output_level = level
 
@@ -283,15 +289,15 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
     """
     Output to be used by formatters to dump information to stdout
     """
-
-    fg_ = fg or ''
-    bg_ = bg or ''
-    if (fg or bg) and _color_enabled(sys.stdout):
-        data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
+    if (fg or bg) and _color_enabled(sys.stdout):  # need color
+        data = f"{' ' * indentation}{fg or ''}{bg or ''}{data}{Style.RESET_ALL}{endline}"
+        sys.stdout.write(data)
     else:
         data = f"{' ' * indentation}{data}{endline}"
-
-    sys.stdout.write(data)
+        # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
+        colorama.deinit()
+        sys.stdout.write(data)
+        colorama.reinit()
 
 
 class TimedOutput:

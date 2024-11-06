@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException, ConanInvalidConfiguration
+from conan.internal.methods import auto_header_only_package_id
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
-from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
 def compute_package_id(node, modes, config_version):

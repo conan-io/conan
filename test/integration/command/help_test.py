@@ -1,4 +1,4 @@
-from conans import __version__
+from conan import __version__
 from conan.test.utils.tools import TestClient
 
 
