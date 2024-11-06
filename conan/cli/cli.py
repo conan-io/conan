@@ -245,6 +245,20 @@ def _warn_python_version():
         ConanOutput().warning("*" * 80, warn_tag="deprecated")
 
 
+def _warn_frozen_center(conan_api):
+    remotes = conan_api.remotes.list()
+    for r in remotes:
+        if r.url == "https://center.conan.io":
+            ConanOutput().warning(
+                "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
+                "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"
+                "It is recommended to update to the new remote using the following command:\n"
+                f"'conan remote update {r.name} --url=\"https://center2.conan.io\"'",
+                warn_tag="deprecated"
+            )
+            break
+
+
 def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
@@ -291,6 +305,7 @@ def main(args):
     try:
         cli.run(args)
         _warn_python_version()
+        _warn_frozen_center(conan_api)
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)
