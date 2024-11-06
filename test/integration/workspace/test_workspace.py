@@ -3,11 +3,15 @@ import textwrap
 
 import pytest
 
+from conan.internal.workspace import Workspace
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
+
+
+Workspace.TEST_ENABLED = "will_break_next"
 
 
 class TestHomeRoot:
@@ -17,7 +21,7 @@ class TestHomeRoot:
         folder = temp_folder()
         cwd = os.path.join(folder, "sub1", "sub2")
         save(os.path.join(folder, f"conanws.{ext}"), content)
-        c = TestClient(current_folder=cwd)
+        c = TestClient(current_folder=cwd, light=True)
         c.run("config home")
         assert os.path.join(folder, "myhome") in c.stdout
 
@@ -30,12 +34,12 @@ class TestHomeRoot:
             """)
         save(os.path.join(folder, f"conanws.py"), conanwspy)
         save(os.path.join(folder, "conanws.yml"), "home_folder: myhome")
-        c = TestClient(current_folder=cwd)
+        c = TestClient(current_folder=cwd, light=True)
         c.run("config home")
         assert os.path.join(folder, "newmyhome") in c.stdout
 
     def test_workspace_root(self):
-        c = TestClient()
+        c = TestClient(light=True)
         # Just check the root command works
         c.run("workspace root", assert_error=True)
         assert "ERROR: No workspace defined, conanws.py file not found" in c.out
@@ -51,7 +55,7 @@ class TestHomeRoot:
 class TestAddRemove:
 
     def test_add(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanws.py": "name='myws'",
                 "dep1/conanfile.py": GenConanfile("dep1", "0.1"),
                 "dep2/conanfile.py": GenConanfile("dep2", "0.1"),
@@ -59,7 +63,6 @@ class TestAddRemove:
         c.run("workspace add dep1")
         assert "Reference 'dep1/0.1' added to workspace" in c.out
         c.run("editable list")
-        assert "Workspace: myws" in c.out
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
         c.run("workspace add dep2")
@@ -90,17 +93,17 @@ class TestAddRemove:
 
 class TestOpenAdd:
     def test_without_git(self):
-        t = TestClient(default_server_user=True)
+        t = TestClient(default_server_user=True, light=True)
         t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         t.run("create .")
         t.run("upload * -r=default -c")
 
-        c = TestClient(servers=t.servers)
+        c = TestClient(servers=t.servers, light=True)
         c.run(f"workspace open pkg/0.1")
         assert "name = 'pkg'" in c.load("pkg/conanfile.py")
 
         # The add should work the same
-        c2 = TestClient(servers=t.servers)
+        c2 = TestClient(servers=t.servers, light=True)
         c2.save({"conanws.py": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert "name = 'pkg'" in c2.load("pkg/conanfile.py")
@@ -108,7 +111,7 @@ class TestOpenAdd:
         assert "pkg/0.1" in c2.out
 
     def test_without_git_export_sources(self):
-        t = TestClient(default_server_user=True)
+        t = TestClient(default_server_user=True, light=True)
         t.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports_sources("*.txt"),
                 "CMakeLists.txt": "mycmake"})
         t.run("create .")
@@ -134,16 +137,16 @@ class TestOpenAdd:
             """)
         url, commit = create_local_git_repo(files={"conanfile.py": conanfile}, folder=folder,
                                             branch="mybranch")
-        t1 = TestClient(default_server_user=True)
+        t1 = TestClient(default_server_user=True, light=True)
         t1.run_command('git clone "file://{}" .'.format(url))
         t1.run("create .")
         t1.run("upload * -r=default -c")
 
-        c = TestClient(servers=t1.servers)
+        c = TestClient(servers=t1.servers, light=True)
         c.run("workspace open pkg/0.1")
         assert c.load("pkg/conanfile.py") == conanfile
 
-        c2 = TestClient(servers=t1.servers)
+        c2 = TestClient(servers=t1.servers, light=True)
         c2.save({"conanws.py": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert 'name = "pkg"' in c2.load("pkg/conanfile.py")
@@ -151,7 +154,7 @@ class TestOpenAdd:
         assert "pkg/0.1" in c2.out
 
     def test_workspace_build_editables(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanws.yml": ""})
 
         c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),

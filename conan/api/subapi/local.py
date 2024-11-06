@@ -19,8 +19,7 @@ class LocalAPI:
         self.editable_packages = EditablePackages(conan_api.home_folder)
         editables = conan_api.workspace.editables()
         if editables:
-            self.editable_packages.edited_refs.update({RecipeReference.loads(r): v
-                                                       for r, v in editables.items()})
+            self.editable_packages.edited_refs.update(editables)
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):
@@ -120,4 +119,3 @@ class LocalAPI:
         conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
-

@@ -70,9 +70,6 @@ def print_editables_text(data):
         cli_out_write("    Path: %s" % v["path"])
         if v.get("output_folder"):
             cli_out_write("    Output: %s" % v["output_folder"])
-        if v.get("workspace"):
-            cli_out_write(f"    Workspace: {v['workspace']['name']}")
-            cli_out_write(f"        Folder: {v['workspace']['folder']}")
 
 
 @conan_subcommand(formatters={"text": print_editables_text, "json": print_editables_json})

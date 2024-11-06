@@ -66,11 +66,9 @@ class WorkspaceAPI:
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
-        # Retrieve conanfile.py from target_path
-        target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self._workspace.add(ref, target_path, output_folder=output_folder)
+        self._workspace.add(ref, path, output_folder=output_folder)
         return ref
 
     def remove(self, path):

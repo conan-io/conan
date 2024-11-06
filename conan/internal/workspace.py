@@ -3,8 +3,10 @@ from pathlib import Path
 
 import yaml
 
+from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
 from conan.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
 
 
@@ -18,8 +20,18 @@ def _find_ws_folder():
 
 
 class Workspace:
+    TEST_ENABLED = False
+
     def __init__(self):
         self._folder = _find_ws_folder()
+        if self._folder:
+            ConanOutput().warning(f"Workspace found: {self._folder}")
+            if (Workspace.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
+                ConanOutput().warning("Workspace ignored as CONAN_WORKSPACE_ENABLE is not set")
+                self._folder = None
+            else:
+                ConanOutput().warning(f"Workspace is a dev-only feature, exclusively for testing")
+
         self._yml = None
         self._py = None
         if self._folder is not None:
@@ -76,15 +88,28 @@ class Workspace:
         """
         self._check_ws()
         self._yml = self._yml or {}
-        self._yml.setdefault("editables", {})[str(ref)] = {"path": path,
-                                                           "output_folder": output_folder}
+        editable = {"path": self._rel_path(path)}
+        if output_folder:
+            editable["output_folder"] = self._rel_path(output_folder)
+        self._yml.setdefault("editables", {})[str(ref)] = editable
         save(self._yml_file, yaml.dump(self._yml))
+
+    def _rel_path(self, path):
+        if path is None:
+            return None
+        if not os.path.isabs(path):
+            raise ConanException(f"Editable path must be absolute: {path}")
+        path = os.path.relpath(path, self._folder)
+        if path.startswith(".."):
+            raise ConanException(f"Editable path must be inside the workspace folder: "
+                                 f"{self._folder}")
+        return path.replace("\\", "/")  # Normalize to unix path
 
     def remove(self, path):
         self._check_ws()
         self._yml = self._yml or {}
         found_ref = None
-        path = path.replace("\\", "/")
+        path = self._rel_path(path)
         for ref, info in self._yml.get("editables", {}).items():
             if os.path.dirname(info["path"]).replace("\\", "/") == path:
                 found_ref = ref
@@ -100,12 +125,16 @@ class Workspace:
             return
         editables = self._attr("editables")
         if editables:
+            editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
             for v in editables.values():
-                v["workspace"] = {"name": self.name,
-                                  "folder": self._folder}
+                v["path"] = os.path.normpath(os.path.join(self._folder, v["path"]))
+                if v.get("output_folder"):
+                    v["output_folder"] = os.path.normpath(os.path.join(self._folder,
+                                                                       v["output_folder"]))
         return editables
 
     def serialize(self):
+        self._check_ws()
         return {"name": self.name,
                 "folder": self._folder,
                 "editables": self._attr("editables")}
