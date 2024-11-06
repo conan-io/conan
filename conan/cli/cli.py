@@ -190,6 +190,7 @@ class Cli:
 
         try:
             command.run(self._conan_api, args[0][1:])
+            _warn_frozen_center(self._conan_api)
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
@@ -305,7 +306,6 @@ def main(args):
     try:
         cli.run(args)
         _warn_python_version()
-        _warn_frozen_center(conan_api)
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)
