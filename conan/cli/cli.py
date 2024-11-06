@@ -16,7 +16,7 @@ from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan.internal.cache.home_paths import HomePaths
-from conans import __version__ as client_version
+from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
@@ -176,7 +176,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version)
+                cli_out_write("Conan version %s" % __version__)
                 return
 
             if command_argument in ["-h", "--help"]:

@@ -27,7 +27,7 @@ from webtest.app import TestApp
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans import REVISIONS
+from conan.internal import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH

@@ -21,7 +21,7 @@ import platform
 import shutil
 import sys
 
-from conans import __version__
+from conan import __version__
 
 
 def _run_bin(pyinstaller_path):

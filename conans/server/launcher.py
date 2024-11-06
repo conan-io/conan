@@ -2,7 +2,7 @@
 import os
 import sys
 
-from conans import REVISIONS
+from conan.internal import REVISIONS
 from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 

@@ -1,5 +1,4 @@
 import argparse
-import os
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -98,12 +97,14 @@ class BaseConanCommand:
 
         formatter(info)
 
-    def _dispatch_errors(self, info):
+    @staticmethod
+    def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
                 raise ConanException(info["conan_error"])
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
+
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
@@ -113,7 +114,7 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
         if args.core_conf:
