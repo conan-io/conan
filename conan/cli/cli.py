@@ -190,6 +190,7 @@ class Cli:
 
         try:
             command.run(self._conan_api, args[0][1:])
+            _warn_frozen_center(self._conan_api)
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
@@ -243,6 +244,20 @@ def _warn_python_version():
                               "Conan future versions will drop support for it, "
                               "please upgrade Python", warn_tag="deprecated")
         ConanOutput().warning("*" * 80, warn_tag="deprecated")
+
+
+def _warn_frozen_center(conan_api):
+    remotes = conan_api.remotes.list()
+    for r in remotes:
+        if r.url == "https://center.conan.io":
+            ConanOutput().warning(
+                "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
+                "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"
+                "It is recommended to update to the new remote using the following command:\n"
+                f"'conan remote update {r.name} --url=\"https://center2.conan.io\"'",
+                warn_tag="deprecated"
+            )
+            break
 
 
 def main(args):
