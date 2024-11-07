@@ -10,7 +10,6 @@ from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
-
 Workspace.TEST_ENABLED = "will_break_next"
 
 
@@ -88,6 +87,27 @@ class TestAddRemove:
         c.run("workspace remove dep2")
         c.run("editable list")
         assert "dep1/0.1" not in c.out
+        assert "dep2/0.1" not in c.out
+
+    def test_add_from_outside(self):
+        c = TestClient(light=True)
+        c.save({"sub/conanws.py": "name='myws'",
+                "sub/dep1/conanfile.py": GenConanfile("dep1", "0.1"),
+                "sub/dep2/conanfile.py": GenConanfile("dep2", "0.1")})
+        with c.chdir("sub"):
+            c.run("workspace add dep1")
+            assert "Reference 'dep1/0.1' added to workspace" in c.out
+            c.run("workspace add dep2")
+            assert "Reference 'dep2/0.1' added to workspace" in c.out
+            c.run("editable list")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" in c.out
+        c.run("editable list")
+        assert "dep1/0.1" not in c.out
+        assert "dep2/0.1" not in c.out
+        c.run("editable add sub/dep1")
+        c.run("editable list")
+        assert "dep1/0.1" in c.out
         assert "dep2/0.1" not in c.out
 
 
