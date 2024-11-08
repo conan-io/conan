@@ -484,48 +484,6 @@ class _Component:
 
     def _auto_deduce_locations(self, conanfile):
 
-        def _get_real_path(file_path):
-            # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
-            if os.path.islink(file_path):
-                # Important! os.path.realpath returns the final path of the symlink even if it points
-                # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
-                # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
-                # Note: os.readlink() returns the path which the symbolic link points to.
-                file_path = os.path.realpath(file_path)
-            return file_path.replace("\\", "/")
-
-        # def _save_lib_path(file_name, file_path):
-        #     """Add each lib with its full library path"""
-        #     name, ext, formatted_path = _get_real_path(file_name, file_path)
-        #     lib_name = None
-        #     # Users may not name their libraries in a conventional way. For example, directly
-        #     # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
-        #     # Issue related: https://github.com/conan-io/conan/issues/11331
-        #     if file_name in libs:  # let's ensure that it has any extension
-        #         lib_name = file_name
-        #     elif name in libs:
-        #         lib_name = name
-        #     elif name.startswith("lib"):
-        #         short_name = name[3:]  # libpkg -> pkg
-        #         if short_name in libs:
-        #             lib_name = short_name
-        #     # DLL check
-        #     if not lib_name and ext == "dll" or ext.endswith(".dll"):
-        #         if len(libs) == 1:  # first DLL should be the good one
-        #             lib_name = libs[0]
-        #         else:  # let's cross the fingers... This is the last chance.
-        #             for lib in libs:
-        #                 if lib in name and lib not in lib_paths:
-        #                     lib_name = lib
-        #                     break
-        #     if lib_name is not None:
-        #         # Let's save the lib
-        #         lib_paths[lib_name] = formatted_path
-        #         # Removing it from the global list to simplify the rest of the lib matches
-        #         libs.remove(lib_name)
-        #         return True
-        #     return False
-
         def _find_matching(dirs, pattern):
             lib_found = ""
             for d in dirs:
