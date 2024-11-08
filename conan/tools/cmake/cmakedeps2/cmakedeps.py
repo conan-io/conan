@@ -4,6 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.api.output import Color
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
@@ -50,6 +51,7 @@ class CMakeDeps2:
 
         # Iterate all the transitive requires
         ret = {}
+        direct_deps = []
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
@@ -57,6 +59,8 @@ class CMakeDeps2:
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
 
+            if require.direct:
+                direct_deps.append(dep)
             config = ConfigTemplate2(self, dep)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
@@ -66,7 +70,25 @@ class CMakeDeps2:
             ret[targets.filename] = targets.content()
             target_configuration = TargetConfigurationTemplate2(self, dep, require)
             ret[target_configuration.filename] = target_configuration.content()
+
+        self._print_help(direct_deps)
         return ret
+
+    def _print_help(self, direct_deps):
+        if direct_deps:
+            msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
+            targets = []
+            for dep in direct_deps:
+                msg.append(f"    find_package({self.get_cmake_filename(dep)})")
+                if not dep.cpp_info.exe:
+                    target_name = self.get_property("cmake_target_name", dep)
+                    targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
+            if targets:
+                msg.append(f"    target_link_libraries(... {' '.join(targets)})")
+            if self._conanfile._conan_is_consumer:
+                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
+            else:
+                self._conanfile.output.verbose("\n".join(msg))
 
     def set_property(self, dep, prop, value, build_context=False):
         """

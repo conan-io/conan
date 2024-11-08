@@ -337,11 +337,34 @@ def test_add_wrong_conancenter():
     c = TestClient(light=True)
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
-    assert "the correct remote API is https://center.conan.io" in c.out
-    c.run("remote add conancenter https://center.conan.io")
+    assert "the correct remote API is https://center2.conan.io" in c.out
+    c.run("remote add conancenter https://center2.conan.io")
     c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
-    assert "the correct remote API is https://center.conan.io" in c.out
+    assert "the correct remote API is https://center2.conan.io" in c.out
+
+
+def test_using_frozen_center():
+    """ If the legacy center.conan.io is in the remote list warn about it.
+    """
+    c = TestClient(light=True)
+    c.run("remote add whatever https://center.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+    assert 'conan remote update whatever --url="https://center2.conan.io"' in c.out
+
+    c.run("remote list")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+
+    c.run("remote remove whatever")
+
+    c.run("remote add conancenter https://center2.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+
+    c.run("remote list")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+
+    c.run("remote update conancenter --url=https://center.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
 
 
 def test_wrong_remotes_json_file():

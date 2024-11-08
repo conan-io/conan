@@ -3,10 +3,9 @@ import os
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.local.editable import EditablePackages
-from conans.client.conanfile.build import run_build_method
+from conan.internal.methods import run_build_method, run_source_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
-from conans.client.source import run_source_method
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference

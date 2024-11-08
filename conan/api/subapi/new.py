@@ -5,7 +5,7 @@ from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
 from conan.errors import ConanException
 from conans.util.files import load
-from conans import __version__
+from conan import __version__
 
 
 class NewAPI:

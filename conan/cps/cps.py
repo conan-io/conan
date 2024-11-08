@@ -71,7 +71,7 @@ class CPSComponent:
         return comp
 
     @staticmethod
-    def from_cpp_info(cpp_info, pkg_type, libname=None):
+    def from_cpp_info(cpp_info, conanfile, libname=None):
         cps_comp = CPSComponent()
         if not libname:
             cps_comp.definitions = cpp_info.defines
@@ -85,7 +85,7 @@ class CPSComponent:
             cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
-        cpp_info.deduce_locations(pkg_type)
+        cpp_info.deduce_locations(conanfile)
         cps_comp.type = CPSComponentType.from_conan(cpp_info.type)
         cps_comp.location = cpp_info.location
         cps_comp.link_location = cpp_info.link_location
@@ -168,18 +168,18 @@ class CPS:
 
         if not dep.cpp_info.has_components:
             if dep.cpp_info.libs and len(dep.cpp_info.libs) > 1:
-                comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)  # base
+                comp = CPSComponent.from_cpp_info(dep.cpp_info, dep)  # base
                 base_name = f"_{cps.name}"
                 cps.components[base_name] = comp
                 for lib in dep.cpp_info.libs:
-                    comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type, lib)
+                    comp = CPSComponent.from_cpp_info(dep.cpp_info, dep, lib)
                     comp.requires.insert(0, f":{base_name}")  # dep to the common one
                     cps.components[lib] = comp
                 cps.default_components = dep.cpp_info.libs
                 # FIXME: What if one lib is named equal to the package?
             else:
                 # single component, called same as library
-                component = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)
+                component = CPSComponent.from_cpp_info(dep.cpp_info, dep)
                 if not component.requires and dep.dependencies:
                     for transitive_dep in dep.dependencies.host.items():
                         dep_name = transitive_dep[0].ref.name
@@ -191,7 +191,7 @@ class CPS:
         else:
             sorted_comps = dep.cpp_info.get_sorted_components()
             for comp_name, comp in sorted_comps.items():
-                component = CPSComponent.from_cpp_info(comp, dep.package_type)
+                component = CPSComponent.from_cpp_info(comp, dep)
                 cps.components[comp_name] = component
             # Now by default all are default_components
             cps.default_components = [comp_name for comp_name in sorted_comps]

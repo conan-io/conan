@@ -1,6 +1,9 @@
 from conan.errors import ConanException
 
 
+REVISIONS = "revisions"  # capability
+
+
 def check_duplicated_generator(generator, conanfile):
     if generator.__class__.__name__ in conanfile.generators:
         raise ConanException(f"{generator.__class__.__name__} is declared in the generators "

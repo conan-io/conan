@@ -4,7 +4,7 @@ import unittest
 import mock
 from mock import Mock, MagicMock
 
-from conans import __version__
+from conan import __version__
 from conans.client.rest.conan_requester import ConanRequester
 from conans.model.conf import ConfDefinition
 from conan.test.utils.tools import temp_folder
