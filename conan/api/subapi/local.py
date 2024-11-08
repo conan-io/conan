@@ -58,17 +58,20 @@ class LocalAPI:
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self.editable_packages.add(ref, target_path, output_folder=output_folder)
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
         if path:
             path = make_abs_path(path, cwd)
             path = os.path.join(path, "conanfile.py")
-        return self.editable_packages.remove(path, requires)
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        return editable_packages.remove(path, requires)
 
     def editable_list(self):
-        return self.editable_packages.edited_refs
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        return editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
         """ calls the 'source()' method of the current (user folder) conanfile.py

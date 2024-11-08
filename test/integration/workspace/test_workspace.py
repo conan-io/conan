@@ -61,31 +61,34 @@ class TestAddRemove:
                 "dep3/conanfile.py": GenConanfile("dep3", "0.1")})
         c.run("workspace add dep1")
         assert "Reference 'dep1/0.1' added to workspace" in c.out
-        c.run("editable list")
+        c.run("workspace info")
         assert "dep1/0.1" in c.out
+        assert "dep2" not in c.out
+        c.run("editable list")  # No editables in global
+        assert "dep1" not in c.out
         assert "dep2" not in c.out
         c.run("workspace add dep2")
         assert "Reference 'dep2/0.1' added to workspace" in c.out
-        c.run("editable list")
+        c.run("workspace info")
         assert "dep1/0.1" in c.out
         assert "dep2/0.1" in c.out
 
         with c.chdir(temp_folder()):  # If we move to another folder, outside WS, no editables
             c.run("editable list")
-            assert "pkga/0.1" not in c.out
-            assert "pkgb/0.1" not in c.out
+            assert "dep1" not in c.out
+            assert "dep2" not in c.out
 
         c.run("workspace info")
         assert "dep1/0.1" in c.out
         assert "dep2/0.1" in c.out
 
         c.run("workspace remove dep1")
-        c.run("editable list")
+        c.run("workspace info")
         assert "dep1/0.1" not in c.out
         assert "dep2/0.1" in c.out
 
         c.run("workspace remove dep2")
-        c.run("editable list")
+        c.run("workspace info")
         assert "dep1/0.1" not in c.out
         assert "dep2/0.1" not in c.out
 
@@ -99,17 +102,28 @@ class TestAddRemove:
             assert "Reference 'dep1/0.1' added to workspace" in c.out
             c.run("workspace add dep2")
             assert "Reference 'dep2/0.1' added to workspace" in c.out
-            c.run("editable list")
+            c.run("workspace info")
             assert "dep1/0.1" in c.out
             assert "dep2/0.1" in c.out
+        assert c.load_home("editable_packages.json") is None
+
         c.run("editable list")
-        assert "dep1/0.1" not in c.out
-        assert "dep2/0.1" not in c.out
+        assert "dep1" not in c.out
+        assert "dep2" not in c.out
+        assert c.load_home("editable_packages.json") is None
         with c.chdir("sub"):
             c.run("editable add dep1")
+            assert c.load_home("editable_packages.json") is not None
+            c.run("editable list")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" not in c.out
+            c.run("workspace info")
+            assert "dep1" in c.out
+            assert "dep2" in c.out
+
         c.run("editable list")
         assert "dep1/0.1" in c.out
-        assert "dep2/0.1" not in c.out
+        assert "dep2" not in c.out
 
 
 class TestOpenAdd:
@@ -128,7 +142,7 @@ class TestOpenAdd:
         c2.save({"conanws.py": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert "name = 'pkg'" in c2.load("pkg/conanfile.py")
-        c2.run("editable list")
+        c2.run("workspace info")
         assert "pkg/0.1" in c2.out
 
     def test_without_git_export_sources(self):
@@ -171,7 +185,7 @@ class TestOpenAdd:
         c2.save({"conanws.py": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert 'name = "pkg"' in c2.load("pkg/conanfile.py")
-        c2.run("editable list")
+        c2.run("workspace info")
         assert "pkg/0.1" in c2.out
 
     def test_workspace_build_editables(self):

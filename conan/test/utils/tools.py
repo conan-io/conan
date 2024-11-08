@@ -466,6 +466,12 @@ class TestClient:
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
 
+    def load_home(self, filename):
+        try:
+            return load(os.path.join(self.cache_folder, filename))
+        except IOError:
+            return None
+
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
