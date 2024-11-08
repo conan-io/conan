@@ -105,7 +105,8 @@ class TestAddRemove:
         c.run("editable list")
         assert "dep1/0.1" not in c.out
         assert "dep2/0.1" not in c.out
-        c.run("editable add sub/dep1")
+        with c.chdir("sub"):
+            c.run("editable add dep1")
         c.run("editable list")
         assert "dep1/0.1" in c.out
         assert "dep2/0.1" not in c.out
