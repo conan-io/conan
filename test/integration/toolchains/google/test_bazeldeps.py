@@ -1137,7 +1137,7 @@ def test_shared_windows_find_libraries():
 
     cc_import(
         name = "libssl_precompiled",
-        shared_library = "bin/libcrypto-3-x64.dll",
+        shared_library = "bin/libssl-3-x64.dll",
         interface_library = "lib/libssl.lib",
     )
     """)

@@ -533,7 +533,9 @@ class _Component:
                     break
                 # If pattern is a exact match
                 if isinstance(pattern, str):
-                    matches.update(glob.glob(f"{d}/{pattern}"))
+                    matches = glob.glob(f"{d}/{pattern}")
+                    if matches:
+                        lib_found = matches[0]
                     continue
                 # Otherwise, it's a regex
                 files = os.listdir(d)
@@ -578,18 +580,14 @@ class _Component:
             regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
             regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
             regex_dll = re.compile(rf"(?:.+)?{libname}(?:[._-].+)?\.dll")
-            # global libname search
-            # static_patterns = [f"{libname}.lib", f"{libname}.a",  # exact match
-            #                    f"lib{libname}.lib", f"lib{libname}.a"]  # exact match
-            # shared_patterns = [f"{libname}.so", f"{libname}.dylib",  # exact match
-            #                    f"lib{libname}.so", f"lib{libname}.dylib"]  # exact match
-            # # This could not follow any pattern, e.g., zdll.lib and zlib1.dll
-            # dll_patterns = [f"*{libname}*.dll" "*.dll"]
+            regex_any_dll = re.compile(rf".+(?:[._-].+)?\.dll")
             static_location = _find_matching(libdirs, regex_static)
             if not static_location:
                 shared_location = _find_matching(libdirs, regex_shared)
             if static_location and static_location.endswith(".lib"):
                 dll_location = _find_matching(bindirs, regex_dll)
+                if not dll_location:  # any existing DLL is going to be found
+                    dll_location = _find_matching(bindirs, regex_any_dll)
 
         out = ConanOutput(scope=str(conanfile))
         if static_location:
