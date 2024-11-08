@@ -142,5 +142,7 @@ def export_conandata_patches(conanfile):
         if patch_file:
             src = os.path.join(conanfile.recipe_folder, patch_file)
             dst = os.path.join(conanfile.export_sources_folder, patch_file)
+            if not os.path.exists(src):
+                raise ConanException(f"Patch file does not exist: '{src}'")
             mkdir(os.path.dirname(dst))
             shutil.copy2(src, dst)
