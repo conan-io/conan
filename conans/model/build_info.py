@@ -2,6 +2,7 @@ import copy
 import glob
 import json
 import os
+import re
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
@@ -481,57 +482,118 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def deduce_locations(self, conanfile):
-        pkg_type = conanfile.package_type
-        if self._exe:   # exe is a new field, it should have the correct location
-            return
-        if self._location or self._link_location:
-            if self._type is None or self._type is PackageType.HEADER:
-                raise ConanException("Incorrect cpp_info defining location without type or header")
-            return
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
-            return
+    def _auto_deduce_locations(self, conanfile):
 
-        if len(self.libs) == 0:
-            return
+        def _get_real_path(file_path):
+            # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+            if os.path.islink(file_path):
+                # Important! os.path.realpath returns the final path of the symlink even if it points
+                # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+                # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
+                # Note: os.readlink() returns the path which the symbolic link points to.
+                file_path = os.path.realpath(file_path)
+            return file_path.replace("\\", "/")
 
-        if len(self.libs) != 1:
-            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+        # def _save_lib_path(file_name, file_path):
+        #     """Add each lib with its full library path"""
+        #     name, ext, formatted_path = _get_real_path(file_name, file_path)
+        #     lib_name = None
+        #     # Users may not name their libraries in a conventional way. For example, directly
+        #     # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+        #     # Issue related: https://github.com/conan-io/conan/issues/11331
+        #     if file_name in libs:  # let's ensure that it has any extension
+        #         lib_name = file_name
+        #     elif name in libs:
+        #         lib_name = name
+        #     elif name.startswith("lib"):
+        #         short_name = name[3:]  # libpkg -> pkg
+        #         if short_name in libs:
+        #             lib_name = short_name
+        #     # DLL check
+        #     if not lib_name and ext == "dll" or ext.endswith(".dll"):
+        #         if len(libs) == 1:  # first DLL should be the good one
+        #             lib_name = libs[0]
+        #         else:  # let's cross the fingers... This is the last chance.
+        #             for lib in libs:
+        #                 if lib in name and lib not in lib_paths:
+        #                     lib_name = lib
+        #                     break
+        #     if lib_name is not None:
+        #         # Let's save the lib
+        #         lib_paths[lib_name] = formatted_path
+        #         # Removing it from the global list to simplify the rest of the lib matches
+        #         libs.remove(lib_name)
+        #         return True
+        #     return False
 
-        # Recipe didn't specify things, need to auto deduce
-        libdirs = [x.replace("\\", "/") for x in self.libdirs]
-        bindirs = [x.replace("\\", "/") for x in self.bindirs]
-
-        # TODO: Do a better handling of pre-defined type
-        libname = self.libs[0]
-        static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
-        shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
-                           f"lib{libname}.*dylib"]
-        dll_patterns = [f"{libname}.dll"]
-
-        def _find_matching(patterns, dirs):
-            matches = set()
-            for pattern in patterns:
-                for d in dirs:
+        def _find_matching(dirs, pattern):
+            lib_found = ""
+            for d in dirs:
+                if lib_found:
+                    break
+                # If pattern is a exact match
+                if isinstance(pattern, str):
                     matches.update(glob.glob(f"{d}/{pattern}"))
-            if len(matches) == 1:
-                return next(iter(matches))
+                    continue
+                # Otherwise, it's a regex
+                files = os.listdir(d)
+                for file_name in files:
+                    full_path = os.path.join(d, file_name)
+                    if not os.path.isfile(full_path):  # Make sure that directories are excluded
+                        continue
+                    elif pattern.match(file_name):
+                        # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+                        if os.path.islink(full_path):
+                            # Important! os.path.realpath returns the final path of the symlink even if it points
+                            # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+                            # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
+                            # Note: os.readlink() returns the path which the symbolic link points to.
+                            real_path = os.path.realpath(full_path)
+                            if pattern.match(os.path.basename(real_path)):
+                                lib_found = real_path.replace("\\", "/")
+                        else:
+                            lib_found = full_path.replace("\\", "/")
+                        break
+            return lib_found
 
-        static_location = _find_matching(static_patterns, libdirs)
-        shared_location = _find_matching(shared_patterns, libdirs)
-        dll_location = _find_matching(dll_patterns, bindirs)
+        pkg_type = conanfile.package_type
+        # Recipe didn't specify things, need to auto deduce
+        libdirs = self.libdirs
+        bindirs = self.bindirs
+
+        libname = self.libs[0]
+        static_location = None
+        shared_location = None
+        dll_location = None
+        # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
+        _, ext = os.path.splitext(libname)
+        if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
+            if ext in (".lib", ".a"):
+                static_location = _find_matching(libdirs, libname)
+            elif ext in (".so", ".dylib"):
+                shared_location = _find_matching(libdirs, libname)
+            elif ext == ".dll":
+                dll_location = _find_matching(bindirs, libname)
+        else:
+            regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
+            regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
+            regex_dll = re.compile(rf"(?:.+)?{libname}(?:[._-].+)?\.dll")
+            # global libname search
+            # static_patterns = [f"{libname}.lib", f"{libname}.a",  # exact match
+            #                    f"lib{libname}.lib", f"lib{libname}.a"]  # exact match
+            # shared_patterns = [f"{libname}.so", f"{libname}.dylib",  # exact match
+            #                    f"lib{libname}.so", f"lib{libname}.dylib"]  # exact match
+            # # This could not follow any pattern, e.g., zdll.lib and zlib1.dll
+            # dll_patterns = [f"*{libname}*.dll" "*.dll"]
+            static_location = _find_matching(libdirs, regex_static)
+            if not static_location:
+                shared_location = _find_matching(libdirs, regex_shared)
+            if static_location and static_location.endswith(".lib"):
+                dll_location = _find_matching(bindirs, regex_dll)
+
         out = ConanOutput(scope=str(conanfile))
         if static_location:
-            if shared_location:
-                out.warning(f"Lib {libname} has both static {static_location} and "
-                            f"shared {shared_location} in the same package")
-                if pkg_type is PackageType.STATIC:
-                    self._location = static_location
-                    self._type = PackageType.STATIC
-                else:
-                    self._location = shared_location
-                    self._type = PackageType.SHARED
-            elif dll_location:
+            if dll_location:
                 self._location = dll_location
                 self._link_location = static_location
                 self._type = PackageType.SHARED
@@ -552,6 +614,25 @@ class _Component:
                                  f"should have been deduced correctly.")
         if self._type != pkg_type:
             out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+
+    def deduce_locations(self, conanfile):
+        if self._exe:   # exe is a new field, it should have the correct location
+            return
+        if self._location or self._link_location:
+            if self._type is None or self._type is PackageType.HEADER:
+                raise ConanException("Incorrect cpp_info defining location without type or header")
+            return
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+            return
+
+        if len(self.libs) == 0:
+            return
+
+        if len(self.libs) != 1:
+            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
+
+        # If no location is defined, it's time to guess the location
+        self._auto_deduce_locations(conanfile)
 
 
 class CppInfo:
