@@ -489,7 +489,7 @@ class _Component:
             for d in dirs:
                 if lib_found:
                     break
-                # If pattern is a exact match
+                # If pattern is an exact match
                 if isinstance(pattern, str):
                     matches = glob.glob(f"{d}/{pattern}")
                     if matches:
@@ -510,17 +510,15 @@ class _Component:
                             # Note: os.readlink() returns the path which the symbolic link points to.
                             real_path = os.path.realpath(full_path)
                             if pattern.match(os.path.basename(real_path)):
-                                lib_found = real_path.replace("\\", "/")
+                                lib_found = real_path
                         else:
-                            lib_found = full_path.replace("\\", "/")
+                            lib_found = full_path
                         break
-            return lib_found
+            return lib_found.replace("\\", "/")
 
         pkg_type = conanfile.package_type
-        # Recipe didn't specify things, need to auto deduce
         libdirs = self.libdirs
         bindirs = self.bindirs
-
         libname = self.libs[0]
         static_location = None
         shared_location = None
@@ -771,6 +769,7 @@ class CppInfo:
                 c.type = self.type  # This should be a string
                 c.includedirs = self.includedirs
                 c.libdirs = self.libdirs
+                c.bindirs = self.bindirs
                 c.libs = [lib]
                 result.components[f"_{lib}"] = c
 

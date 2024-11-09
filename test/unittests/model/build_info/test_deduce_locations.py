@@ -1,4 +1,5 @@
 import os
+import platform
 
 import pytest
 
@@ -57,8 +58,7 @@ def test_deduce_shared_link_locations():
     ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"]),
     ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"]),
     ("libssl.lib", "libssl-3-x64.dll", ["libssl"]),
-    ("zdll.lib", "zlib1.dll", ["zdll"]),
-    (["iconv.lib", "charset.lib"], ["charset-1.dll", "iconv-2.dll"], ["charset", "iconv"]),
+    ("zdll.lib", "zlib1.dll", ["zdll"])
 ])
 def test_windows_shared_link_locations(lib_name, dll_name, libs):
     folder = temp_folder()
@@ -103,8 +103,25 @@ def test_windows_several_shared_link_locations(lib_info):
     for lib_name in lib_info:
         assert result.components[f"_{lib_name}"].location == locations[lib_name][0].replace("\\", "/")
         assert result.components[f"_{lib_name}"].link_location == locations[lib_name][1].replace("\\", "/")
-    assert result.type == "shared-library"
+        assert result.components[f"_{lib_name}"].type == "shared-library"
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
 def test_shared_link_locations_symlinks():
-    pass
+    folder = temp_folder()
+    real_location = os.path.join(folder, "libdir", "mylib.so")
+    save(real_location, "")
+    # Symlinks
+    sym_1 = os.path.join(folder, "libdir", "mylib.1.0.0.so")
+    sym_2 = os.path.join(folder, "libdir", "mylib.2.0.0.so")
+    os.symlink(real_location, sym_1)
+    os.symlink(sym_1, sym_2)
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+
+    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    assert result.location == real_location
+    assert result.type == "shared-library"
