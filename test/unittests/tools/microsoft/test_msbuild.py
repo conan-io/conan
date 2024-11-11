@@ -1,5 +1,4 @@
 import os
-import textwrap
 
 import pytest
 
@@ -31,14 +30,9 @@ def test_msbuild_targets():
 
 def test_msbuild_cpu_count():
     c = ConfDefinition()
-    c.loads(textwrap.dedent("""\
-        tools.microsoft.msbuild:max_cpu_count=23
-    """))
+    c.loads("tools.microsoft.msbuild:max_cpu_count=23")
 
     settings = MockSettings({"build_type": "Release",
-                             "compiler": "gcc",
-                             "compiler.version": "7",
-                             "os": "Linux",
                              "arch": "x86_64"})
     conanfile = ConanFileMock()
     conanfile.settings = settings
@@ -46,8 +40,12 @@ def test_msbuild_cpu_count():
 
     msbuild = MSBuild(conanfile)
     cmd = msbuild.command('project.sln')
+    assert 'msbuild "project.sln" /p:Configuration="Release" /p:Platform=x64 /m:23' == cmd
 
-    assert '/m:23' in cmd
+    c.loads("tools.microsoft.msbuild:max_cpu_count=0")
+    conanfile.conf = c.get_conanfile_conf(None)
+    cmd = msbuild.command('project.sln')
+    assert 'msbuild "project.sln" /p:Configuration="Release" /p:Platform=x64 /m' == cmd
 
 
 def test_msbuild_toolset():
@@ -81,10 +79,10 @@ def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
     conanfile = ConanFile()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = Settings({"build_type": ["Release"],
-                         "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
-                                      "msvc": {"version": ["193"], "cppstd": ["20"]}},
-                         "os": ["Windows"],
-                         "arch": ["x86_64"]})
+                                   "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
+                                                "msvc": {"version": ["193"], "cppstd": ["20"]}},
+                                   "os": ["Windows"],
+                                   "arch": ["x86_64"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "intel-cc"
     conanfile.settings.compiler.version = "2021.3"

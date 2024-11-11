@@ -19,8 +19,8 @@ def _cmake_cmd_line_args(conanfile, generator):
         args.append("-j{}".format(njobs))
 
     maxcpucount = conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count", check_type=int)
-    if maxcpucount and "Visual Studio" in generator:
-        args.append("/m:{}".format(njobs))
+    if maxcpucount is not None and "Visual Studio" in generator:
+        args.append(f"/m:{maxcpucount}" if maxcpucount > 0 else "/m")
 
     # Arguments for verbosity
     if "Visual Studio" in generator:

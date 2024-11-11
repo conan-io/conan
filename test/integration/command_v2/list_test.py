@@ -18,20 +18,22 @@ from conans.util.files import load, save
 
 class TestParamErrors:
 
-    def test_query_param_is_required(self):
+    def test_default_pattern(self):
         c = TestClient()
-        c.run("list", assert_error=True)
-        assert "ERROR: Missing pattern or graph json file" in c.out
+        c.run("list")
+        assert "Found 0 pkg/version" in c.out
 
-        c.run("list -c", assert_error=True)
-        assert "ERROR: Missing pattern or graph json file" in c.out
+        c.run("list -c")
+        assert "Found 0 pkg/version" in c.out
 
         c.run('list -r="*"', assert_error=True)
-        assert "ERROR: Missing pattern or graph json file" in c.out
+        assert "ERROR: Remotes for pattern '*' can't be found" in c.out
 
         c.run("list --remote remote1 --cache", assert_error=True)
-        assert "ERROR: Missing pattern or graph json file" in c.out
+        assert "ERROR: Remote 'remote1' can't be found or is disabled" in c.out
 
+    def test_query_param(self):
+        c = TestClient()
         c.run("list * --graph=myjson", assert_error=True)
         assert "ERROR: Cannot define both the pattern and the graph json file" in c.out
 
