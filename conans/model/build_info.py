@@ -489,6 +489,8 @@ class _Component:
             for d in dirs:
                 if lib_found:
                     break
+                if not os.path.exists(d):
+                    continue
                 # If pattern is an exact match
                 if isinstance(pattern, str):
                     matches = glob.glob(f"{d}/{pattern}")
@@ -778,7 +780,7 @@ class CppInfo:
             common.type = str(PackageType.HEADER)  # the type of components is a string!
             common.requires = list(result.components.keys()) + (self.requires or [])
 
-            result.components["_common"] = common
+            # result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components
