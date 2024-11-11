@@ -13,7 +13,7 @@ from conan.errors import ConanException
 @conan_subcommand(formatters={"text": cli_out_write})
 def workspace_root(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Return the folder containing the conanws.py workspace file
+    Return the folder containing the conanws.py/conanws.yml workspace file
     """
     ws = conan_api.workspace
     if not ws.folder():
@@ -104,5 +104,5 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):
 @conan_command(group="Consumer")
 def workspace(conan_api, parser, *args):
     """
-    Manage the remote list and the users authenticated on them.
+    Manage Conan workspaces (group of packages in editable mode)
     """
