@@ -758,3 +758,181 @@ class TestConfigInstallPkg:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
+
+class TestConfigInstallPkgSettings:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            settings = "os"
+            package_type = "configuration"
+            def package(self):
+                f = "win" if self.settings.os == "Windows" else "nix"
+                copy(self, "*.conf", src=os.path.join(self.build_folder, f), dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "win/global.conf": "user.myteam:myconf=mywinvalue",
+                "nix/global.conf": "user.myteam:myconf=mynixvalue",
+                })
+        c.run("export-pkg . -s os=Windows")
+        c.run("export-pkg . -s os=Linux")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    @pytest.mark.parametrize("default_profile", [False, True])
+    def test_config_install_from_pkg(self, client, default_profile):
+        # Now install it
+        c = client
+        if not default_profile:
+            os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*] -s os=Windows")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -s os=Linux")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_error_no_settings_defined(self, client):
+        c = client
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*]", assert_error=True)
+        assert "There are invalid packages:" in c.out
+        assert "myconf/0.1: Invalid: 'settings.os' value not defined" in c.out
+
+    def test_config_install_from_pkg_profile(self, client):
+        # Now install it
+        c = client
+        c.save({"win.profile": "[settings]\nos=Windows",
+                "nix.profile": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_config_install_from_pkg_profile_default(self, client):
+        # Now install it
+        c = client
+        c.save_home({"profiles/default": "[settings]\nos=Windows"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.save_home({"profiles/default": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+
+class TestConfigInstallPkgOptions:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            options = {"project": ["project1", "project2"]}
+            default_options = {"project": "project1"}
+            package_type = "configuration"
+            def package(self):
+                copy(self, "*.conf", src=os.path.join(self.build_folder, str(self.options.project)),
+                     dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "project1/global.conf": "user.myteam:myconf=my1value",
+                "project2/global.conf": "user.myteam:myconf=my2value",
+                })
+        c.run("export-pkg .")
+        c.run("export-pkg . -o project=project2")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    @pytest.mark.parametrize("default_profile", [False, True])
+    def test_config_install_from_pkg(self, client, default_profile):
+        # Now install it
+        c = client
+        if not default_profile:
+            os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*] -o &:project=project1")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.run("config install-pkg myconf/[*] -o &:project=project2")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out
+
+    def test_no_option_defined(self, client):
+        c = client
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*]")
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+    def test_config_install_from_pkg_profile(self, client):
+        # Now install it
+        c = client
+        c.save({"win.profile": "[options]\n&:project=project1",
+                "nix.profile": "[options]\n&:project=project2"})
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out
+
+    def test_config_install_from_pkg_profile_default(self, client):
+        # Now install it
+        c = client
+        c.save_home({"profiles/default": "[options]\n&:project=project1"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.save_home({"profiles/default": "[options]\n&:project=project2"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out
