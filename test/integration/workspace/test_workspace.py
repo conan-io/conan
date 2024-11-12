@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 
@@ -124,6 +125,46 @@ class TestAddRemove:
         c.run("editable list")
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
+
+    def test_dynamic_editables(self):
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import load
+            class Lib(ConanFile):
+                def set_name(self):
+                    self.name = load(self, os.path.join(self.recipe_folder, "name.txt"))
+                def set_version(self):
+                    self.version = load(self, os.path.join(self.recipe_folder, "version.txt"))
+            """)
+        workspace = textwrap.dedent("""\
+            import os
+            name = "myws"
+
+            workspace_folder = os.path.dirname(os.path.abspath(__file__))
+
+            def editables():
+                result = {}
+                for f in os.listdir(workspace_folder):
+                    if os.path.isdir(f):
+                        name = open(os.path.join(f, "name.txt")).read().strip()
+                        version = open(os.path.join(f, "version.txt")).read().strip()
+                        result[f"{name}/{version}"] = {"path": f}
+                return result
+            """)
+        c.save({"conanws.py": workspace,
+                "dep1/conanfile.py": conanfile,
+                "dep1/name.txt": "pkg",
+                "dep1/version.txt": "2.1"})
+        c.run("workspace info --format=json")
+        info = json.loads(c.stdout)
+        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        c.save({"dep1/name.txt": "other",
+                "dep1/version.txt": "14.5"})
+        c.run("workspace info --format=json")
+        info = json.loads(c.stdout)
+        assert info["editables"] == {"other/14.5": {"path": "dep1"}}
 
 
 class TestOpenAdd:
