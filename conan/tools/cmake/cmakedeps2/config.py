@@ -37,10 +37,8 @@ class ConfigTemplate2:
                                                   check_type=list)
         if components is None:  # Lets compute the default components names
             components = []
-            # TODO: Repeated call, also in targets file, we might want to cache it
-            # or remove it once the dynamically created components for lib=[multi] are removed
-            cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
-            for name in cpp_info.components:
+            # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
+            for name in self._conanfile.cpp_info.components:
                 cmakename = self._cmakedeps.get_property("cmake_target_name", self._conanfile, name)
                 if cmakename and "::" in cmakename:  # Remove package namespace
                     cmakename = cmakename.split("::", 1)[1]

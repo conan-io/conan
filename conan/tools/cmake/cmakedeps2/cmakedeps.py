@@ -119,8 +119,11 @@ class CMakeDeps2:
         except KeyError:
             # Here we are not using the cpp_info = deduce_cpp_info(dep) because it is not
             # necessary for the properties
-            return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
-                else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
+            if not comp_name:
+                return dep.cpp_info.get_property(prop, check_type=check_type)
+            comp = dep.cpp_info.components.get(comp_name)  # it is a default dict
+            if comp is not None:
+                return comp.get_property(prop, check_type=check_type)
 
     def get_cmake_filename(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""
