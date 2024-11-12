@@ -109,9 +109,11 @@ def test_windows_several_shared_link_locations(lib_info):
 @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
 def test_shared_link_locations_symlinks():
     folder = temp_folder()
-    real_location = os.path.join(folder, "libdir", "mylib.so")
+    # forcing a folder that it's not going to be analysed by the deduce_location() function
+    real_location = os.path.join(folder, "other", "mylib.so")
     save(real_location, "")
     # Symlinks
+    os.makedirs(os.path.join(folder, "libdir"))
     sym_1 = os.path.join(folder, "libdir", "mylib.1.0.0.so")
     sym_2 = os.path.join(folder, "libdir", "mylib.2.0.0.so")
     os.symlink(real_location, sym_1)

@@ -779,8 +779,7 @@ class CppInfo:
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
             common.requires = list(result.components.keys()) + (self.requires or [])
-
-            # result.components["_common"] = common
+            result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components

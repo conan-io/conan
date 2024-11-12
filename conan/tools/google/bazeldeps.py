@@ -427,6 +427,8 @@ class _BazelBUILDGenerator:
             )
         # components
         for cmp_name, cmp_cpp_info in result.components.items():
+            if cmp_name == "_common":  # FIXME: placeholder?
+                continue
             if len(cmp_cpp_info.libs) > 1:
                 raise ConanException(f"BazelDeps only allows 1 lib per component:\n"
                                      f"{self._dep}: {cmp_cpp_info.libs}")
