@@ -19,7 +19,7 @@ from conans.util.files import save
     ("mylibwin2.if.lib", ["mylibwin2.if.lib"]),
     ("mylibwin2.if.lib", ["mylibwin2"])
 ])
-def test_simple_deduce_locations(lib_name, libs):
+def test_simple_deduce_locations_static(lib_name, libs):
     folder = temp_folder()
     location = os.path.join(folder, "libdir", lib_name)
     save(location, "")
@@ -54,6 +54,33 @@ def test_deduce_shared_link_locations():
     assert result.type == "shared-library"
 
 
+@pytest.mark.parametrize("lib_name, libs", [
+    ("liblog4cxx.so.15.2.0", ["log4cxx"]),
+    ("libapr-1.0.dylib", ["apr-1"]),
+    ("libapr-1.so.0.7.4", ["apr-1"])
+])
+def test_complex_deduce_locations_shared(lib_name, libs):
+    """
+    Tests real examples of shared library names in Linux/MacOS,
+    e.g., log4cxx, apr-1, etc.
+
+    Related issue: https://github.com/conan-io/conan/issues/16990
+    """
+    folder = temp_folder()
+    location = os.path.join(folder, "libdir", lib_name)
+    save(location, "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = libs
+    cppinfo.set_relative_base_folder(folder)
+
+    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    assert result.location == location.replace("\\", "/")
+    assert result.link_location is None
+    assert result.type == "shared-library"
+
+
 @pytest.mark.parametrize("lib_name, dll_name, libs", [
     ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"]),
     ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"]),
@@ -61,6 +88,10 @@ def test_deduce_shared_link_locations():
     ("zdll.lib", "zlib1.dll", ["zdll"])
 ])
 def test_windows_shared_link_locations(lib_name, dll_name, libs):
+    """
+    Tests real examples of shared library names in Windows,
+    e.g., openssl, zlib, libcurlb, etc.
+    """
     folder = temp_folder()
     imp_location = os.path.join(folder, "libdir", lib_name)
     save(imp_location, "")
@@ -80,17 +111,27 @@ def test_windows_shared_link_locations(lib_name, dll_name, libs):
 
 
 @pytest.mark.parametrize("lib_info", [
-    {"charset": ("charset.lib", "charset-1.dll"),
-     "iconv": ("iconv.lib", "iconv-2.dll")}
+    {"charset": ["charset.lib", "charset-1.dll"],
+     "iconv": ["iconv.lib", "iconv-2.dll"]},
+    {"charset": ["libcharset.so.1.0.0"],
+     "iconv": ["libiconv.so.2.6.1"]},
 ])
 def test_windows_several_shared_link_locations(lib_info):
+    """
+    Tests a real model as LIBICONV with several libs defined in the root component
+    """
     folder = temp_folder()
     locations = {}
+    is_windows = False
     for lib_name, lib_files in lib_info.items():
         imp_location = os.path.join(folder, "libdir", lib_files[0])
         save(imp_location, "")
-        location = os.path.join(folder, "bindir", lib_files[1])
-        save(location, "")
+        if len(lib_files) > 1:
+            is_windows = True
+            location = os.path.join(folder, "bindir", lib_files[1])
+            save(location, "")
+        else:
+            location = imp_location  # Linux
         locations[lib_name] = (location, imp_location)
 
     cppinfo = CppInfo()
@@ -102,12 +143,17 @@ def test_windows_several_shared_link_locations(lib_info):
     result = cppinfo.deduce_full_cpp_info(ConanFileMock())
     for lib_name in lib_info:
         assert result.components[f"_{lib_name}"].location == locations[lib_name][0].replace("\\", "/")
-        assert result.components[f"_{lib_name}"].link_location == locations[lib_name][1].replace("\\", "/")
+        if is_windows:
+            assert result.components[f"_{lib_name}"].link_location == locations[lib_name][1].replace("\\", "/")
         assert result.components[f"_{lib_name}"].type == "shared-library"
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
 def test_shared_link_locations_symlinks():
+    """
+    Tests auto deduce location is able to find the real path of
+    any symlink created in the libs folder
+    """
     folder = temp_folder()
     # forcing a folder that it's not going to be analysed by the deduce_location() function
     real_location = os.path.join(folder, "other", "mylib.so")
