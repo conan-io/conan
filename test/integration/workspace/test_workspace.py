@@ -126,7 +126,8 @@ class TestAddRemove:
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
 
-    def test_dynamic_editables(self):
+    @pytest.mark.parametrize("api", [False, True])
+    def test_dynamic_editables(self, api):
         c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             import os
@@ -138,21 +139,36 @@ class TestAddRemove:
                 def set_version(self):
                     self.version = load(self, os.path.join(self.recipe_folder, "version.txt"))
             """)
-        workspace = textwrap.dedent("""\
-            import os
-            name = "myws"
+        if not api:
+            workspace = textwrap.dedent("""\
+                import os
+                name = "myws"
 
-            workspace_folder = os.path.dirname(os.path.abspath(__file__))
+                workspace_folder = os.path.dirname(os.path.abspath(__file__))
 
-            def editables():
-                result = {}
-                for f in os.listdir(workspace_folder):
-                    if os.path.isdir(f):
-                        name = open(os.path.join(f, "name.txt")).read().strip()
-                        version = open(os.path.join(f, "version.txt")).read().strip()
-                        result[f"{name}/{version}"] = {"path": f}
-                return result
-            """)
+                def editables():
+                    result = {}
+                    for f in os.listdir(workspace_folder):
+                        if os.path.isdir(f):
+                            name = open(os.path.join(f, "name.txt")).read().strip()
+                            version = open(os.path.join(f, "version.txt")).read().strip()
+                            result[f"{name}/{version}"] = {"path": f}
+                    return result
+                """)
+        else:
+            workspace = textwrap.dedent("""\
+               import os
+               name = "myws"
+
+               def editables(*args, **kwargs):
+                   result = {}
+                   for f in os.listdir(workspace_api.folder):
+                       if os.path.isdir(f):
+                           conanfile = workspace_api.load(os.path.join(f, "conanfile.py"))
+                           result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
+                   return result
+               """)
+
         c.save({"conanws.py": workspace,
                 "dep1/conanfile.py": conanfile,
                 "dep1/name.txt": "pkg",

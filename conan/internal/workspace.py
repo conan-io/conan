@@ -19,6 +19,19 @@ def _find_ws_folder():
             path = path.parent
 
 
+class _UserWorkspaceAPI:
+    def __init__(self, folder):
+        self.folder = folder
+
+    def load(self, conanfile_path):
+        conanfile_path = os.path.join(self.folder, conanfile_path)
+        from conans.client.loader import ConanFileLoader
+        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=None)
+        conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
+                                      channel=None, remotes=None, graph_lock=None)
+        return conanfile
+
+
 class Workspace:
     TEST_ENABLED = False
 
@@ -45,6 +58,7 @@ class Workspace:
             py_file = os.path.join(self._folder, "conanws.py")
             if os.path.exists(py_file):
                 self._py, _ = load_python_file(py_file)
+                setattr(self._py, "workspace_api", _UserWorkspaceAPI(self._folder))
                 setattr(self._py, "conanws_data", self._yml)
 
     @property
