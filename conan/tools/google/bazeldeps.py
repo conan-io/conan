@@ -8,6 +8,7 @@ from jinja2 import Template, StrictUndefined
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conans.model.dependencies import get_transitive_requires
+from conans.model.pkg_type import PackageType
 from conans.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
@@ -396,24 +397,19 @@ class _BazelBUILDGenerator:
         """
         return self._root_package_info.repository_name
 
-    def deduce_libs_info(self):
-        def is_shared(deduced_info):
-            if deduced_info.link_location:  # import library
-                return True
-            elif deduced_info.location:
-                _, ext = os.path.splitext(deduced_info.location)
-                if ext in (".so", ".dylib", ".dll"):  # adding dll just in case
-                    return True
-            return False
+    def get_full_libs_info(self):
+
+        def is_shared(cpp_info_):
+            return cpp_info_.type == PackageType.SHARED
 
         full_libs_info = defaultdict(list)
         cpp_info = self._dep.cpp_info
-        result = cpp_info.deduce_full_cpp_info(self._dep)
+        deduced_cpp_info = cpp_info.deduce_full_cpp_info(self._dep)
         package_folder_path = self.package_folder
         # Root
         if len(cpp_info.libs) > 1:
             for lib_name in cpp_info.libs:
-                virtual_component = result.components.pop(f"_{lib_name}")  # removing it!
+                virtual_component = deduced_cpp_info.components.pop(f"_{lib_name}")  # removing it!
                 full_libs_info["root"].append(
                     _LibInfo(lib_name, is_shared(virtual_component),
                          _relativize_path(virtual_component.location, package_folder_path),
@@ -421,12 +417,12 @@ class _BazelBUILDGenerator:
                 )
         elif cpp_info.libs:
             full_libs_info["root"].append(
-                _LibInfo(cpp_info.libs[0], is_shared(result),
-                         _relativize_path(result.location, package_folder_path),
-                         _relativize_path(result.link_location, package_folder_path))
+                _LibInfo(cpp_info.libs[0], is_shared(deduced_cpp_info),
+                         _relativize_path(deduced_cpp_info.location, package_folder_path),
+                         _relativize_path(deduced_cpp_info.link_location, package_folder_path))
             )
         # components
-        for cmp_name, cmp_cpp_info in result.components.items():
+        for cmp_name, cmp_cpp_info in deduced_cpp_info.components.items():
             if cmp_name == "_common":  # FIXME: placeholder?
                 continue
             if len(cmp_cpp_info.libs) > 1:
@@ -477,11 +473,11 @@ class _BazelBUILDGenerator:
 
         package_folder_path = self.package_folder
         context = dict()
-        deduced_libs_info = self.deduce_libs_info()
-        context["root"] = fill_info(self._root_package_info, deduced_libs_info.get("root", []))
+        full_libs_info = self.get_full_libs_info()
+        context["root"] = fill_info(self._root_package_info, full_libs_info.get("root", []))
         context["components"] = []
         for component in self._components_info:
-            component_context = fill_info(component, deduced_libs_info.get(component.name, []))
+            component_context = fill_info(component, full_libs_info.get(component.name, []))
             context["components"].append(component_context)
             context["root"]["component_names"].append(component_context["name"])
 

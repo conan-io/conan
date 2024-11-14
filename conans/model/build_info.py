@@ -484,39 +484,41 @@ class _Component:
 
     def _auto_deduce_locations(self, conanfile):
 
+        def _lib_match_by_glob(dir_, pattern):
+            # Run a glob.glob function to find the file given by the pattern
+            matches = glob.glob(f"{dir_}/{pattern}")
+            if matches:
+                return matches[0]
+
+        def _lib_match_by_regex(dir_, pattern):
+            # pattern is a regex compiled pattern, so let's iterate each file to find the library
+            files = os.listdir(dir_)
+            for file_name in files:
+                full_path = os.path.join(dir_, file_name)
+                if os.path.isfile(full_path) and pattern.match(file_name):
+                    # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+                    if os.path.islink(full_path):
+                        # Important! os.path.realpath returns the final path of the symlink even if it points
+                        # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+                        # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
+                        # Note: os.readlink() returns the path which the symbolic link points to.
+                        real_path = os.path.realpath(full_path)
+                        if pattern.match(os.path.basename(real_path)):
+                            return real_path
+                    else:
+                        return full_path
+
         def _find_matching(dirs, pattern):
-            lib_found = ""
             for d in dirs:
-                if lib_found:
-                    break
                 if not os.path.exists(d):
                     continue
                 # If pattern is an exact match
                 if isinstance(pattern, str):
-                    matches = glob.glob(f"{d}/{pattern}")
-                    if matches:
-                        lib_found = matches[0]
-                    continue
-                # Otherwise, it's a regex
-                files = os.listdir(d)
-                for file_name in files:
-                    full_path = os.path.join(d, file_name)
-                    if not os.path.isfile(full_path):  # Make sure that directories are excluded
-                        continue
-                    elif pattern.match(file_name):
-                        # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
-                        if os.path.islink(full_path):
-                            # Important! os.path.realpath returns the final path of the symlink even if it points
-                            # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
-                            # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
-                            # Note: os.readlink() returns the path which the symbolic link points to.
-                            real_path = os.path.realpath(full_path)
-                            if pattern.match(os.path.basename(real_path)):
-                                lib_found = real_path
-                        else:
-                            lib_found = full_path
-                        break
-            return lib_found.replace("\\", "/")
+                    lib_found = _lib_match_by_glob(d, pattern)
+                else:
+                    lib_found = _lib_match_by_regex(d, pattern)
+                if lib_found is not None:
+                    return lib_found.replace("\\", "/")
 
         pkg_type = conanfile.package_type
         libdirs = self.libdirs
@@ -580,15 +582,15 @@ class _Component:
             return
         if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
             return
-
-        if len(self.libs) == 0:
+        num_libs = len(self.libs)
+        if num_libs == 0:
             return
-
-        if len(self.libs) != 1:
-            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
-
-        # If no location is defined, it's time to guess the location
-        self._auto_deduce_locations(conanfile)
+        elif num_libs > 1:
+            raise ConanException(
+                f"More than 1 library defined in cpp_info.libs, cannot deduce CPS ({num_libs} libraries found)")
+        else:
+            # If no location is defined, it's time to guess the location
+            self._auto_deduce_locations(conanfile)
 
 
 class CppInfo:
