@@ -79,7 +79,7 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial, check_config=False)
 
     try:
         default_profile = args.profile or conan_api.profiles.get_default_build()

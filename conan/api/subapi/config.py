@@ -95,12 +95,11 @@ class ConfigAPI:
             # We check if this specific version is already installed
             config_pref = pkg.pref.repr_notime()
             if config_pref in config_versions:
+                out = ConanOutput()
                 if force:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "but re-installation forced")
+                    out.info(f"Package '{pkg}' already configured, but re-installation forced")
                 else:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "skipping configuration install")
+                    out.info(f"Package '{pkg}' already configured, skipping configuration install")
                     continue
 
             from conan.internal.api.config.config_installer import configuration_install
@@ -109,6 +108,8 @@ class ConfigAPI:
             # We save the current package full reference in the file for future
             # And for ``package_id`` computation
             config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
+            # TODO: We need to define how to manage the list of installed configs
+            config_versions.pop(pkg.pref.ref.name, None)  # To make it latest
             config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
             config_prefs.append(pkg.pref)
             save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))

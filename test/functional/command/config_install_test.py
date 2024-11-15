@@ -782,6 +782,18 @@ class TestConfigInstallPkgLockfiles:
         assert "myconf/0.1: Checking remote: default" in c.out
         assert "Configuration from package: myconf/0.1" in c.out
 
+    def test_verify_lockfile(self, client):
+        c = client
+        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+        # Overwrite it with a new one
+        c.save({"conanfile.py": GenConanfile("myconf", "0.2").with_package_type("configuration")})
+        c.run("export-pkg .")
+
+        c.save({"conanfile.py": GenConanfile()})
+        c.run("install . --lockfile=config.lock", assert_error=True)  # should fail
+        assert "ERROR: Lockfile contained locked 'config_requires' not in current " \
+               "configuration: [myconf/0.1" in c.out
+
 
 class TestConfigInstallPkgSettings:
     conanfile = textwrap.dedent("""

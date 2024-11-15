@@ -1,10 +1,13 @@
+import json
 import os
 
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.graph import Overrides
 from conan.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
+from conans.util.files import load
 
 
 class LockfileAPI:
@@ -12,8 +15,8 @@ class LockfileAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @staticmethod
-    def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False, overrides=None):
+    def get_lockfile(self, lockfile=None, conanfile_path=None, cwd=None, partial=False,
+                     overrides=None, check_config=True):
         """ obtain a lockfile, following this logic:
         - If lockfile is explicitly defined, it would be either absolute or relative to cwd and
           the lockfile file must exist. If lockfile="" (empty string) the default "conan.lock"
@@ -28,6 +31,7 @@ class LockfileAPI:
         :param conanfile_path: The full path to the conanfile, if existing
         :param lockfile: the name of the lockfile file
         :param overrides: Dictionary of overrides {overriden: [new_ref1, new_ref2]}
+        :param check_config: Compared locked config_requires and raise if not matching
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
@@ -53,6 +57,20 @@ class LockfileAPI:
         if overrides:
             graph_lock._overrides = Overrides.deserialize(overrides)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
+        if check_config:
+            refs = list(graph_lock._conf_requires.refs())
+            if refs:
+                config_version_file = HomePaths(self.conan_api.home_folder).config_version_path
+                if os.path.exists(config_version_file):
+                    raise ConanException("Lockfile contained locked 'config_requires' not in "
+                                         f"current configuration: {refs}")
+                config_versions = json.loads(load(config_version_file))
+                config_versions = config_versions["config_version"]
+                config_versions = {ref.split(":", 1)[0]: ref for ref in config_versions}
+                for r in refs:
+                    if r not in config_versions:
+                        raise ConanException("Lockfile contained locked 'config_requires' not in "
+                                             f"current configuration: {r}")
         return graph_lock
 
     def update_lockfile_export(self, lockfile, conanfile, ref, is_build_require=False):
