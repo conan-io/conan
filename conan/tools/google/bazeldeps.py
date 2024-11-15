@@ -12,7 +12,6 @@ from conans.model.pkg_type import PackageType
 from conans.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
-_LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'import_lib_path'])
 
 
 def _get_name_with_namespace(namespace, name):
@@ -249,12 +248,19 @@ class _BazelDependenciesBZLGenerator:
         save("BUILD.bazel", "# This is an empty BUILD file.")
 
 
+class _LibInfo:
+    def __init__(self, lib_name, cpp_info_, package_folder_path):
+        self.name = lib_name
+        self.is_shared = cpp_info_.type == PackageType.SHARED
+        self.lib_path = _relativize_path(cpp_info_.location, package_folder_path)
+        self.import_lib_path = _relativize_path(cpp_info_.link_location, package_folder_path)
+
+
 class _BazelBUILDGenerator:
     """
     This class creates the BUILD.bazel for each dependency where it's declared all the
     necessary information to load the libraries
     """
-
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
     filename = "BUILD.bazel"
@@ -398,10 +404,6 @@ class _BazelBUILDGenerator:
         return self._root_package_info.repository_name
 
     def get_full_libs_info(self):
-
-        def is_shared(cpp_info_):
-            return cpp_info_.type == PackageType.SHARED
-
         full_libs_info = defaultdict(list)
         cpp_info = self._dep.cpp_info
         deduced_cpp_info = cpp_info.deduce_full_cpp_info(self._dep)
@@ -411,15 +413,11 @@ class _BazelBUILDGenerator:
             for lib_name in cpp_info.libs:
                 virtual_component = deduced_cpp_info.components.pop(f"_{lib_name}")  # removing it!
                 full_libs_info["root"].append(
-                    _LibInfo(lib_name, is_shared(virtual_component),
-                         _relativize_path(virtual_component.location, package_folder_path),
-                         _relativize_path(virtual_component.link_location, package_folder_path))
+                    _LibInfo(lib_name, virtual_component, package_folder_path)
                 )
         elif cpp_info.libs:
             full_libs_info["root"].append(
-                _LibInfo(cpp_info.libs[0], is_shared(deduced_cpp_info),
-                         _relativize_path(deduced_cpp_info.location, package_folder_path),
-                         _relativize_path(deduced_cpp_info.link_location, package_folder_path))
+                _LibInfo(cpp_info.libs[0], deduced_cpp_info, package_folder_path)
             )
         # components
         for cmp_name, cmp_cpp_info in deduced_cpp_info.components.items():
@@ -431,9 +429,7 @@ class _BazelBUILDGenerator:
             elif cmp_cpp_info.libs:
                 # Bazel needs to relativize each path
                 full_libs_info[_get_component_name(self._dep, cmp_name)].append(
-                    _LibInfo(cmp_cpp_info.libs[0], is_shared(cmp_cpp_info),
-                             _relativize_path(cmp_cpp_info.location, package_folder_path),
-                             _relativize_path(cmp_cpp_info.link_location, package_folder_path))
+                    _LibInfo(cmp_cpp_info.libs[0], cmp_cpp_info, package_folder_path)
                 )
         return full_libs_info
 
