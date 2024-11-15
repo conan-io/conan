@@ -293,6 +293,10 @@ def test_replace_requires_multiple():
                 self.requires("opengl/system")
                 self.requires("egl/system")
 
+            def generate(self):
+                for r, d in self.dependencies.items():
+                    self.output.info(f"DEP: {r.ref.name}: {d.ref.name}")
+
             def package_info(self):
                 self.cpp_info.requires.append("opengl::opengl")
                 self.cpp_info.requires.append("egl::egl")
@@ -308,4 +312,6 @@ def test_replace_requires_multiple():
             "profile": profile})
     c.run("create dep --name=libgl --version=1.0")
     c.run("create app -pr=profile")
-    print(c.out)
+    # There are actually 2 dependencies, pointing to the same node
+    assert "libepoxy/0.1: DEP: opengl: libgl" in c.out
+    assert "libepoxy/0.1: DEP: egl: libgl" in c.out
