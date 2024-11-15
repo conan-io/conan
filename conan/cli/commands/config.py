@@ -60,7 +60,7 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     """
     (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
     """
-    subparser.add_argument("item", help="Conan require")
+    subparser.add_argument("require", nargs="?", help="Conan require")
     subparser.add_argument("-l", "--lockfile", action=OnceArgument,
                            help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                                 "existing 'conan.lock' file")
@@ -88,9 +88,9 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     profiles = [default_profile] if default_profile else []
     profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
     remotes = [Remote("_tmp_conan_config", url=args.url)] if args.url else None
-    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile, force=args.force,
-                                               remotes=remotes, profile=profile)
-    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
+    prefs = conan_api.config.install_pkg(args.require, lockfile=lockfile, force=args.force,
+                                         remotes=remotes, profile=profile)
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[p.ref for p in prefs])
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 

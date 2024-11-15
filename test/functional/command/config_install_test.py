@@ -10,6 +10,7 @@ from mock import patch
 
 from conan.api.model import Remote
 from conan.internal.api.config.config_installer import _hide_password
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.downloaders.file_downloader import FileDownloader
 from conan.internal.paths import DEFAULT_CONAN_HOME
 from conan.test.assets.genconanfile import GenConanfile
@@ -699,23 +700,6 @@ class TestConfigInstallPkg:
         c.run("config install-pkg myconf/[*]", assert_error=True)
         assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
 
-    def test_lockfile(self, client):
-        """ it should be able to install the config using a lockfile
-        """
-        c = client
-        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
-
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
-        # Make sure we bump the version, otherwise only a package revision will be created
-        c2.save({"conanfile.py": self.conanfile.replace("0.1", "0.2"),
-                 "global.conf": "user.myteam:myconf=othervalue"})
-        c2.run("export-pkg .")
-        c2.run("upload * -r=default -c")
-
-        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
-
     def test_create_also(self):
         conanfile = textwrap.dedent("""
            from conan import ConanFile
@@ -758,6 +742,45 @@ class TestConfigInstallPkg:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
+
+class TestConfigInstallPkgLockfiles:
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("myconf", "0.1").with_package_type("configuration")})
+        c.run("export-pkg .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    def test_lockfile(self, client):
+        """ it should be able to install the config using a lockfile
+        """
+        c = client
+        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        # Make sure we bump the version, otherwise only a package revision will be created
+        c2.save({"conanfile.py": GenConanfile("myconf", "0.2").with_package_type("configuration")})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
+
+        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
+        assert "myconf/0.1" in c.out
+        assert "myconf/0.2" not in c.out
+
+    def test_install_from_lockfile(self, client):
+        c = client
+        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+        path = HomePaths(c.cache_folder).config_version_path
+        os.remove(path)
+        c.run("remove * -c")
+        # get them from the lockfile
+        c.run("config install-pkg --lockfile=config.lock")
+        assert "Installing configurations defined in lockfile" in c.out
+        assert "myconf/0.1: Checking remote: default" in c.out
+        assert "Configuration from package: myconf/0.1" in c.out
 
 
 class TestConfigInstallPkgSettings:
