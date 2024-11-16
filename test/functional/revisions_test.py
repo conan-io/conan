@@ -10,7 +10,7 @@ from conan.test.utils.env import environment_update
 from conan.internal.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
-from conan.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
+from conan.test.utils.tools import TestServer, GenConanfile, TestClient
 from conans.util.files import load
 
 
@@ -22,7 +22,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.server2 = TestServer()
         self.servers = OrderedDict([("default", self.server),
                                     ("remote2", self.server2)])
-        self.c_v2 = TurboTestClient(servers=self.servers, inputs=2*["admin", "password"])
+        self.c_v2 = TestClient(servers=self.servers, inputs=2*["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_install_binary_iterating_remotes_same_rrev(self):
@@ -34,7 +34,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.c_v2.upload_all(self.ref, remote="default")
+            self.c_v2.run(f"upload {self.ref} -r=default -c")
         self.c_v2.run("remove {}#*:{} -c -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
         with environment_update({"MY_VAR": "2"}):
@@ -42,7 +42,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         the_time = the_time + 10.0
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.c_v2.upload_all(self.ref, remote="remote2")
+            self.c_v2.run(f"upload {self.ref} -r=remote2 -c")
         self.c_v2.remove_all()
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
@@ -59,21 +59,21 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Two revisions of "lib1" to the server
         lib1 = RecipeReference.loads("lib1/1.0@conan/stable")
         lib1_pref = self.c_v2.create(lib1)
-        self.c_v2.upload_all(lib1)
+        self.c_v2.run(f"upload {lib1} -r=default -c")
         lib1b_pref = self.c_v2.create(lib1, conanfile=GenConanfile().with_build_msg("Rev2"))
-        self.c_v2.upload_all(lib1)
+        self.c_v2.run(f"upload {lib1} -r=default -c")
 
         # Lib2 depending of lib1
         self.c_v2.remove_all()
         lib2 = RecipeReference.loads("lib2/1.0@conan/stable")
         self.c_v2.create(lib2, conanfile=GenConanfile().with_requirement(lib1_pref.ref))
-        self.c_v2.upload_all(lib2)
+        self.c_v2.run(f"upload {lib2} -r=default -c")
 
         # Lib3 depending of lib1b
         self.c_v2.remove_all()
         lib3 = RecipeReference.loads("lib3/1.0@conan/stable")
         self.c_v2.create(lib3, conanfile=GenConanfile().with_requirement(lib1b_pref.ref))
-        self.c_v2.upload_all(lib3)
+        self.c_v2.run(f"upload {lib3} -r=default -c")
 
         # Project depending on both lib3 and lib2
         self.c_v2.remove_all()
@@ -89,11 +89,11 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Upload one revision
         pref = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
 
         # Upload other revision
         self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("Build Rev 2"))
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
         self.c_v2.remove_all()
 
         # Create an alias to the first revision
@@ -102,7 +102,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
         self.assertIn('alias = "{}"'.format(repr(pref.ref)), exported)
 
-        self.c_v2.upload_all(RecipeReference.loads("lib/latest@conan/stable"))
+        self.c_v2.run(f"upload lib/latest@conan/stable -r=default -c")
         self.c_v2.remove_all()
 
         self.c_v2.run("install --requires=lib/(latest)@conan/stable")
@@ -117,7 +117,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         the revision from upstream"""
         # Upload with v2
         pref = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
@@ -135,8 +135,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         Another client v2 upload the same RREV with PREV2
         The first client can upgrade from the remote, only
         in the package, because the recipe is the same and it is not updated"""
-        client = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
-        client2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        client = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        client2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
 
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_update({"MY_VAR": "1"}):
@@ -145,13 +145,13 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         time.sleep(1)
 
         with patch.object(RevisionList, '_now', return_value=time.time()):
-            client.upload_all(self.ref)
+            client.run(f"upload {self.ref} -r=default -c")
 
         with environment_update({"MY_VAR": "2"}):
             pref2 = client2.create(self.ref, conanfile=conanfile)
 
         with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
-            client2.upload_all(self.ref)
+            client2.run(f"upload {self.ref} -r=default -c")
 
         prev1_time_remote = self.server.package_revision_time(pref)
         prev2_time_remote = self.server.package_revision_time(pref2)
@@ -198,19 +198,21 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
         # Now create a new revision with other client and upload it, we will request it
-        new_client = TurboTestClient(servers=self.servers, inputs=["admin", "password"])
-        pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        new_client.upload_all(self.ref)
+        new_client = TestClient(servers=self.servers, inputs=["admin", "password"])
+        new_client.save({"conanfile.py": GenConanfile("lib", "1.0").with_build_msg("Rev2")})
+        new_client.run("create . --user=conan --channel=testing")
+        new_client.run(f"upload * -r=default -c")
 
         # Repeat the install --update pointing to the new reference
-        client.run("install --requires={} --update".format(repr(pref.ref)))
+        client.run("install --requires={} --update".format(ref))
+        print(client.out)
         client.assert_listed_require({str(self.ref): "Downloaded (default)"})
 
     def test_revision_mismatch_packages_remote(self):
         """If we have a recipe that doesn't match a remote recipe:
          It is not resolved in the remote."""
         self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
 
         client = self.c_v2
         client.remove_all()
@@ -227,7 +229,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         for _ in range(1, 4):  # create different revisions
             conanfile.with_build_msg("any change to get another rrev")
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
-            self.c_v2.upload_all(pref.ref)
+            self.c_v2.run(f"upload {pref.ref} -r=default -c")
             refs.append(pref.ref)
             assert refs.count(pref.ref) == 1 # make sure that all revisions are different
 
@@ -244,7 +246,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_remove_local_recipe(self):
@@ -320,11 +322,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         """When a client removes a reference, it removes ALL revisions, no matter
         if the client is v1 or v2"""
         pref1 = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(pref1.ref)
+        self.c_v2.run(f"upload {pref1.ref} -r=default -c")
 
         pref2 = self.c_v2.create(self.ref,
                                  conanfile=GenConanfile().with_build_msg("RREV 2!"))
-        self.c_v2.upload_all(pref2.ref)
+        self.c_v2.run(f"upload {pref2.ref} -r=default -c")
 
         self.assertNotEqual(pref1, pref2)
 
@@ -342,11 +344,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         """If a client removes a recipe with revision:
              - If the client is v2 will remove only that revision"""
         pref1 = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(pref1.ref)
+        self.c_v2.run(f"upload {pref1.ref} -r=default -c")
 
         pref2 = self.c_v2.create(self.ref,
                                  conanfile=GenConanfile().with_build_msg("RREV 2!"))
-        self.c_v2.upload_all(pref2.ref)
+        self.c_v2.run(f"upload {pref2.ref} -r=default -c")
 
         self.assertNotEqual(pref1, pref2)
 
@@ -362,11 +364,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         """When a client removes a package, without RREV, it removes the package from ALL
         RREVs"""
         pref1 = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(pref1.ref)
+        self.c_v2.run(f"upload {pref1.ref} -r=default -c")
 
         pref2 = self.c_v2.create(self.ref,
                                  conanfile=GenConanfile().with_build_msg("RREV 2!"))
-        self.c_v2.upload_all(pref2.ref)
+        self.c_v2.run(f"upload {pref2.ref} -r=default -c")
 
         self.assertEqual(pref1.package_id, pref2.package_id)
         # Both revisions exist in 2.0 cache
@@ -392,18 +394,18 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         """
         # First RREV
         pref1 = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(pref1.ref)
+        self.c_v2.run(f"upload {pref1.ref} -r=default -c")
 
         # Second RREV with two PREVS (exactly same conanfile, different package files)
         rev2_conanfile = GenConanfile().with_build_msg("RREV 2!")\
                                        .with_package_file("file", env_var="MY_VAR")
         with environment_update({"MY_VAR": "1"}):
             pref2 = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
-            self.c_v2.upload_all(pref2.ref)
+            self.c_v2.run(f"upload {pref2.ref} -r=default -c")
 
         with environment_update({"MY_VAR": "2"}):
             pref2b = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
-            self.c_v2.upload_all(pref2b.ref)
+            self.c_v2.run(f"upload {pref2b.ref} -r=default -c")
 
         # Check created revisions
         self.assertEqual(pref1.package_id, pref2.package_id)
@@ -437,7 +439,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_upload_a_recipe(self):
@@ -446,7 +448,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         """
         client = self.c_v2
         pref = client.create(self.ref)
-        client.upload_all(self.ref)
+        client.run(f"upload {self.ref} -r=default -c")
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions_references(self.ref)]
 
         self.assertEqual(revs, [pref.ref.revision])
@@ -459,13 +461,14 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         client = self.c_v2
         pref = client.create(self.ref, conanfile=GenConanfile().with_setting("os"),
                              args=" -s os=Windows")
-        client.upload_all(self.ref)
+        client.run(f"upload {self.ref} -r=default -c")
+
         pref2 = client.create(self.ref,
                               conanfile=GenConanfile().with_setting("os").with_build_msg("rev2"),
                               args=" -s os=Linux")
 
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref.ref.revision)
-        client.upload_all(self.ref)
+        client.run(f"upload {self.ref} -r=default -c")
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref2.ref.revision)
 
     def test_upload_no_overwrite_packages(self):
@@ -477,7 +480,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_update({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
-        client.upload_all(self.ref)
+        client.run(f"upload {self.ref} -r=default -c")
 
         with environment_update({"MY_VAR": "2"}):
             pref2 = client.create(self.ref, conanfile=conanfile)
@@ -486,7 +489,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref.revision)
-        client.upload_all(self.ref)
+        client.run(f"upload {self.ref} -r=default -c")
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref2.revision)
 
@@ -494,17 +497,17 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 class CapabilitiesRevisionsTest(unittest.TestCase):
     def test_server_with_only_v2_capability(self):
         server = TestServer(server_capabilities=[])
-        c_v2 = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
+        c_v2 = TestClient(servers={"default": server}, inputs=["admin", "password"])
         ref = RecipeReference.loads("lib/1.0@conan/testing")
         c_v2.create(ref)
-        c_v2.upload_all(ref, remote="default")
+        c_v2.run(f"upload {ref} -r=default -c")
 
 
 class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_rotation_deleting_recipe_revisions(self):
@@ -515,15 +518,15 @@ class ServerRevisionsIndexes(unittest.TestCase):
         the first is now the latest
         """
         ref1 = self.c_v2.export(self.ref, conanfile=GenConanfile())
-        self.c_v2.upload_all(ref1)
+        self.c_v2.run(f"upload {ref1} -r=default -c")
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref1.revision)
         ref2 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev2"))
-        self.c_v2.upload_all(ref2)
+        self.c_v2.run(f"upload {ref2} -r=default -c")
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref2.revision)
         ref3 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev3"))
-        self.c_v2.upload_all(ref3)
+        self.c_v2.run(f"upload {ref2} -r=default -c")
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref3.revision)
 
@@ -617,13 +620,13 @@ class ServerRevisionsIndexes(unittest.TestCase):
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_update({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
         with environment_update({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
         with environment_update({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run(f"upload {self.ref} -r=default -c")
 
         # Delete the package revisions (all of them have the same ref#rev and id)
         command = "remove {}:{}#{{}} -r default -c".format(pref3.ref.repr_notime(), pref3.package_id)
