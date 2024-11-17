@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import stat
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -55,22 +56,29 @@ class UploadTest(unittest.TestCase):
     @pytest.mark.artifactory_ready
     def test_upload_force(self):
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile("hello", "0.1").with_package_file("myfile.sh",
-                                                                                    "foo")})
-        client.run("create .")
+        conanfile_ = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class MyPkg(ConanFile):
+                name = "hello"
+                version = "0.1"
+                def package(self):
+                    copy(self, "myfile.sh", src=self.source_folder, dst=self.package_folder)
+            """)
+        client.save({"conanfile.py": conanfile_,
+                    "myfile.sh": "foo"})
+
+        client.run("export-pkg .")
         client.run("upload * --confirm -r default")
         assert "Uploading package 'hello" in client.out
         client.run("upload * --confirm -r default")
         assert "Uploading package" not in client.out
 
         if platform.system() == "Linux":
-            client.run("remove '*' -c")
-            client.save({"conanfile.py": GenConanfile("hello", "0.1").with_package_file("myfile.sh",
-                                                                                        "foo")})
             package_file_path = os.path.join(client.current_folder, "myfile.sh")
             os.system('chmod +x "{}"'.format(package_file_path))
             assert os.stat(package_file_path).st_mode & stat.S_IXUSR
-            client.run("create .")
+            client.run("export-pkg .")
 
             client.run("upload * --confirm -r default")
             # Doesn't change revision, doesn't reupload
