@@ -22,7 +22,7 @@ class CacheDatabase:
             self._packages.create_table()
 
     def exists_prev(self, ref):
-        return self._packages.get_package_revisions_references_count(ref) > 0
+        return self._packages.get_package_revisions_reference_exists(ref)
 
     def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
