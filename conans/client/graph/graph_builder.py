@@ -183,7 +183,7 @@ class DepsGraphBuilder(object):
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         for pattern, tool_requires in profile.tool_requires.items():
-            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):
+            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 for tool_require in tool_requires:  # Do the override
                     if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
@@ -364,9 +364,7 @@ class DepsGraphBuilder(object):
 
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
-        # If the node is virtual or a test package, the require is also "root"
-        is_test_package = getattr(node.conanfile, "tested_reference_str", False)
-        if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
+        if getattr(require, "is_consumer", None):
             dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref, parent=node.conanfile)
