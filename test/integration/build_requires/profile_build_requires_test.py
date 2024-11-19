@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -254,3 +255,16 @@ def test_tool_requires_revision_profile():
     c.run("graph info app -pr:b=build_profile --build=*")
     assert f"tool/0.1#{rev1}" in c.out
     assert rev2 not in c.out
+
+
+def test_tool_requires_not_cli_root():
+    tc = TestClient(light=True)
+    tc.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_package_type("application"),
+             "conanfile.py": GenConanfile("app", "0.1"),
+             "profile": "include(default)\n[tool_requires]\n*:tool/0.1"})
+    tc.run("export tool")
+    tc.run("export .")
+    tc.run("graph info --requires=app/0.1 -pr:h=profile -f=json", redirect_stdout="out.json")
+    graph = json.loads(tc.load("out.json"))
+    cli_deps = graph['graph']["nodes"]["0"]["dependencies"]
+    assert all(dep["ref"] != "tool/0.1" for dep in cli_deps.values())

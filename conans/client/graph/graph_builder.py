@@ -187,6 +187,8 @@ class DepsGraphBuilder(object):
                 for tool_require in tool_requires:  # Do the override
                     if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
+                    if node.recipe == RECIPE_VIRTUAL:
+                        continue
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
