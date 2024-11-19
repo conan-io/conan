@@ -1,3 +1,4 @@
+import os
 import unittest
 import textwrap
 
@@ -260,3 +261,31 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
         self.assertIn("library/version: Build OS=Linux", t.out)
+
+
+def test_consumer_get_profile_tool_requires():
+    # [tool_requires] defined in a profile will result in applying them in the
+    # consumer, both if using a conanfile.txt of using a --requires
+    t = TestClient(light=True)
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "1.0"
+            def package_info(self):
+                self.buildenv_info.define("MYVAR", "MYVALUE")
+        """)
+    t.save({'profile': "[tool_requires]\ntool/1.0",
+            'dep.py': GenConanfile("dep", "1.0"),
+            'tool.py': tool,
+            'conanfile.txt': ""})
+    t.run("create tool.py")
+    t.run("create dep.py")
+    t.run("install . --profile ./profile")
+    env = t.load("conanbuildenv.sh")
+    assert 'export MYVAR="MYVALUE"' in env
+    os.remove(os.path.join(t.current_folder, "conanbuildenv.sh"))
+    # also when using --requires
+    t.run("install --requires=dep/1.0 --profile ./profile")
+    env = t.load("conanbuildenv.sh")
+    assert 'export MYVAR="MYVALUE"' in env

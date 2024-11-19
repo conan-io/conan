@@ -256,8 +256,6 @@ class ConanFileLoader:
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))
-        for r in conanfile.requires.values():
-            r.is_consumer = True
 
         if python_requires:
             conanfile.python_requires = [pr.repr_notime() for pr in python_requires]

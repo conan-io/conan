@@ -5,7 +5,7 @@ from collections import deque
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -39,7 +39,8 @@ class DepsGraphBuilder(object):
         # print("Loading graph")
         dep_graph = DepsGraph()
 
-        self._prepare_node(root_node, profile_host, profile_build, Options())
+        define_consumers = root_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER)
+        self._prepare_node(root_node, profile_host, profile_build, Options(), define_consumers)
         rs = self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
@@ -171,14 +172,20 @@ class DepsGraphBuilder(object):
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
 
     @staticmethod
-    def _prepare_node(node, profile_host, profile_build, down_options):
-
+    def _prepare_node(node, profile_host, profile_build, down_options, define_consumers=False):
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
         profile_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
         assert isinstance(profile_options, Options), type(profile_options)
         run_configure_method(conanfile, down_options, profile_options, ref)
+
+        if define_consumers:  # Mark this requirements as the "consumers" nodes
+            tested_ref = getattr(conanfile, "tested_reference_str", None)
+            tested_ref = RecipeReference.loads(tested_ref) if tested_ref else None
+            for r in conanfile.requires.values():
+                if tested_ref is None or r.ref == tested_ref:
+                    r.is_consumer = True
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
