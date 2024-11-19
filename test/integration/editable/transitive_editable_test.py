@@ -216,9 +216,9 @@ def test_warning_from_cache():
             "pkgc/conanfile.py": GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0")})
     c.run("editable add pkga")
     c.run("create pkgb")
-    assert "pkgb/1.0: WARN: risk: Package being built in the cache, using editable" in c.out
+    assert "pkgb/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
     c.run("create pkgc")
-    assert "pkgc/1.0: WARN: risk: Package being built in the cache, using editable" in c.out
+    assert "pkgc/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
     c.run("create pkgc --build=*")
-    assert "pkgb/1.0: WARN: risk: Package being built in the cache, using editable" in c.out
-    assert "pkgc/1.0: WARN: risk: Package being built in the cache, using editable" in c.out
+    assert "pkgb/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
+    assert "pkgc/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
