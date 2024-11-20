@@ -80,6 +80,11 @@ class PremakeDeps(object):
 
         sections = ["#!lua"]
 
+        sections.extend(
+            ['conan_build_type = "{0}"'.format(str(self._conanfile.settings.build_type)),
+            'conan_arch = "{0}"'.format(str(self._conanfile.settings.get_safe("arch"))),
+            ""])
+
         deps = _PremakeTemplate(all_cpp_info)
         all_flags = template.format(deps=deps)
         sections.append(all_flags)
