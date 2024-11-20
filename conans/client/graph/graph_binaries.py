@@ -230,6 +230,10 @@ class GraphBinariesAnalyzer:
                                               "didn't enable 'tools.graph:vendor=build' to compute " \
                                               "its dependencies"
                 node.binary = BINARY_INVALID
+            if any(n.node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD)
+                   for n in node.transitive_deps.values()):
+                conanfile.output.warning("Package is being built in the cache using editable "
+                                         "dependencies, this is dangerous", warn_tag="risk")
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
