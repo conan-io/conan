@@ -39,7 +39,8 @@ class DepsGraphBuilder(object):
         # print("Loading graph")
         dep_graph = DepsGraph()
 
-        define_consumers = root_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER)
+        is_test_package = getattr(root_node.conanfile, "tested_reference_str", None)
+        define_consumers = root_node.recipe == RECIPE_VIRTUAL or is_test_package
         self._prepare_node(root_node, profile_host, profile_build, Options(), define_consumers)
         rs = self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
