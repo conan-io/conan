@@ -484,9 +484,9 @@ class _Component:
 
     def _auto_deduce_locations(self, conanfile):
 
-        def _lib_match_by_glob(dir_, pattern):
-            # Run a glob.glob function to find the file given by the pattern
-            matches = glob.glob(f"{dir_}/{pattern}")
+        def _lib_match_by_glob(dir_, filename):
+            # Run a glob.glob function to find the file given by the filename
+            matches = glob.glob(f"{dir_}/{filename}")
             if matches:
                 return matches[0]
 
@@ -514,6 +514,7 @@ class _Component:
                     continue
                 # If pattern is an exact match
                 if isinstance(pattern, str):
+                    # pattern == filename
                     lib_found = _lib_match_by_glob(d, pattern)
                 else:
                     lib_found = _lib_match_by_regex(d, pattern)
@@ -542,8 +543,7 @@ class _Component:
             regex_dll = re.compile(rf"(?:.+)?{libname}(?:[._-].+)?\.dll")
             regex_any_dll = re.compile(rf".+(?:[._-].+)?\.dll")
             static_location = _find_matching(libdirs, regex_static)
-            if not static_location:
-                shared_location = _find_matching(libdirs, regex_shared)
+            shared_location = _find_matching(libdirs, regex_shared)
             if static_location and static_location.endswith(".lib"):
                 dll_location = _find_matching(bindirs, regex_dll)
                 if not dll_location:  # any existing DLL is going to be found
@@ -551,6 +551,11 @@ class _Component:
 
         out = ConanOutput(scope=str(conanfile))
         if static_location:
+            if shared_location:
+                raise ConanException(f"{conanfile}: obtained for library '{libname}' both static "
+                                     f"and shared libraries at the same time:\n"
+                                     f"- STATIC: {static_location}\n"
+                                     f"- SHARED: {shared_location}")
             if dll_location:
                 self._location = dll_location
                 self._link_location = static_location

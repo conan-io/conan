@@ -3,6 +3,7 @@ import platform
 
 import pytest
 
+from conan.errors import ConanException
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
@@ -173,3 +174,20 @@ def test_shared_link_locations_symlinks():
     result = cppinfo.deduce_full_cpp_info(ConanFileMock())
     assert result.location == real_location
     assert result.type == "shared-library"
+
+
+def test_error_if_shared_and_static_found():
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libmylib.a"), "")
+    save(os.path.join(folder, "libdir", "libmylib.so"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    with pytest.raises(ConanException) as e:
+        cppinfo.deduce_full_cpp_info(ConanFileMock())
+    assert (f"obtained for library 'mylib' both static and shared libraries at the same time:\n"
+            f"- STATIC: {folder}/libdir/libmylib.a\n"
+            f"- SHARED: {folder}/libdir/libmylib.so") in str(e.value)
