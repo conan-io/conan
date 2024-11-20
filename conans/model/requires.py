@@ -254,6 +254,8 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
+        # necessary even if no propagation, order of requires matter
+        self.is_test = self.is_test or other.is_test
         # package_id_mode is not being propagated downstream. So it is enough to check if the
         # current require already defined it or not
         if self.package_id_mode is None:
