@@ -1216,6 +1216,8 @@ class TestCMakeComponents:
                 name = "dep"
                 version = "0.1"
                 def package_info(self):
+                    # private component that should be skipped
+                    self.cpp_info.components["_private"].includedirs = ["include"]
                     self.cpp_info.components["c1"].set_property("cmake_target_name", "MyC1")
                     self.cpp_info.components["c2"].set_property("cmake_target_name", "Dep::MyC2")
                     self.cpp_info.components["c3"].includedirs = ["include"]

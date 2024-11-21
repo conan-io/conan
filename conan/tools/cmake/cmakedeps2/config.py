@@ -39,6 +39,8 @@ class ConfigTemplate2:
             components = []
             # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
             for name in self._conanfile.cpp_info.components:
+                if name.startswith("_"):  # Skip private components
+                    continue
                 cmakename = self._cmakedeps.get_property("cmake_target_name", self._conanfile, name)
                 if cmakename and "::" in cmakename:  # Remove package namespace
                     cmakename = cmakename.split("::", 1)[1]
