@@ -482,17 +482,17 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def _auto_deduce_locations(self, conanfile, first_match=True):
+    def _auto_deduce_locations(self, conanfile, component_name):
 
-        def _lib_match_by_glob(dir_, filename, first_match=True):
+        def _lib_match_by_glob(dir_, filename):
             # Run a glob.glob function to find the file given by the filename
             matches = glob.glob(f"{dir_}/{filename}")
             if matches:
-                return matches[0] if first_match else matches
+                return matches
 
 
-        def _lib_match_by_regex(dir_, pattern, first_match=True):
-            ret = []
+        def _lib_match_by_regex(dir_, pattern):
+            ret = set()
             # pattern is a regex compiled pattern, so let's iterate each file to find the library
             files = os.listdir(dir_)
             for file_name in files:
@@ -506,29 +506,27 @@ class _Component:
                         # Note: os.readlink() returns the path which the symbolic link points to.
                         real_path = os.path.realpath(full_path)
                         if pattern.match(os.path.basename(real_path)):
-                            ret.append(real_path)
+                            ret.add(real_path)
                     else:
-                        ret.append(full_path)
-                    if first_match:
-                        return ret[0]
-            return ret
+                        ret.add(full_path)
+            return list(ret)
 
 
-        def _find_matching(dirs, pattern, first_match=True):
+        def _find_matching(dirs, pattern):
             for d in dirs:
                 if not os.path.exists(d):
                     continue
                 # If pattern is an exact match
                 if isinstance(pattern, str):
                     # pattern == filename
-                    lib_found = _lib_match_by_glob(d, pattern, first_match=first_match)
+                    lib_found = _lib_match_by_glob(d, pattern)
                 else:
-                    lib_found = _lib_match_by_regex(d, pattern, first_match=first_match)
+                    lib_found = _lib_match_by_regex(d, pattern)
                 if lib_found:
-                    if first_match:
-                        return lib_found.replace("\\", "/")
-                    else:
-                        return [m.replace("\\", "/") for m in lib_found]
+                    if len(lib_found) > 1:
+                        raise ConanException(f"There were several matches for Lib {libname}: "
+                                             f"{lib_found}")
+                    return lib_found[0].replace("\\", "/")
 
 
         pkg_type = conanfile.package_type
@@ -550,19 +548,11 @@ class _Component:
         else:
             regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
             regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
-            regex_dll = re.compile(rf"(?:.+)?{libname}(?:[._-].+)?\.dll")
-            regex_any_dll = re.compile(rf".+(?:[._-].+)?\.dll")
+            regex_dll = re.compile(rf"(?:.+)?({libname}|{component_name})(?:.+)?\.dll")
             static_location = _find_matching(libdirs, regex_static)
             shared_location = _find_matching(libdirs, regex_shared)
             if static_location or not shared_location:
                 dll_location = _find_matching(bindirs, regex_dll)
-                if not dll_location:  # any existing DLL is going to be found
-                    dll_location = _find_matching(bindirs, regex_any_dll, first_match=False)
-                    if dll_location:
-                        if len(dll_location) > 1:
-                            raise ConanException(f"There were found more than 1 DLL for Lib {libname}: "
-                                                 f"{dll_location}")
-                        dll_location = dll_location[0]
 
         out = ConanOutput(scope=str(conanfile))
         if static_location:
@@ -597,7 +587,7 @@ class _Component:
         if self._type != pkg_type:
             out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
 
-    def deduce_locations(self, conanfile):
+    def deduce_locations(self, conanfile, component_name=""):
         if self._exe:   # exe is a new field, it should have the correct location
             return
         if self._location or self._link_location:
@@ -614,7 +604,7 @@ class _Component:
                 f"More than 1 library defined in cpp_info.libs, cannot deduce CPS ({num_libs} libraries found)")
         else:
             # If no location is defined, it's time to guess the location
-            self._auto_deduce_locations(conanfile)
+            self._auto_deduce_locations(conanfile, component_name=component_name)
 
 
 class CppInfo:
@@ -811,8 +801,8 @@ class CppInfo:
             result.default_components = self.default_components
             result.components = {k: v.clone() for k, v in self.components.items()}
 
-        result._package.deduce_locations(conanfile)
-        for comp in result.components.values():
-            comp.deduce_locations(conanfile)
+        result._package.deduce_locations(conanfile, component_name=conanfile.ref.name)
+        for comp_name, comp in result.components.items():
+            comp.deduce_locations(conanfile, component_name=comp_name)
 
         return result

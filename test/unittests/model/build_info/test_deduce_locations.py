@@ -1,5 +1,6 @@
 import os
 import platform
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,7 +10,15 @@ from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
 from conans.model.build_info import CppInfo
 from conans.model.pkg_type import PackageType
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import save
+
+
+@pytest.fixture
+def conanfile():
+    c = ConanFileMock()
+    c._conan_node = MagicMock(ref=RecipeReference(""))
+    return c
 
 
 @pytest.mark.parametrize("lib_name, libs", [
@@ -21,7 +30,7 @@ from conans.util.files import save
     ("mylibwin2.if.lib", ["mylibwin2.if.lib"]),
     ("mylibwin2.if.lib", ["mylibwin2"])
 ])
-def test_simple_deduce_locations_static(lib_name, libs):
+def test_simple_deduce_locations_static(lib_name, libs, conanfile):
     folder = temp_folder()
     location = os.path.join(folder, "libdir", lib_name)
     save(location, "")
@@ -31,13 +40,13 @@ def test_simple_deduce_locations_static(lib_name, libs):
     cppinfo.libs = libs
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == location.replace("\\", "/")
     assert result.link_location is None
     assert result.type == "static-library"
 
 
-def test_deduce_shared_link_locations():
+def test_deduce_shared_link_locations(conanfile):
     folder = temp_folder()
     imp_location = os.path.join(folder, "libdir", "mylib.lib")
     save(imp_location, "")
@@ -50,7 +59,7 @@ def test_deduce_shared_link_locations():
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == location.replace("\\", "/")
     assert result.link_location == imp_location.replace("\\", "/")
     assert result.type == "shared-library"
@@ -61,7 +70,7 @@ def test_deduce_shared_link_locations():
     ("libapr-1.0.dylib", ["apr-1"]),
     ("libapr-1.so.0.7.4", ["apr-1"])
 ])
-def test_complex_deduce_locations_shared(lib_name, libs):
+def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     """
     Tests real examples of shared library names in Linux/MacOS,
     e.g., log4cxx, apr-1, etc.
@@ -77,19 +86,19 @@ def test_complex_deduce_locations_shared(lib_name, libs):
     cppinfo.libs = libs
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == location.replace("\\", "/")
     assert result.link_location is None
     assert result.type == "shared-library"
 
 
-@pytest.mark.parametrize("lib_name, dll_name, libs", [
-    ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"]),
-    ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"]),
-    ("libssl.lib", "libssl-3-x64.dll", ["libssl"]),
-    ("zdll.lib", "zlib1.dll", ["zdll"])
+@pytest.mark.parametrize("lib_name, dll_name, libs, pkg_name", [
+    ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"], "libcurl"),
+    ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"], "crypto"),
+    ("libssl.lib", "libssl-3-x64.dll", ["libssl"], "ssl"),
+    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib")
 ])
-def test_windows_shared_link_locations(lib_name, dll_name, libs):
+def test_windows_shared_link_locations(lib_name, dll_name, libs, pkg_name, conanfile):
     """
     Tests real examples of shared library names in Windows,
     e.g., openssl, zlib, libcurlb, etc.
@@ -106,7 +115,8 @@ def test_windows_shared_link_locations(lib_name, dll_name, libs):
     cppinfo.libs = libs
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    conanfile._conan_node.ref = RecipeReference(name=pkg_name)
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == location.replace("\\", "/")
     assert result.link_location == imp_location.replace("\\", "/")
     assert result.type == "shared-library"
@@ -118,7 +128,7 @@ def test_windows_shared_link_locations(lib_name, dll_name, libs):
     {"charset": ["libcharset.so.1.0.0"],
      "iconv": ["libiconv.so.2.6.1"]},
 ])
-def test_windows_several_shared_link_locations(lib_info):
+def test_windows_several_shared_link_locations(lib_info, conanfile):
     """
     Tests a real model as LIBICONV with several libs defined in the root component
     """
@@ -142,7 +152,7 @@ def test_windows_several_shared_link_locations(lib_info):
     cppinfo.libs = list(lib_info.keys())
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     for lib_name in lib_info:
         assert result.components[f"_{lib_name}"].location == locations[lib_name][0].replace("\\", "/")
         if is_windows:
@@ -151,7 +161,7 @@ def test_windows_several_shared_link_locations(lib_info):
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
-def test_shared_link_locations_symlinks():
+def test_shared_link_locations_symlinks(conanfile):
     """
     Tests auto deduce location is able to find the real path of
     any symlink created in the libs folder
@@ -172,13 +182,13 @@ def test_shared_link_locations_symlinks():
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
 
-    result = cppinfo.deduce_full_cpp_info(ConanFileMock())
+    result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == real_location
     assert result.type == "shared-library"
 
 
 @pytest.mark.parametrize("static", [True, False])
-def test_error_if_shared_and_static_found(static):
+def test_error_if_shared_and_static_found(static, conanfile):
     folder = temp_folder()
     save(os.path.join(folder, "libdir", "libmylib.a"), "")
     save(os.path.join(folder, "libdir", "libmylib.so"), "")
@@ -188,7 +198,6 @@ def test_error_if_shared_and_static_found(static):
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
     folder = folder.replace("\\", "/")
-    conanfile = ConanFileMock()
     if static:
         conanfile.package_type = PackageType.STATIC
     result = cppinfo.deduce_full_cpp_info(conanfile)
@@ -197,7 +206,7 @@ def test_error_if_shared_and_static_found(static):
     assert result.type == (PackageType.STATIC if static else PackageType.SHARED)
 
 
-def test_error_windows_if_more_than_one_dll():
+def test_error_windows_if_more_than_one_dll(conanfile):
     folder = temp_folder()
     save(os.path.join(folder, "libdir", "mylib.a"), "")
     save(os.path.join(folder, "bindir", "libx.dll"), "")
@@ -210,5 +219,5 @@ def test_error_windows_if_more_than_one_dll():
     cppinfo.set_relative_base_folder(folder)
 
     with pytest.raises(ConanException) as e:
-        cppinfo.deduce_full_cpp_info(ConanFileMock())
-    assert "There were found more than 1 DLL for Lib mylib:" in str(e.value)
+        cppinfo.deduce_full_cpp_info(conanfile)
+    assert "There were several matches for Lib mylib:" in str(e.value)
