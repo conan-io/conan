@@ -8,6 +8,7 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
 from conans.model.build_info import CppInfo
+from conans.model.pkg_type import PackageType
 from conans.util.files import save
 
 
@@ -176,7 +177,8 @@ def test_shared_link_locations_symlinks():
     assert result.type == "shared-library"
 
 
-def test_error_if_shared_and_static_found():
+@pytest.mark.parametrize("static", [True, False])
+def test_error_if_shared_and_static_found(static):
     folder = temp_folder()
     save(os.path.join(folder, "libdir", "libmylib.a"), "")
     save(os.path.join(folder, "libdir", "libmylib.so"), "")
@@ -186,8 +188,10 @@ def test_error_if_shared_and_static_found():
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
     folder = folder.replace("\\", "/")
-    with pytest.raises(ConanException) as e:
-        cppinfo.deduce_full_cpp_info(ConanFileMock())
-    assert (f"obtained for library 'mylib' both static and shared libraries at the same time:\n"
-            f"- STATIC: {folder}/libdir/libmylib.a\n"
-            f"- SHARED: {folder}/libdir/libmylib.so") in str(e.value)
+    conanfile = ConanFileMock()
+    if static:
+        conanfile.package_type = PackageType.STATIC
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    ext = "a" if static else "so"
+    assert result.location == f"{folder}/libdir/libmylib.{ext}"
+    assert result.type == (PackageType.STATIC if static else PackageType.SHARED)

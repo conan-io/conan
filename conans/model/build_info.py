@@ -552,11 +552,15 @@ class _Component:
         out = ConanOutput(scope=str(conanfile))
         if static_location:
             if shared_location:
-                raise ConanException(f"{conanfile}: obtained for library '{libname}' both static "
-                                     f"and shared libraries at the same time:\n"
-                                     f"- STATIC: {static_location}\n"
-                                     f"- SHARED: {shared_location}")
-            if dll_location:
+                out.warning(f"Lib {libname} has both static {static_location} and "
+                            f"shared {shared_location} in the same package")
+                if pkg_type is PackageType.STATIC:
+                    self._location = static_location
+                    self._type = PackageType.STATIC
+                else:
+                    self._location = shared_location
+                    self._type = PackageType.SHARED
+            elif dll_location:
                 self._location = dll_location
                 self._link_location = static_location
                 self._type = PackageType.SHARED
