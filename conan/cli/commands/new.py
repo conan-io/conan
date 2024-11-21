@@ -24,7 +24,7 @@ def new(conan_api, parser, *args):
     parser.add_argument("-d", "--define", action="append",
                         help="Define a template argument as key=value, e.g., -d name=mypkg")
     parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if it already exists")
-    parser.add_argument("-of", "--output-folder", help="Output folder for the generated files",
+    parser.add_argument("-o", "--output", help="Output folder for the generated files",
                         default=os.getcwd())
 
     args = parser.parse_args(*args)
@@ -61,7 +61,7 @@ def new(conan_api, parser, *args):
 
     # Saving the resulting files
     output = ConanOutput()
-    output_folder = args.output_folder
+    output_folder = args.output
     # Making sure they don't overwrite existing files
     for f, v in sorted(template_files.items()):
         path = os.path.join(output_folder, f)
