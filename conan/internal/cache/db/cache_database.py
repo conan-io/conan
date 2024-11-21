@@ -22,9 +22,7 @@ class CacheDatabase:
             self._packages.create_table()
 
     def exists_prev(self, ref):
-        # TODO: This logic could be done directly against DB
-        matching_prevs = self.get_package_revisions_references(ref)
-        return len(matching_prevs) > 0
+        return self._packages.get_package_revisions_reference_exists(ref)
 
     def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
@@ -61,11 +59,9 @@ class CacheDatabase:
         self._packages.remove_build_id(pref)
 
     def get_matching_build_id(self, ref, build_id):
-        # TODO: This can also be done in a single query in DB
-        for d in self._packages.get_package_references(ref):
-            existing_build_id = d["build_id"]
-            if existing_build_id == build_id:
-                return d["pref"]
+        result = self._packages.get_package_references_with_build_id_match(ref, build_id)
+        if result:
+            return result["pref"]
         return None
 
     def get_recipe(self, ref: RecipeReference):

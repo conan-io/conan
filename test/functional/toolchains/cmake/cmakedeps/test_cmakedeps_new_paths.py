@@ -47,10 +47,12 @@ def test_cmake_generated(client):
 
 
 @pytest.mark.tool("cmake")
-def test_cmake_in_package(client):
+@pytest.mark.parametrize("lowercase", [False, True])
+def test_cmake_in_package(client, lowercase):
     c = client
     # same, but in-package
-    dep = textwrap.dedent("""
+    f = "dep-config" if lowercase else "depConfig"
+    dep = textwrap.dedent(f"""
         import os
         from conan import ConanFile
         from conan.tools.files import save
@@ -60,7 +62,7 @@ def test_cmake_in_package(client):
 
             def package(self):
                 content = 'message(STATUS "Hello from dep dep-Config.cmake!!!!!")'
-                save(self, os.path.join(self.package_folder, "cmake", "dep-config.cmake"), content)
+                save(self, os.path.join(self.package_folder, "cmake", "{f}.cmake"), content)
             def package_info(self):
                 self.cpp_info.set_property("cmake_find_mode", "none")
                 self.cpp_info.builddirs = ["cmake"]
