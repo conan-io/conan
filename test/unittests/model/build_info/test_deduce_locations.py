@@ -195,3 +195,20 @@ def test_error_if_shared_and_static_found(static):
     ext = "a" if static else "so"
     assert result.location == f"{folder}/libdir/libmylib.{ext}"
     assert result.type == (PackageType.STATIC if static else PackageType.SHARED)
+
+
+def test_error_windows_if_more_than_one_dll():
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "mylib.a"), "")
+    save(os.path.join(folder, "bindir", "libx.dll"), "")
+    save(os.path.join(folder, "bindir", "liby.dll"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.bindirs = ["bindir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+
+    with pytest.raises(ConanException) as e:
+        cppinfo.deduce_full_cpp_info(ConanFileMock())
+    assert "There were found more than 1 DLL for Lib mylib:" in str(e.value)
