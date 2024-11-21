@@ -6,6 +6,7 @@ from conan.internal.conan_app import ConanApp
 from conan.internal.workspace import Workspace
 from conan.tools.scm import Git
 from conan.errors import ConanException
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.source import retrieve_exports_sources
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import merge_directories
@@ -35,6 +36,8 @@ class WorkspaceAPI:
         recipe = app.proxy.get_recipe(ref, remotes, update=False, check_update=False)
 
         layout, recipe_status, remote = recipe
+        if recipe_status == RECIPE_EDITABLE:
+            raise ConanException(f"Can't open a dependency that is already an editable: {ref}")
         ref = layout.reference
         conanfile_path = layout.conanfile()
         conanfile, module = app.loader.load_basic_module(conanfile_path, remotes=remotes)
@@ -66,6 +69,7 @@ class WorkspaceAPI:
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
+        ref.validate_ref()
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
         self._workspace.add(ref, path, output_folder=output_folder)

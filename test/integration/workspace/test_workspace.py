@@ -149,9 +149,10 @@ class TestAddRemove:
                 def editables():
                     result = {}
                     for f in os.listdir(workspace_folder):
-                        if os.path.isdir(f):
-                            name = open(os.path.join(f, "name.txt")).read().strip()
-                            version = open(os.path.join(f, "version.txt")).read().strip()
+                        if os.path.isdir(os.path.join(workspace_folder, f)):
+                            name = open(os.path.join(workspace_folder, f, "name.txt")).read().strip()
+                            version = open(os.path.join(workspace_folder, f,
+                                                        "version.txt")).read().strip()
                             p = os.path.join(f, "conanfile.py").replace("\\\\", "/")
                             result[f"{name}/{version}"] = {"path": p}
                     return result
@@ -164,7 +165,7 @@ class TestAddRemove:
                def editables(*args, **kwargs):
                    result = {}
                    for f in os.listdir(workspace_api.folder):
-                       if os.path.isdir(f):
+                       if os.path.isdir(os.path.join(workspace_api.folder, f)):
                            f = os.path.join(f, "conanfile.py").replace("\\\\", "/")
                            conanfile = workspace_api.load(f)
                            result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
@@ -186,6 +187,28 @@ class TestAddRemove:
         c.run("install --requires=other/14.5")
         # Doesn't fail
         assert "other/14.5 - Editable" in c.out
+        with c.chdir("dep1"):
+            c.run("install --requires=other/14.5")
+            # Doesn't fail
+            assert "other/14.5 - Editable" in c.out
+
+    def test_error_uppercase(self):
+        c = TestClient(light=True)
+        c.save({"conanws.py": "name='myws'",
+                "conanfile.py": GenConanfile("Pkg", "0.1")})
+        c.run("workspace add .", assert_error=True)
+        assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+        c.save({"conanfile.py": GenConanfile()})
+        c.run("workspace add . --name=Pkg --version=0.1", assert_error=True)
+        assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+
+    def test_add_open_error(self):
+        c = TestClient(light=True)
+        c.save({"conanws.py": "name='myws'",
+                "dep/conanfile.py": GenConanfile("dep", "0.1")})
+        c.run("workspace add dep")
+        c.run("workspace open dep/0.1", assert_error=True)
+        assert "ERROR: Can't open a dependency that is already an editable: dep/0.1" in c.out
 
 
 class TestOpenAdd:
