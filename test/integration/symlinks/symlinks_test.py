@@ -4,11 +4,12 @@ import textwrap
 
 import pytest
 
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient, TestServer, TurboTestClient
+from conan.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, rmdir, chdir, save
 
 links_conanfile = textwrap.dedent("""
@@ -193,8 +194,8 @@ def test_complete_round_trip_folders():
                           ])
 def test_package_with_symlinks(package_files):
 
-    client = TurboTestClient(default_server_user=True)
-    client2 = TurboTestClient(servers=client.servers)
+    client = TestClient(default_server_user=True)
+    client2 = TestClient(servers=client.servers)
     client.save({"conanfile.py": links_conanfile})
 
     for path in package_files["files"]:
@@ -203,7 +204,7 @@ def test_package_with_symlinks(package_files):
     for link_dest, link_file in package_files["symlinks"]:
         os.symlink(link_dest, os.path.join(client.current_folder, link_file))
 
-    pref = client.create(RecipeReference.loads("hello/0.1"), conanfile=False)
+    client.run("create .")
 
     def assert_folder_symlinks(base_folder):
         with chdir(base_folder):
@@ -215,12 +216,12 @@ def test_package_with_symlinks(package_files):
                     assert load(link) == "foo contents"
 
     # Check exported sources are there
-    ref_layout = client.get_latest_ref_layout(pref.ref)
+    ref_layout = client.exported_layout()
     assert_folder_symlinks(ref_layout.export_sources())
     assert_folder_symlinks(ref_layout.source())
 
     # Check files have been copied to the build
-    pkg_layout = client.get_latest_pkg_layout(pref)
+    pkg_layout = client.created_layout()
     assert_folder_symlinks(pkg_layout.build())
     assert_folder_symlinks(pkg_layout.package())
 
@@ -229,6 +230,9 @@ def test_package_with_symlinks(package_files):
 
     # Client 2 install
     client2.run("install --requires=hello/0.1 --deployer=full_deploy")
+    ref = client2.get_latest_ref_layout(RecipeReference.loads("hello/0.1"))
+    pref = PkgReference(ref.reference, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+
     # Check package files are there
     package_folder = client2.get_latest_pkg_layout(pref).package()
     assert_folder_symlinks(package_folder)
@@ -240,25 +244,25 @@ def test_exports_does_not_follow_symlink():
     tmp = temp_folder()
     linked_abs_folder = tmp
     save(os.path.join(tmp, "source.cpp"), "foo")
-    client = TurboTestClient(default_server_user=True)
-    conanfile = GenConanfile()\
+    client = TestClient(default_server_user=True)
+    conanfile = GenConanfile("lib", "1.0")\
         .with_package('copy(self, "*", self.source_folder, self.package_folder)')\
         .with_exports_sources("*")\
         .with_import("from conan.tools.files import copy")
     client.save({"conanfile.py": conanfile, "foo.txt": "bar"})
     os.symlink(linked_abs_folder, os.path.join(client.current_folder, "linked_folder"))
-    pref = client.create(RecipeReference.loads("lib/1.0"), conanfile=False)
-    exports_sources_folder = client.get_latest_ref_layout(pref.ref).export_sources()
+    client.run("create . ")
+    exports_sources_folder = client.exported_layout().export_sources()
     assert os.path.islink(os.path.join(exports_sources_folder, "linked_folder"))
     assert os.path.exists(os.path.join(exports_sources_folder, "linked_folder", "source.cpp"))
 
     # Check files have been copied to the build
-    build_folder = client.get_latest_pkg_layout(pref).build()
+    build_folder = client.created_layout().build()
     assert os.path.islink(os.path.join(build_folder, "linked_folder"))
     assert os.path.exists(os.path.join(build_folder, "linked_folder", "source.cpp"))
 
     # Check package files are there
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
     assert os.path.islink(os.path.join(package_folder, "linked_folder"))
     assert os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
 
@@ -278,7 +282,7 @@ def test_exports_does_not_follow_symlink():
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_symlinks_zero_size():
     server = TestServer()
-    client = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
+    client = TestClient(servers={"default": server}, inputs=["admin", "password"])
 
     conanfile = """
 import os
@@ -286,20 +290,22 @@ from conan import ConanFile
 from conan.tools.files import save
 
 class HelloConan(ConanFile):
+    name = "hello"
+    version = "0.1"
 
     def package(self):
         # Link to file.txt and then remove it
         save(self, os.path.join(self.package_folder, "file.txt"), "contents")
         os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))
 """
-    ref = RecipeReference.loads("lib/1.0@conan/stable")
+    client.save({"conanfile.py": conanfile})
     # By default it is not allowed
-    pref = client.create(ref, conanfile=conanfile)
+    client.run("create .")
+    p_folder = client.created_layout().download_package()
     # Upload, it will create the tgz
-    client.upload_all(ref)
+    client.run("upload * -r=default -c")
 
     # We can uncompress it without warns
-    p_folder = client.get_latest_pkg_layout(pref).download_package()
     tgz = os.path.join(p_folder, PACKAGE_TGZ_NAME)
     client.run_command('gzip -d "{}"'.format(tgz))
     client.run_command('tar tvf "{}"'.format(os.path.join(p_folder, "conan_package.tar")))
