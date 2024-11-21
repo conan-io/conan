@@ -152,7 +152,8 @@ class TestAddRemove:
                         if os.path.isdir(f):
                             name = open(os.path.join(f, "name.txt")).read().strip()
                             version = open(os.path.join(f, "version.txt")).read().strip()
-                            result[f"{name}/{version}"] = {"path": f}
+                            p = os.path.join(f, "conanfile.py").replace("\\\\", "/")
+                            result[f"{name}/{version}"] = {"path": p}
                     return result
                 """)
         else:
@@ -164,7 +165,8 @@ class TestAddRemove:
                    result = {}
                    for f in os.listdir(workspace_api.folder):
                        if os.path.isdir(f):
-                           conanfile = workspace_api.load(os.path.join(f, "conanfile.py"))
+                           f = os.path.join(f, "conanfile.py").replace("\\\\", "/")
+                           conanfile = workspace_api.load(f)
                            result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
                    return result
                """)
@@ -175,12 +177,15 @@ class TestAddRemove:
                 "dep1/version.txt": "2.1"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["editables"] == {"pkg/2.1": {"path": "dep1/conanfile.py"}}
         c.save({"dep1/name.txt": "other",
                 "dep1/version.txt": "14.5"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"other/14.5": {"path": "dep1"}}
+        assert info["editables"] == {"other/14.5": {"path": "dep1/conanfile.py"}}
+        c.run("install --requires=other/14.5")
+        # Doesn't fail
+        assert "other/14.5 - Editable" in c.out
 
 
 class TestOpenAdd:
