@@ -217,7 +217,7 @@ def test_warning_windows_if_more_than_one_dll(conanfile):
     cppinfo.bindirs = ["bindir"]
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
-
+    folder = folder.replace("\\", "/")
     result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == f"{folder}/bindir/libx.dll"
     assert result.type == "shared-library"
