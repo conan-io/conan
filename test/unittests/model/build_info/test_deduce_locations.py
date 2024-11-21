@@ -206,7 +206,7 @@ def test_error_if_shared_and_static_found(static, conanfile):
     assert result.type == (PackageType.STATIC if static else PackageType.SHARED)
 
 
-def test_error_windows_if_more_than_one_dll(conanfile):
+def test_warning_windows_if_more_than_one_dll(conanfile):
     folder = temp_folder()
     save(os.path.join(folder, "libdir", "mylib.a"), "")
     save(os.path.join(folder, "bindir", "libx.dll"), "")
@@ -218,6 +218,6 @@ def test_error_windows_if_more_than_one_dll(conanfile):
     cppinfo.libs = ["mylib"]
     cppinfo.set_relative_base_folder(folder)
 
-    with pytest.raises(ConanException) as e:
-        cppinfo.deduce_full_cpp_info(conanfile)
-    assert "There were several matches for Lib mylib:" in str(e.value)
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == f"{folder}/bindir/libx.dll"
+    assert result.type == "shared-library"

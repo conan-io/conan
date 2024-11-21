@@ -524,11 +524,11 @@ class _Component:
                     lib_found = _lib_match_by_regex(d, pattern)
                 if lib_found:
                     if len(lib_found) > 1:
-                        raise ConanException(f"There were several matches for Lib {libname}: "
-                                             f"{lib_found}")
+                        lib_found.sort()
+                        out.warning(f"There were several matches for Lib {libname}: {lib_found}")
                     return lib_found[0].replace("\\", "/")
 
-
+        out = ConanOutput(scope=str(conanfile))
         pkg_type = conanfile.package_type
         libdirs = self.libdirs
         bindirs = self.bindirs
@@ -554,7 +554,6 @@ class _Component:
             if static_location or not shared_location:
                 dll_location = _find_matching(bindirs, regex_dll)
 
-        out = ConanOutput(scope=str(conanfile))
         if static_location:
             if shared_location:
                 out.warning(f"Lib {libname} has both static {static_location} and "
