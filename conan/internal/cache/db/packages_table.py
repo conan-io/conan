@@ -217,8 +217,9 @@ class PackagesDBTable(BaseDbTable):
 
     def get_package_references_with_build_id_match(self, ref: RecipeReference, build_id):
         # Return the latest revisions
-        assert ref.revision, "To search for package id's you must provide a recipe revision."
+        assert ref.revision, "To search for package id's by build_id you must provide a recipe revision."
         # we select the latest prev for each package_id
+        # This is the same query as get_package_references, but with an additional filter
         query = f'SELECT {self.columns.reference}, ' \
                 f'{self.columns.rrev}, ' \
                 f'{self.columns.pkgid}, ' \
