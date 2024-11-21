@@ -105,7 +105,7 @@ class CMakeDeps(object):
                 msg.append(f"    find_package({config.file_name})")
             targets = ' '.join(c.root_target_name for c in direct_configs)
             msg.append(f"    target_link_libraries(... {targets})")
-            if self._conanfile._conan_is_consumer:
+            if self._conanfile._conan_is_consumer:  # noqa
                 self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
             else:
                 self._conanfile.output.verbose("\n".join(msg))

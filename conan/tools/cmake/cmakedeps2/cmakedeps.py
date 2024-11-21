@@ -85,10 +85,7 @@ class CMakeDeps2:
                     targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
             if targets:
                 msg.append(f"    target_link_libraries(... {' '.join(targets)})")
-            if self._conanfile._conan_is_consumer:
-                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
-            else:
-                self._conanfile.output.verbose("\n".join(msg))
+            self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
 
     def set_property(self, dep, prop, value, build_context=False):
         """
