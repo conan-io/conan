@@ -1227,3 +1227,22 @@ class TestCMakeComponents:
         c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
         cmake = c.load("dep-config.cmake")
         assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyC1 MyC2 c3)' in cmake
+
+    def test_components_individual_names(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.components["c1"].set_property("cmake_target_name", "MyC1")
+                    self.cpp_info.components["c1"].set_property("cmake_components", ["MyCompC1"])
+                    self.cpp_info.components["c2"].set_property("cmake_target_name", "Dep::MyC2")
+                    self.cpp_info.components["c3"].includedirs = ["include"]
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        cmake = c.load("dep-config.cmake")
+        assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyCompC1 MyC2 c3)' in cmake
