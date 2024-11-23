@@ -6,6 +6,7 @@ from jinja2 import Template
 
 from conan.api.output import Color
 from conan.internal import check_duplicated_generator
+from conan.internal.api.install.generators import relativize_path
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
@@ -150,6 +151,13 @@ class CMakeDeps2:
         return get_transitive_requires(self._conanfile, conanfile)
 
 
+# TODO: Repeated from CMakeToolchain blocks
+def _join_paths(conanfile, paths):
+    paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
+    paths = [relativize_path(p, conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
+    return " ".join([f'"{p}"' for p in paths])
+
+
 class _PathGenerator:
     _conan_cmakedeps_paths = "conan_cmakedeps_paths.cmake"
 
@@ -164,6 +172,9 @@ class _PathGenerator:
             {% endfor %}
             {% if host_runtime_dirs %}
             set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
+            {% endif %}
+            {% if cmake_program_path %}
+            list(PREPEND CMAKE_PROGRAM_PATH {{ cmake_program_path }})
             {% endif %}
             """)
 
@@ -201,8 +212,26 @@ class _PathGenerator:
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
             pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
 
+        # CMAKE_PROGRAM_PATH
+        cmake_program_path = {}
+        for req, dep in list(host_req.items()) + list(test_req.items()) + list(build_req.items()):
+            if not req.direct:
+                continue
+            cppinfo = dep.cpp_info.aggregated_components()
+            if not cppinfo.bindirs:
+                continue
+            previous = cmake_program_path.get(req.ref.name)
+            if previous:
+                self._conanfile.output.info(f"There is already a '{req.ref}' package "
+                                            f"contributing to CMAKE_PROGRAM_PATH. The one with "
+                                            f"build={req.build} test={req.test} will be used")
+
+            cmake_program_path[req.ref.name] = cppinfo.bindirs
+        cmake_program_path = [d for dirs in cmake_program_path.values() for d in dirs]
+
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
-                   "pkg_paths": pkg_paths}
+                   "pkg_paths": pkg_paths,
+                   "cmake_program_path": _join_paths(self._conanfile, cmake_program_path)}
         content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 
