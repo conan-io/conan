@@ -91,6 +91,7 @@ def print_graph_basic(graph):
                     output.info(f"        {src_ref}->{option}={conflict_value}", Color.BRIGHT_CYAN)
         output.info("    It is recommended to define options values in profiles, not in recipes",
                     Color.BRIGHT_CYAN)
+        output.warning("There are options conflicts in the dependency graph", warn_tag="risk")
 
 
 def print_graph_packages(graph):
