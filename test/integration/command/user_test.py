@@ -440,3 +440,15 @@ class TestRemoteAuth:
         time.sleep(3)
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_auth_after_logout(self):
+        server = TestServer(users={"myuser": "password"})
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password"]*2)
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out
+        c.run("remote logout *")
+        assert "Changed user of remote 'default' from 'myuser' (authenticated) to 'None'" in c.out
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out
