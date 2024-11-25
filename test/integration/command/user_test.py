@@ -406,6 +406,10 @@ class TestRemoteAuth:
                                                             "user", "pass", "user", "pass",
                                                             "user", "pass"])
         c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" not in c.out
         assert "user: myuser" in c.out
         # Invalidate server secret
         server.test_server.ra.api_v2.credentials_manager.secret = "potato"
