@@ -2,6 +2,7 @@ import copy
 import glob
 import json
 import os
+import re
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
@@ -486,46 +487,78 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def deduce_locations(self, conanfile):
-        pkg_type = conanfile.package_type
-        if self._exe:   # exe is a new field, it should have the correct location
-            return
-        if self._location or self._link_location:
-            if self._type is None or self._type is PackageType.HEADER:
-                raise ConanException("Incorrect cpp_info defining location without type or header")
-            return
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
-            return
+    def _auto_deduce_locations(self, conanfile, component_name):
 
-        if len(self.libs) == 0:
-            return
+        def _lib_match_by_glob(dir_, filename):
+            # Run a glob.glob function to find the file given by the filename
+            matches = glob.glob(f"{dir_}/{filename}")
+            if matches:
+                return matches
 
-        if len(self.libs) != 1:
-            raise ConanException("More than 1 library defined in cpp_info.libs, cannot deduce CPS")
 
-        # Recipe didn't specify things, need to auto deduce
-        libdirs = [x.replace("\\", "/") for x in self.libdirs]
-        bindirs = [x.replace("\\", "/") for x in self.bindirs]
+        def _lib_match_by_regex(dir_, pattern):
+            ret = set()
+            # pattern is a regex compiled pattern, so let's iterate each file to find the library
+            files = os.listdir(dir_)
+            for file_name in files:
+                full_path = os.path.join(dir_, file_name)
+                if os.path.isfile(full_path) and pattern.match(file_name):
+                    # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+                    if os.path.islink(full_path):
+                        # Important! os.path.realpath returns the final path of the symlink even if it points
+                        # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+                        # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
+                        # Note: os.readlink() returns the path which the symbolic link points to.
+                        real_path = os.path.realpath(full_path)
+                        if pattern.match(os.path.basename(real_path)):
+                            ret.add(real_path)
+                    else:
+                        ret.add(full_path)
+            return list(ret)
 
-        # TODO: Do a better handling of pre-defined type
-        libname = self.libs[0]
-        static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
-        shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
-                           f"lib{libname}.*dylib"]
-        dll_patterns = [f"{libname}.dll"]
 
-        def _find_matching(patterns, dirs):
-            matches = set()
-            for pattern in patterns:
-                for d in dirs:
-                    matches.update(glob.glob(f"{d}/{pattern}"))
-            if len(matches) == 1:
-                return next(iter(matches))
+        def _find_matching(dirs, pattern):
+            for d in dirs:
+                if not os.path.exists(d):
+                    continue
+                # If pattern is an exact match
+                if isinstance(pattern, str):
+                    # pattern == filename
+                    lib_found = _lib_match_by_glob(d, pattern)
+                else:
+                    lib_found = _lib_match_by_regex(d, pattern)
+                if lib_found:
+                    if len(lib_found) > 1:
+                        lib_found.sort()
+                        out.warning(f"There were several matches for Lib {libname}: {lib_found}")
+                    return lib_found[0].replace("\\", "/")
 
-        static_location = _find_matching(static_patterns, libdirs)
-        shared_location = _find_matching(shared_patterns, libdirs)
-        dll_location = _find_matching(dll_patterns, bindirs)
         out = ConanOutput(scope=str(conanfile))
+        pkg_type = conanfile.package_type
+        libdirs = self.libdirs
+        bindirs = self.bindirs
+        libname = self.libs[0]
+        static_location = None
+        shared_location = None
+        dll_location = None
+        # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
+        _, ext = os.path.splitext(libname)
+        if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
+            if ext in (".lib", ".a"):
+                static_location = _find_matching(libdirs, libname)
+            elif ext in (".so", ".dylib"):
+                shared_location = _find_matching(libdirs, libname)
+            elif ext == ".dll":
+                dll_location = _find_matching(bindirs, libname)
+        else:
+            regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
+            regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
+            regex_dll = re.compile(rf"(?:.+)?({libname}|{component_name})(?:.+)?\.dll")
+            static_location = _find_matching(libdirs, regex_static)
+            shared_location = _find_matching(libdirs, regex_shared)
+            if static_location or not shared_location:
+                dll_location = _find_matching(bindirs, regex_dll)
+
         if static_location:
             if shared_location:
                 out.warning(f"Lib {libname} has both static {static_location} and "
@@ -557,6 +590,25 @@ class _Component:
                                  f"should have been deduced correctly.")
         if self._type != pkg_type:
             out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+
+    def deduce_locations(self, conanfile, component_name=""):
+        if self._exe:   # exe is a new field, it should have the correct location
+            return
+        if self._location or self._link_location:
+            if self._type is None or self._type is PackageType.HEADER:
+                raise ConanException("Incorrect cpp_info defining location without type or header")
+            return
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+            return
+        num_libs = len(self.libs)
+        if num_libs == 0:
+            return
+        elif num_libs > 1:
+            raise ConanException(
+                f"More than 1 library defined in cpp_info.libs, cannot deduce CPS ({num_libs} libraries found)")
+        else:
+            # If no location is defined, it's time to guess the location
+            self._auto_deduce_locations(conanfile, component_name=component_name)
 
 
 class CppInfo:
@@ -739,6 +791,7 @@ class CppInfo:
                 c.type = self.type  # This should be a string
                 c.includedirs = self.includedirs
                 c.libdirs = self.libdirs
+                c.bindirs = self.bindirs
                 c.libs = [lib]
                 result.components[f"_{lib}"] = c
 
@@ -746,15 +799,14 @@ class CppInfo:
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
             common.requires = list(result.components.keys()) + (self.requires or [])
-
             result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components
             result.components = {k: v.clone() for k, v in self.components.items()}
 
-        result._package.deduce_locations(conanfile)
-        for comp in result.components.values():
-            comp.deduce_locations(conanfile)
+        result._package.deduce_locations(conanfile, component_name=conanfile.ref.name)
+        for comp_name, comp in result.components.items():
+            comp.deduce_locations(conanfile, component_name=comp_name)
 
         return result
