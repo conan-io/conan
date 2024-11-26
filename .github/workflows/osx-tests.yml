@@ -14,26 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  testing:
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: ['3.8', '3.12', '3.13']
-        test-type: [unittests, integration, functional]
-
+  setup-caches:
     runs-on: macos-14
-
-    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
-
+    name: Setup and Cache Dependencies
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.8
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
 
       - name: Cache pip packages
         id: cache-pip
@@ -61,12 +52,10 @@ jobs:
           key: ${{ runner.os }}-brew
 
       - name: Install homebrew dependencies
-        if: matrix.test-type == 'functional'
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
 
       - name: Cache CMake and Bazel installations
-        if: matrix.test-type == 'functional'
         id: cache-tools
         uses: actions/cache@v4
         with:
@@ -79,7 +68,7 @@ jobs:
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
           CMAKE_BUILD_VERSIONS=("3.15.7")
@@ -98,7 +87,7 @@ jobs:
           done
 
       - name: Install universal CMake versions
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
           CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5")
@@ -118,7 +107,7 @@ jobs:
           done
 
       - name: Install Bazel versions
-        if: matrix.test-type == 'functional' && steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
           for version in 6.3.2 7.1.2; do
@@ -127,6 +116,33 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
+  testing:
+    needs: setup-caches
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ['3.8', '3.12', '3.13']
+        test-type: [unittests, integration, functional]
+
+    runs-on: macos-14
+
+    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Use Cached Dependencies
+        run: |
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          cmake --version
+          bazel --version
+
       - name: Run Tests
         run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
@@ -134,7 +150,5 @@ jobs:
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
             pytest test/integration --durations=20 -n auto
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-            cmake --version
             pytest test/functional --durations=20 -n auto
           fi
