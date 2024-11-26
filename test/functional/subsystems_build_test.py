@@ -393,12 +393,12 @@ class TestSubsystemsCMakeBuild:
             cmake_compiler += " -DCMAKE_CXX_COMPILER={}".format(compilerpp)
             cmake_compiler += " -DCMAKE_RC_COMPILER={}".format(compiler)
         toolset = "-T {}".format(toolset) if toolset else ""
-        client.run_command("cmake --debug-output {} {}"
+        client.run_command("cmake {} {}"
                            " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\" -G \"{}\" .".format(cmake_compiler,
                                                                                   toolset,
                                                                                   generator))
         build_out = client.out
-        client.run_command("cmake --build . --verbose")
+        client.run_command("cmake --build .")
         app = "app" if "Visual" not in generator else r"Debug\app"
         client.run_command(app)
         return build_out

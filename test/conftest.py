@@ -227,10 +227,7 @@ def _get_tool(name, version):
 
 
 def _get_individual_tool(name, version):
-    print("name:", name)
     tool = tools_locations.get(name, {})
-    print("tool:", tool)
-    print("tool get disabled:", tool.get("disabled"))
     if tool.get("disabled"):
         return False
 
