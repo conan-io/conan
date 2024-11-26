@@ -323,7 +323,7 @@ def test_tools_install_archless(tool_class, result):
     (Brew, 'test -n "$(brew ls --versions package)"'),
     (Pkg, 'pkg info package'),
     (PkgUtil, 'test -n "`pkgutil --list package`"'),
-    (Chocolatey, 'choco search --local-only --exact package | findstr /c:"1 packages installed."'),
+    (Chocolatey, 'choco list --exact package | findstr /c:"1 packages installed."'),
     (PacMan, 'pacman -Qi package'),
     (Zypper, 'rpm -q package'),
 ])
