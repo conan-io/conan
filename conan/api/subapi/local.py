@@ -1,14 +1,15 @@
 import os
 
 from conan.cli import make_abs_path
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.local.editable import EditablePackages
-from conans.client.conanfile.build import run_build_method
+from conan.internal.methods import run_build_method, run_source_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
-from conans.client.source import run_source_method
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
+from conans.client.hook_manager import HookManager
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import chdir
 
@@ -18,6 +19,9 @@ class LocalAPI:
     def __init__(self, conan_api):
         self._conan_api = conan_api
         self.editable_packages = EditablePackages(conan_api.home_folder)
+        editables = conan_api.workspace.editables()
+        if editables:
+            self.editable_packages.edited_refs.update(editables)
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):
@@ -56,17 +60,20 @@ class LocalAPI:
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self.editable_packages.add(ref, target_path, output_folder=output_folder)
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
         if path:
             path = make_abs_path(path, cwd)
             path = os.path.join(path, "conanfile.py")
-        return self.editable_packages.remove(path, requires)
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        return editable_packages.remove(path, requires)
 
     def editable_list(self):
-        return self.editable_packages.edited_refs
+        editable_packages = EditablePackages(self._conan_api.home_folder)
+        return editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
         """ calls the 'source()' method of the current (user folder) conanfile.py
@@ -92,16 +99,16 @@ class LocalAPI:
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        app = ConanApp(self._conan_api)
-        run_source_method(conanfile, app.hook_manager)
+        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+        run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile):
         """ calls the 'build()' method of the current (user folder) conanfile.py
         """
-        app = ConanApp(self._conan_api)
+        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
         conanfile.folders.set_base_package(conanfile.folders.base_build)
         conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
-        run_build_method(conanfile, app.hook_manager)
+        run_build_method(conanfile, hook_manager)
 
     @staticmethod
     def test(conanfile):
@@ -117,4 +124,3 @@ class LocalAPI:
         conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
-

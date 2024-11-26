@@ -260,9 +260,10 @@ build_order_html = r"""
 </html>
 """
 
+
 def _render_build_order(build_order, template):
-    from conans import __version__ as client_version
-    context = {'build_order': build_order, 'version': client_version, }
+    from conan import __version__
+    context = {'build_order': build_order, 'version': __version__}
     return template.render(context)
 
 

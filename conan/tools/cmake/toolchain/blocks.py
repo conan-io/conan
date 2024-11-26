@@ -375,7 +375,7 @@ class AndroidSystemBlock(Block):
         {% if android_use_legacy_toolchain_file %}
         set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {{ android_use_legacy_toolchain_file }})
         {% endif %}
-        include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
+        include("{{ android_ndk_path }}/build/cmake/android.toolchain.cmake")
         """)
 
     def context(self):

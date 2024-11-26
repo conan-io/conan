@@ -227,8 +227,8 @@ class GenConanfile(object):
         return self
 
     def with_package_info(self, cpp_info=None, env_info=None):
-        assert isinstance(cpp_info, dict), "cpp_info ({}) expects dict".format(type(cpp_info))
-        assert isinstance(env_info, dict), "env_info ({}) expects dict".format(type(env_info))
+        assert cpp_info is None or isinstance(cpp_info, dict), "cpp_info ({}) expects dict".format(type(cpp_info))
+        assert env_info is None or isinstance(env_info, dict), "env_info ({}) expects dict".format(type(env_info))
         self._package_info = self._package_info or {}
         if cpp_info:
             self._package_info["cpp_info"] = cpp_info

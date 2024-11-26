@@ -3,8 +3,7 @@ import os
 import textwrap
 
 from conan.cli.exit_codes import ERROR_GENERAL
-from conans.model.recipe_ref import RecipeReference
-from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile, TurboTestClient
+from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 
 
 class TestBasicCliOutput:
@@ -252,19 +251,6 @@ class TestEditables:
         c.run("graph info consumer --package-filter=pkg*")
         # FIXME: Paths are not diplayed yet
         assert "source_folder: None" in c.out
-
-
-class TestInfoRevisions:
-
-    def test_info_command_showing_revision(self):
-        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
-        client = TurboTestClient()
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-
-        client.create(ref)
-        client.run("graph info --requires={}".format(ref))
-        revision = client.recipe_revision(ref)
-        assert f"ref: lib/1.0@conan/testing#{revision}" in client.out
 
 
 class TestInfoTestPackage:

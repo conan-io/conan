@@ -11,7 +11,7 @@ from requests.adapters import HTTPAdapter
 
 from conan.internal.cache.home_paths import HomePaths
 
-from conans import __version__ as client_version
+from conan import __version__
 from conans.client.loader import load_python_file
 from conan.internal.errors import scoped_traceback
 from conan.errors import ConanException
@@ -121,7 +121,7 @@ class ConanRequester:
         platform_info = "; ".join([" ".join([platform.system(), platform.release()]),
                                    "Python " + platform.python_version(),
                                    platform.machine()])
-        self._user_agent = "Conan/%s (%s)" % (client_version, platform_info)
+        self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
 
     @staticmethod
     def _get_retries(config):

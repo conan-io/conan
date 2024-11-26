@@ -171,11 +171,8 @@ class ConanFileLoader:
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
-        try:
-            conanfile._conan_is_consumer = True
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        conanfile._conan_is_consumer = True
+        return conanfile
 
     def load_conanfile(self, conanfile_path, ref, graph_lock=None, remotes=None,
                        update=None, check_update=None):
@@ -396,7 +393,7 @@ def _get_required_conan_version_without_loading(conan_file_path):
         found = re.search(r"(.*)required_conan_version\s*=\s*[\"'](.*)[\"']", contents)
         if found and "#" not in found.group(1):
             txt_version = found.group(2)
-    except:
+    except:  # noqa this should be solid, cannot fail
         pass
 
     return txt_version

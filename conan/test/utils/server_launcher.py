@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 
-from conans import REVISIONS
+from conan.internal import REVISIONS
 from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager

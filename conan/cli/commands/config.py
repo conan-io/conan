@@ -73,14 +73,23 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     subparser.add_argument("--url", action=OnceArgument,
                            help="(Experimental) Provide Conan repository URL "
                                 "(for first install without remotes)")
+    subparser.add_argument("-pr", "--profile", help="Profile to install config")
+    subparser.add_argument("-s", "--settings", action="append", help="Settings to install config")
+    subparser.add_argument("-o", "--options", action="append", help="Options to install config")
     args = parser.parse_args(*args)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
 
+    try:
+        default_profile = args.profile or conan_api.profiles.get_default_build()
+    except ConanException:  # it can fail if the default profile doesn't exist yet
+        default_profile = None
+    profiles = [default_profile] if default_profile else []
+    profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
     remotes = [Remote("_tmp_conan_config", url=args.url)] if args.url else None
     config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile, force=args.force,
-                                               remotes=remotes)
+                                               remotes=remotes, profile=profile)
     lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
