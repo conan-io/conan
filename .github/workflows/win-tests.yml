@@ -35,49 +35,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install MSVC v14.39 Toolset
-        shell: pwsh
         run: |
-          # Navigate to the Visual Studio Installer directory
-          Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
-
-          # Define the installation path of Visual Studio
-          $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-
-          # Specify the component ID for MSVC Toolset v14.39
-          $componentsToAdd = @(
-              "Microsoft.VisualStudio.Component.VC.Tools.14.39.x86.x64"
-          )
-
-          # Build the arguments string for the components to add
-          [string]$workloadArgs = $componentsToAdd | ForEach-Object { "--add " + $_ }
-
-          # Construct the installer command arguments
-          $Arguments = @(
-              'modify',
-              '--installPath', "`"$InstallPath`"",
-              $workloadArgs,
-              '--passive', '--norestart', '--nocache'
-          )
-
-          # Start the installer process and monitor it
-          Write-Host "Starting Visual Studio Installer..."
-          $process = Start-Process -FilePath "vs_installer.exe" -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
-          Write-Host "Visual Studio Installer process has exited with code $($process.ExitCode)"
-
-          # Check the exit code to determine if the installation was successful
-          if ($process.ExitCode -eq 0) {
-              Write-Host "Components have been successfully installed"
-          } else {
-              Write-Host "Components could not be installed"
-              # Output installer logs for debugging
-              $logFile = "$env:TEMP\dd_installer.log"
-              if (Test-Path $logFile) {
-                  Write-Host "Installer logs:"
-                  Get-Content -Path $logFile -Raw
-              }
-              exit 1
+          Start-Process -Wait "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList {`
+            modify `
+            --quiet `
+            --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+            --add `
+            Microsoft.VisualStudio.Component.VC.Tools.14.39.x86.x64 `
           }
-
 
       - name: Verify MSVC v14.39 toolset installation
         run: |
