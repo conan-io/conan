@@ -38,7 +38,7 @@ jobs:
         run: |
             & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
             --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
-            --add Microsoft.VisualStudio.Component.VC.Tools.14.40.x86.x64 `
+            --add Microsoft.VisualStudio.Component.VC.14.39.17.9.x86.x64 `
             --quiet --norestart
 
       - name: Verify MSVC v14.40 toolset installation
