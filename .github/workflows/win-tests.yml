@@ -61,14 +61,6 @@ jobs:
             "--quiet", "--wait", "--norestart", "--nocache" `
             -Wait
 
-      - name: Verify installed MSVC toolsets
-        run: |
-            Get-ChildItem "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
-
-      - name: Setup MSVC environment
-        run: |
-            "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64 -vcvars_ver=14.3
-
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
