@@ -247,7 +247,7 @@ class RemotesAPI:
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
-        app.remote_manager.check_credentials(remote)
+        app.remote_manager.check_credentials(remote, True)
         user, token, _ = app.localdb.get_login(remote.url)
         return user
 
