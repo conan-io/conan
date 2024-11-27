@@ -154,6 +154,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install pytest
+
       - name: Run Tests
         run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
