@@ -34,6 +34,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install MSVC v14.40 toolset
+        run: |
+            & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
+            --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+            --add Microsoft.VisualStudio.Component.VC.Tools.14.40.x86.x64 `
+            --quiet --wait --norestart
+
       - name: Install Visual Studio Build Tools
         run: |
             Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
