@@ -160,7 +160,7 @@ jobs:
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
-          pip install pytest
+          pip install meson
 
       - name: Run Tests
         run: |
