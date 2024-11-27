@@ -10,7 +10,7 @@ from conan.internal.conan_app import ConanApp
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
@@ -254,7 +254,7 @@ class RemotesAPI:
 
 def _load(remotes_file):
     if not os.path.exists(remotes_file):
-        remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
+        remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center2.conan.io", True, False)
         _save(remotes_file, [remote])
         return [remote]
 
@@ -313,7 +313,7 @@ def _validate_url(url):
         if url.startswith("https://conan.io/center"):
             raise ConanException("Wrong ConanCenter remote URL. You are adding the web "
                                  "https://conan.io/center the correct remote API is "
-                                 "https://center.conan.io")
+                                 "https://center2.conan.io")
         address = urlparse(url)
         if not all([address.scheme, address.netloc]):
             out.warning(f"The URL '{url}' is invalid. It must contain scheme and hostname.")

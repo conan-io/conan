@@ -2,7 +2,7 @@ import os
 import unittest
 from datetime import timedelta
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.server.conf import ConanServerConfigParser
 from conan.test.utils.test_files import temp_folder
 from conans.util.config_parser import ConfigParser

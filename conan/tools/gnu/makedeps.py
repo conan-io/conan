@@ -49,6 +49,9 @@ def _get_formatted_dirs(folders: list, prefix_path_: str, name: str) -> list:
     """
     ret = []
     for directory in folders:
+        if directory.startswith("$(CONAN"):  # already a variable
+            ret.append(directory)
+            continue
         directory = os.path.normpath(directory).replace("\\", "/")
         prefix = ""
         if not os.path.isabs(directory):
@@ -77,6 +80,7 @@ def _makefy_properties(properties: Optional[dict]) -> dict:
     """
     return {_makefy(name): value for name, value in properties.items()} if properties else {}
 
+
 def _check_property_value(name, value, output):
     if "\n" in value:
         output.warning(f"Skipping propery '{name}' because it contains newline")
@@ -84,11 +88,12 @@ def _check_property_value(name, value, output):
     else:
         return True
 
+
 def _filter_properties(properties: Optional[dict], output) -> dict:
     """
     Filter out properties whose values contain newlines, because they would break the generated makefile
     :param properties: A property dictionary (None is also accepted)
-    :return: A property dictionary without the properties containing newlines 
+    :return: A property dictionary without the properties containing newlines
     """
     return {name: value for name, value in properties.items() if _check_property_value(name, value, output)} if properties else {}
 
@@ -572,6 +577,10 @@ class DepGenerator:
         dirs = {}
         for var, prefix in _common_cppinfo_dirs().items():
             cppinfo_value = getattr(dependency.cpp_info, var)
+            if not cppinfo_value:  # The root value is not defined, there might be components
+                cppinfo_value = [f"$(CONAN_{var.replace('dirs', '_dirs').upper()}_{_makefy(dependency.ref.name)}_{_makefy(name)})"
+                                 for name, obj in dependency.cpp_info.components.items() if getattr(obj, var.lower())]
+                prefix = ""
             formatted_dirs = _get_formatted_dirs(cppinfo_value, root, _makefy(dependency.ref.name))
             if formatted_dirs:
                 self._info.dirs_append(var)
@@ -655,21 +664,17 @@ class MakeDeps:
         check_duplicated_generator(self, self._conanfile)
 
         host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
         content_buffer = f"{self._title}\n"
         deps_buffer = ""
 
         # Filter the build_requires not activated for any requirement
-        dependencies = [tup for tup in list(host_req.items()) + list(build_req.items()) + list(test_req.items()) if not tup[0].build]
+        dependencies = list(host_req.items()) + list(test_req.items())
 
         make_infos = []
 
         for require, dep in dependencies:
-            # Require is not used at the moment, but its information could be used, and will be used in Conan 2.0
-            if require.build:
-                continue
             output = ConanOutput(scope=f"{self._conanfile} MakeDeps: {dep}:")
             dep_gen = DepGenerator(dep, require, output)
             make_infos.append(dep_gen.makeinfo)

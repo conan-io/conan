@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient
 from test.conftest import tools_locations
 
@@ -17,7 +16,7 @@ from test.conftest import tools_locations
 @pytest.mark.tool("android_ndk")
 @pytest.mark.tool("autotools")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
-def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
+def test_android_autotools_toolchain_cross_compiling(arch, expected_arch):
     profile_host = textwrap.dedent("""
     include(default)
 

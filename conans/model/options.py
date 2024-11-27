@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -234,6 +234,9 @@ class Options:
                     tokens = k.split(":", 1)
                     if len(tokens) == 2:
                         package, option = tokens
+                        if not package:
+                            raise ConanException("Invalid empty package name in options. "
+                                                 f"Use a pattern like `mypkg/*:{option}`")
                         if "/" not in package and "*" not in package and "&" not in package:
                             msg = "The usage of package names `{}` in options is " \
                                   "deprecated, use a pattern like `{}/*:{}` " \

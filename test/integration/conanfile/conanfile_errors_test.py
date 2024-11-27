@@ -3,6 +3,7 @@ import unittest
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -192,3 +193,50 @@ def test_requirements_change_options():
     c.save({"conanfile.py": conanfile})
     c.run("create .", assert_error=True)
     assert "ERROR: hello/0.1: Dependencies options were defined incorrectly." in c.out
+
+
+@pytest.mark.parametrize("property_name", ["libdir", "bindir", "includedir"])
+@pytest.mark.parametrize("property_content", [[], ["mydir1", "mydir2"]])
+def test_shorthand_bad_interface(property_name, property_content):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.{property_name}s = {property_content}
+                self.output.info(self.cpp_info.{property_name})
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    if property_content:
+        assert f"The {property_name} property is undefined because {property_name}s has more than one element." in c.out
+    else:
+        assert f"The {property_name} property is undefined because {property_name}s is empty." in c.out
+
+
+def test_consumer_unexpected():
+    tc = TestClient(light=True)
+    cmake_conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class CMake(ConanFile):
+        name = "cmake"
+        version = "1.0"
+        package_type = "application"
+
+        def package_info(self):
+            self.output.info("cmake/1.0 -> " + str(self._conan_is_consumer))
+    """)
+    tc.save({
+             "cmake/conanfile.py": cmake_conanfile,
+             "dep1/conanfile.py": GenConanfile("dep1", "1.0"),
+             "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep1/1.0"),
+             "profile": "include(default)\n[tool_requires]\n*: cmake/1.0\n"})
+    tc.run("export dep1")
+    tc.run("create cmake")
+    tc.run("create . -b=missing -pr=profile")
+    assert "cmake/1.0 -> True" not in tc.out

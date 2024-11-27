@@ -11,7 +11,7 @@ def test_user_overrides():
     """ Show that it is possible to add things to lockfiles, to pre-lock things explicitly from
     user side
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"math/conanfile.py": GenConanfile("math"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/[*]"),
             "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/[*]")})
@@ -46,7 +46,7 @@ def test_user_overrides():
 def test_user_build_overrides():
     """ Test that it is possible to lock also build-requries
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"cmake/conanfile.py": GenConanfile("cmake"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_build_requires("cmake/[*]")})
 
@@ -79,7 +79,7 @@ def test_user_build_overrides():
 def test_user_python_overrides():
     """ Test that it is possible to lock also python-requries
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pytool/conanfile.py": GenConanfile("pytool"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_python_requires("pytool/[*]")})
 
@@ -112,7 +112,7 @@ def test_user_python_overrides():
 def test_config_overrides():
     """ Test that it is possible to lock also config-requires
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.run("lock add --config-requires=config/1.0")
     assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/1.0"]
     c.run("lock remove --config-requires=config/1.0")
@@ -122,7 +122,7 @@ def test_config_overrides():
 def test_add_revisions():
     """ Is it possible to add revisions explicitly too
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"math/conanfile.py": GenConanfile("math"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/[*]"),
             "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/[*]")})
@@ -170,7 +170,7 @@ def test_add_multiple_revisions():
     """ What if we add multiple revisions, mix with and without revisions, with and without
     timestamps and it will not crash
     """
-    c = TestClient()
+    c = TestClient(light=True)
     # without revision, it will resolve to latest
     c.run("lock add --requires=math/1.0#rev1")
     new_lock = c.load("conan.lock")
@@ -206,7 +206,7 @@ def test_timestamps_are_updated():
     """ When ``conan lock add`` adds a revision with a timestamp, or without it, it will be
     updated in the lockfile-out to the resolved new timestamp
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.txt": "[requires]\nmath/1.0",
             "math/conanfile.py": GenConanfile("math", "1.0")})
     c.run("create math")
@@ -221,7 +221,7 @@ def test_timestamps_are_updated():
 
 def test_lock_add_error():
     # https://github.com/conan-io/conan/issues/14465
-    c = TestClient()
+    c = TestClient(light=True)
     c.run(f"lock add --requires=math/1.0:pid1", assert_error=True)
     assert "ERROR: Invalid recipe reference 'math/1.0:pid1' is a package reference" in c.out
 
@@ -241,7 +241,7 @@ class TestLockRemove:
         ('--requires="*/[>=1.0 <2]"', ["math", "engine"])
     ])
     def test_lock_remove(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -274,7 +274,7 @@ class TestLockRemove:
                                    "math/1.0#85d927a4a067a531b1a9c7619522c015"]),
     ])
     def test_lock_remove_revisions(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -305,7 +305,7 @@ class TestLockRemove:
         ("--requires=math/[*]@team*", ["math/2.0@team/stable"]),
     ])
     def test_lock_remove_user_channel(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -336,7 +336,7 @@ class TestLockUpdate:
         ("python-requires", "mytool/1.0", "mytool/1.1"),
     ])
     def test_lock_update(self, kind, old, new):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",

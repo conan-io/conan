@@ -3,7 +3,8 @@ from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
-from conans.errors import ConanException, NotFoundException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 
 
 class ConanProxy:

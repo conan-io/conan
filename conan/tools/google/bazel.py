@@ -11,6 +11,10 @@ class Bazel(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
+        # Use BazelToolchain generated file if exists
+        self._conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
+        self._use_conan_config = os.path.exists(self._conan_bazelrc)
+        self._startup_opts = self._get_startup_command_options()
 
     def _safe_run_command(self, command):
         """
@@ -22,7 +26,18 @@ class Bazel(object):
             self._conanfile.run(command)
         finally:
             if platform.system() == "Windows":
-                self._conanfile.run("bazel shutdown")
+                self._conanfile.run("bazel" + self._startup_opts + " shutdown")
+
+    def _get_startup_command_options(self):
+        bazelrc_paths = []
+        if self._use_conan_config:
+            bazelrc_paths.append(self._conan_bazelrc)
+        # User bazelrc paths have more prio than Conan one
+        # See more info in https://bazel.build/run/bazelrc
+        bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
+                                                      check_type=list))
+        opts = " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
+        return f" {opts}" if opts else ""
 
     def build(self, args=None, target="//...", clean=True):
         """
@@ -41,34 +56,21 @@ class Bazel(object):
         :param clean: boolean that indicates to run a "bazel clean" before running the "bazel build".
                       Notice that this is important to ensure a fresh bazel cache every
         """
-        # Use BazelToolchain generated file if exists
-        conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
-        use_conan_config = os.path.exists(conan_bazelrc)
-        bazelrc_paths = []
-        bazelrc_configs = []
-        if use_conan_config:
-            bazelrc_paths.append(conan_bazelrc)
-            bazelrc_configs.append(BazelToolchain.bazelrc_config)
-        # User bazelrc paths have more prio than Conan one
-        # See more info in https://bazel.build/run/bazelrc
-        bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
-                                                      check_type=list))
         # Note: In case of error like this: ... https://bcr.bazel.build/: PKIX path building failed
         # Check this comment: https://github.com/bazelbuild/bazel/issues/3915#issuecomment-1120894057
-        command = "bazel"
-        for rc in bazelrc_paths:
-            rc = rc.replace("\\", "/")
-            command += f" --bazelrc={rc}"
-        command += " build"
-        bazelrc_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
+        bazelrc_build_configs = []
+        if self._use_conan_config:
+            bazelrc_build_configs.append(BazelToolchain.bazelrc_config)
+        command = "bazel" + self._startup_opts + " build"
+        bazelrc_build_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
                                                         check_type=list))
-        for config in bazelrc_configs:
+        for config in bazelrc_build_configs:
             command += f" --config={config}"
         if args:
             command += " ".join(f" {arg}" for arg in args)
         command += f" {target}"
         if clean:
-            self._safe_run_command("bazel clean")
+            self._safe_run_command("bazel" + self._startup_opts + " clean")
         self._safe_run_command(command)
 
     def test(self, target=None):
@@ -77,4 +79,4 @@ class Bazel(object):
         """
         if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
             return
-        self._safe_run_command(f'bazel test {target}')
+        self._safe_run_command("bazel" + self._startup_opts + f" test {target}")

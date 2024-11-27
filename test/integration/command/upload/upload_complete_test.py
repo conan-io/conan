@@ -56,7 +56,6 @@ def test_upload_with_pattern():
         client.run("export . --user=frodo --channel=stable")
 
     client.run("upload hello* --confirm -r default")
-    print(client.out)
     for num in range(3):
         assert "Uploading recipe 'hello%s/1.2.1@frodo/stable" % num in client.out
 

@@ -7,7 +7,7 @@ import yaml
 from conan.api.conan_api import ConanAPI
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.conf import default_settings_yml
+from conan.internal.default_settings import default_settings_yml
 from conans.model.conf import ConfDefinition
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options

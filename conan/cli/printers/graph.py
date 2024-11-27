@@ -1,6 +1,7 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
-from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
-    BINARY_PLATFORM
+from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, \
+    RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP, \
+    BINARY_PLATFORM, BINARY_BUILD
 
 
 def print_graph_basic(graph):
@@ -90,6 +91,7 @@ def print_graph_basic(graph):
                     output.info(f"        {src_ref}->{option}={conflict_value}", Color.BRIGHT_CYAN)
         output.info("    It is recommended to define options values in profiles, not in recipes",
                     Color.BRIGHT_CYAN)
+        output.warning("There are options conflicts in the dependency graph", warn_tag="risk")
 
 
 def print_graph_packages(graph):
@@ -129,6 +131,9 @@ def print_graph_packages(graph):
             elif status == BINARY_MISSING or status == BINARY_INVALID:
                 output.write(msg, Color.BRIGHT_CYAN)
                 output.writeln(status, Color.BRIGHT_RED)
+            elif status == BINARY_BUILD:
+                output.write(msg, Color.BRIGHT_CYAN)
+                output.writeln(status, Color.BRIGHT_YELLOW)
             else:
                 # Support python36
                 msg += status

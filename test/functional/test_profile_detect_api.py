@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conan.internal.api import detect_api
+from conan.internal.api.detect import detect_api
 from conan.test.utils.tools import TestClient
 
 

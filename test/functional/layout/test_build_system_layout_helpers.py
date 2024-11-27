@@ -4,9 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient, TurboTestClient
+from conan.test.utils.tools import TestClient
 from conans.util.files import save, load
 
 
@@ -43,15 +42,17 @@ def test_layout_in_cache(conanfile, build_type, arch):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed
     """
-    client = TurboTestClient()
+    client = TestClient()
 
     libarch = subfolders_arch.get(arch)
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
-    ref = RecipeReference.loads("lib/1.0")
-    pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
-                         conanfile=conanfile.format(libpath=libpath))
-    bf = client.cache.pkg_layout(pref).build()
-    pf = client.cache.pkg_layout(pref).package()
+
+    client.save({"conanfile.py": conanfile.format(libpath=libpath)})
+    client.run(f"create . --name=lib --version=1.0 -s build_type={build_type} -s arch={arch}")
+
+    layout = client.created_layout()
+    bf = layout.build()
+    pf = layout.package()
 
     # Check the build folder
     assert os.path.exists(os.path.join(os.path.join(bf, libpath), "mylib.lib"))

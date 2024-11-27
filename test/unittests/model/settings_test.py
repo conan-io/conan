@@ -3,8 +3,8 @@ import unittest
 
 import pytest
 
-from conans.client.conf import default_settings_yml
-from conans.errors import ConanException
+from conan.internal.default_settings import default_settings_yml
+from conan.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field
 
 
@@ -426,7 +426,7 @@ def test_possible_values():
     settings.compiler = "gcc"
     sot = settings.compiler.cppstd.possible_values()
     assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
-                   'gnu20', '23', 'gnu23']
+                   'gnu20', '23', 'gnu23', '26', 'gnu26']
 
     # We cannot access the child definition of a non declared setting
     with pytest.raises(Exception) as e:

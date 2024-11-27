@@ -1,6 +1,6 @@
 # All harcoded (names, paths etc), refactor it if needed
 
-sln_file = '''
+sln_file = r'''
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
@@ -38,7 +38,7 @@ EndGlobal
 
 '''
 
-vcxproj_file = '''<?xml version="1.0" encoding="utf-8"?>
+vcxproj_file = r'''<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
@@ -282,6 +282,8 @@ def get_vs_project_files(std=False):
         main = main_file_17_2015
     elif std == "cpp17_2017":
         main = main_file_17_2017
+    else:
+        raise Exception("Incorrect std")
 
     return {"MyProject.sln": sln_file,
             "MyProject/MyProject.vcxproj": vcxproj_file,

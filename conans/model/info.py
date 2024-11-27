@@ -1,9 +1,10 @@
-from conans.errors import ConanException
+import hashlib
+
+from conan.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
 from conans.util.config_parser import ConfigParser
-from conans.util.sha import sha1
 
 
 class _VersionRepr:
@@ -71,7 +72,8 @@ class RequirementInfo:
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
-            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+            raise ConanException(f"require {self._ref} package_id_mode='{default_package_id_mode}' "
+                                 "is not a known package_id_mode")
         else:
             func_package_id_mode()
 
@@ -327,6 +329,7 @@ class ConanInfo:
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
                  python_requires=None, conf=None, config_version=None):
         self.invalid = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.settings = settings
         self.settings_target = None  # needs to be explicitly defined by recipe package_id()
         self.options = options
@@ -335,6 +338,7 @@ class ConanInfo:
         self.python_requires = python_requires
         self.conf = conf
         self.config_version = config_version
+        self.compatibility_delta = None
 
     def clone(self):
         """ Useful for build_id implementation and for compatibility()
@@ -378,6 +382,8 @@ class ConanInfo:
         config_version_dumps = self.config_version.serialize() if self.config_version else None
         if config_version_dumps:
             result["config_version"] = config_version_dumps
+        if self.compatibility_delta:
+            result["compatibility_delta"] = self.compatibility_delta
         return result
 
     def dumps(self):
@@ -442,7 +448,9 @@ class ConanInfo:
         :return: `str` the `package_id`, e.g., `"040ce2bd0189e377b2d15eb7246a4274d1c63317"`
         """
         text = self.dumps()
-        package_id = sha1(text.encode())
+        md = hashlib.sha1()
+        md.update(text.encode())
+        package_id = md.hexdigest()
         return package_id
 
     def clear(self):

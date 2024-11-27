@@ -621,50 +621,13 @@ def test_error_missing_build_type(matrix_client):
 
 
 @pytest.mark.tool("cmake")
-def test_map_imported_config(matrix_client):
+def test_map_imported_config(transitive_libraries):
     # https://github.com/conan-io/conan/issues/12041
-    client = matrix_client
-
-    # It is necessary a 2-level test to make the fixes evident
-    talk_cpp = gen_function_cpp(name="talk", includes=["matrix"], calls=["matrix"])
-    talk_h = gen_function_h(name="talk")
-    conanfile = textwrap.dedent("""
-        import os
-        from conan import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.files import copy
-        class HelloConan(ConanFile):
-            name = 'talk'
-            version = '1.0'
-            exports_sources = "*"
-            generators = "CMakeDeps", "CMakeToolchain"
-            requires = ("matrix/1.0", )
-            settings = "os", "compiler", "arch", "build_type"
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-
-            def package(self):
-                cmake = CMake(self)
-                cmake.install()
-
-            def package_info(self):
-                self.cpp_info.libs.append("talk")
-        """)
-
-    client.save({"conanfile.py": conanfile,
-                 "CMakeLists.txt": gen_cmakelists(libname="talk",
-                                                  libsources=["talk.cpp"], find_package=["matrix"],
-                                                  install=True, public_header="talk.h"),
-                 "talk.cpp": talk_cpp,
-                 "talk.h": talk_h}, clean_first=True)
-    client.run("create . -tf=\"\" -s build_type=Release")
+    client = transitive_libraries
 
     conanfile = textwrap.dedent("""
         [requires]
-        talk/1.0
+        engine/1.0
         [generators]
         CMakeDeps
         CMakeToolchain
@@ -674,14 +637,14 @@ def test_map_imported_config(matrix_client):
         cmake_minimum_required(VERSION 3.15)
         project(app)
         set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
-        find_package(talk REQUIRED)
+        find_package(engine REQUIRED)
         add_executable(app main.cpp)
-        target_link_libraries(app talk::talk)
+        target_link_libraries(app engine::engine)
         """)
 
     client.save({
         "conanfile.txt": conanfile,
-        "main.cpp": gen_function_cpp(name="main", includes=["talk"], calls=["talk"]),
+        "main.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"]),
         "CMakeLists.txt": cmakelists
     }, clean_first=True)
 
@@ -696,7 +659,7 @@ def test_map_imported_config(matrix_client):
         client.run_command("cmake --build . --config Debug")
         client.run_command("Debug\\app.exe")
     assert "matrix/1.0: Hello World Release!" in client.out
-    assert "talk: Release!" in client.out
+    assert "engine/1.0: Hello World Release!" in client.out
     assert "main: Debug!" in client.out
 
 
@@ -727,7 +690,7 @@ def test_cmake_target_runtime_dlls(transitive_libraries):
     client.run_command("build\\Release\\foo.exe")
 
     assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "engine.dll"))
-    assert "engine/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
+    assert "engine/1.0: Hello World Release!" in client.out  # if the DLL wasn't copied, the application would not run and show output
 
 
 @pytest.mark.tool("cmake")

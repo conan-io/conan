@@ -48,8 +48,10 @@ def test_config_list():
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
 
-    client.run("config list unexpectedarg", assert_error=True)
-    assert "unrecognized arguments: unexpectedarg" in client.out
+    client.run("config list cmake")
+    assert "tools.cmake:cmake_program: Path to CMake executable" in client.out
+    assert "core.download:parallel" not in client.out
+    assert "tools.build:verbosity" not in client.out
 
 
 def test_config_install():
@@ -71,20 +73,25 @@ def test_config_install_conanignore():
     tests/*
     # Next line is commented out, so it should be ignored
     # other_tests/*
+    !b/c/important_file
+    !b/c/important_folder/*
     """)
     tc.save({
         'config_folder/.conanignore': conanignore,
-        "config_folder/a/test": '',
+        'config_folder/a/test': '',
         'config_folder/abracadabra': '',
         'config_folder/b/bison': '',
         'config_folder/b/a/test2': '',
         'config_folder/b/c/helmet': '',
+        'config_folder/b/c/important_file': '',
+        'config_folder/b/c/important_folder/contents': '',
         'config_folder/d/prix': '',
         'config_folder/d/foo/bar': '',
         'config_folder/foo': '',
         'config_folder/tests/tester': '',
         'config_folder/other_tests/tester2': ''
     })
+
     def _assert_config_exists(path):
         assert os.path.exists(os.path.join(tc.cache_folder, path))
 
@@ -104,7 +111,10 @@ def test_config_install_conanignore():
     _assert_config_exists("b/bison")
     _assert_config_exists("b/a/test2")
     _assert_config_not_exists("b/c/helmet")
-    _assert_config_not_exists("b/c")
+
+    _assert_config_exists("b/c")
+    _assert_config_exists("b/c/important_file")
+    _assert_config_exists("b/c/important_folder/contents")
 
     _assert_config_not_exists("d/prix")
     _assert_config_not_exists("d/foo/bar")
@@ -115,7 +125,39 @@ def test_config_install_conanignore():
     _assert_config_not_exists("tests/tester")
     _assert_config_exists("other_tests/tester2")
 
-    os.listdir(tc.current_folder)
+
+def test_config_install_conanignore_ignore_all_allow_specific_workflow():
+    tc = TestClient()
+    conanignore = textwrap.dedent("""
+    *
+    !important_folder/*
+    !important_file
+    # We can even include the conanignore that we skip by default!
+    !.conanignore
+    """)
+    tc.save({
+        'config_folder/.conanignore': conanignore,
+        'config_folder/a/test': '',
+        'config_folder/abracadabra': '',
+        'config_folder/important_folder/contents': '',
+        'config_folder/important_file': '',
+    })
+
+    def _assert_config_exists(path):
+        assert os.path.exists(os.path.join(tc.cache_folder, path))
+
+    def _assert_config_not_exists(path):
+        assert not os.path.exists(os.path.join(tc.cache_folder, path))
+
+    tc.run('config install config_folder')
+
+    _assert_config_exists(".conanignore")
+
+    _assert_config_not_exists("a")
+    _assert_config_not_exists("abracadabra")
+
+    _assert_config_exists("important_folder/contents")
+    _assert_config_exists("important_file")
 
 
 def test_config_show():

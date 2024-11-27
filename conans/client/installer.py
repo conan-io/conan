@@ -3,14 +3,16 @@ import shutil
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
-from conans.client.conanfile.build import run_build_method
-from conans.client.conanfile.package import run_package_method
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
+from conans.client.hook_manager import HookManager
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
+from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
+from conan.errors import ConanException
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conan.internal.paths import CONANINFO
@@ -30,13 +32,13 @@ def build_id(conan_file):
     return None
 
 
-class _PackageBuilder(object):
+class _PackageBuilder:
 
-    def __init__(self, app):
-        self._app = app
+    def __init__(self, app, hook_manager):
         self._cache = app.cache
-        self._hook_manager = app.hook_manager
+        self._hook_manager = hook_manager
         self._remote_manager = app.remote_manager
+        self._home_folder = app.cache_folder
 
     def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -90,7 +92,7 @@ class _PackageBuilder(object):
                 raise ConanException("%s\nError copying sources to build folder" % msg)
 
     def _build(self, conanfile, pref):
-        write_generators(conanfile, self._app)
+        write_generators(conanfile, self._hook_manager, self._home_folder)
 
         try:
             run_build_method(conanfile, self._hook_manager)
@@ -173,8 +175,9 @@ class BinaryInstaller:
         self._editable_packages = editable_packages
         self._cache = app.cache
         self._remote_manager = app.remote_manager
-        self._hook_manager = app.hook_manager
+        self._hook_manager = HookManager(HomePaths(app.cache_folder).hooks_path)
         self._global_conf = global_conf
+        self._home_folder = app.cache_folder
 
     def _install_source(self, node, remotes, need_conf=False):
         conanfile = node.conanfile
@@ -338,7 +341,9 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_package_info(conanfile, pkg_folder, is_editable=False)
+            self._call_finalize_method(conanfile, package_layout.finalize())
+            # Use package_folder which has been updated previously by install_method if necessary
+            self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         # It will only run generation
@@ -355,7 +360,7 @@ class BinaryInstaller:
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, self._app)
+        write_generators(conanfile, self._hook_manager, self._home_folder)
 
         if node.binary == BINARY_EDITABLE_BUILD:
             run_build_method(conanfile, self._hook_manager)
@@ -387,7 +392,7 @@ class BinaryInstaller:
         with pkg_layout.package_lock():
             pkg_layout.package_remove()
             with pkg_layout.set_dirty_context_manager():
-                builder = _PackageBuilder(self._app)
+                builder = _PackageBuilder(self._app, self._hook_manager)
                 pref = builder.build_package(node, pkg_layout)
             assert node.prev, "Node PREV shouldn't be empty"
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -454,3 +459,17 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+
+    @staticmethod
+    def _call_finalize_method(conanfile, finalize_folder):
+        if hasattr(conanfile, "finalize"):
+            conanfile.folders.set_finalize_folder(finalize_folder)
+            if not os.path.exists(finalize_folder):
+                mkdir(finalize_folder)
+                conanfile.output.highlight("Calling finalize()")
+                with conanfile_exception_formatter(conanfile, "finalize"):
+                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'],
+                                               'finalize'):
+                        conanfile.finalize()
+
+            conanfile.output.success(f"Finalized folder {finalize_folder}")

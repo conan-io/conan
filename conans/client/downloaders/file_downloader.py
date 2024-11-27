@@ -5,10 +5,10 @@ import time
 
 from conan.api.output import ConanOutput, TimedOutput
 from conans.client.rest import response_to_str
-from conans.errors import ConanException, NotFoundException, AuthenticationException, \
-    ForbiddenException, ConanConnectionError, RequestErrorException
-from conans.util.files import human_size
-from conans.util.sha import check_with_algorithm_sum
+from conan.internal.errors import ConanConnectionError, RequestErrorException, AuthenticationException, \
+    ForbiddenException, NotFoundException
+from conan.errors import ConanException
+from conans.util.files import human_size, check_with_algorithm_sum
 
 
 class FileDownloader:
@@ -84,7 +84,7 @@ class FileDownloader:
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                if auth is None or (hasattr(auth, "bearer") and auth.bearer is None):
                     # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))

@@ -76,3 +76,43 @@ def test_profile_cli_priority():
     assert "user.myconf:myvalue3={'3': '5', 'a': 'b'}" in c.out
     assert "user.myconf:myvalue4={'1': '2'}" in c.out
     assert "user.myconf:myvalue5={'6': '7'}" in c.out
+
+
+def test_profiles_patterns_include():
+    # https://github.com/conan-io/conan/issues/16718
+    c = TestClient()
+    msvc = textwrap.dedent("""
+        [settings]
+        compiler=msvc
+        compiler.cppstd=14
+        compiler.version=193
+        os=Windows
+
+        test*/*:compiler.cppstd=14
+        """)
+    clang = textwrap.dedent("""
+        include(./msvc)
+        [settings]
+        test*/*:compiler=clang
+        test*/*:compiler.cppstd=17
+        test*/*:compiler.runtime_version=v144
+        test*/*:compiler.version=18
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "test_pkg"
+            version = "0.1"
+            settings = "os", "compiler"
+            def generate(self):
+                self.output.info(f"MyCompiler={self.settings.compiler}!!!")
+                self.output.info(f"MyCompilerVersion={self.settings.compiler.version}!!!")
+                self.output.info(f"MyCompilerCpp={self.settings.compiler.cppstd}!!!")
+            """)
+    c.save({"conanfile.py": conanfile,
+            "msvc": msvc,
+            "clang": clang})
+    c.run("install . -pr=clang")
+    assert "conanfile.py (test_pkg/0.1): MyCompiler=clang!!!" in c.out
+    assert "conanfile.py (test_pkg/0.1): MyCompilerVersion=18!!!" in c.out
+    assert "conanfile.py (test_pkg/0.1): MyCompilerCpp=17!!!" in c.out

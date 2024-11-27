@@ -1,10 +1,13 @@
 import copy
+import glob
 import json
 import os
+import re
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
+from conan.errors import ConanException
+from conans.model.pkg_type import PackageType
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -77,6 +80,8 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
+        self._exe = None  # application executable, only 1 allowed, following CPS
+        self._languages = None
 
         self._sysroot = None
         self._requires = None
@@ -90,6 +95,11 @@ class _Component:
             self.includedirs = ["include"]
             self.libdirs = ["lib"]
             self.bindirs = ["bin"]
+
+        # CPS
+        self._type = None
+        self._location = None
+        self._link_location = None
 
     def serialize(self):
         return {
@@ -111,7 +121,12 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._properties
+            "properties": self._properties,
+            "exe": self._exe,  # single exe, incompatible with libs
+            "type": self._type,
+            "location": self._location,
+            "link_location": self._link_location,
+            "languages": self._languages
         }
 
     @staticmethod
@@ -119,6 +134,14 @@ class _Component:
         result = _Component()
         for field, value in contents.items():
             setattr(result, f"_{field}", value)
+        return result
+
+    def clone(self):
+        # Necessary below for exploding a cpp_info.libs = [lib1, lib2] into components
+        result = _Component()
+        for k, v in vars(self).items():
+            if k.startswith("_"):
+                setattr(result, k, copy.copy(v))
         return result
 
     @property
@@ -194,22 +217,28 @@ class _Component:
     @property
     def bindir(self):
         bindirs = self.bindirs
-        assert bindirs
-        assert len(bindirs) == 1
+        if not bindirs or len(bindirs) != 1:
+            raise ConanException(f"The bindir property is undefined because bindirs "
+                                 f"{'is empty' if not bindirs else 'has more than one element'}."
+                                 f" Consider using the bindirs property.")
         return bindirs[0]
 
     @property
     def libdir(self):
         libdirs = self.libdirs
-        assert libdirs
-        assert len(libdirs) == 1
+        if not libdirs or len(libdirs) != 1:
+            raise ConanException(f"The libdir property is undefined because libdirs "
+                                 f"{'is empty' if not libdirs else 'has more than one element'}."
+                                 f" Consider using the libdirs property.")
         return libdirs[0]
 
     @property
     def includedir(self):
         includedirs = self.includedirs
-        assert includedirs
-        assert len(includedirs) == 1
+        if not includedirs or len(includedirs) != 1:
+            raise ConanException(f"The includedir property is undefined because includedirs "
+                                 f"{'is empty' if not includedirs else 'has more than one element'}."
+                                 f" Consider using the includedirs property.")
         return includedirs[0]
 
     @property
@@ -241,6 +270,46 @@ class _Component:
     @libs.setter
     def libs(self, value):
         self._libs = value
+
+    @property
+    def exe(self):
+        return self._exe
+
+    @exe.setter
+    def exe(self, value):
+        self._exe = value
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        self._type = value
+
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, value):
+        self._location = value
+
+    @property
+    def link_location(self):
+        return self._link_location
+
+    @link_location.setter
+    def link_location(self, value):
+        self._link_location = value
+
+    @property
+    def languages(self):
+        return self._languages
+
+    @languages.setter
+    def languages(self, value):
+        self._languages = value
 
     @property
     def defines(self):
@@ -334,11 +403,15 @@ class _Component:
             self._properties = {}
         self._properties[property_name] = value
 
-    def get_property(self, property_name):
+    def get_property(self, property_name, check_type=None):
         if self._properties is None:
             return None
         try:
-            return self._properties[property_name]
+            value = self._properties[property_name]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {property_name} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             pass
 
@@ -373,7 +446,12 @@ class _Component:
 
         if other._properties:
             current_values = self.get_init("_properties", {})
-            current_values.update(other._properties)
+            for k, v in other._properties.items():
+                existing = current_values.get(k)
+                if existing is not None and isinstance(existing, list) and not overwrite:
+                    existing.extend(v)
+                else:
+                    current_values[k] = v
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
@@ -409,11 +487,135 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
+    def _auto_deduce_locations(self, conanfile, component_name):
+
+        def _lib_match_by_glob(dir_, filename):
+            # Run a glob.glob function to find the file given by the filename
+            matches = glob.glob(f"{dir_}/{filename}")
+            if matches:
+                return matches
+
+
+        def _lib_match_by_regex(dir_, pattern):
+            ret = set()
+            # pattern is a regex compiled pattern, so let's iterate each file to find the library
+            files = os.listdir(dir_)
+            for file_name in files:
+                full_path = os.path.join(dir_, file_name)
+                if os.path.isfile(full_path) and pattern.match(file_name):
+                    # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
+                    if os.path.islink(full_path):
+                        # Important! os.path.realpath returns the final path of the symlink even if it points
+                        # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+                        # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
+                        # Note: os.readlink() returns the path which the symbolic link points to.
+                        real_path = os.path.realpath(full_path)
+                        if pattern.match(os.path.basename(real_path)):
+                            ret.add(real_path)
+                    else:
+                        ret.add(full_path)
+            return list(ret)
+
+
+        def _find_matching(dirs, pattern):
+            for d in dirs:
+                if not os.path.exists(d):
+                    continue
+                # If pattern is an exact match
+                if isinstance(pattern, str):
+                    # pattern == filename
+                    lib_found = _lib_match_by_glob(d, pattern)
+                else:
+                    lib_found = _lib_match_by_regex(d, pattern)
+                if lib_found:
+                    if len(lib_found) > 1:
+                        lib_found.sort()
+                        out.warning(f"There were several matches for Lib {libname}: {lib_found}")
+                    return lib_found[0].replace("\\", "/")
+
+        out = ConanOutput(scope=str(conanfile))
+        pkg_type = conanfile.package_type
+        libdirs = self.libdirs
+        bindirs = self.bindirs
+        libname = self.libs[0]
+        static_location = None
+        shared_location = None
+        dll_location = None
+        # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
+        _, ext = os.path.splitext(libname)
+        if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
+            if ext in (".lib", ".a"):
+                static_location = _find_matching(libdirs, libname)
+            elif ext in (".so", ".dylib"):
+                shared_location = _find_matching(libdirs, libname)
+            elif ext == ".dll":
+                dll_location = _find_matching(bindirs, libname)
+        else:
+            regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
+            regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
+            regex_dll = re.compile(rf"(?:.+)?({libname}|{component_name})(?:.+)?\.dll")
+            static_location = _find_matching(libdirs, regex_static)
+            shared_location = _find_matching(libdirs, regex_shared)
+            if static_location or not shared_location:
+                dll_location = _find_matching(bindirs, regex_dll)
+
+        if static_location:
+            if shared_location:
+                out.warning(f"Lib {libname} has both static {static_location} and "
+                            f"shared {shared_location} in the same package")
+                if pkg_type is PackageType.STATIC:
+                    self._location = static_location
+                    self._type = PackageType.STATIC
+                else:
+                    self._location = shared_location
+                    self._type = PackageType.SHARED
+            elif dll_location:
+                self._location = dll_location
+                self._link_location = static_location
+                self._type = PackageType.SHARED
+            else:
+                self._location = static_location
+                self._type = PackageType.STATIC
+        elif shared_location:
+            self._location = shared_location
+            self._type = PackageType.SHARED
+        elif dll_location:
+            # Only .dll but no link library
+            self._location = dll_location
+            self._type = PackageType.SHARED
+        if not self._location:
+            raise ConanException(f"{conanfile}: Cannot obtain 'location' for library '{libname}' "
+                                 f"in {libdirs}. You can specify 'cpp_info.location' directly "
+                                 f"or report in github.com/conan-io/conan/issues if you think it "
+                                 f"should have been deduced correctly.")
+        if self._type != pkg_type:
+            out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+
+    def deduce_locations(self, conanfile, component_name=""):
+        if self._exe:   # exe is a new field, it should have the correct location
+            return
+        if self._location or self._link_location:
+            if self._type is None or self._type is PackageType.HEADER:
+                raise ConanException("Incorrect cpp_info defining location without type or header")
+            return
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+            return
+        num_libs = len(self.libs)
+        if num_libs == 0:
+            return
+        elif num_libs > 1:
+            raise ConanException(
+                f"More than 1 library defined in cpp_info.libs, cannot deduce CPS ({num_libs} libraries found)")
+        else:
+            # If no location is defined, it's time to guess the location
+            self._auto_deduce_locations(conanfile, component_name=component_name)
+
 
 class CppInfo:
 
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
+        self.default_components = None
         self._package = _Component(set_defaults)
 
     def __getattr__(self, attr):
@@ -421,19 +623,22 @@ class CppInfo:
         return getattr(self._package, attr)
 
     def __setattr__(self, attr, value):
-        if attr in ("components", "_package", "_aggregated"):
+        if attr in ("components", "default_components", "_package", "_aggregated"):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self._package, attr, value)
 
     def serialize(self):
         ret = {"root": self._package.serialize()}
+        if self.default_components:
+            ret["default_components"] = self.default_components
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
 
     def deserialize(self, content):
         self._package = _Component.deserialize(content.pop("root"))
+        self.default_components = content.get("default_components")
         for component_name, info in content.items():
             self.components[component_name] = _Component.deserialize(info)
         return self
@@ -544,8 +749,10 @@ class CppInfo:
         if not external:
             return
         # Only direct host (not test) dependencies can define required components
-        direct_dependencies = [d.ref.name for d in conanfile.requires.values()
-                               if not d.build and not d.is_test and d.visible and not d.override]
+        # We use conanfile.dependencies to use the already replaced ones by "replace_requires"
+        # So consumers can keep their ``self.cpp_info.requires = ["pkg_name::comp"]``
+        direct_dependencies = [r.ref.name for r, d in conanfile.dependencies.items() if r.direct
+                               and not r.build and not r.is_test and r.visible and not r.override]
 
         for e in external:
             if e not in direct_dependencies:
@@ -571,3 +778,35 @@ class CppInfo:
         # Then split the names
         ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
+
+    def deduce_full_cpp_info(self, conanfile):
+        result = CppInfo()  # clone it
+
+        if self.libs and len(self.libs) > 1:  # expand in multiple components
+            ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
+                                  "Define 'cpp_info.components' instead.")
+            assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
+            for lib in self.libs:
+                c = _Component()  # Do not do a full clone, we don't need the properties
+                c.type = self.type  # This should be a string
+                c.includedirs = self.includedirs
+                c.libdirs = self.libdirs
+                c.bindirs = self.bindirs
+                c.libs = [lib]
+                result.components[f"_{lib}"] = c
+
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            common.requires = list(result.components.keys()) + (self.requires or [])
+            result.components["_common"] = common
+        else:
+            result._package = self._package.clone()
+            result.default_components = self.default_components
+            result.components = {k: v.clone() for k, v in self.components.items()}
+
+        result._package.deduce_locations(conanfile, component_name=conanfile.ref.name)
+        for comp_name, comp in result.components.items():
+            comp.deduce_locations(conanfile, component_name=comp_name)
+
+        return result

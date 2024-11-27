@@ -1,12 +1,14 @@
 import os
 
 from conan.internal.api.install.generators import write_generators
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
 
 from conans.client.graph.install_graph import InstallGraph
+from conans.client.hook_manager import HookManager
 from conans.client.installer import BinaryInstaller
-from conans.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration
 
 
 class InstallAPI:
@@ -51,7 +53,7 @@ class InstallAPI:
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_package=None, deploy_folder=None):
+                         deploy=False, deploy_package=None, deploy_folder=None, envs_generation=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -64,8 +66,8 @@ class InstallAPI:
             msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
 
-        if root_node.cant_build and root_node.should_build:
-            binary, reason = "Cannot build for this configuration", root_node.cant_build
+        if conanfile.info is not None and conanfile.info.cant_build and root_node.should_build:
+            binary, reason = "Cannot build for this configuration", conanfile.info.cant_build
             msg = "{}: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
 
@@ -87,5 +89,6 @@ class InstallAPI:
             if gen not in final_generators:
                 final_generators.append(gen)
         conanfile.generators = final_generators
-        app = ConanApp(self.conan_api)
-        write_generators(conanfile, app)
+        hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
+        write_generators(conanfile, hook_manager, self.conan_api.home_folder,
+                         envs_generation=envs_generation)

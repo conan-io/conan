@@ -37,7 +37,7 @@ def test_extra_flags_via_conf(os_):
                  "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
     toolchain = client.load(
-        "conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
+        "conangnutoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
     if os_ == "Windows":
         assert 'set "CPPFLAGS=%CPPFLAGS% -DNDEBUG -DDEF1 -DDEF2"' in toolchain
         assert 'set "CXXFLAGS=%CXXFLAGS% -O3 --flag1 --flag2"' in toolchain
@@ -88,7 +88,7 @@ def test_extra_flags_order():
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('install . -pr=./profile')
     toolchain = client.load(
-        "conanautotoolstoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
+        "conangnutoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
 
     assert '-Dextra_defines -Ddefines' in toolchain
     assert 'extra_cxxflags cxxflags' in toolchain
@@ -113,7 +113,7 @@ def test_autotools_custom_environment():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Linux -s:h os=Linux")
-    content = load(os.path.join(client.current_folder, "conanautotoolstoolchain.sh"))
+    content = load(os.path.join(client.current_folder, "conangnutoolchain.sh"))
     assert 'export FOO="BAR"' in content
 
 
@@ -141,7 +141,7 @@ def test_linker_scripts_via_conf(os_):
                  "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
     toolchain = client.load(
-        "conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
+        "conangnutoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
     if os_ == "Windows":
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
@@ -255,7 +255,7 @@ def test_toolchain_and_compilers_build_context():
         generators = "GnuToolchain"
 
         def build(self):
-            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.sh")
             content = load(self, toolchain)
             assert 'export CC="clang"' in content
             assert 'export CXX="clang++"' in content
@@ -274,11 +274,14 @@ def test_toolchain_and_compilers_build_context():
         tool_requires = "tool/1.0"
 
         def build(self):
-            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.sh")
             content = load(self, toolchain)
             assert 'export CC="gcc"' in content
             assert 'export CXX="g++"' in content
             assert 'export RC="windres"' in content
+            # Issue: https://github.com/conan-io/conan/issues/15486
+            assert 'export CC_FOR_BUILD="clang"' in content
+            assert 'export CXX_FOR_BUILD="clang++"' in content
     """)
     client = TestClient()
     client.save({
@@ -376,7 +379,7 @@ def test_msvc_profile_defaults():
         generators = "GnuToolchain"
 
         def build(self):
-            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.bat")
             content = load(self, toolchain)
             # Default values and conf ones
             assert r'set "CC=clang"' in content  # conf value has precedence
@@ -415,7 +418,7 @@ def test_msvc_profile_defaults():
             tc.generate()
 
         def build(self):
-            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.bat")
             content = load(self, toolchain)
             # Default values
             assert r'set "CC=compile clang"' in content
