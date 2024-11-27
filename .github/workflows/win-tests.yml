@@ -41,6 +41,10 @@ jobs:
             --add Microsoft.VisualStudio.Component.VC.Tools.14.40.x86.x64 `
             --quiet --wait --norestart
 
+      - name: Verify MSVC v14.40 toolset installation
+      run: |
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+
       - name: Install Visual Studio Build Tools
         run: |
             Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
