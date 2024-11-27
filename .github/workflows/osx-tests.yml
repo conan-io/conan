@@ -132,23 +132,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
+
+      - name: Restore tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/bazel/6.3.2
+            ~/Applications/bazel/7.1.2
+          key: ${{ runner.os }}-conan-tools-cache
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Use Cached Dependencies
+      - name: Run Tests
         run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
 
-      - name: Run Tests
-        run: |
           if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n auto
+            python -m pytest test/unittests --durations=20 -n auto
           elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n auto
+            python -m pytest test/integration --durations=20 -n auto
           elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n auto
+            python -m pytest test/functional --durations=20 -n auto
           fi
