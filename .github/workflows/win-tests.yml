@@ -49,10 +49,10 @@ jobs:
         run: |
             Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile "vs_buildtools17.exe"
             Start-Process -FilePath ".\vs_buildtools17.exe" -ArgumentList `
-            "--quiet", "--wait", "--norestart", "--nocache" `
+            "--quiet", "--wait", "--norestart", "--nocache", `
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64", `
-            "--add", "Microsoft.VisualStudio.Component.VC.v143.x86.x64" -WindowStyle Hidden -Wait
-
+            "--add", "Microsoft.VisualStudio.Component.VC.v143.x86.x64" `
+            -WindowStyle Hidden -Wait
 
       - name: Cache pip packages
         uses: actions/cache@v4
