@@ -34,9 +34,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install MSVC v14.39 toolset
+      - name: Install MSVC v14.39 Toolset
+        shell: pwsh
         run: |
-            & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --add Microsoft.VisualStudio.Component.VC.Tools.14.39.x86.x64 --norestart --passive
+          Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
+          $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          $componentsToAdd = @(
+              "Microsoft.VisualStudio.Component.VC.Tools.14.39.x86.x64"
+          )
+          [string]$workloadArgs = $componentsToAdd | ForEach-Object { "--add " + $_ }
+          
+          $Arguments = @('vs_installer.exe', 'modify', '--installPath', "`"$InstallPath`"", $workloadArgs, '--quiet', '--norestart', '--nocache')
+
+          $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+          
+          if ($process.ExitCode -eq 0)
+          {
+              Write-Host "Components have been successfully installed"
+          }
+          else
+          {
+              Write-Host "Components could not be installed"
+              exit 1
+          }
 
       - name: Verify MSVC v14.39 toolset installation
         run: |
