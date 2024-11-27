@@ -1,7 +1,7 @@
 import argparse
+import os
 
 from conans.server.launcher import ServerLauncher
-from conans.util.env import get_env
 
 
 def run():
@@ -12,7 +12,7 @@ def run():
                         help='Specify where to store server config and data.')
     args = parser.parse_args()
     launcher = ServerLauncher(force_migration=args.migrate,
-                              server_dir=args.server_dir or get_env("CONAN_SERVER_HOME"))
+                              server_dir=args.server_dir or os.environ.get("CONAN_SERVER_HOME"))
     launcher.launch()
 
 

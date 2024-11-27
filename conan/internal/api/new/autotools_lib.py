@@ -14,6 +14,7 @@ class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "library"
+    win_bash = True
 
     # Optional metadata
     license = "<Put the package license here>"
@@ -94,6 +95,7 @@ from conan.tools.build import can_run
 class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "AutotoolsDeps", "AutotoolsToolchain"
+    win_bash = True
 
     win_bash = True
 

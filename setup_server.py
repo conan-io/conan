@@ -17,9 +17,7 @@ from os import path
 
 # The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
-excluded_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+excluded_test_packages = ["test"]
 
 
 def get_requires(filename):
@@ -34,7 +32,7 @@ def get_requires(filename):
 def load_version():
     """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
+                                            "conan", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
@@ -54,7 +52,7 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 
 
 setup(
-    name='conan-server',
+    name='conan_server',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html

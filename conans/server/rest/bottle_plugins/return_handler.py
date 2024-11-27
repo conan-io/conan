@@ -1,8 +1,6 @@
-import traceback
-
 from bottle import HTTPResponse
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class ReturnHandlerPlugin(object):

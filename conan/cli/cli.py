@@ -16,9 +16,10 @@ from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan.internal.cache.home_paths import HomePaths
-from conans import __version__ as client_version
+from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
-from conans.util.files import exception_message_safe
+
+_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
 
 class Cli:
@@ -32,10 +33,11 @@ class Cli:
         assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
+        self._conan_api.command.cli = self
         self._groups = defaultdict(list)
         self._commands = {}
 
-    def _add_commands(self):
+    def add_commands(self):
         if Cli._builtin_commands is None:
             conan_cmd_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
             for module in pkgutil.iter_modules([conan_cmd_path]):
@@ -47,34 +49,43 @@ class Cli:
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 
-        custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
-        if not os.path.isdir(custom_commands_path):
-            return
+        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        # Important! This variable should be only used for testing/debugging purpose
+        developer_custom_commands_path = os.getenv(_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH)
+        # Notice that in case of having same custom commands file names, the developer one has
+        # preference over the Conan default location because of the sys.path.append(xxxx)
+        custom_commands_folders = [developer_custom_commands_path, conan_custom_commands_path] \
+            if developer_custom_commands_path else [conan_custom_commands_path]
 
-        sys.path.append(custom_commands_path)
-        for module in pkgutil.iter_modules([custom_commands_path]):
-            module_name = module[1]
-            if module_name.startswith("cmd_"):
-                try:
-                    self._add_command(module_name, module_name.replace("cmd_", ""))
-                except Exception as e:
-                    ConanOutput().error("Error loading custom command "
-                                        "'{}.py': {}".format(module_name, e))
-        # layers
-        for folder in os.listdir(custom_commands_path):
-            layer_folder = os.path.join(custom_commands_path, folder)
-            sys.path.append(layer_folder)
-            if not os.path.isdir(layer_folder):
-                continue
-            for module in pkgutil.iter_modules([layer_folder]):
+        for custom_commands_path in custom_commands_folders:
+            if not os.path.isdir(custom_commands_path):
+                return
+
+            sys.path.append(custom_commands_path)
+            for module in pkgutil.iter_modules([custom_commands_path]):
                 module_name = module[1]
                 if module_name.startswith("cmd_"):
-                    module_path = f"{folder}.{module_name}"
                     try:
-                        self._add_command(module_path, module_name.replace("cmd_", ""),
-                                          package=folder)
+                        self._add_command(module_name, module_name.replace("cmd_", ""))
                     except Exception as e:
-                        ConanOutput().error(f"Error loading custom command {module_path}: {e}")
+                        ConanOutput().error(f"Error loading custom command '{module_name}.py': {e}",
+                                            error_type="exception")
+            # layers
+            for folder in os.listdir(custom_commands_path):
+                layer_folder = os.path.join(custom_commands_path, folder)
+                sys.path.append(layer_folder)
+                if not os.path.isdir(layer_folder):
+                    continue
+                for module in pkgutil.iter_modules([layer_folder]):
+                    module_name = module[1]
+                    if module_name.startswith("cmd_"):
+                        module_path = f"{folder}.{module_name}"
+                        try:
+                            self._add_command(module_path, module_name.replace("cmd_", ""),
+                                              package=folder)
+                        except Exception as e:
+                            ConanOutput().error(f"Error loading custom command {module_path}: {e}",
+                                                error_type="exception")
 
     def _add_command(self, import_path, method_name, package=None):
         try:
@@ -83,7 +94,9 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
-                self._groups[command_wrapper.group].append(name)
+                # Avoiding duplicated command help messages
+                if name not in self._groups[command_wrapper.group]:
+                    self._groups[command_wrapper.group].append(name)
             for name, value in getmembers(imported_module):
                 if isinstance(value, ConanSubCommand):
                     if name.startswith("{}_".format(method_name)):
@@ -153,7 +166,7 @@ class Cli:
         methods
         """
         output = ConanOutput()
-        self._add_commands()
+        self.add_commands()
         try:
             command_argument = args[0][0]
         except IndexError:  # No parameters
@@ -163,7 +176,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version)
+                cli_out_write("Conan version %s" % __version__)
                 return
 
             if command_argument in ["-h", "--help"]:
@@ -177,6 +190,7 @@ class Cli:
 
         try:
             command.run(self._conan_api, args[0][1:])
+            _warn_frozen_center(self._conan_api)
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
@@ -205,21 +219,45 @@ class Cli:
         if exception is None:
             return SUCCESS
         if isinstance(exception, ConanInvalidConfiguration):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_INVALID_CONFIGURATION
         if isinstance(exception, ConanException):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_GENERAL
         if isinstance(exception, SystemExit):
             if exception.code != 0:
-                output.error("Exiting with code: %d" % exception.code)
+                output.error("Exiting with code: %d" % exception.code, error_type="exception")
             return exception.code
 
         assert isinstance(exception, Exception)
-        output.error(traceback.format_exc())
-        msg = exception_message_safe(exception)
-        output.error(msg)
+        output.error(traceback.format_exc(), error_type="exception")
+        output.error(str(exception), error_type="exception")
         return ERROR_UNEXPECTED
+
+
+def _warn_python_version():
+    version = sys.version_info
+    if version.minor == 6:
+        ConanOutput().writeln("")
+        ConanOutput().warning("*"*80, warn_tag="deprecated")
+        ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
+                              "Conan future versions will drop support for it, "
+                              "please upgrade Python", warn_tag="deprecated")
+        ConanOutput().warning("*" * 80, warn_tag="deprecated")
+
+
+def _warn_frozen_center(conan_api):
+    remotes = conan_api.remotes.list()
+    for r in remotes:
+        if r.url == "https://center.conan.io":
+            ConanOutput().warning(
+                "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
+                "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"
+                "It is recommended to update to the new remote using the following command:\n"
+                f"'conan remote update {r.name} --url=\"https://center2.conan.io\"'",
+                warn_tag="deprecated"
+            )
+            break
 
 
 def main(args):
@@ -267,6 +305,7 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
+        _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)

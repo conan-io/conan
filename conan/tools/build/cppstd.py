@@ -1,7 +1,7 @@
 import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
-from conan.internal.api.detect_api import default_cppstd as default_cppstd_
+from conan.internal.api.detect.detect_api import default_cppstd as default_cppstd_
 from conans.model.version import Version
 
 
@@ -11,12 +11,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         In case the current cppstd doesn't fit the minimal version required
         by cppstd, a ConanInvalidConfiguration exception will be raised.
 
-        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
-        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
-           default from cppstd_default)
-        3. If not settings.compiler is present (not declared in settings) will raise because it
-           cannot compare.
-        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
+        settings.compiler.cppstd must be defined, otherwise ConanInvalidConfiguration is raised
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param cppstd: Minimal cppstd version required
@@ -31,12 +26,7 @@ def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
         In case the current cppstd doesn't fit the maximum version required
         by cppstd, a ConanInvalidConfiguration exception will be raised.
 
-        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
-        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
-           default from cppstd_default)
-        3. If not settings.compiler is present (not declared in settings) will raise because it
-           cannot compare.
-        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
+        settings.compiler.cppstd must be defined, otherwise ConanInvalidConfiguration is raised
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param cppstd: Maximum cppstd version required
@@ -126,12 +116,7 @@ def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions):
         In case the current cppstd doesn't fit the maximum version required
         by cppstd, a ConanInvalidConfiguration exception will be raised.
 
-        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
-        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
-           default from cppstd_default)
-        3. If not settings.compiler is present (not declared in settings) will raise because it
-           cannot compare.
-        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
+        settings.compiler.cppstd must be defined, otherwise ConanInvalidConfiguration is raised
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param cppstd: Required cppstd version.
@@ -179,8 +164,14 @@ def _apple_clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "13.0":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092 doesn't show c++23 full support until 16
+    # but it was this before Conan 2.9, so keeping it to not break
+    if version < "16.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _gcc_supported_cppstd(version):
@@ -199,8 +190,13 @@ def _gcc_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "11":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "14.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _msvc_supported_cppstd(version):
@@ -237,8 +233,12 @@ def _clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "12":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
-
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "17.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _mcst_lcc_supported_cppstd(version):
@@ -256,6 +256,7 @@ def _mcst_lcc_supported_cppstd(version):
     # FIXME: When cppstd 23 was introduced????
 
     return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
 
 def _qcc_supported_cppstd(version):
     """

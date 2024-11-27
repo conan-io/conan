@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -29,6 +29,9 @@ class Requirement:
         self._direct = direct
         self.options = options
         # Meta and auxiliary information
+        # The "defining_require" is the require that defines the current value. If this require is
+        # overriden/forced, this attribute will point to the overriding/forcing requirement.
+        self.defining_require = self  # if not overriden, it points to itself
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
@@ -251,7 +254,11 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
-        # TODO: self.package_id_mode => Choose more restrictive?
+        self.is_test = self.is_test or other.is_test
+        # package_id_mode is not being propagated downstream. So it is enough to check if the
+        # current require already defined it or not
+        if self.package_id_mode is None:
+            self.package_id_mode = other.package_id_mode
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
@@ -267,15 +274,18 @@ class Requirement:
 
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
+            # Build-requires will propagate its main trait for running exes/shared to downstream
+            # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=True, direct=False)
+                                             run=require.run, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
+            # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=False, direct=False)
+                                                 run=True, visible=self.visible, direct=False)
                 return downstream_require
             return
 
@@ -299,10 +309,12 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
-            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
-                downstream_require.headers = False
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            # This is faster than pkg_type in (pkg.shared, pkg.static, ....)
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 downstream_require.libs = False
+                downstream_require.headers = False
+            elif pkg_type is PackageType.STATIC:
+                downstream_require.headers = False
 
         assert require.visible, "at this point require should be visible"
 
@@ -316,11 +328,11 @@ class Requirement:
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
 
+        if self.visible is False:
+            downstream_require.visible = False
+
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
-            if self.visible is False:
-                downstream_require.visible = False
-
             if self.headers is False:
                 downstream_require.headers = False
 
@@ -333,6 +345,7 @@ class Requirement:
 
         if self.test:
             downstream_require.test = True
+        downstream_require.is_test = require.is_test
 
         # If the current one is resolving conflicts, the downstream one will be too
         downstream_require.force = require.force
@@ -365,7 +378,7 @@ class Requirement:
         non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
         unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 if dep_pkg_type is PackageType.SHARED:
                     self.package_id_mode = non_embed_mode
                 else:
@@ -516,16 +529,6 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def override(self, ref):
-        req = Requirement(ref)
-        old_requirement = self._requires.get(req)
-        if old_requirement is not None:
-            req.force = True
-            self._requires[req] = req
-        else:
-            req.override = True
-            self._requires[req] = req
-
     def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest
@@ -572,3 +575,6 @@ class Requirements:
 
     def serialize(self):
         return [v.serialize() for v in self._requires.values()]
+
+    def __len__(self):
+        return len(self._requires)

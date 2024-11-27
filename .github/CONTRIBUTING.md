@@ -22,17 +22,17 @@ To contribute follow the next steps:
    to open one to gather feedback.
 2. Check that the issue has been staged to "queue" or ask @conan-io/barbarians to do it. This helps in terms of validation and discussion of
    possible implementation of the feature/fix.
-3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop` branch and develop
+3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop2` branch and develop
    your fix/feature as discussed in previous step.
-4. Try to keep your branch updated with the `develop` branch to avoid conflicts.
-5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.0.X patch. In that case, the PR should be targeted to release/2.0.
+4. Try to keep your branch updated with the `develop2` branch to avoid conflicts.
+5. Open a pull request, and select `develop2` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.X.Y patch. In that case, the PR should be targeted to release/2.0.
 6. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
 7. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
 The ``conan-io`` organization maintainers will review and help with the coding of tests. Finally it will be assigned to milestone.
 
-Each milestone corresponds to a Conan release, a branch `release/xxx` will be opened from the `develop` branch.
-When the branch is ready, a tag corresponding to the version will be pushed and it will be merged into `develop` branch.
+Each milestone corresponds to a Conan release, a branch `release/xxx` will be opened from the `develop2` branch.
+When the branch is ready, a tag corresponding to the version will be pushed and it will be merged into `develop2` branch.
 
 The release plan is done monthly but dates are not fixed, the ``conan-io`` organization maintainers reserve the right of altering the issues
 of each milestone as well as the release dates.
@@ -63,7 +63,7 @@ We use the following tags to control the status of the issues:
 - **in-progress**: A milestone has previously been assigned to the issue and is now under development.
 - **review**: Issue has a PR associated that solves it (remember to use the GitHub keywords "closes #IssueNumber", "fixes #IssueNumber"...
   in the description of the PR).
-- **closed via PR**: A PR with the fix or new feature has been merged to `develop` and the issue will be fixed in the next monthly release.
+- **closed via PR**: A PR with the fix or new feature has been merged to `develop2` and the issue will be fixed in the next monthly release.
 
 Code of conduct
 ---------------
@@ -81,8 +81,8 @@ Please keep in mind these points:
   - Backwards compatibility and not breaking users' packages is very important and it won't be done unless there are very good reasons.
 - You should not get bothered if you feel unattended, Conan is an Open Source project, not a commercial product. Try to explain what you
   really need and we will try to help you.
-- The Conan maintainers won't tolerate harassment or abuse. 
-  
+- The Conan maintainers won't tolerate harassment or abuse.
+
 If a user is not following the code of conduct:
 
    - We will contact the user to remind the rules.
@@ -94,10 +94,6 @@ Code style
 
 - In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/)
 - Limit all lines to a maximum of 101 characters (`Right margin` setting in PyCharm)
-- Start new files with [encoding declaration](https://www.python.org/dev/peps/pep-0263/):
-```
-# -*- coding: utf-8 -*-
-```
 - Specify imports in the following order: system, `blank line`, 3rd-party, `blank line`, own; all sorted alphabetically:
 ```
 import os

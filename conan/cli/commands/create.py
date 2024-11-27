@@ -9,6 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conans.client.graph.graph import BINARY_BUILD
 from conans.util.files import mkdir
 
 
@@ -26,14 +27,20 @@ def create(conan_api, parser, *args):
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
+    parser.add_argument("-tm", "--test-missing", action='store_true', default=False,
+                        help='Run the test_package checks only if the package is built from source'
+                             ' but not if it already existed (using --build=missing)')
     parser.add_argument("-bt", "--build-test", action="append",
                         help="Same as '--build' but only for the test_package requires. By default"
                              " if not specified it will take the '--build' value if specified")
+    raw_args = args[0]
     args = parser.parse_args(*args)
+
+    if args.test_missing and args.test_folder == "":
+        raise ConanException('--test-folder="" is incompatible with --test-missing')
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -49,12 +56,32 @@ def create(conan_api, parser, *args):
                                              lockfile=lockfile,
                                              remotes=remotes)
 
+    # FIXME: Dirty: package type still raw, not processed yet
+    is_build = args.build_require or conanfile.package_type == "build-scripts"
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
-    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
-                                                         args.build_require)
+    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
+    if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
+        from conan.internal.runner.docker import DockerRunner
+        from conan.internal.runner.ssh import SSHRunner
+        from conan.internal.runner.wsl import WSLRunner
+        try:
+            runner_type = profile_host.runner['type'].lower()
+        except KeyError:
+            raise ConanException(f"Invalid runner configuration. 'type' must be defined")
+        runner_instances_map = {
+            'docker': DockerRunner,
+            # 'ssh': SSHRunner,
+            # 'wsl': WSLRunner,
+        }
+        try:
+            runner_instance = runner_instances_map[runner_type]
+        except KeyError:
+            raise ConanException(f"Invalid runner type '{runner_type}'. Allowed values: {', '.join(runner_instances_map.keys())}")
+        return runner_instance(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
@@ -66,13 +93,11 @@ def create(conan_api, parser, *args):
                                                          remotes=remotes, update=args.update,
                                                          python_requires=[ref])
     else:
-        requires = [ref] if not args.build_require else None
-        tool_requires = [ref] if args.build_require else None
-        # FIXME: Dirty: package type still raw, not processed yet
-        # TODO: Why not for package_type = "application" like cmake to be used as build-require?
-        if conanfile.package_type == "build-scripts" and not args.build_require:
-            # swap them
-            requires, tool_requires = tool_requires, requires
+        requires = [ref] if not is_build else None
+        tool_requires = [ref] if is_build else None
+        if conanfile.vendor:  # Automatically allow repackaging for conan create
+            pr = profile_build if is_build else profile_host
+            pr.conf.update("&:tools.graph:vendor", "build")
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
@@ -95,15 +120,25 @@ def create(conan_api, parser, *args):
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
 
+    test_package_folder = getattr(conanfile, "test_package_folder", None) \
+        if args.test_folder is None else args.test_folder
+    test_conanfile_path = _get_test_conanfile_path(test_package_folder, path)
+    # If the user provide --test-missing and the binary was not built from source, skip test_package
+    if args.test_missing and deps_graph.root.dependencies\
+            and deps_graph.root.dependencies[0].dst.binary != BINARY_BUILD:
+        test_conanfile_path = None  # disable it
+
     if test_conanfile_path:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
-        tested_python_requires = ref.repr_notime() if is_python_require else None
+        # If it is a string, it will be injected always, if it is a RecipeReference, then it will
+        # be replaced only if ``python_requires = "tested_reference_str"``
+        tested_python_requires = ref.repr_notime() if is_python_require else ref
         from conan.cli.commands.test import run_test
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
-                 update=False, build_modes=args.build, build_modes_test=args.build_test,
+                 update=None, build_modes=args.build, build_modes_test=args.build_test,
                  tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
@@ -124,16 +159,16 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
                     "tested is '{}'".format(missmatch[0], tested_ref))
 
 
-def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requires=None):
+def test_package(conan_api, deps_graph, test_conanfile_path):
     out = ConanOutput()
     out.title("Testing the package")
     # TODO: Better modeling when we are testing a python_requires
-    if len(deps_graph.nodes) == 1 and not tested_python_requires:
+    conanfile = deps_graph.root.conanfile
+    if len(deps_graph.nodes) == 1 and not hasattr(conanfile, "python_requires"):
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
-    conanfile = deps_graph.root.conanfile
     # To make sure the folders are correct
     conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
     if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:

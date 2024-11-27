@@ -1,7 +1,7 @@
 import sqlite3
 
 from conan.internal.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import timestamp_now
 
@@ -33,7 +33,7 @@ class RecipesDBTable(BaseDbTable):
             self.columns.rrev: ref.revision,
         }
         where_expr = ' AND '.join(
-            [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+            [f"{k}='{v}' " if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
     def create(self, path, ref: RecipeReference):
@@ -54,9 +54,9 @@ class RecipesDBTable(BaseDbTable):
         assert ref.revision is not None
         assert ref.timestamp is not None
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
-                f'WHERE {self.columns.reference}="{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"SET {self.columns.timestamp} = '{ref.timestamp}' " \
+                f"WHERE {self.columns.reference}='{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
         with self.db_connection() as conn:
             conn.execute(query)
 
@@ -66,7 +66,7 @@ class RecipesDBTable(BaseDbTable):
         where_clause = self._where_clause(ref)
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.lru} = "{lru}" ' \
+                f"SET {self.columns.lru} = '{lru}' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             conn.execute(query)
@@ -80,23 +80,17 @@ class RecipesDBTable(BaseDbTable):
 
     # returns all different conan references (name/version@user/channel)
     def all_references(self):
-        query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                    f'{self.columns.rrev}, ' \
-                    f'{self.columns.path} ,' \
-                    f'{self.columns.timestamp}, ' \
-                    f'{self.columns.lru} ' \
-                    f'FROM {self.table_name} ' \
-                    f'ORDER BY {self.columns.timestamp} DESC'
+        query = f'SELECT DISTINCT {self.columns.reference} FROM {self.table_name}'
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
-        return result
+            rows = r.fetchall()
+            return [RecipeReference.loads(row[0]) for row in rows]
 
     def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference}="{str(ref)}" ' \
-                f'AND {self.columns.rrev} = "{ref.revision}" '
+                f"WHERE {self.columns.reference}='{str(ref)}' " \
+                f"AND {self.columns.rrev} = '{ref.revision}' "
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
@@ -112,7 +106,7 @@ class RecipesDBTable(BaseDbTable):
                 f'MAX({self.columns.timestamp}), ' \
                 f'{self.columns.lru} ' \
                 f'FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
                 f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
 
         with self.db_connection() as conn:
@@ -126,7 +120,7 @@ class RecipesDBTable(BaseDbTable):
     def get_recipe_revisions_references(self, ref: RecipeReference):
         assert ref.revision is None
         query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f"WHERE {self.columns.reference} = '{str(ref)}' " \
                 f'ORDER BY {self.columns.timestamp} DESC'
 
         with self.db_connection() as conn:

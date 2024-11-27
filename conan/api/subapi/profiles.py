@@ -1,10 +1,12 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 
 from conans.client.loader import load_python_file
-from conans.client.profile_loader import ProfileLoader
-from conans.errors import ConanException, scoped_traceback
+from conan.internal.api.profile.profile_loader import ProfileLoader
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
 from conans.model.profile import Profile
 
 DEFAULT_PROFILE_NAME = "default"
@@ -97,6 +99,16 @@ class ProfilesAPI:
         profile.conf.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
         profile.conf.rebase_conf_definition(global_conf)
+        for k, v in sorted(profile.options._package_options.items()):
+            ConanOutput().warning("Unscoped option definition is ambiguous.\n"
+                                  f"Use '&:{k}={v}' to refer to the current package.\n"
+                                  f"Use '*:{k}={v}' or other pattern if the intent was to apply to "
+                                  f"dependencies", warn_tag="legacy")
+        if profile.conf.get("tools.graph:skip_test", check_type=bool):
+            ConanOutput().warning("Usage of 'tools.graph:skip_test'", warn_tag="experimental")
+            if not profile.conf.get("tools.build:skip_test", check_type=bool):
+                ConanOutput().warning("tools.graph:skip_test set, but tools.build:skip_test is not, "
+                                      "probably you need to define it too")
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
@@ -138,7 +150,7 @@ class ProfilesAPI:
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
-        from conans.client.conf.detect import detect_defaults_settings
+        from conan.internal.api.profile.detect import detect_defaults_settings
         settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value

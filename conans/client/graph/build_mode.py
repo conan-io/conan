@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 
@@ -15,6 +15,9 @@ class BuildMode:
         self.editable = False
         self.patterns = []
         self.build_missing_patterns = []
+        self._build_missing_excluded = []
+        self._build_compatible_patterns = []
+        self._build_compatible_excluded = []
         self._excluded_patterns = []
         if params is None:
             return
@@ -34,7 +37,18 @@ class BuildMode:
             else:
                 if param.startswith("missing:"):
                     clean_pattern = param[len("missing:"):]
-                    self.build_missing_patterns.append(clean_pattern)
+                    if clean_pattern and clean_pattern[0] in ["!", "~"]:
+                        self._build_missing_excluded.append(clean_pattern[1:])
+                    else:
+                        self.build_missing_patterns.append(clean_pattern)
+                elif param == "compatible":
+                    self._build_compatible_patterns = ["*"]
+                elif param.startswith("compatible:"):
+                    clean_pattern = param[len("compatible:"):]
+                    if clean_pattern and clean_pattern[0] in ["!", "~"]:
+                        self._build_compatible_excluded.append(clean_pattern[1:])
+                    else:
+                        self._build_compatible_patterns.append(clean_pattern)
                 else:
                     clean_pattern = param
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:
@@ -49,7 +63,7 @@ class BuildMode:
         # TODO: ref can be obtained from conan_file
 
         for pattern in self._excluded_patterns:
-            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 conan_file.output.info("Excluded build from source")
                 return False
 
@@ -68,7 +82,7 @@ class BuildMode:
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 return True
         return False
 
@@ -83,9 +97,28 @@ class BuildMode:
             return True
         if self.should_build_missing(conan_file):
             return True
+        if self.allowed_compatible(conan_file):
+            return True
         return False
 
+    def allowed_compatible(self, conanfile):
+        if self._build_compatible_excluded:
+            for pattern in self._build_compatible_excluded:
+                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                    return False
+            return True  # If it has not been excluded by the negated patterns, it is included
+
+        for pattern in self._build_compatible_patterns:
+            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+                return True
+
     def should_build_missing(self, conanfile):
+        if self._build_missing_excluded:
+            for pattern in self._build_missing_excluded:
+                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                    return False
+            return True  # If it has not been excluded by the negated patterns, it is included
+
         for pattern in self.build_missing_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=False):
+            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 return True

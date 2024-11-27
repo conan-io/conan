@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -17,6 +17,7 @@ class _PackageOption:
     def __init__(self, name, value, possible_values=None):
         self._name = name
         self._value = value  # Value None = not defined
+        self.important = False
         # possible_values only possible origin is recipes
         if possible_values is None:
             self._possible_values = None
@@ -27,10 +28,11 @@ class _PackageOption:
     def dumps(self, scope=None):
         if self._value is None:
             return None
+        important = "!" if self.important else ""
         if scope:
-            return "%s:%s=%s" % (scope, self._name, self._value)
+            return "%s:%s%s=%s" % (scope, self._name, important, self._value)
         else:
-            return "%s=%s" % (self._name, self._value)
+            return "%s%s=%s" % (self._name, important, self._value)
 
     def copy_conaninfo_option(self):
         # To generate a copy without validation, for package_id info.options value
@@ -182,12 +184,19 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
+        important = item[-1] == "!"
+        item = item[:-1] if important else item
+
         current_value = self._data.get(item)
         if self._freeze and current_value.value is not None and current_value != value:
             raise ConanException(f"Incorrect attempt to modify option '{item}' "
                                  f"from '{current_value}' to '{value}'")
         self._ensure_exists(item)
-        self._data.setdefault(item, _PackageOption(item, None)).value = value
+        v = self._data.setdefault(item, _PackageOption(item, None))
+        new_value_important = important or (isinstance(value, _PackageOption) and value.important)
+        if new_value_important or not v.important:
+            v.value = value
+            v.important = new_value_important
 
     def items(self):
         result = []
@@ -225,6 +234,9 @@ class Options:
                     tokens = k.split(":", 1)
                     if len(tokens) == 2:
                         package, option = tokens
+                        if not package:
+                            raise ConanException("Invalid empty package name in options. "
+                                                 f"Use a pattern like `mypkg/*:{option}`")
                         if "/" not in package and "*" not in package and "&" not in package:
                             msg = "The usage of package names `{}` in options is " \
                                   "deprecated, use a pattern like `{}/*:{}` " \
@@ -269,8 +281,12 @@ class Options:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, value = line.split("=", 1)
-            values[name] = value
+            try:
+                name, value = line.split("=", 1)
+                values[name] = value
+            except ValueError:
+                raise ConanException(f"Error while parsing option '{line}'. "
+                                     f"Options should be specified as 'pkg/*:option=value'")
         return Options(options_values=values)
 
     def serialize(self):

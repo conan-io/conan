@@ -55,7 +55,6 @@ class Autotools(object):
         subsystem = deduce_subsystem(self._conanfile, scope="build")
         configure_cmd = subsystem_path(subsystem, configure_cmd)
         cmd = '"{}" {}'.format(configure_cmd, self._configure_args)
-        self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
 
     def make(self, target=None, args=None):

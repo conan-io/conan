@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_PLATFORM
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
 
@@ -91,6 +91,16 @@ class ConanFileDependencies(UserRequirementsDict):
     def from_node(node):
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
+        if node.replaced_requires:
+            for old_req, new_req in node.replaced_requires.items():
+                # Two different replaced_requires can point to the same real requirement
+                existing = d[new_req]
+                added_req = new_req.copy_requirement()
+                added_req.ref = RecipeReference.loads(old_req)
+                d[added_req] = existing
+            # Now remove the replaced from dependencies dict
+            for new_req in node.replaced_requires.values():
+                d.pop(new_req, None)
         return ConanFileDependencies(d)
 
     def filter(self, require_filter, remove_system=True):
@@ -165,7 +175,9 @@ def get_transitive_requires(consumer, dependency):
     """ the transitive requires that we need are the consumer ones, not the current dependencey
     ones, so we get the current ones, then look for them in the consumer, and return those
     """
-    pkg_deps = dependency.dependencies.filter({"direct": True})
+    # The build dependencies cannot be transitive in generators like CMakeDeps,
+    # even if users make them visible
+    pkg_deps = dependency.dependencies.filter({"direct": True, "build": False})
     result = consumer.dependencies.transitive_requires(pkg_deps)
     result = result.filter({"skip": False})
     return result

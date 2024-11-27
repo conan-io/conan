@@ -1,9 +1,12 @@
 import sys
 
+from conan.api.output import init_colorama
 from conan.api.subapi.cache import CacheAPI
+from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
-from conans import __version__ as client_version
+from conan.api.subapi.workspace import WorkspaceAPI
+from conan import conan_version
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.download import DownloadAPI
 from conan.api.subapi.export import ExportAPI
@@ -16,15 +19,13 @@ from conan.api.subapi.remotes import RemotesAPI
 from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
-from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
-from conans.client.userio import init_colorama
-from conans.errors import ConanException
-from conans.model.version import Version
-from conans.paths import get_conan_user_home
+from conan.errors import ConanException
+from conan.internal.paths import get_conan_user_home
+from conans.model.version_range import validate_conan_version
 
 
-class ConanAPI(object):
+class ConanAPI:
     def __init__(self, cache_folder=None):
 
         version = sys.version_info
@@ -32,13 +33,15 @@ class ConanAPI(object):
             raise ConanException("Conan needs Python >= 3.6")
 
         init_colorama(sys.stderr)
-        self.cache_folder = cache_folder or get_conan_user_home()
+        self.workspace = WorkspaceAPI(self)
+        self.cache_folder = self.workspace.home_folder() or cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
 
         # Migration system
-        migrator = ClientMigrator(self.cache_folder, Version(client_version))
+        migrator = ClientMigrator(self.cache_folder, conan_version)
         migrator.migrate()
 
+        self.command = CommandAPI(self)
         self.remotes = RemotesAPI(self)
         # Search recipes by wildcard and packages filtering by configuracion
         self.search = SearchAPI(self)
@@ -57,4 +60,6 @@ class ConanAPI(object):
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
 
-        check_required_conan_version(self.config.global_conf)
+        required_range_new = self.config.global_conf.get("core:required_conan_version")
+        if required_range_new:
+            validate_conan_version(required_range_new)

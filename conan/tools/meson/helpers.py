@@ -2,7 +2,7 @@ from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
 from conans.model.options import _PackageOption
 
-__all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
+__all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag", "to_cstd_flag"]
 
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
 _meson_system_map = {
@@ -18,7 +18,7 @@ _meson_system_map = {
     'SunOS': 'sunos',
     'Windows': 'windows',
     'WindowsCE': 'windows',
-    'WindowsStore': 'windows'
+    'WindowsStore': 'windows',
 }
 
 # https://mesonbuild.com/Reference-tables.html#cpu-families
@@ -35,6 +35,7 @@ _meson_cpu_family_map = {
     'armv8': ('aarch64', 'armv8', 'little'),
     'armv8_32': ('aarch64', 'armv8_32', 'little'),
     'armv8.3': ('aarch64', 'armv8.3', 'little'),
+    'arm64ec': ('aarch64', 'arm64ec', 'little'),
     'avr': ('avr', 'avr', 'little'),
     'mips': ('mips', 'mips', 'big'),
     'mips64': ('mips64', 'mips64', 'big'),
@@ -125,3 +126,16 @@ def to_cppstd_flag(compiler, compiler_version, cppstd):
         return 'v%s' % flag if flag else None
     else:
         return _cppstd_map.get(cppstd)
+
+
+def to_cstd_flag(cstd):
+    """ possible values
+    none, c89, c99, c11, c17, c18, c2x, c23, gnu89, gnu99, gnu11, gnu17, gnu18, gnu2x, gnu23
+    """
+    _cstd_map = {
+        '99': "c99",
+        '11': "c11",
+        '17': "c17",
+        '23': "c23",
+    }
+    return _cstd_map.get(cstd, cstd)

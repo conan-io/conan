@@ -57,7 +57,7 @@ class XcodeToolchain(object):
     @property
     def _cppstd(self):
         from conan.tools.build.flags import cppstd_flag
-        cppstd = cppstd_flag(self._conanfile.settings)
+        cppstd = cppstd_flag(self._conanfile)
         if cppstd.startswith("-std="):
             return cppstd[5:]
         return cppstd
@@ -109,7 +109,7 @@ class XcodeToolchain(object):
 
     @property
     def _check_if_extra_flags(self):
-        return self._global_cflags or self._global_cxxflags or self._global_ldflags
+        return self._global_cflags or self._global_cxxflags or self._global_ldflags or self._global_defines
 
     @property
     def _flags_xcconfig_content(self):

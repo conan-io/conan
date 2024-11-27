@@ -1,11 +1,11 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write, ConanOutput
+from conan.api.input import UserInput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
-from conans.client.userio import UserInput
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def summary_remove_list(results):
@@ -41,7 +41,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('pattern', nargs="?",
                         help="A pattern in the form 'pkg/version#revision:package_id#revision', "
-                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "e.g: \"zlib/1.2.13:*\" means all binaries for zlib/1.2.13. "
                              "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Remove without requesting a confirmation')

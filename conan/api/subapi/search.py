@@ -1,5 +1,4 @@
 from conan.internal.conan_app import ConanApp
-from conans.search.search import search_recipes
 
 
 class SearchAPI:
@@ -13,21 +12,13 @@ class SearchAPI:
             only_none_user_channel = True
             query = query[:-1]
 
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         if remote:
             refs = app.remote_manager.search_recipes(remote, query)
         else:
-            references = search_recipes(app.cache, query)
-            # For consistency with the remote search, we return references without revisions
-            # user could use further the API to look for the revisions
-            refs = []
-            for r in references:
-                r.revision = None
-                r.timestamp = None
-                if r not in refs:
-                    refs.append(r)
+            refs = app.cache.search_recipes(query)
         ret = []
         for r in refs:
             if not only_none_user_channel or (r.user is None and r.channel is None):
                 ret.append(r)
-        return ret
+        return sorted(ret)

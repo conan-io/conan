@@ -33,8 +33,6 @@ def format_graph_info(result):
     for n in serial["nodes"].values():
         cli_out_write(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, indent="  ")
-    if graph.error:
-        raise graph.error
 
 
 def _serial_pretty_printer(data, indent=""):

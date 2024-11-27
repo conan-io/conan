@@ -1,4 +1,4 @@
-from conans.errors import AuthenticationException
+from conan.internal.errors import AuthenticationException
 
 
 class UserService(object):

@@ -216,6 +216,7 @@ class {{package_name}}Conan(ConanFile):
     version = "{{version}}"
 
     # Binary configuration
+    package_type = "static-library" # hardcoded in .vcxproj
     settings = "os", "compiler", "build_type", "arch"
 
     # Sources are located in the same place as this recipe, copy them to the recipe

@@ -1,45 +1,23 @@
 name: Bug Report
 description: Report a bug, something does not work as it's supposed to
-title: '[bug] SHORT DESCRIPTION'
+title: '[bug]'
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to submit a report. 
-        **Please don't forget to update the issue title.**
-        Include all applicable information to help us reproduce your problem.
   - type: textarea
     id: description
     attributes:
-      label: Environment details
-      description: Include every applicable attribute
-      value: |
-        * Operating System+version:
-        * Compiler+version:
-        * Conan version:
-        * Python version:
+      label: Describe the bug
+      description: Include the bug description and environment details
+      placeholder: |
+        Environment details: OS, compiler, Conan version, Conan profiles, etc.
+        Description: xxxx
     validations:
       required: false
   - type: textarea
-    id: reproduction
+    id: steps
     attributes:
-      label: Steps to reproduce
-      description: Include if applicable
+      label: How to reproduce it
+      description: It would be great to know how to reproduce it locally
       placeholder: |
-        1. Make sure that ... is there
-        2. Execute the `conan ...` command
-        3. Observe how the resulting ... is wrong
-    validations:
-      required: false
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs
-      description: (Executed commands with output, include/attach if applicable)
-      placeholder: |
-        ```
-        barbarian@conan ~: conan ...
-        This is the output from conan ...
-        ```
+        Commands to reproduce it, remote repository to use it locally, etc. Every detail is more than welcome!
     validations:
       required: false
