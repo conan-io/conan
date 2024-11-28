@@ -49,6 +49,8 @@ jobs:
       - name: Run Unit & Integration Tests
         shell: pwsh
         run: |
+          git config --global core.autocrlf false
+
           if ("${{ matrix.test-type }}" -eq "unittests") {
             pytest test/unittests --durations=20 -n=4
           } elseif ("${{ matrix.test-type }}" -eq "integration") {
