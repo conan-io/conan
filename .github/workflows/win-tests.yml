@@ -14,18 +14,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  testing:
+  unit_integration_tests:
+    runs-on: windows-2022
     strategy:
-      fail-fast: true
+      matrix:
+        python-version: ['3.13', '3.8', '3.6']
+        test-type: ['unittests', 'integration']
+
+    name: Unit & Integration Tests ${{ matrix.test-type }} (${{ matrix.python-version }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\AppData\Local\pip\cache
+          key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-packages-${{ runner.os }}-
+
+      - name: Install Python requirements
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+
+      - name: Run Unit & Integration Tests
+        run: |
+          if (${{ matrix.test-type }} -eq "unittests") {
+            pytest test/unittests --durations=20 -n=4
+          } elseif (${{ matrix.test-type }} -eq "integration") {
+            pytest test/integration --durations=20 -n=4
+          }
+
+  functional_tests:
+    runs-on: windows-2022
+    strategy:
       matrix:
         python-version: ['3.13', '3.8', '3.6']
 
-    runs-on: windows-2022
-
-    name: Conan (${{ matrix.python-version }})
-
+    name: Functional Tests (${{ matrix.python-version }})
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -45,13 +81,12 @@ jobs:
           }
 
       - name: Verify MSVC v14.38 toolset installation
-        run: |
-            dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+        run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
       - name: Install Visual Studio Build Tools
         run: |
-            Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
-            Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
+          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
             "--quiet",  "--wait", "--norestart", "--nocache", `
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
             "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
@@ -63,7 +98,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Users\runneradmin\AppData\Local\pip\cache
-          key: pip-packages-${{ runner.os }}-${{ hashFiles('conans/requirements*.txt') }}
+          key: pip-packages-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             pip-packages-${{ runner.os }}-
 
@@ -170,7 +205,7 @@ jobs:
               Remove-Item $zipFile
           }
 
-      - name: Run Tests
+      - name: Run Functional Tests
         run: |
           git config --global core.autocrlf false
 
@@ -203,4 +238,4 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/unittests test/integration test/functional -n=auto --durations=50 -vvv
+          pytest test/functional -n=auto --durations=50 -vvv
