@@ -34,21 +34,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Download and Install Visual Studio Build Tools 2022 version 17.9
-        run: |
-            Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile "vs_buildtools17_9.exe"
-            Start-Process -FilePath ".\vs_buildtools17_9.exe" -ArgumentList @(
-            "--quiet", "--wait", "--norestart", "--nocache",
-            "--installPath", "C:\BuildTools_14.39",
-            "--channelUri", "https://aka.ms/vs/17/release/channel",
-            "--installChannelUri", "https://aka.ms/vs/17/9/channel",
-            "--add", "Microsoft.VisualStudio.Workload.VCTools",
-            "--add", "Microsoft.VisualStudio.Component.VC.Tools.14.39.x86.x64"
-            ) -Wait
-
-      - name: Verify MSVC v14.39 toolset installation
-        run: |
-            dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
       - name: Install Visual Studio Build Tools
         run: |
