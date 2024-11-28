@@ -93,7 +93,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     auto_language(conanfile)  # default implementation removes `compiler.cstd`
 
     # Assign only the current package options values, but none of the dependencies
-    is_consumer = conanfile._conan_is_consumer
+    is_consumer = conanfile._conan_is_consumer  # noqa
     conanfile.options.apply_downstream(down_options, profile_options, ref, is_consumer)
 
     if hasattr(conanfile, "configure"):

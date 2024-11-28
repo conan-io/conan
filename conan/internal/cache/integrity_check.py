@@ -17,8 +17,8 @@ class IntegrityChecker:
         This is to be done over the package contents, not the compressed conan_package.tgz
         artifacts
     """
-    def __init__(self, app):
-        self._app = app
+    def __init__(self, cache):
+        self._cache = cache
 
     def check(self, upload_data):
         corrupted = False
@@ -30,7 +30,7 @@ class IntegrityChecker:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
     def _recipe_corrupted(self, ref: RecipeReference):
-        layout = self._app.cache.recipe_layout(ref)
+        layout = self._cache.recipe_layout(ref)
         output = ConanOutput()
         read_manifest, expected_manifest = layout.recipe_manifests()
         # Filter exports_sources from read manifest if there are no exports_sources locally
@@ -50,7 +50,7 @@ class IntegrityChecker:
         output.info(f"{ref}: Integrity checked: ok")
 
     def _package_corrupted(self, ref: PkgReference):
-        layout = self._app.cache.pkg_layout(ref)
+        layout = self._cache.pkg_layout(ref)
         output = ConanOutput()
         read_manifest, expected_manifest = layout.package_manifests()
 
