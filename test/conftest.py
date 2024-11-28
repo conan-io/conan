@@ -164,6 +164,7 @@ tools_locations = {
                            'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
     },
     'premake': {
+        "disabled": True,
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {
