@@ -47,10 +47,11 @@ jobs:
           pip install -r conans/requirements_server.txt
 
       - name: Run Unit & Integration Tests
+        shell: pwsh
         run: |
-          if (${{ matrix.test-type }} -eq "unittests") {
+          if ("${{ matrix.test-type }}" -eq "unittests") {
             pytest test/unittests --durations=20 -n=4
-          } elseif (${{ matrix.test-type }} -eq "integration") {
+          } elseif ("${{ matrix.test-type }}" -eq "integration") {
             pytest test/integration --durations=20 -n=4
           }
 
