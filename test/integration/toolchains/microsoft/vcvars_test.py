@@ -106,6 +106,7 @@ def test_vcvars_2015_error():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.xfail(reason="we dont have vs2015 installed in gh actions")
 def test_vcvars_platform_x86():
     # https://github.com/conan-io/conan/issues/11144
     client = TestClient(path_with_spaces=False)
