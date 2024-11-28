@@ -57,7 +57,7 @@ jobs:
         shell: pwsh
         run: |
           git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=20 -n=auto -vvv
+          pytest test/unittests test/integration --durations=100 -n=auto
 
   functional_tests:
     runs-on: windows-2022
@@ -245,4 +245,4 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=50 -vvv
+          pytest test/functional -n=auto --durations=100
