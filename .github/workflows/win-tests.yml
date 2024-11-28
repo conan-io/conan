@@ -19,9 +19,8 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.13', '3.8', '3.6']
-        test-type: ['unittests', 'integration']
 
-    name: Unit & Integration Tests ${{ matrix.test-type }} (${{ matrix.python-version }})
+    name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,6 +29,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Install Visual Studio Build Tools
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
+          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
+            "--quiet",  "--wait", "--norestart", "--nocache", `
+            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+            "--add", "Microsoft.Component.MSBuild" -WindowStyle Hidden -Wait
 
       - name: Cache pip packages
         uses: actions/cache@v4
@@ -50,12 +57,7 @@ jobs:
         shell: pwsh
         run: |
           git config --global core.autocrlf false
-
-          if ("${{ matrix.test-type }}" -eq "unittests") {
-            pytest test/unittests --durations=20 -n=4
-          } elseif ("${{ matrix.test-type }}" -eq "integration") {
-            pytest test/integration --durations=20 -n=4
-          }
+          pytest test/unittests test/integration --durations=20 -n=auto -vvv
 
   functional_tests:
     runs-on: windows-2022
@@ -174,6 +176,7 @@ jobs:
             Expand-Archive -Path $zipFile -DestinationPath $destination -Force
             Remove-Item $zipFile
           }
+
       - name: Install modern CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
@@ -190,6 +193,7 @@ jobs:
             Expand-Archive -Path $zipFile -DestinationPath $destination -Force
             Remove-Item $zipFile
           }
+
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
