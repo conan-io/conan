@@ -162,6 +162,7 @@ tools_locations = {
                            'Darwin': '/Users/runner/Applications/bazel/7.1.2'}},
     },
     'premake': {
+        "disabled": True,
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {

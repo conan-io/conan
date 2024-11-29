@@ -110,7 +110,7 @@ class _PremakeTemplate(object):
             if dep_cpp_info.sysroot else ""
 
 
-class PremakeDeps(object):
+class PremakeDeps:
     """
     PremakeDeps class generator
     conandeps.premake5.lua: unconditional import of all *direct* dependencies only
@@ -192,9 +192,7 @@ class PremakeDeps(object):
         build_req = self._conanfile.dependencies.build
 
         # Merge into one list
-        full_req = list(host_req.items()) \
-                   + list(test_req.items()) \
-                   + list(build_req.items())
+        full_req = list(host_req.items()) + list(test_req.items()) + list(build_req.items())
 
         # Process dependencies and accumulate globally required data
         pkg_files = []
