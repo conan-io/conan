@@ -831,7 +831,7 @@ def test_android_c_library():
     conan_toolchain = client.load(os.path.join(client.current_folder, "conan_toolchain.cmake"))
     assert "set(ANDROID_PLATFORM android-23)" in conan_toolchain
     assert "set(ANDROID_ABI x86_64)" in conan_toolchain
-    assert "include(/foo/build/cmake/android.toolchain.cmake)" in conan_toolchain
+    assert 'include("/foo/build/cmake/android.toolchain.cmake")' in conan_toolchain
     client.run("create . --name=foo --version=1.0 " + settings)
 
 

@@ -25,7 +25,9 @@ def test_architecture_flag_if_intel_cc(os_, arch, expected):
         "arch": arch,
         "os": os_
     })
-    flag = architecture_flag(settings)
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    flag = architecture_flag(conanfile)
     assert flag == expected
 
 

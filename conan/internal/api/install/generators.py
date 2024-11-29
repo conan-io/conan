@@ -72,14 +72,13 @@ def load_cache_generators(path):
     return result
 
 
-def write_generators(conanfile, app, envs_generation=None):
+def write_generators(conanfile, hook_manager, home_folder, envs_generation=None):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
     _receive_generators(conanfile)
 
-    hook_manager = app.hook_manager
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
-    global_generators = load_cache_generators(HomePaths(app.cache_folder).custom_generators_path)
+    global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
     if conanfile.generators:

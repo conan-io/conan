@@ -12,13 +12,13 @@ from conan.internal.paths import DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
-def cmd_export(app, global_conf, conanfile_path, name, version, user, channel, graph_lock=None,
-               remotes=None):
+def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, user, channel,
+               graph_lock=None, remotes=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    loader, cache, hook_manager = app.loader, app.cache, app.hook_manager
+    loader, cache = app.loader, app.cache
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
                                    remotes=remotes)
 

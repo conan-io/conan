@@ -43,7 +43,7 @@ class NMakeToolchain(object):
 
     @property
     def _cl(self):
-        bt_flags = build_type_flags(self._conanfile.settings)
+        bt_flags = build_type_flags(self._conanfile)
         bt_flags = bt_flags if bt_flags else []
 
         rt_flags = msvc_runtime_flag(self._conanfile)

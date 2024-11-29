@@ -557,6 +557,30 @@ def test_create_and_priority_of_consumer_specific_setting():
     assert "I'm None and my build type is Debug" in client.out
 
 
+def test_package_consumer_is_only_the_tested_one():
+    """
+    the &:xxx pattern applies only to the package being tested, not other requires
+    """
+    c = TestClient(light=True)
+    test = textwrap.dedent("""
+        from conan import ConanFile
+        class Tool(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.requires("dep/1.0")
+
+            def test(self):
+                pass
+        """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_option("myoption", [1, 2]),
+            "pkg/test_package/conanfile.py": test})
+    c.run("create dep")
+    c.run("create pkg -o &:myoption=1")
+    # This would crash if myoption is applied to dep
+    assert 'pkg/0.1 (test package): Running test()' in c.out
+
+
 def test_consumer_specific_settings_from_profile():
     client = TestClient()
     conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
