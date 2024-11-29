@@ -39,10 +39,14 @@ jobs:
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
             "--add", "Microsoft.Component.MSBuild" -WindowStyle Hidden -Wait
 
+      - name: Determine pip cache directory
+        id: pip-cache-dir
+        run: echo "PIP_CACHE_DIR=$(pip cache dir)" >> $GITHUB_ENV
+
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: ${{ env.PIP_CACHE_DIR || '~/.cache/pip' }}
+          path: ${{ env.PIP_CACHE_DIR }}
           key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
@@ -100,10 +104,14 @@ jobs:
             "--add", "Microsoft.Component.MSBuild", `
             "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
 
+      - name: Determine pip cache directory
+        id: pip-cache-dir
+        run: echo "PIP_CACHE_DIR=$(pip cache dir)" >> $GITHUB_ENV
+
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: ${{ env.PIP_CACHE_DIR || '~/.cache/pip' }}
+          path: ${{ env.PIP_CACHE_DIR }}
           key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
