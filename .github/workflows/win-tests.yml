@@ -41,10 +41,10 @@ jobs:
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: C:\Users\runneradmin\AppData\Local\pip\cache
+          path: ${{ env.PIP_CACHE_DIR || '~/.cache/pip' }}
           key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
-            pip-packages-${{ runner.os }}-
+            pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
 
       - name: Install Python requirements
         run: |
@@ -102,10 +102,10 @@ jobs:
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: C:\Users\runneradmin\AppData\Local\pip\cache
-          key: pip-packages-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          path: ${{ env.PIP_CACHE_DIR || '~/.cache/pip' }}
+          key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
-            pip-packages-${{ runner.os }}-
+            pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
 
       - name: Install Python requirements
         run: |
