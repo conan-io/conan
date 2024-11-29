@@ -21,7 +21,8 @@ class TestProfileDetectAPI:
             compiler.version={{detect_api.default_compiler_version(compiler, version)}}
             compiler.runtime={{runtime}}
             compiler.cppstd={{detect_api.default_cppstd(compiler, version)}}
-            # FIXME: check if we can do something better than this, we have a problem with updates
+            # detect_msvc_update returns the real update, like 12 for VS 17.12 so 
+            # we have to convert to the setting that's 0-10
             compiler.update={{ (detect_api.detect_msvc_update(version) | int) % 10 }}
 
             [conf]
