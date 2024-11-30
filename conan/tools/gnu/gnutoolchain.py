@@ -53,11 +53,11 @@ class GnuToolchain:
             self.ndebug = "NDEBUG"
 
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
-        self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_flags = build_type_flags(self._conanfile)
         self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         self.cppstd = cppstd_flag(self._conanfile)
-        self.arch_flag = architecture_flag(self._conanfile.settings)
+        self.arch_flag = architecture_flag(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()

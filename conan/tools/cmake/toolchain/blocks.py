@@ -243,7 +243,7 @@ class ArchitectureBlock(Block):
         """)
 
     def context(self):
-        arch_flag = architecture_flag(self._conanfile.settings)
+        arch_flag = architecture_flag(self._conanfile)
         if not arch_flag:
             return
         return {"arch_flag": arch_flag}
