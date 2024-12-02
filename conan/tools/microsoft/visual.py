@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
@@ -155,7 +156,15 @@ class VCVars:
         create_env_script(conanfile, content, conan_vcvars_bat, scope)
         _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        try:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            ConanOutput().warning(
+                "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
+                "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
+            )
+        except ConanException:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
+                                              choices=["powershell", "pwsh"])
         if is_ps1:
             content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{

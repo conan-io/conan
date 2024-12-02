@@ -3,6 +3,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
@@ -15,7 +16,7 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
-                             accepted_extensions=None):
+                             accepted_extensions=None, powershell="powershell"):
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
@@ -536,7 +537,14 @@ class EnvVars:
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
-            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            try:
+                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+                ConanOutput().warning(
+                    "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
+                    "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
+                )
+            except ConanException:
+                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell", "pwsh"])
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False

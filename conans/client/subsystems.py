@@ -23,6 +23,7 @@ import os
 import platform
 import re
 
+from conan.api.output import ConanOutput
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 
@@ -43,7 +44,16 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="bu
 
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-
+    try:
+        if conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool):
+            powershell = "powershell"
+        ConanOutput().warning(
+            "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
+            "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
+        )
+    except ConanException:
+        powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
+                                          choices=["powershell", "pwsh"]) or "powershell"
     if platform.system() == "Windows" and (
             (conanfile.win_bash and scope == "build") or
             (conanfile.win_bash_run and scope == "run")):
@@ -51,7 +61,7 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="bu
             raise ConanException("win_bash/win_bash_run defined but no "
                                  "tools.microsoft.bash:subsystem")
         if active:
-            wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
+            wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command, powershell=powershell)
         else:
             wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
     else:
