@@ -1,6 +1,8 @@
-from conans import CHECKSUM_DEPLOY, REVISIONS
+from conan.internal import REVISIONS
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
+
+CHECKSUM_DEPLOY = "checksum_deploy"  # capability
 
 
 class RestApiClient:
@@ -60,8 +62,8 @@ class RestApiClient:
         token = api_v2.authenticate(user, password)
         return token
 
-    def check_credentials(self):
-        return self._get_api().check_credentials()
+    def check_credentials(self, force_auth=False):
+        return self._get_api().check_credentials(force_auth)
 
     def search(self, pattern=None, ignorecase=True):
         return self._get_api().search(pattern, ignorecase)

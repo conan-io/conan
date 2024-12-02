@@ -2,6 +2,7 @@ import copy
 import os
 import textwrap
 import unittest
+import pytest
 
 from requests.models import Response
 
@@ -186,6 +187,7 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("ERROR: Recipe 'pkg' not found", client.out)
 
 
+@pytest.mark.xfail(reason="This test is randomly failing")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""

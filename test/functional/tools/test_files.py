@@ -407,7 +407,7 @@ def test_export_conandata_patches(mock_patch_ng):
     # No patch found
     client.save({"conandata.yml": conandata_yml})
     client.run("create .", assert_error=True)
-    assert "No such file or directory" in client.out
+    assert "Patch file does not exist: '" in client.out
 
     client.save({"patches/mypatch.patch": "mypatch!!!"})
     client.run("create .")

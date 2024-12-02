@@ -231,6 +231,7 @@ class Git:
         """
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
+        mkdir(self.folder)
         self._conanfile.output.info("Shallow fetch of git repo")
         self.run('init')
         self.run(f'remote add origin "{url}"', hidden_output=url if hide_url else None)

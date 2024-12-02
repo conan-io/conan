@@ -16,7 +16,7 @@ from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.util.files import save
 
 
-class MesonToolchain(object):
+class MesonToolchain:
     """
     MesonToolchain generator
     """
@@ -156,7 +156,7 @@ class MesonToolchain(object):
         self._conanfile = conanfile
         self._native = native
         self._is_apple_system = is_apple_os(self._conanfile)
-        is_cross_building = cross_building(conanfile, skip_x64_x86=True)
+        is_cross_building = cross_building(conanfile)  # x86_64->x86 is considered cross-building
         if not is_cross_building and native:
             raise ConanException("You can only pass native=True if you're cross-building, "
                                  "otherwise, it could cause unexpected results.")
@@ -164,8 +164,8 @@ class MesonToolchain(object):
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        self._backend = conanfile.conf.get("tools.meson.mesontoolchain:backend",
-                                           default=backend or 'ninja')
+        self._backend = self._conanfile_conf.get("tools.meson.mesontoolchain:backend",
+                                                 default=backend or 'ninja')
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
                            "Release": "release",
@@ -424,13 +424,13 @@ class MesonToolchain(object):
         exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[], check_type=list)
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
-        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
+        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags
         return {
             "cxxflags": cxxflags + sys_root + self.extra_cxxflags,
             "cflags": cflags + sys_root + self.extra_cflags,
-            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
-                       + sys_root + self.extra_ldflags,
+            "ldflags": ld,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }
 
@@ -447,11 +447,12 @@ class MesonToolchain(object):
     def _sanitize_env_format(value):
         if value is None or isinstance(value, list):
             return value
+        if not isinstance(value, str):
+            raise ConanException(f"MesonToolchain: Value '{value}' should be a string")
         ret = [x.strip() for x in value.split() if x]
         return ret[0] if len(ret) == 1 else ret
 
     def _context(self):
-
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
 
@@ -474,10 +475,11 @@ class MesonToolchain(object):
 
         subproject_options = {}
         for subproject, listkeypair in self.subproject_options.items():
-            if listkeypair is not None and listkeypair is not []:
-                subproject_options[subproject] = []
-                for keypair in listkeypair:
-                    subproject_options[subproject].append({k: to_meson_value(v) for k, v in keypair.items()})
+            if listkeypair:
+                if not isinstance(listkeypair, list):
+                    raise ConanException("MesonToolchain.subproject_options must be a list of dicts")
+                subproject_options[subproject] = [{k: to_meson_value(v) for k, v in keypair.items()}
+                                                  for keypair in listkeypair]
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
@@ -555,6 +557,7 @@ class MesonToolchain(object):
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
         check_duplicated_generator(self, self._conanfile)
+        self._conanfile.output.info(f"MesonToolchain generated: {self._filename}")
         save(self._filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()

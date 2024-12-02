@@ -8,7 +8,7 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
 from conan.tools.google import Bazel
-from conan.tools.google.bazeldeps import _relativize_path, _get_libs
+from conan.tools.google.bazeldeps import _relativize_path
 
 
 @pytest.fixture(scope="module")
@@ -54,8 +54,10 @@ def test_bazel_command_with_config_values():
     conanfile.conf.define("tools.google.bazel:bazelrc_path", ["/path/to/bazelrc"])
     bazel = Bazel(conanfile)
     bazel.build(target='//test:label')
+    commands = conanfile.commands
     assert "bazel --bazelrc=/path/to/bazelrc build " \
-           "--config=config --config=config2 //test:label" in conanfile.commands
+           "--config=config --config=config2 //test:label" in commands
+    assert "bazel --bazelrc=/path/to/bazelrc clean" in commands
 
 
 @pytest.mark.parametrize("path, pattern, expected", [
@@ -75,45 +77,3 @@ def test_bazel_command_with_config_values():
 ])
 def test_bazeldeps_relativize_path(path, pattern, expected):
     assert _relativize_path(path, pattern) == expected
-
-
-@pytest.mark.parametrize("libs, is_shared, expected", [
-    # expected == (lib_name, is_shared, library_path, interface_library_path)
-    (["mylibwin"], False, [('mylibwin', False, '{base_folder}/lib/mylibwin.lib', None)]),
-    # Win + shared
-    (["mylibwin"], True, [('mylibwin', True, '{base_folder}/bin/mylibwin.dll', '{base_folder}/lib/mylibwin.lib')]),
-    # Win + shared (interface with another ext)
-    (["mylibwin2"], True, [('mylibwin2', True, '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib')]),
-    # Mac + shared
-    (["mylibmac"], True, [('mylibmac', True, '{base_folder}/bin/mylibmac.dylib', None)]),
-    # Mac + static
-    (["mylibmac"], False, [('mylibmac', False, '{base_folder}/lib/mylibmac.a', None)]),
-    # mylib + shared (saved as libmylib.so) -> removing the leading "lib" if it matches
-    (["mylib"], True, [('mylib', True, '{base_folder}/lib/libmylib.so', None)]),
-    # mylib + static (saved in a subfolder subfolder/libmylib.a) -> non-recursive at this moment
-    (["mylib"], False, []),
-    # no lib matching
-    (["noexist"], False, []),
-    # no lib matching + Win + static
-    (["noexist", "mylibwin"], False, [('mylibwin', False, '{base_folder}/lib/mylibwin.lib', None)]),
-    # protobuf (Issue related https://github.com/conan-io/conan/issues/15390)
-    (["protoc"], True, []),
-    # non-conventional library name (Issue related https://github.com/conan-io/conan/pull/11343)
-    (["libmylib.so"], True, [('libmylib.so', True, '{base_folder}/lib/libmylib.so', None)]),
-])
-def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
-    cpp_info.libs = libs
-    ret = []
-    for (lib, is_shared, lib_path, interface_lib_path) in expected:
-        if lib_path:
-            lib_path = lib_path.format(base_folder=cpp_info._base_folder)
-        if interface_lib_path:
-            interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
-        ret.append((lib, is_shared, lib_path, interface_lib_path))
-    dep = MagicMock()
-    dep.options.get_safe.return_value = is_shared
-    dep.ref.name = "my_pkg"
-    found_libs = _get_libs(dep, cpp_info)
-    found_libs.sort()
-    ret.sort()
-    assert found_libs == ret

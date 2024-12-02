@@ -1,11 +1,12 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.methods import run_source_method
 from conan.tools.env import VirtualBuildEnv
-from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter, NotFoundException
+from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
-                               merge_directories, clean_dirty, chdir)
+                               merge_directories, clean_dirty)
 
 
 def _try_get_sources(ref, remote_manager, recipe_layout, remote):
@@ -73,15 +74,3 @@ def config_source(export_source_folder, conanfile, hook_manager):
                     run_source_method(conanfile, hook_manager)
             else:
                 run_source_method(conanfile, hook_manager)
-
-
-def run_source_method(conanfile, hook_manager):
-    mkdir(conanfile.source_folder)
-    with chdir(conanfile.source_folder):
-        hook_manager.execute("pre_source", conanfile=conanfile)
-        if hasattr(conanfile, "source"):
-            conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
-            with conanfile_exception_formatter(conanfile, "source"):
-                with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
-                    conanfile.source()
-        hook_manager.execute("post_source", conanfile=conanfile)

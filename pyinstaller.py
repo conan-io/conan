@@ -21,8 +21,7 @@ import platform
 import shutil
 import sys
 
-from conans import __version__
-from conans.util.files import save
+from conan import __version__
 
 
 def _run_bin(pyinstaller_path):
@@ -115,17 +114,20 @@ def pyinstall(source_folder, onefile=False):
               "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
               "--hidden-import=conan.tools.qbs --hidden-import=conan.tools.scm "
               "--hidden-import=conan.tools.system --hidden-import=conan.tools.system.package_manager")
+
+    if not os.path.exists(pyinstaller_path):
+        os.mkdir(pyinstaller_path)
+
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""
     else:
         win_ver_file = os.path.join(pyinstaller_path, 'windows-version-file')
         content = _windows_version_file(__version__)
-        save(win_ver_file, content)
+        with open(win_ver_file, 'w') as file:
+            file.write(content)
         win_ver = ["--version-file", win_ver_file]
 
-    if not os.path.exists(pyinstaller_path):
-        os.mkdir(pyinstaller_path)
 
     if onefile:
         distpath = os.path.join(pyinstaller_path, "dist", "conan")

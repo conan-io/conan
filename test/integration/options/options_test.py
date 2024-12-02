@@ -744,11 +744,16 @@ class TestImportantOptions:
 
 class TestConflictOptionsWarnings:
 
-    def test_options_warnings(self):
+    @pytest.mark.parametrize("important", [True, False])
+    def test_options_warnings(self, important):
         c = TestClient()
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3], default=1)
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
-        libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1", options={"myoption": 2})
+        if important:
+            libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1") \
+                                              .with_default_option("liba*:myoption!", 2)
+        else:
+            libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1", options={"myoption": 2})
         app = GenConanfile().with_requires("libb/0.1", "libc/0.1")
 
         c.save({"liba/conanfile.py": liba,
@@ -767,3 +772,4 @@ class TestConflictOptionsWarnings:
                 It is recommended to define options values in profiles, not in recipes
             """)
         assert expected in c.out
+        assert "WARN: risk: There are options conflicts in the dependency graph" in c.out

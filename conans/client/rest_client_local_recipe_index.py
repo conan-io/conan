@@ -10,6 +10,7 @@ from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.export import cmd_export
+from conans.client.hook_manager import HookManager
 from conans.client.loader import ConanFileLoader
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
     PackageNotFoundException
@@ -68,6 +69,7 @@ class RestApiClientLocalRecipesIndex:
         from conan.api.conan_api import ConanAPI
         conan_api = ConanAPI(local_recipes_index_path)
         self._app = ConanApp(conan_api)
+        self._hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
         self._layout = _LocalRecipesIndexLayout(repo_folder)
 
     def call_method(self, method_name, *args, **kwargs):
@@ -100,7 +102,7 @@ class RestApiClientLocalRecipesIndex:
         raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support "
                              "authentication")
 
-    def check_credentials(self):
+    def check_credentials(self, force_auth=False):
         raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None):
@@ -150,8 +152,8 @@ class RestApiClientLocalRecipesIndex:
         sys.stderr = StringIO()
         try:
             global_conf = ConfDefinition()
-            new_ref, _ = cmd_export(self._app, global_conf, conanfile_path, ref.name,
-                                    str(ref.version), None, None, remotes=[self._remote])
+            new_ref, _ = cmd_export(self._app, self._hook_manager, global_conf, conanfile_path,
+                                    ref.name, str(ref.version), None, None, remotes=[self._remote])
         except Exception as e:
             raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
                                  f"{str(e)}")

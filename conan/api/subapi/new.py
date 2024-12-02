@@ -5,7 +5,7 @@ from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
 from conan.errors import ConanException
 from conans.util.files import load
-from conans import __version__
+from conan import __version__
 
 
 class NewAPI:
@@ -93,9 +93,11 @@ class NewAPI:
     @staticmethod
     def render(template_files, definitions):
         result = {}
-        name = definitions.get("name", "Pkg")
+        name = definitions.get("name", "pkg")
         if isinstance(name, list):
             raise ConanException(f"name argument can't be multiple: {name}")
+        if name != name.lower():
+            raise ConanException(f"name argument must be lowercase: {name}")
         definitions["conan_version"] = __version__
 
         def ensure_list(key):

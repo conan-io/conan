@@ -1,17 +1,17 @@
 import os
 import re
 import textwrap
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conans.model.dependencies import get_transitive_requires
+from conans.model.pkg_type import PackageType
 from conans.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
-_LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'import_lib_path'])
 
 
 def _get_name_with_namespace(namespace, name):
@@ -70,102 +70,6 @@ def _get_requirements(conanfile, build_context_activated):
         if require.build and dep.ref.name not in build_context_activated:
             continue
         yield require, dep
-
-
-def _get_libs(dep, cpp_info=None, reference_name=None) -> list:
-    """
-    Get the static/shared library paths
-
-    :param dep: normally a <ConanFileInterface obj>
-    :param cpp_info: <CppInfo obj> of the component.
-    :param reference_name: <str> Package/Component's reference name. ``None`` by default.
-    :return: list of tuples per static/shared library ->
-             [(name, is_shared, lib_path, import_lib_path)]
-             Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
-                    Windows would have:
-                        * shared: library_path as DLL, and import_library_path as LIB
-                        * static: library_path as LIB, and import_library_path as None
-    """
-    def _is_shared():
-        """
-        Checking traits and shared option
-        """
-        default_value = dep.options.get_safe("shared") if dep.options else False
-        return {"shared-library": True,
-                "static-library": False}.get(str(dep.package_type), default_value)
-
-    def _save_lib_path(file_name, file_path):
-        """Add each lib with its full library path"""
-        name, ext = file_name.split('.', maxsplit=1)  # ext could be .if.lib
-        formatted_path = file_path.replace("\\", "/")
-        lib_name = None
-        # Users may not name their libraries in a conventional way. For example, directly
-        # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
-        # Issue related: https://github.com/conan-io/conan/issues/11331
-        if file_name in libs:  # let's ensure that it has any extension
-            lib_name = file_name
-        elif name in libs:
-            lib_name = name
-        elif name.startswith("lib"):
-            short_name = name[3:]  # libpkg -> pkg
-            if short_name in libs:
-                lib_name = short_name
-        # FIXME: CPS will be in charge of defining correctly this part. At the moment, we can
-        #        only guess the name of the DLL binary as it does not follow any Conan pattern.
-        if ext == "dll" or ext.endswith(".dll"):
-            if lib_name:
-                shared_windows_libs[lib_name] = formatted_path
-            elif total_libs_number == 1 and libs[0] not in shared_windows_libs:
-                shared_windows_libs[libs[0]] = formatted_path
-            else:  # let's cross the fingers... This is the last chance.
-                for lib in libs:
-                    if ref_name in name and ref_name in lib and lib not in shared_windows_libs:
-                        shared_windows_libs[lib] = formatted_path
-                        break
-        elif lib_name is not None:
-            lib_paths[lib_name] = formatted_path
-
-    cpp_info = cpp_info or dep.cpp_info
-    libs = cpp_info.libs[:]  # copying the values
-    if not libs:  # no libraries declared
-        return []
-    is_shared = _is_shared()
-    libdirs = cpp_info.libdirs
-    bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
-    ref_name = reference_name or dep.ref.name
-    if hasattr(cpp_info, "aggregated_components"):
-        # Global cpp_info
-        total_libs_number = len(cpp_info.aggregated_components().libs)
-    else:
-        total_libs_number = len(libs)
-    lib_paths = {}
-    shared_windows_libs = {}
-    for libdir in set(libdirs + bindirs):
-        if not os.path.exists(libdir):
-            continue
-        files = os.listdir(libdir)
-        for f in files:
-            full_path = os.path.join(libdir, f)
-            if not os.path.isfile(full_path):  # Make sure that directories are excluded
-                continue
-            _, ext = os.path.splitext(f)
-            if is_shared and ext in (".so", ".dylib", ".lib", ".dll"):
-                _save_lib_path(f, full_path)
-            elif not is_shared and ext in (".a", ".lib"):
-                _save_lib_path(f, full_path)
-
-    libraries = []
-    for name, lib_path in lib_paths.items():
-        import_lib_path = None
-        if is_shared and os.path.splitext(lib_path)[1] == ".lib":
-            if name not in shared_windows_libs:
-                raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
-                                     f" Only found {lib_path}")
-            import_lib_path = lib_path  # .lib
-            lib_path = shared_windows_libs.pop(name)  # .dll
-        libraries.append((name, is_shared, lib_path, import_lib_path))
-    # TODO: Would we want to manage the cases where DLLs are provided by the system?
-    return libraries
 
 
 def _get_headers(cpp_info, package_folder_path):
@@ -344,12 +248,19 @@ class _BazelDependenciesBZLGenerator:
         save("BUILD.bazel", "# This is an empty BUILD file.")
 
 
+class _LibInfo:
+    def __init__(self, lib_name, cpp_info_, package_folder_path):
+        self.name = lib_name
+        self.is_shared = cpp_info_.type == PackageType.SHARED
+        self.lib_path = _relativize_path(cpp_info_.location, package_folder_path)
+        self.import_lib_path = _relativize_path(cpp_info_.link_location, package_folder_path)
+
+
 class _BazelBUILDGenerator:
     """
     This class creates the BUILD.bazel for each dependency where it's declared all the
     necessary information to load the libraries
     """
-
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
     filename = "BUILD.bazel"
@@ -492,8 +403,38 @@ class _BazelBUILDGenerator:
         """
         return self._root_package_info.repository_name
 
+    def get_full_libs_info(self):
+        full_libs_info = defaultdict(list)
+        cpp_info = self._dep.cpp_info
+        deduced_cpp_info = cpp_info.deduce_full_cpp_info(self._dep)
+        package_folder_path = self.package_folder
+        # Root
+        if len(cpp_info.libs) > 1:
+            for lib_name in cpp_info.libs:
+                virtual_component = deduced_cpp_info.components.pop(f"_{lib_name}")  # removing it!
+                full_libs_info["root"].append(
+                    _LibInfo(lib_name, virtual_component, package_folder_path)
+                )
+        elif cpp_info.libs:
+            full_libs_info["root"].append(
+                _LibInfo(cpp_info.libs[0], deduced_cpp_info, package_folder_path)
+            )
+        # components
+        for cmp_name, cmp_cpp_info in deduced_cpp_info.components.items():
+            if cmp_name == "_common":  # FIXME: placeholder?
+                continue
+            if len(cmp_cpp_info.libs) > 1:
+                raise ConanException(f"BazelDeps only allows 1 lib per component:\n"
+                                     f"{self._dep}: {cmp_cpp_info.libs}")
+            elif cmp_cpp_info.libs:
+                # Bazel needs to relativize each path
+                full_libs_info[_get_component_name(self._dep, cmp_name)].append(
+                    _LibInfo(cmp_cpp_info.libs[0], cmp_cpp_info, package_folder_path)
+                )
+        return full_libs_info
+
     def _get_context(self):
-        def fill_info(info):
+        def fill_info(info, libs_info):
             ret = {
                 "name": info.name,  # package name and components name
                 "libs": {},
@@ -513,17 +454,8 @@ class _BazelBUILDGenerator:
                 defines = _get_defines(cpp_info)
                 os_build = self._dep.settings_build.get_safe("os")
                 linkopts = _get_linkopts(cpp_info, os_build)
-                libs = _get_libs(self._dep, cpp_info)
-                libs_info = []
                 bindirs = [_relativize_path(bindir, package_folder_path)
                            for bindir in cpp_info.bindirs]
-                for (lib, is_shared, lib_path, import_lib_path) in libs:
-                    # Bazel needs to relativize each path
-                    libs_info.append(
-                        _LibInfo(lib, is_shared,
-                                 _relativize_path(lib_path, package_folder_path),
-                                 _relativize_path(import_lib_path, package_folder_path))
-                    )
                 ret.update({
                     "libs": libs_info,
                     "bindirs": bindirs,
@@ -537,12 +469,14 @@ class _BazelBUILDGenerator:
 
         package_folder_path = self.package_folder
         context = dict()
-        context["root"] = fill_info(self._root_package_info)
+        full_libs_info = self.get_full_libs_info()
+        context["root"] = fill_info(self._root_package_info, full_libs_info.get("root", []))
         context["components"] = []
         for component in self._components_info:
-            component_context = fill_info(component)
+            component_context = fill_info(component, full_libs_info.get(component.name, []))
             context["components"].append(component_context)
             context["root"]["component_names"].append(component_context["name"])
+
         return context
 
     def generate(self):

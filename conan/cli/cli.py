@@ -16,7 +16,7 @@ from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan.internal.cache.home_paths import HomePaths
-from conans import __version__ as client_version
+from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
@@ -176,7 +176,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version)
+                cli_out_write("Conan version %s" % __version__)
                 return
 
             if command_argument in ["-h", "--help"]:
@@ -190,6 +190,7 @@ class Cli:
 
         try:
             command.run(self._conan_api, args[0][1:])
+            _warn_frozen_center(self._conan_api)
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
@@ -243,6 +244,20 @@ def _warn_python_version():
                               "Conan future versions will drop support for it, "
                               "please upgrade Python", warn_tag="deprecated")
         ConanOutput().warning("*" * 80, warn_tag="deprecated")
+
+
+def _warn_frozen_center(conan_api):
+    remotes = conan_api.remotes.list()
+    for r in remotes:
+        if r.url == "https://center.conan.io":
+            ConanOutput().warning(
+                "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
+                "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"
+                "It is recommended to update to the new remote using the following command:\n"
+                f"'conan remote update {r.name} --url=\"https://center2.conan.io\"'",
+                warn_tag="deprecated"
+            )
+            break
 
 
 def main(args):

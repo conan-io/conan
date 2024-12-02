@@ -57,7 +57,7 @@ def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
             conanfile = node.conanfile
             if not conanfile.ref:  # virtual or conanfile.txt, can't have deployer
                 continue
-            consumer = conanfile._conan_is_consumer
+            consumer = conanfile._conan_is_consumer  # noqa
             if any(conanfile.ref.matches(p, consumer) for p in excluded):
                 continue
             if not any(conanfile.ref.matches(p, consumer) for p in included):

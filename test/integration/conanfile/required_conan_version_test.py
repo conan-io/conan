@@ -2,7 +2,7 @@ import textwrap
 
 import mock
 
-from conans import __version__
+from conan import __version__
 from conan.test.utils.tools import TestClient
 
 
@@ -22,10 +22,10 @@ def test_required_conan_version():
     client.run("source . ", assert_error=True)
     assert f"Current Conan version ({__version__}) does not satisfy the defined one (>=100.0)" in client.out
 
-    with mock.patch("conans.model.version_range.client_version", "101.0"):
+    with mock.patch("conan.__version__", "101.0"):
         client.run("export . --name=pkg --version=1.0")
 
-    with mock.patch("conans.model.version_range.client_version", "101.0-dev"):
+    with mock.patch("conan.__version__", "101.0-dev"):
         client.run("export . --name=pkg --version=1.0")
 
     client.run("install --requires=pkg/1.0@", assert_error=True)

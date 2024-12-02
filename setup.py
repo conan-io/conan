@@ -29,7 +29,7 @@ def get_requires(filename):
 def load_version():
     """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
+                                            "conan", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
