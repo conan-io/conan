@@ -172,10 +172,4 @@ jobs:
           cmake --version
           bazel --version
 
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            python -m pytest test/unittests --durations=20 -n auto
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            python -m pytest test/integration --durations=20 -n auto
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            python -m pytest test/functional --durations=20 -n auto
-          fi
+          python -m pytest test/${{ matrix.test-type }} --durations=20 -n auto
