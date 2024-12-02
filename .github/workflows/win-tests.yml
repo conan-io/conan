@@ -1,0 +1,261 @@
+name: Windows Tests
+
+on:
+  push:
+    branches:
+      - develop2
+      - release/*
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit_integration_tests:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        python-version: ['3.13', '3.8', '3.6']
+
+    name: Unit & Integration Tests (${{ matrix.python-version }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Visual Studio Build Tools
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
+          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
+            "--quiet",  "--wait", "--norestart", "--nocache", `
+            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+            "--add", "Microsoft.Component.MSBuild" -WindowStyle Hidden -Wait
+
+      - name: Determine pip cache directory
+        id: pip-cache-dir
+        shell: pwsh
+        run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Install Python requirements
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+
+      - name: Run Unit & Integration Tests
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          pytest test/unittests test/integration --durations=100 -n=auto
+
+  functional_tests:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        python-version: ['3.13', '3.8', '3.6']
+
+    name: Functional Tests (${{ matrix.python-version }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install MSVC v14.38 Toolset
+        run: |
+          Start-Process -Wait "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList {`
+            modify `
+            --quiet `
+            --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+            --add `
+            Microsoft.VisualStudio.Component.VC.14.38.17.8.x86.x64 `
+          }
+
+      - name: Verify MSVC v14.38 toolset installation
+        run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+
+      - name: Install Visual Studio Build Tools
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
+          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
+            "--quiet",  "--wait", "--norestart", "--nocache", `
+            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
+            "--add", "Microsoft.Component.MSBuild", `
+            "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
+
+      - name: Determine pip cache directory
+        id: pip-cache-dir
+        shell: pwsh
+        run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: pip-packages-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-packages-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Install Python requirements
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
+
+      - name: "Set choco cache"
+        run: choco config set cacheLocation C:\choco-cache
+
+      - uses: actions/cache@v4
+        with:
+          path: C:\choco-cache
+          key: choco-cache
+
+      - name: Install Chocolatey packages
+        run: |
+          choco install pkgconfiglite --version 0.28
+          choco install ninja --version 1.10.2
+          choco install mingw
+          choco install cygwin
+          choco install cyg-get
+          cyg-get automake gcc-g++ make binutils --verbose
+
+      - uses: msys2/setup-msys2@v2
+        id: msys2-setup
+        with:
+            update: true
+            # It's important that the default environment that is used is MSYS
+            # we check this default in a test
+            msystem: MSYS
+            install: >-
+                mingw-w64-x86_64-toolchain
+                mingw-w64-i686-toolchain
+                base-devel
+                gcc
+                autoconf-wrapper
+                automake
+
+      - name: Cache CMake and Bazel installations
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\tools\cmake\3.15.7
+            C:\tools\cmake\3.19.7
+            C:\tools\cmake\3.23.5
+            C:\tools\bazel\6.3.2
+            C:\tools\bazel\7.1.2
+          key: ${{ runner.os }}-conan-tools-cache
+
+      - name: Build CMake old versions of CMake
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7"
+          foreach ($version in $CMAKE_BUILD_VERSIONS) {
+            Write-Host "Downloading CMake version $version for Windows..."
+            $destination = "C:\tools\cmake\$version"
+            if (-not (Test-Path $destination)) {
+                New-Item -Path $destination -ItemType Directory
+            }
+            $major_minor_version = ($version -split '\.')[0..1] -join '.'
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-win64-x64.zip"
+            $zipFile = "cmake-$version-windows-x86_64.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipFile
+            Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+            Remove-Item $zipFile
+          }
+
+      - name: Install modern CMake versions
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          $CMAKE_BUILD_VERSIONS = "3.23.5"
+          foreach ($version in $CMAKE_BUILD_VERSIONS) {
+            $destination = "C:\tools\cmake\$version"
+            if (-not (Test-Path $destination)) {
+                New-Item -Path $destination -ItemType Directory
+            }
+            $major_minor_version = ($version -split '\.')[0..1] -join '.'
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-windows-x86_64.zip"
+            $zipFile = "cmake-$version-windows-x86_64.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zipFile
+            Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+            Remove-Item $zipFile
+          }
+
+      - name: Install Bazel versions
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          $BAZEL_BUILD_VERSIONS = "6.3.2", "7.1.2"
+          foreach ($version in $BAZEL_BUILD_VERSIONS) {
+              Write-Host "Downloading Bazel version $version for Windows..."
+              $destination = "C:\tools\bazel\$version"
+              if (-not (Test-Path $destination)) {
+                  New-Item -Path $destination -ItemType Directory
+              }
+              $major_minor_version = ($version -split '\.')[0..1] -join '.'
+              $url = "https://github.com/bazelbuild/bazel/releases/download/$version/bazel-$version-windows-x86_64.zip"
+              $zipFile = "bazel-$version-windows-x86_64.zip"
+              Invoke-WebRequest -Uri $url -OutFile $zipFile
+              Expand-Archive -Path $zipFile -DestinationPath $destination -Force
+              Remove-Item $zipFile
+          }
+
+      - name: Run Functional Tests
+        run: |
+          git config --global core.autocrlf false
+
+          $pathsToRemove = @()
+          $pathsToRemove += "C:\mingw64\bin"                # To avoid that CMake finds gcc there
+          $pathsToRemove += "C:\Strawberry\c\bin"
+          $pathsToRemove += "C:\Program Files\CMake\bin"    # Remove the default CMake version
+          $pathsToRemove += "C:\Program Files\Git\usr\bin"  # To avoid using uname and other tools from there
+          foreach ($dir in $pathsToRemove) {
+              $newPath = ($env:PATH -split ";") -ne $dir -join ";"
+              [System.Environment]::SetEnvironmentVariable('PATH', $newPath)
+              Write-Host "$dir removed from PATH. Current PATH: $env:PATH"
+          }
+
+          # Check GCC is not in Path
+          $gccPath = Get-Command gcc.exe -ErrorAction SilentlyContinue
+          if ($null -ne $gccPath) {
+              Write-Host "GCC found in PATH at: $($gccPath.Path)"
+          } else {
+              Write-Host "GCC not found in PATH."
+          }
+
+          $shortGuid = [System.Guid]::NewGuid().ToString().Substring(0, 4)
+          $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
+          New-Item -ItemType Directory -Force -Path $randomFolder
+          $env:CONAN_TEST_FOLDER = $randomFolder
+          $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
+
+          $msys2Path = '${{ steps.msys2-setup.outputs.msys2-location }}'
+          [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
+          Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
+
+          pytest test/functional -n=auto --durations=100
