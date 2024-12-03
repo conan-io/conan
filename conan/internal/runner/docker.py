@@ -47,7 +47,8 @@ def config_parser(file_path):
         return Conf(
             image=None,
             build=Build(dockerfile=None, build_context=None, build_args=None, cache_from=None),
-            run=Run(name=None, environment=None, user=None, privileged=None, cap_add=None, security_opt=None, volumes=None)
+            run=Run(name=None, environment=None, user=None, privileged=None, cap_add=None,
+                    security_opt=None, volumes=None, network=None)
         )
 
 
