@@ -466,6 +466,7 @@ def test_create_docker_runner_from_configfile_with_args():
                 BASE_IMAGE: ubuntu:22.04
         run:
             name: my-conan-runner-container-with-args
+            network: my-network
         """)
     client.save({"configfile.yaml": configfile})
 
