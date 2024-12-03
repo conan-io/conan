@@ -411,6 +411,7 @@ def test_makedeps_tool_requires():
     assert "CONAN_NAME_OTHER" not in make_content
 
 
+@pytest.mark.xfail(platform.system() == "Windows", reason="Test uses Unix-style paths not compatible with Windows filesystem.")
 @pytest.mark.parametrize("pattern, result, expected",
                          [("libs = []", False, 'SYSROOT'),
                           ("sysroot = ['/foo/bar/sysroot']", True, 'CONAN_SYSROOT_PACKAGE = /foo/bar/sysroot')])

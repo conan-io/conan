@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import timestamp_to_str
 

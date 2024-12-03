@@ -7,7 +7,7 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import _get_test_conanfile_path
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers.graph import print_graph_basic
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})

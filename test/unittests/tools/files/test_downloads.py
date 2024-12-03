@@ -4,7 +4,8 @@ import shutil
 import pytest
 
 from conan.tools.files import ftp_download, download, get
-from conans.errors import ConanException, AuthenticationException
+from conan.internal.errors import AuthenticationException
+from conan.errors import ConanException
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder

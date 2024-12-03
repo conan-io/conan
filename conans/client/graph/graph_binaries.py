@@ -13,8 +13,9 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
-from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
+from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
+    PackageNotFoundException
+from conan.errors import ConanException
 from conans.model.info import RequirementInfo, RequirementsInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -229,6 +230,10 @@ class GraphBinariesAnalyzer:
                                               "didn't enable 'tools.graph:vendor=build' to compute " \
                                               "its dependencies"
                 node.binary = BINARY_INVALID
+            if any(n.node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD)
+                   for n in node.transitive_deps.values()):
+                conanfile.output.warning("Package is being built in the cache using editable "
+                                         "dependencies, this is dangerous", warn_tag="risk")
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked
@@ -348,8 +353,6 @@ class GraphBinariesAnalyzer:
                 self._get_package_from_remotes(node, remotes, update)
             except NotFoundException:
                 output.warning("Can't update, no package in remote")
-            except NoRemoteAvailable:
-                output.warning("Can't update, there are no remotes configured or enabled")
             else:
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
@@ -470,6 +473,9 @@ class GraphBinariesAnalyzer:
         required_nodes.add(graph.root)
         for node in graph.nodes:
             if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
+                if node.skipped_build_requires:
+                    raise ConanException(f"Package {node.ref} skipped its test/tool requires with "
+                                         f"tools.graph:skip_build, but was marked to be built ")
                 can_skip = node.conanfile.conf.get("tools.graph:skip_binaries",
                                                    check_type=bool, default=True)
                 # Only those that are forced to build, not only "missing"
@@ -484,15 +490,11 @@ class GraphBinariesAnalyzer:
                 is_consumer = not (node.recipe != RECIPE_CONSUMER and
                                    node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
                                                        BINARY_EDITABLE))
-                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
-                                    or (d.require.direct and is_consumer))
-
-                # second pass, transitive affected. Packages that have some dependency that is required
-                # cannot be skipped either. In theory the binary could be skipped, but build system
-                # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
-                indirect = (d.node for d in node.transitive_deps.values()
-                            if any(t.node in deps_required for t in d.node.transitive_deps.values()))
-                deps_required.update(indirect)
+                deps_required = set()
+                for req, t in node.transitive_deps.items():
+                    if req.files or (req.direct and is_consumer):
+                        deps_required.add(t.node)
+                        deps_required.update(req.required_nodes)
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():

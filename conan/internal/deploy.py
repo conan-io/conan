@@ -5,7 +5,8 @@ import shutil
 from conan.internal.cache.home_paths import HomePaths
 from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
-from conans.errors import ConanException, conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter
+from conan.errors import ConanException
 from conans.util.files import rmdir, mkdir
 
 
@@ -56,7 +57,7 @@ def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
             conanfile = node.conanfile
             if not conanfile.ref:  # virtual or conanfile.txt, can't have deployer
                 continue
-            consumer = conanfile._conan_is_consumer
+            consumer = conanfile._conan_is_consumer  # noqa
             if any(conanfile.ref.matches(p, consumer) for p in excluded):
                 continue
             if not any(conanfile.ref.matches(p, consumer) for p in included):

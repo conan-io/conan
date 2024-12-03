@@ -7,12 +7,11 @@ import re
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient, TurboTestClient
+from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -181,7 +180,7 @@ def test_install_output_directories():
     If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
     for the libraries is changed
     """
-    client = TurboTestClient(path_with_spaces=False)
+    client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=1.0")
     client.run("create .")
     consumer_conanfile = textwrap.dedent("""
@@ -215,9 +214,8 @@ def test_install_output_directories():
                  "configure.ac": configure_ac,
                  "Makefile.am": makefile_am,
                  "main.cpp": main}, clean_first=True)
-    ref = RecipeReference.loads("zlib/1.2.11")
-    pref = client.create(ref, conanfile=consumer_conanfile)
-    p_folder = client.get_latest_pkg_layout(pref).package()
+    client.run("create . --name=zlib --version=1.2.11")
+    p_folder = client.created_layout().package()
     assert os.path.exists(os.path.join(p_folder, "mybin", "main"))
     assert not os.path.exists(os.path.join(p_folder, "bin"))
 

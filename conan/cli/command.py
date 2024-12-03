@@ -1,5 +1,4 @@
 import argparse
-import os
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -98,12 +97,14 @@ class BaseConanCommand:
 
         formatter(info)
 
-    def _dispatch_errors(self, info):
+    @staticmethod
+    def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
                 raise ConanException(info["conan_error"])
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
+
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
@@ -113,9 +114,10 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
+        global_conf = self._conan_api.config.global_conf
         if args.core_conf:
             from conans.model.conf import ConfDefinition
             confs = ConfDefinition()
@@ -124,7 +126,14 @@ class ConanArgumentParser(argparse.ArgumentParser):
                     raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
             confs.loads("\n".join(args.core_conf))
             confs.validate()
-            self._conan_api.config.global_conf.update_conf_definition(confs)
+            global_conf.update_conf_definition(confs)
+
+        # TODO: This might be even better moved to the ConanAPI so users without doing custom
+        #  commands can benefit from it
+        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                           default=[], check_type=list))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings",
+                                                            default=[], check_type=list))
         return args
 
 

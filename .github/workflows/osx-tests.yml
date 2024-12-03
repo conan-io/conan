@@ -1,0 +1,175 @@
+name: OSX Tests
+
+on:
+  push:
+    branches:
+      - develop2
+      - release/*
+  pull_request:
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup-caches:
+    runs-on: macos-14
+    name: Setup and Cache Dependencies
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Cache pip packages
+        id: cache-pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
+
+      - name: Install Python requirements
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
+
+      - name: Uninstall default CMake
+        run: brew uninstall cmake || true
+
+      - name: Cache Homebrew packages
+        id: cache-brew
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-brew
+
+      - name: Install homebrew dependencies
+        run: |
+          brew install xcodegen make libtool zlib autoconf automake ninja
+
+      - name: Cache CMake and Bazel installations
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/bazel/6.3.2
+            ~/Applications/bazel/7.1.2
+          key: ${{ runner.os }}-conan-tools-cache
+
+      - name: Build CMake old versions not available for ARM
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          CMAKE_BUILD_VERSIONS=("3.15.7")
+          for version in "${CMAKE_BUILD_VERSIONS[@]}"; do
+            echo "Compiling CMake version ${version} from source for ARM..."
+            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}.tar.gz
+            tar -xzf cmake-${version}.tar.gz
+            cd cmake-${version}
+            mkdir build && cd build
+            ../bootstrap --prefix=${HOME}/Applications/CMake/${version} -- -DCMAKE_USE_OPENSSL=ON
+            make -j$(sysctl -n hw.ncpu)
+            make install
+            ${HOME}/Applications/CMake/${version}/bin/cmake --version
+            cd ../../
+            rm -rf cmake-${version} cmake-${version}.tar.gz
+          done
+
+      - name: Install universal CMake versions
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5")
+          for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
+            echo "Downloading and installing precompiled universal CMake version ${version}..."
+            wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
+            tar -xzf cmake-${version}-macos-universal.tar.gz \
+              --exclude=CMake.app/Contents/bin/cmake-gui \
+              --exclude=CMake.app/Contents/doc/cmake \
+              --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
+              --exclude=CMake.app/Contents/share/vim
+            mkdir -p ${HOME}/Applications/CMake/${version}
+            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
+            ${HOME}/Applications/CMake/${version}/bin/cmake --version
+            rm -rf cmake-${version}-macos-universal
+            rm cmake-${version}-macos-universal.tar.gz
+          done
+
+      - name: Install Bazel versions
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          for version in 6.3.2 7.1.2; do
+            mkdir -p ${HOME}/Applications/bazel/${version}
+            wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
+            chmod +x ${HOME}/Applications/bazel/${version}/bazel
+          done
+
+  testing:
+    needs: setup-caches
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ['3.8', '3.12', '3.13']
+        test-type: [unittests, integration, functional]
+
+    runs-on: macos-14
+
+    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
+
+      - name: Restore tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/bazel/6.3.2
+            ~/Applications/bazel/7.1.2
+          key: ${{ runner.os }}-conan-tools-cache
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
+
+      - name: Install homebrew dependencies
+        run: |
+          brew install xcodegen make libtool zlib autoconf automake ninja
+
+      - name: Run Tests
+        run: |
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          cmake --version
+          bazel --version
+
+          python -m pytest test/${{ matrix.test-type }} --durations=20 -n auto

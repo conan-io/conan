@@ -27,12 +27,13 @@ from webtest.app import TestApp
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
-from conans import REVISIONS
+from conan.internal import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
-from conans.errors import NotFoundException, ConanException
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
@@ -76,7 +77,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=13
+        compiler.version=15
         compiler.libcxx=libc++
         build_type=Release
         """)
@@ -455,7 +456,7 @@ class TestClient:
         # create default profile
         if light:
             text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.cache.settings_path, "os: [Linux]")
+            save(self.cache.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
@@ -464,6 +465,12 @@ class TestClient:
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
+
+    def load_home(self, filename):
+        try:
+            return load(os.path.join(self.cache_folder, filename))
+        except IOError:
+            return None
 
     @property
     def cache(self):
@@ -846,115 +853,6 @@ class TestClient:
         pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
         pref = PkgReference.loads(pref)
         return self.cache.pkg_layout(pref)
-
-
-class TurboTestClient(TestClient):
-
-    def __init__(self, *args, **kwargs):
-        super(TurboTestClient, self).__init__(*args, **kwargs)
-
-    def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
-        if conanfile:
-            self.save({"conanfile.py": conanfile})
-        full_str = f"--name={ref.name} --version={ref.version}"
-        if ref.user:
-            full_str += f" --user={ref.user}"
-        if ref.channel:
-            full_str += f" --channel={ref.channel}"
-        self.run("create . {} {}".format(full_str, args or ""),
-                 assert_error=assert_error)
-
-        tmp = copy.copy(ref)
-        tmp.revision = None
-        ref = self.cache.get_latest_recipe_reference(tmp)
-
-        if assert_error:
-            return None
-
-        package_id = self.created_package_id(ref)
-        package_ref = PkgReference(ref, package_id)
-        tmp = copy.copy(package_ref)
-        tmp.revision = None
-        prevs = self.cache.get_package_revisions_references(tmp, only_latest_prev=True)
-        prev = prevs[0]
-
-        return prev
-
-    def upload_all(self, ref, remote=None, args=None, assert_error=False):
-        remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c -r {} {}".format(ref.repr_notime(), remote, args or ""),
-                 assert_error=assert_error)
-        if not assert_error:
-            remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            _tmp = copy.copy(ref)
-            _tmp.revision = remote_rrev
-            return _tmp
-
-    def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
-        if conanfile:
-            self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {}".format(repr(ref),  args or ""),
-                 assert_error=assert_error)
-        # FIXME: What is this line? rrev is not used, is it checking existance or something?
-        rrev = self.cache.get_latest_recipe_reference(ref)
-
-        if assert_error:
-            return None
-        package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
-        package_ref = PkgReference(ref, package_id)
-        prev = self.cache.get_latest_package_reference(package_ref)
-        _tmp = copy.copy(package_ref)
-        _tmp.revision = prev
-        return _tmp
-
-    def recipe_revision(self, ref):
-        tmp = copy.copy(ref)
-        tmp.revision = None
-        latest_rrev = self.cache.get_latest_recipe_reference(tmp)
-        return latest_rrev.revision
-
-    def package_revision(self, pref):
-        tmp = copy.copy(pref)
-        tmp.revision = None
-        latest_prev = self.cache.get_latest_package_reference(tmp)
-        return latest_prev.revision
-
-    # FIXME: 2.0: adapt this function to using the new "conan list xxxx" and recover the xfail tests
-    def search(self, pattern, remote=None, assert_error=False, args=None):
-        remote = " -r={}".format(remote) if remote else ""
-        self.run("search {} --json {} {} {}".format(pattern, ".tmp.json", remote,
-                                                    args or ""),
-                 assert_error=assert_error)
-        data = json.loads(self.load(".tmp.json"))
-        return data
-
-    def massive_uploader(self, ref, revisions, num_prev, remote=None):
-        """Uploads N revisions with M package revisions. The revisions can be specified like:
-            revisions = [{"os": "Windows"}, {"os": "Linux"}], \
-                        [{"os": "Macos"}], \
-                        [{"os": "Solaris"}, {"os": "FreeBSD"}]
-
-            IMPORTANT: Different settings keys will cause different recipe revisions
-        """
-        remote = remote or "default"
-        ret = []
-        for i, settings_groups in enumerate(revisions):
-            tmp = []
-            for settings in settings_groups:
-                conanfile_gen = GenConanfile(). \
-                    with_build_msg("REV{}".format(i)). \
-                    with_package_file("file", env_var="MY_VAR")
-                for s in settings.keys():
-                    conanfile_gen = conanfile_gen.with_setting(s)
-                for k in range(num_prev):
-                    args = " ".join(["-s {}={}".format(key, value)
-                                     for key, value in settings.items()])
-                    with environment_update({"MY_VAR": str(k)}):
-                        pref = self.create(ref, conanfile=conanfile_gen, args=args)
-                        self.upload_all(ref, remote=remote)
-                        tmp.append(pref)
-                ret.append(tmp)
-        return ret
 
 
 def get_free_port():

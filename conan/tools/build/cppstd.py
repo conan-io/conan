@@ -164,8 +164,14 @@ def _apple_clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "13.0":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092 doesn't show c++23 full support until 16
+    # but it was this before Conan 2.9, so keeping it to not break
+    if version < "16.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _gcc_supported_cppstd(version):
@@ -184,8 +190,13 @@ def _gcc_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "11":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "14.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _msvc_supported_cppstd(version):
@@ -222,8 +233,12 @@ def _clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "12":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
-
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "17.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _mcst_lcc_supported_cppstd(version):

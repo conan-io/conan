@@ -9,7 +9,7 @@ from conan.api.output import Color, ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.version import Version
 
 

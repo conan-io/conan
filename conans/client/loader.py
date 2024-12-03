@@ -1,3 +1,4 @@
+import traceback
 from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
@@ -15,7 +16,8 @@ from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
+from conan.internal.errors import conanfile_exception_formatter, NotFoundException
+from conan.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -169,11 +171,8 @@ class ConanFileLoader:
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
-        try:
-            conanfile._conan_is_consumer = True
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        conanfile._conan_is_consumer = True
+        return conanfile
 
     def load_conanfile(self, conanfile_path, ref, graph_lock=None, remotes=None,
                        update=None, check_update=None):
@@ -373,7 +372,6 @@ def _load_python_file(conan_file_path):
     except ConanException:
         raise
     except Exception:
-        import traceback
         trace = traceback.format_exc().split('\n')
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))
@@ -395,7 +393,7 @@ def _get_required_conan_version_without_loading(conan_file_path):
         found = re.search(r"(.*)required_conan_version\s*=\s*[\"'](.*)[\"']", contents)
         if found and "#" not in found.group(1):
             txt_version = found.group(2)
-    except:
+    except:  # noqa this should be solid, cannot fail
         pass
 
     return txt_version

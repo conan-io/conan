@@ -10,8 +10,8 @@ from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    PackageNotFoundException
+from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
+from conan.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -32,8 +32,8 @@ class RemoteManager:
         if remote.remote_type == LOCAL_RECIPES_INDEX:
             return RestApiClientLocalRecipesIndex(remote, self._home_folder)
 
-    def check_credentials(self, remote):
-        self._call_remote(remote, "check_credentials")
+    def check_credentials(self, remote, force_auth=False):
+        self._call_remote(remote, "check_credentials", force_auth)
 
     def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)

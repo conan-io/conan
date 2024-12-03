@@ -48,7 +48,7 @@ pkgapp_01_id = "dda63a9bddbbe704d4858d67156d5dad0361dc19"
 
 @pytest.fixture()
 def client_setup():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save_home({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"})
     pkb_requirements = """
     def requirements(self):
@@ -208,7 +208,7 @@ def test_single_config_centralized_change_dep(client_setup):
     c.run("install --requires=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
-    assert "pkga" not in c.out
+    assert "pkga/" not in c.out
     c.assert_listed_binary({"pkgj/0.1": (pkgawin_01_id, "Cache"),
                             "pkgb/0.1": ("6142fb85ccd4e94afad85a8d01a87234eefa5600", "Cache"),
                             "pkgc/0.1": ("93cfcbc8109eedf4211558258ff5a844fdb62cca", "Build"),

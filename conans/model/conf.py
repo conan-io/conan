@@ -6,7 +6,7 @@ import fnmatch
 
 from collections import OrderedDict
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
@@ -15,7 +15,7 @@ BUILT_IN_CONFS = {
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
     "core:skip_warnings": "Do not show warnings matching any of the patterns in this list. "
-                          "Current warning tags are 'network', 'deprecated'",
+                          "Current warning tags are 'network', 'deprecated', 'experimental'",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
@@ -80,6 +80,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
+    "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
     "tools.cmake:install_strip": "Add --strip to cmake.install()",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
@@ -88,6 +89,8 @@ BUILT_IN_CONFS = {
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
     "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
+    "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
+    "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
@@ -117,14 +120,14 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers if os=Windows",
+    "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
-    "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
-    "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
+    "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",

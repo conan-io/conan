@@ -1,0 +1,146 @@
+FROM ubuntu:24.04
+
+LABEL maintainer="Conan.io <info@conan.io>"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV PY36=3.6.15 \
+    PY38=3.8.6 \
+    PY39=3.9.2 \
+    PY312=3.12.3 \
+    PY313=3.13.0 \
+    CMAKE_3_15_7=/usr/share/cmake-3.15.7/bin/cmake \
+    CMAKE_3_16_9=/usr/share/cmake-3.16.9/bin/cmake \
+    CMAKE_3_17_5=/usr/share/cmake-3.17.5/bin/cmake \
+    CMAKE_3_19_7=/usr/share/cmake-3.19.7/bin/cmake \
+    CMAKE_3_23_5=/usr/share/cmake-3.23.5/bin/cmake \
+    GCC_9=/usr/bin/gcc-9 \
+    GXX_9=/usr/bin/g++-9 \
+    GCC_11=/usr/bin/gcc-11 \
+    GXX_11=/usr/bin/g++-11 \
+    CLANG_14=/usr/bin/clang-14 \
+    CLANGXX_14=/usr/bin/clang++-14 \
+    BAZEL_6_3_2=6.3.2 \
+    BAZEL_7_1_2=7.1.2
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        software-properties-common \
+        build-essential \
+        libtool \
+        automake \
+        autoconf \
+        pkg-config \
+        gettext \
+        git \
+        curl \
+        make \
+        libssl-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        llvm \
+        libncurses5-dev \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libffi-dev \
+        liblzma-dev \
+        python3-openssl \
+        ca-certificates \
+        sudo \
+        tar \
+        linux-libc-dev \
+        subversion \
+        subversion-tools \
+        ninja-build \
+        gcc-9 \
+        g++-9 \
+        gcc-11 \
+        g++-11 \
+        clang-14 \
+        clang++-14 \
+        gcc-arm-linux-gnueabihf \
+        g++-arm-linux-gnueabihf \
+        unzip \
+        apt-transport-https \
+        gnupg-agent \
+        gcc-9-multilib \
+        g++-9-multilib \
+        gcc-11-multilib \
+        g++-11-multilib \
+        scons && \
+    # fix: asm/errno.h: No such file or directory
+    ln -s /usr/include/asm-generic/ /usr/include/asm && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash conan && \
+    echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+ENV HOME /home/conan
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
+
+RUN curl https://pyenv.run | bash && \
+    pyenv install $PY36 && \
+    pyenv install $PY38 && \
+    pyenv install $PY39 && \
+    pyenv install $PY312 && \
+    pyenv install $PY313 && \
+    pyenv global $PY39 && \
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python get-pip.py && \
+    rm get-pip.py
+
+RUN chown -R conan:conan $HOME
+
+USER root
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7-Linux-x86_64.tar.gz && \
+    tar -xvzf cmake-3.15.7-Linux-x86_64.tar.gz && mv cmake-3.15.7-Linux-x86_64 /usr/share/cmake-3.15.7  && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.16.9/cmake-3.16.9-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.16.9-Linux-x86_64.tar.gz && mv cmake-3.16.9-Linux-x86_64 /usr/share/cmake-3.16.9 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.17.5-Linux-x86_64.tar.gz && mv cmake-3.17.5-Linux-x86_64 /usr/share/cmake-3.17.5 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.19.7/cmake-3.19.7-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.19.7-Linux-x86_64.tar.gz && mv cmake-3.19.7-Linux-x86_64 /usr/share/cmake-3.19.7 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15_7 10 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16_9 20 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17_5 30 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19_7 40 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23_5 50
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 30 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 10 && \
+    update-alternatives --set gcc /usr/bin/gcc-9 && \
+    update-alternatives --set g++ /usr/bin/g++-9 && \
+    update-alternatives --set clang /usr/bin/clang-14 && \
+    update-alternatives --set clang++ /usr/bin/clang++-14
+
+RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6_3_2}/bazel-${BAZEL_6_3_2}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_6_3_2}-linux-x86_64 && \
+    mv bazel-${BAZEL_6_3_2}-linux-x86_64 /usr/share/bazel-$BAZEL_6_3_2/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_7_1_2/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_1_2}/bazel-${BAZEL_7_1_2}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
+    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
+
+USER conan
+WORKDIR $HOME
+
+CMD ["/bin/bash"]

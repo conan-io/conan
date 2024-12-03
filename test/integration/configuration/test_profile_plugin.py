@@ -27,6 +27,17 @@ class TestErrorsProfilePlugin:
         c.run("profile show", assert_error=True)
         assert "ERROR: The 'profile.py' plugin file doesn't exist" in c.out
 
+    def test_regresion_29(self):
+        # https://github.com/conan-io/conan/issues/17247
+        c = TestClient()
+        c.save({"conanfile.txt": ""})
+        c.run("install . -s compiler=clang -s compiler.version=19 -s compiler.cppstd=26")
+        # doesn't fail anymore
+        c.run("install . -s compiler=apple-clang -s compiler.version=16 -s compiler.cppstd=26")
+        # doesn't fail anymore
+        c.run("install . -s compiler=gcc -s compiler.version=14 -s compiler.cppstd=26")
+        # doesn't fail anymore
+
 
 def test_android_ndk_version():
     c = TestClient()

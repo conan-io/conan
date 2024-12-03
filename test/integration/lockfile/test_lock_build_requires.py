@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient
 
 
 def test_lock_build_tool_requires():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"common/conanfile.py": GenConanfile("common", "1.0").with_settings("os"),
             "tool/conanfile.py": GenConanfile("tool", "1.0").with_settings("os")
                                                             .with_requires("common/1.0"),
@@ -31,7 +31,7 @@ def test_lock_build_tool_requires():
 
 
 def test_lock_buildrequires_create():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("tool", "0.1")})
     c.run("create .  --build-require --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
@@ -39,7 +39,7 @@ def test_lock_buildrequires_create():
 
 
 def test_lock_buildrequires_export():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("tool", "0.1")})
     c.run("export . --build-require --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
@@ -47,7 +47,7 @@ def test_lock_buildrequires_export():
 
 
 def test_lock_buildrequires_create_transitive():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("dep/0.1")})
     c.run("create dep")
@@ -60,7 +60,7 @@ def test_lock_buildrequires_create_transitive():
 def test_lock_create_build_require_transitive():
     """ cross compiling from Windows to Linux
     """
-    c = TestClient()
+    c = TestClient(light=True)
     dep = textwrap.dedent("""
         from conan import ConanFile
         class Dep(ConanFile):
@@ -125,7 +125,7 @@ class TestTransitiveBuildRequires:
     @pytest.fixture()
     def client(self):
         # https://github.com/conan-io/conan/issues/13899
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                      "cmake/conanfile.py": GenConanfile("cmake", "1.0").with_requires("zlib/1.0"),
                      "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_build_requires("cmake/1.0"),

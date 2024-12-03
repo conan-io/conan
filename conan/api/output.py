@@ -4,10 +4,10 @@ import sys
 import time
 from threading import Lock
 
+import colorama
 from colorama import Fore, Style
 
-from conans.client.userio import color_enabled
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
@@ -50,6 +50,40 @@ if os.environ.get("CONAN_COLOR_DARK"):
     Color.BRIGHT_GREEN = Fore.GREEN
 
 
+def init_colorama(stream):
+    import colorama
+    if _color_enabled(stream):
+        if os.getenv("CLICOLOR_FORCE", "0") != "0":
+            # Otherwise it is not really forced if colorama doesn't feel it
+            colorama.init(strip=False, convert=False)
+        else:
+            colorama.init()
+
+
+def _color_enabled(stream):
+    """
+    NO_COLOR: No colors
+
+    https://no-color.org/
+
+    Command-line software which adds ANSI color to its output by default should check for the
+    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
+    prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
+    """
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
+        return True
+
+    if os.getenv("NO_COLOR") is not None:
+        return False
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
 class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
@@ -62,7 +96,7 @@ class ConanOutput:
         self._scope = scope
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
-        self._color = color_enabled(self.stream)
+        self._color = _color_enabled(self.stream)
 
     @classmethod
     def define_silence_warnings(cls, warnings):
@@ -80,21 +114,26 @@ class ConanOutput:
 
         :param v: `str` or `None`, where `None` is the same as `verbose`.
         """
+        env_level = os.getenv("CONAN_LOG_LEVEL")
+        v = env_level or v
+        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
+                  "error": LEVEL_ERROR,  # -verror 70
+                  "warning": LEVEL_WARNING,  # -vwaring 60
+                  "notice": LEVEL_NOTICE,  # -vnotice 50
+                  "status": LEVEL_STATUS,  # -vstatus 40
+                  None: LEVEL_VERBOSE,  # -v 30
+                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                  "debug": LEVEL_DEBUG,  # -vdebug 20
+                  "v": LEVEL_DEBUG,  # -vv 20
+                  "trace": LEVEL_TRACE,  # -vtrace 10
+                  "vv": LEVEL_TRACE  # -vvv 10
+                  }
         try:
-            level = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                     "error": LEVEL_ERROR,  # -verror 70
-                     "warning": LEVEL_WARNING,  # -vwaring 60
-                     "notice": LEVEL_NOTICE,  # -vnotice 50
-                     "status": LEVEL_STATUS,  # -vstatus 40
-                     None: LEVEL_VERBOSE,  # -v 30
-                     "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                     "debug": LEVEL_DEBUG,  # -vdebug 20
-                     "v": LEVEL_DEBUG,  # -vv 20
-                     "trace": LEVEL_TRACE,  # -vtrace 10
-                     "vv": LEVEL_TRACE  # -vvv 10
-                     }[v]
+            level = levels[v]
         except KeyError:
-            raise ConanException(f"Invalid argument '-v{v}'")
+            msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
+            vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
+            raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
             cls._conan_output_level = level
 
@@ -250,15 +289,15 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
     """
     Output to be used by formatters to dump information to stdout
     """
-
-    fg_ = fg or ''
-    bg_ = bg or ''
-    if (fg or bg) and color_enabled(sys.stdout):
-        data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
+    if (fg or bg) and _color_enabled(sys.stdout):  # need color
+        data = f"{' ' * indentation}{fg or ''}{bg or ''}{data}{Style.RESET_ALL}{endline}"
+        sys.stdout.write(data)
     else:
         data = f"{' ' * indentation}{data}{endline}"
-
-    sys.stdout.write(data)
+        # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
+        colorama.deinit()
+        sys.stdout.write(data)
+        colorama.reinit()
 
 
 class TimedOutput:

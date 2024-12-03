@@ -1,11 +1,12 @@
 from conans.model.version import Version
 
 
-def architecture_flag(settings):
+def architecture_flag(conanfile):
     """
     returns flags specific to the target architecture and compiler
     Used by CMakeToolchain and AutotoolsToolchain
     """
+    settings = conanfile.settings
     from conan.tools.apple.apple import _to_apple_arch
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
@@ -19,6 +20,11 @@ def architecture_flag(settings):
         return ""
 
     if compiler == "clang" and the_os == "Windows":
+        comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
+                                       default={})
+        clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
+        if clangcl:
+            return ""  # Do not add arch flags for clang-cl, can happen in cross-build runtime=None
         # LLVM/Clang and VS/Clang must define runtime. msys2 clang won't
         runtime = settings.get_safe("compiler.runtime")  # runtime is Windows only
         if runtime is not None:
@@ -115,12 +121,13 @@ def build_type_link_flags(settings):
     return []
 
 
-def build_type_flags(settings):
+def build_type_flags(conanfile):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     Used only by AutotoolsToolchain
     """
+    settings = conanfile.settings
     compiler = settings.get_safe("compiler")
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
@@ -129,8 +136,12 @@ def build_type_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if compiler == "msvc":
-        if vs_toolset and "clang" in vs_toolset:
+    comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
+                                   default={})
+    clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
+
+    if compiler == "msvc" or clangcl:
+        if clangcl or (vs_toolset and "clang" in vs_toolset):
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
                      "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],
@@ -233,7 +244,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
 
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if clang_version >= "4.0":
         v98 = "c++98"
@@ -267,6 +278,9 @@ def _cppstd_apple_clang(clang_version, cppstd):
     if clang_version >= "16.0":
         v23 = "c++23"
         vgnu23 = "gnu++23"
+
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
     elif clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
@@ -276,7 +290,8 @@ def _cppstd_apple_clang(clang_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
 
     return f'-std={flag}' if flag else None
 
@@ -289,7 +304,7 @@ def _cppstd_clang(clang_version, cppstd):
 
     https://clang.llvm.org/cxx_status.html
     """
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if clang_version >= "2.1":
         v98 = "c++98"
@@ -331,19 +346,23 @@ def _cppstd_clang(clang_version, cppstd):
         v23 = "c++23"
         vgnu23 = "gnu++23"
 
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
     return f'-std={flag}' if flag else None
 
 
 def _cppstd_gcc(gcc_version, cppstd):
     """https://github.com/Kitware/CMake/blob/master/Modules/Compiler/GNU-CXX.cmake"""
     # https://gcc.gnu.org/projects/cxx-status.html
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if gcc_version >= "3.4":
         v98 = "c++98"
@@ -375,20 +394,25 @@ def _cppstd_gcc(gcc_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if gcc_version >= "11":
-        v23 = "c++2b"
-        vgnu23 = "gnu++2b"
-
-    if gcc_version >= "12":
+    if gcc_version >= "10":
         v20 = "c++20"
         vgnu20 = "gnu++20"
+
+    if gcc_version >= "11":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+
+    if gcc_version >= "14":
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
     return f'-std={flag}' if flag else None
 
 

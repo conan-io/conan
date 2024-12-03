@@ -37,7 +37,7 @@ class _SystemPackageManagerTool(object):
         if os_name in ["Linux", "FreeBSD"]:
             import distro
             os_name = distro.id() or os_name
-        elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
+        elif os_name == "Windows" and self._conanfile.settings.get_safe("os.subsystem") == "msys2":
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux', 'pop'],
                            "apk": ["alpine"],
@@ -320,8 +320,7 @@ class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
     install_command = "{tool} install --yes {packages}"
     update_command = "{tool} outdated"
-    check_command = '{tool} search --local-only --exact {package} | ' \
-                    'findstr /c:"1 packages installed."'
+    check_command = '{tool} list --exact {package} | findstr /c:"1 packages installed."'
 
 
 class PacMan(_SystemPackageManagerTool):

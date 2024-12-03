@@ -1,9 +1,8 @@
 from functools import total_ordering
 from typing import Optional
 
-from conans.errors import ConanException
-from conans.model.recipe_ref import Version
-from conans import __version__ as client_version
+from conans.model.version import Version
+from conan.errors import ConanException
 
 
 @total_ordering
@@ -66,6 +65,10 @@ class _ConditionSet:
 
     def __init__(self, expression, prerelease):
         expressions = expression.split()
+        if not expressions:
+            # Guarantee at least one expression
+            expressions = [""]
+
         self.prerelease = prerelease
         self.conditions = []
         for e in expressions:
@@ -225,7 +228,8 @@ class VersionRange:
 
 
 def validate_conan_version(required_range):
-    clientver = Version(client_version)
+    from conan import __version__  # To avoid circular imports
+    clientver = Version(__version__)
     version_range = VersionRange(required_range)
     for conditions in version_range.condition_sets:
         conditions.prerelease = True

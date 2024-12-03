@@ -1,11 +1,8 @@
-import glob
 import json
 import os
 from enum import Enum
 
-from conan.api.output import ConanOutput
 from conans.model.build_info import CppInfo
-from conans.model.pkg_type import PackageType
 from conans.util.files import save, load
 
 
@@ -13,7 +10,7 @@ class CPSComponentType(Enum):
     DYLIB = "dylib"
     ARCHIVE = "archive"
     INTERFACE = "interface"
-    EXE = "exe"
+    EXE = "executable"
     JAR = "jar"
     UNKNOWN = "unknown"
 
@@ -33,60 +30,6 @@ class CPSComponentType(Enum):
             "application": "executable"
         }
         return CPSComponentType(_package_type_map.get(str(pkg_type), "unknown"))
-
-
-def deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type):
-    if full_lib.get("type") is not None:
-        assert "location" in full_lib, f"If 'type' is specified in library {libname}, 'location' too"
-        return
-
-    # Recipe didn't specify things, need to auto deduce
-    libdirs = [x.replace("\\", "/") for x in cpp_info.libdirs]
-    bindirs = [x.replace("\\", "/") for x in cpp_info.bindirs]
-
-    static_patterns = [f"{libname}.lib", f"{libname}.a", f"lib{libname}.a"]
-    shared_patterns = [f"lib{libname}.so", f"lib{libname}.so.*", f"lib{libname}.dylib",
-                       f"lib{libname}.*dylib"]
-    dll_patterns = [f"{libname}.dll"]
-
-    def _find_matching(patterns, dirs):
-        matches = set()
-        for pattern in patterns:
-            for d in dirs:
-                matches.update(glob.glob(f"{d}/{pattern}"))
-        if len(matches) == 1:
-            return next(iter(matches))
-
-    static_location = _find_matching(static_patterns, libdirs)
-    shared_location = _find_matching(shared_patterns, libdirs)
-    dll_location = _find_matching(dll_patterns, bindirs)
-    if static_location:
-        if shared_location:
-            ConanOutput().warning(f"Lib {libname} has both static {static_location} and "
-                                  f"shared {shared_location} in the same package")
-            if pkg_type is PackageType.STATIC:
-                full_lib["location"] = static_location
-                full_lib["type"] = PackageType.STATIC
-            else:
-                full_lib["location"] = shared_location
-                full_lib["type"] = PackageType.SHARED
-        elif dll_location:
-            full_lib["location"] = dll_location
-            full_lib["link_location"] = static_location
-            full_lib["type"] = PackageType.SHARED
-        else:
-            full_lib["location"] = static_location
-            full_lib["type"] = PackageType.STATIC
-    elif shared_location:
-        full_lib["location"] = shared_location
-        full_lib["type"] = PackageType.SHARED
-    elif dll_location:
-        # Only .dll but no link library
-        full_lib["location"] = dll_location
-        full_lib["type"] = PackageType.SHARED
-    if full_lib.get("type") != pkg_type:
-        ConanOutput().warning(f"Lib {libname} deduced as '{full_lib.get('type')}, "
-                              f"but 'package_type={pkg_type}'")
 
 
 class CPSComponent:
@@ -128,7 +71,7 @@ class CPSComponent:
         return comp
 
     @staticmethod
-    def from_cpp_info(cpp_info, pkg_type, libname=None):
+    def from_cpp_info(cpp_info, conanfile, libname=None):
         cps_comp = CPSComponent()
         if not libname:
             cps_comp.definitions = cpp_info.defines
@@ -142,16 +85,20 @@ class CPSComponent:
             cps_comp.type = CPSComponentType.INTERFACE
             return cps_comp
 
-        libname = libname or next(iter(cpp_info.full_libs))
-        full_lib = cpp_info.full_libs[libname]
-        deduce_full_lib_info(libname, full_lib, cpp_info, pkg_type)
-        cps_comp.type = CPSComponentType.from_conan(full_lib.get("type"))
-        cps_comp.location = full_lib.get("location")
-        cps_comp.link_location = full_lib.get("link_location")
+        cpp_info.deduce_locations(conanfile)
+        cps_comp.type = CPSComponentType.from_conan(cpp_info.type)
+        cps_comp.location = cpp_info.location
+        cps_comp.link_location = cpp_info.link_location
         cps_comp.link_libraries = cpp_info.system_libs
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
         return cps_comp
+
+    def update(self, conf, conf_def):
+        # TODO: conf not used at the moent
+        self.location = self.location or conf_def.get("location")
+        self.link_location = self.link_location or conf_def.get("link_location")
+        self.link_libraries = self.link_libraries or conf_def.get("link_libraries")
 
 
 class CPS:
@@ -221,18 +168,18 @@ class CPS:
 
         if not dep.cpp_info.has_components:
             if dep.cpp_info.libs and len(dep.cpp_info.libs) > 1:
-                comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)  # base
+                comp = CPSComponent.from_cpp_info(dep.cpp_info, dep)  # base
                 base_name = f"_{cps.name}"
                 cps.components[base_name] = comp
                 for lib in dep.cpp_info.libs:
-                    comp = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type, lib)
+                    comp = CPSComponent.from_cpp_info(dep.cpp_info, dep, lib)
                     comp.requires.insert(0, f":{base_name}")  # dep to the common one
                     cps.components[lib] = comp
                 cps.default_components = dep.cpp_info.libs
                 # FIXME: What if one lib is named equal to the package?
             else:
                 # single component, called same as library
-                component = CPSComponent.from_cpp_info(dep.cpp_info, dep.package_type)
+                component = CPSComponent.from_cpp_info(dep.cpp_info, dep)
                 if not component.requires and dep.dependencies:
                     for transitive_dep in dep.dependencies.host.items():
                         dep_name = transitive_dep[0].ref.name
@@ -244,7 +191,7 @@ class CPS:
         else:
             sorted_comps = dep.cpp_info.get_sorted_components()
             for comp_name, comp in sorted_comps.items():
-                component = CPSComponent.from_cpp_info(comp, dep.package_type)
+                component = CPSComponent.from_cpp_info(comp, dep)
                 cps.components[comp_name] = component
             # Now by default all are default_components
             cps.default_components = [comp_name for comp_name in sorted_comps]
@@ -299,4 +246,19 @@ class CPS:
     @staticmethod
     def load(file):
         contents = load(file)
-        return CPS.deserialize(json.loads(contents))
+        base = CPS.deserialize(json.loads(contents))
+
+        path, name = os.path.split(file)
+        basename, ext = os.path.splitext(name)
+        # Find, load and merge configuration specific files
+        for conf in "release", "debug":
+            full_conf = os.path.join(path, f"{basename}@{conf}{ext}")
+            if os.path.exists(full_conf):
+                conf_content = json.loads(load(full_conf))
+                for comp, comp_def in conf_content.get("components", {}).items():
+                    existing = base.components.get(comp)
+                    if existing:
+                        existing.update(conf, comp_def)
+                    else:
+                        base.components[comp] = comp_def
+        return base
