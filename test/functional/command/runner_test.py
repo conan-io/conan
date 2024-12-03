@@ -457,6 +457,11 @@ def test_create_docker_runner_from_configfile_with_args():
     Tests the ``conan create . ``
     """
     client = TestClient()
+
+    # Ensure the network exists
+    docker_client = docker.from_env()
+    docker_client.networks.create("my-network")
+
     configfile = textwrap.dedent(f"""
         image: conan-runner-default-test-with-args
         build:
@@ -507,6 +512,7 @@ def test_create_docker_runner_from_configfile_with_args():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
+    docker_client.networks.get("my-network").remove()
 
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
