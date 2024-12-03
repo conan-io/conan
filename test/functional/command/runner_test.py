@@ -389,7 +389,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     remove=True
     """)
     client.save({"profile": profile})
-    settings = "-s os=Linux -s arch={{{{ detect_api.detect_arch() }}}} -s build_type={} -o hello/*:shared={}".format(build_type, shared)
+    settings = "-s os=Linux -s build_type={} -o hello/*:shared={}".format(build_type, shared)
     # create should also work
     client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings))
     assert 'cmake -G "Ninja"' in client.out
