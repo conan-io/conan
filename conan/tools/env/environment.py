@@ -52,22 +52,25 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         raise ConanException("Cannot wrap command with different envs,"
                              "{} - {}".format(bats+ps1s, shs))
 
+    try:
+        powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
+                                              choices=["powershell.exe", "pwsh"])
+    except ConanException:
+        powershell = "powershell.exe"
+
     if bats:
-        launchers = " && ".join('"{}"'.format(b) for b in bats)
+        launchers = " && ".join(f'"{b}"' for b in bats)
         if ps1s:
-            ps1_launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
-            cmd = cmd.replace('"', "'")
-            return '{} && powershell.exe {} ; cmd /c {}'.format(launchers, ps1_launchers, cmd)
+            ps1_launchers = " && ".join(f'{powershell} -File "{f}"' for f in ps1s)
+            return f'{launchers} && {ps1_launchers} && cmd /c {cmd}'
         else:
-            return '{} && {}'.format(launchers, cmd)
+            return f'{launchers} && {cmd}'
     elif shs:
-        launchers = " && ".join('. "{}"'.format(f) for f in shs)
-        return '{} && {}'.format(launchers, cmd)
+        launchers = " && ".join(f'. "{f}"' for f in shs)
+        return f'{launchers} && {cmd}'
     elif ps1s:
-        # TODO: at the moment it only works with path without spaces
-        launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
-        cmd = cmd.replace('"', "'")
-        return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
+        ps1_launchers = " && ".join(f'{powershell} -File "{f}"' for f in ps1s)
+        return f'{ps1_launchers} && cmd /c {cmd}'
     else:
         return cmd
 
@@ -544,7 +547,7 @@ class EnvVars:
                     "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
                 )
             except ConanException:
-                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell", "pwsh"])
+                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell.exe", "pwsh"])
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
