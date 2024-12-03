@@ -15,8 +15,8 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
-                             accepted_extensions=None, powershell="powershell"):
+def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsystem=None,
+                             accepted_extensions=None):
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames

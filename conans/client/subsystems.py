@@ -23,7 +23,6 @@ import os
 import platform
 import re
 
-from conan.api.output import ConanOutput
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 
@@ -44,16 +43,6 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="bu
 
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    try:
-        if conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool):
-            powershell = "powershell"
-        ConanOutput().warning(
-            "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
-            "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
-        )
-    except ConanException:
-        powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
-                                          choices=["powershell", "pwsh"]) or "powershell"
     if platform.system() == "Windows" and (
             (conanfile.win_bash and scope == "build") or
             (conanfile.win_bash_run and scope == "run")):
@@ -61,11 +50,11 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="bu
             raise ConanException("win_bash/win_bash_run defined but no "
                                  "tools.microsoft.bash:subsystem")
         if active:
-            wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command, powershell=powershell)
+            wrapped_cmd = environment_wrap_command(conanfile, envfiles, envfiles_folder, command)
         else:
             wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
     else:
-        wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
+        wrapped_cmd = environment_wrap_command(conanfile, envfiles, envfiles_folder, command)
     return wrapped_cmd
 
 
@@ -104,12 +93,12 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         env.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
-    wrapped_shell = environment_wrap_command(env, envfiles_folder, wrapped_shell,
+    wrapped_shell = environment_wrap_command(conanfile, env, envfiles_folder, wrapped_shell,
                                              accepted_extensions=("bat", "ps1"))
 
     # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
     # first and there could be commands that we want to skip
-    wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command,
+    wrapped_user_cmd = environment_wrap_command(conanfile, env, envfiles_folder, command,
                                                 accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
     # according to https://www.msys2.org/wiki/Launchers/, it is necessary to use --login shell
