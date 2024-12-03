@@ -461,7 +461,11 @@ class FindFiles(Block):
         list(PREPEND CMAKE_MODULE_PATH {{ generators_folder }})
         {% endif %}
 
-        # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
+        # Definition of CMAKE_PREFIX_PATH, CMAKE_FRAMEWORK_PATH, CMAKE_XXXXX_PATH
+        {% if host_build_paths_root %}
+        # The root dirs of all "host" context dependencies should be considered during find_package()
+        list(PREPEND CMAKE_FRAMEWORK_PATH {{ host_build_paths_root }})
+        {% endif %}
         {% if host_build_paths_noroot %}
         # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
         list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
@@ -476,7 +480,7 @@ class FindFiles(Block):
         {% if cmake_library_path %}
         list(PREPEND CMAKE_LIBRARY_PATH {{ cmake_library_path }})
         {% endif %}
-        {% if is_apple and cmake_framework_path %}
+        {% if cmake_framework_path %}
         list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
         {% endif %}
         {% if cmake_include_path %}
@@ -545,8 +549,7 @@ class FindFiles(Block):
                 host_build_paths_noroot.extend(p for p in cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
             host_bin_paths.extend(cppinfo.bindirs)
-            if is_apple_:
-                host_framework_paths.extend(cppinfo.frameworkdirs)
+            host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
 
         # Read information from build context
