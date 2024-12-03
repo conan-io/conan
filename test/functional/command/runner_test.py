@@ -45,7 +45,7 @@ def test_create_docker_runner_cache_shared():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -56,7 +56,7 @@ def test_create_docker_runner_cache_shared():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -89,7 +89,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -100,7 +100,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -133,7 +133,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -144,7 +144,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -177,7 +177,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -188,7 +188,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     profile_host_copy = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -206,7 +206,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     profile_host_clean = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -248,7 +248,7 @@ def test_create_docker_runner_profile_default_folder():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -258,7 +258,7 @@ def test_create_docker_runner_profile_default_folder():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -294,7 +294,7 @@ def test_create_docker_runner_dockerfile_file_path():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -304,7 +304,7 @@ def test_create_docker_runner_dockerfile_file_path():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -373,7 +373,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
                                             calls=["hello"])})
     profile = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -389,7 +389,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     remove=True
     """)
     client.save({"profile": profile})
-    settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type, shared)
+    settings = "-s os=Linux -s arch={{{{ detect_api.detect_arch() }}}} -s build_type={} -o hello/*:shared={}".format(build_type, shared)
     # create should also work
     client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings))
     assert 'cmake -G "Ninja"' in client.out
@@ -415,7 +415,7 @@ def test_create_docker_runner_from_configfile():
 
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -425,7 +425,7 @@ def test_create_docker_runner_from_configfile():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -478,7 +478,7 @@ def test_create_docker_runner_from_configfile_with_args():
 
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -488,7 +488,7 @@ def test_create_docker_runner_from_configfile_with_args():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -524,7 +524,7 @@ def test_create_docker_runner_default_build_profile():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
