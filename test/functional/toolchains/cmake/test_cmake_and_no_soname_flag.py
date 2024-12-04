@@ -57,7 +57,7 @@ def test_no_soname_flag(nosoname_property):
     client.run("install --requires=app/0.1@ -o nosoname*:shared=True -o lib_b/*:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", client.current_folder, "app")
+    command = environment_wrap_command(ConanFileMock(),"conanrun", client.current_folder, "app")
 
     # If `nosoname_property` is False, and we have a library without the SONAME flag,
     # then it should fail
