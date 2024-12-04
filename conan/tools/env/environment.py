@@ -54,7 +54,7 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
 
     try:
         powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
-                                              choices=["powershell", "pwsh"])
+                                        choices=["powershell", "pwsh"]) or "powershell"
     except ConanException:
         powershell = "powershell"
 
