@@ -44,7 +44,7 @@ def _check_install_run(client):
     assert "hello: Release!" in client.out
 
 
-#@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake")
 def test_other_client_can_link_cmake(transitive_shared_client):
     client = transitive_shared_client
     # https://github.com/conan-io/conan/issues/13000
