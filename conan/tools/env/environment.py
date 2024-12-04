@@ -59,18 +59,20 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         powershell = "powershell.exe"
 
     if bats:
-        launchers = " && ".join(f'"{b}"' for b in bats)
+        launchers = " && ".join('"{}"'.format(b) for b in bats)
         if ps1s:
             ps1_launchers = " && ".join(f'{powershell} -File "{f}"' for f in ps1s)
-            return f'{launchers} && {ps1_launchers} && cmd /c {cmd}'
+            cmd = cmd.replace('"', "'")
+            return '{} && {} && cmd /c {}'.format(launchers, ps1_launchers, cmd)
         else:
-            return f'{launchers} && {cmd}'
+            return '{} && {}'.format(launchers, cmd)
     elif shs:
-        launchers = " && ".join(f'. "{f}"' for f in shs)
-        return f'{launchers} && {cmd}'
+        launchers = " && ".join('. "{}"'.format(f) for f in shs)
+        return '{} && {}'.format(launchers, cmd)
     elif ps1s:
         ps1_launchers = " && ".join(f'{powershell} -File "{f}"' for f in ps1s)
-        return f'{ps1_launchers} && cmd /c {cmd}'
+        cmd = cmd.replace('"', "'")
+        return '{} && cmd /c {}'.format(ps1_launchers, cmd)
     else:
         return cmd
 
