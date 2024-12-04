@@ -73,7 +73,8 @@ def test_virtualenv(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-def test_virtualenv_test_package():
+@pytest.mark.parametrize("powershell", ["powershell", "pwsh"])
+def test_virtualenv_test_package(powershell):
     """ The test_package could crash if not cleaning correctly the test_package
     output folder. This will still crassh if the layout is not creating different build folders
     https://github.com/conan-io/conan/issues/12764
@@ -110,7 +111,7 @@ def test_virtualenv_test_package():
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
     # This was crashing because the .ps1 of test_package was not being cleaned
-    client.run("create . -c tools.env.virtualenv:powershell=True")
+    client.run(f"create . -c tools.env.virtualenv:powershell={powershell}")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
@@ -118,7 +119,8 @@ def test_virtualenv_test_package():
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-def test_vcvars():
+@pytest.mark.parametrize("powershell", ["powershell", "pwsh"])
+def test_vcvars(powershell):
     client = TestClient()
     conanfile = textwrap.dedent(r"""
         from conan import ConanFile
@@ -141,15 +143,15 @@ def test_vcvars():
     hello_cpp = gen_function_cpp(name="main")
     cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
     client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
-
-    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja")
-    client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
+    powershell_exe = "powershell.exe" if powershell == "powershell" else "pwsh"
+    client.run(f"build . -c tools.env.virtualenv:powershell={powershell} -c tools.cmake.cmaketoolchain:generator=Ninja")
+    client.run_command(rf'{powershell_exe} ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message
     assert "conanvcvars.ps1: Activated environment" in client.out
     #check that the new env variables are set
     assert "VSCMD_ARG_VCVARS_VER" in client.out
 
-    client.run_command(r'powershell.exe ".\build\Release\generators\conanvcvars.ps1"')
+    client.run_command(rf'{powershell_exe} ".\build\Release\generators\conanvcvars.ps1"')
     assert client.out.strip() == "conanvcvars.ps1: Activated environment"
 
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
