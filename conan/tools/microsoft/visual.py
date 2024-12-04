@@ -164,7 +164,7 @@ class VCVars:
             )
         except ConanException:
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
-                                              choices=["powershell.exe", "pwsh"])
+                                              choices=["powershell", "pwsh"])
         if is_ps1:
             content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{

@@ -54,9 +54,11 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
 
     try:
         powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
-                                              choices=["powershell.exe", "pwsh"])
+                                              choices=["powershell", "pwsh"])
     except ConanException:
-        powershell = "powershell.exe"
+        powershell = "powershell"
+
+    powershell = "powershell.exe" if powershell == "powershell" else "pwsh"
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -549,7 +551,7 @@ class EnvVars:
                     "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
                 )
             except ConanException:
-                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell.exe", "pwsh"])
+                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell", "pwsh"])
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
