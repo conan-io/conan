@@ -213,6 +213,14 @@ class _LocalRecipesIndexLayout:
                 raise ConanException(f"Corrupted repo, folder {r} without 'config.yml'")
             versions = config_yml["versions"]
             for v in versions:
+                try:
+                    pattern_ref = RecipeReference.loads(pattern)
+                    # We don't care about user/channel, _search_remote_recipes is checking for those at a later point,
+                    # just add all candidates for now
+                    pattern = f"{pattern_ref.name}/{pattern_ref.version}"
+                except:
+                    # pattern = pattern
+                    pass
                 # TODO: Check the search pattern is the same as remotes and cache
                 ref = f"{r}/{v}"
                 if not fnmatch(ref, pattern):

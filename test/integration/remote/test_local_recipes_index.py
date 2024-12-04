@@ -360,3 +360,32 @@ class TestPythonRequires:
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
         assert "pkg/1.0: Created package" in c.out
+
+class TestUserChannel:
+    @pytest.fixture(scope="class")
+    def c3i_user_channel_folder(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        config = textwrap.dedent("""
+                versions:
+                  "1.0":
+                    folder: all
+                  "2.0":
+                    folder: other
+                """)
+        pkg = str(GenConanfile("pkg").with_class_attribute("user='myuser'")\
+                                    .with_class_attribute("channel='mychannel'"))
+        save_files(recipes_folder,
+                   {"pkg/config.yml": config,
+                    "pkg/all/conanfile.py": pkg,
+                    "pkg/other/conanfile.py": str(GenConanfile("pkg"))})
+        return folder
+
+    def test_user_channel_requirement(self, c3i_user_channel_folder):
+        tc = TestClient(light=True)
+        tc.run(f"remote add local '{c3i_user_channel_folder}'")
+        tc.run("graph info --requires=pkg/[*]@myuser/mychannel")
+        assert "Version range '*' from requirement 'pkg/[*]@myuser/mychannel'" not in tc.out
+        assert "pkg/1.0@myuser/mychannel#0b23a5938afb0457079e41aac8991595 - Downloaded (local)" in tc.out
+
+    # TODO: Think of other cases this might be failing
