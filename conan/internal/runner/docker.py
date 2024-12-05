@@ -15,7 +15,7 @@ from conans.model.version import Version
 
 def config_parser(file_path):
     Build = namedtuple('Build', ['dockerfile', 'build_context', 'build_args', 'cache_from'])
-    Run = namedtuple('Run', ['name', 'environment', 'user', 'privileged', 'cap_add', 'security_opt', 'volumes'])
+    Run = namedtuple('Run', ['name', 'environment', 'user', 'privileged', 'cap_add', 'security_opt', 'volumes', 'network'])
     Conf = namedtuple('Conf', ['image', 'build', 'run'])
     if file_path:
         def _instans_or_error(value, obj):
@@ -40,13 +40,15 @@ def config_parser(file_path):
                 cap_add=_instans_or_error(runnerfile.get('run', {}).get('capAdd'), list),
                 security_opt=_instans_or_error(runnerfile.get('run', {}).get('securityOpt'), list),
                 volumes=_instans_or_error(runnerfile.get('run', {}).get('mounts'), dict),
+                network=_instans_or_error(runnerfile.get('run', {}).get('network'), str),
             )
         )
     else:
         return Conf(
             image=None,
             build=Build(dockerfile=None, build_context=None, build_args=None, cache_from=None),
-            run=Run(name=None, environment=None, user=None, privileged=None, cap_add=None, security_opt=None, volumes=None)
+            run=Run(name=None, environment=None, user=None, privileged=None, cap_add=None,
+                    security_opt=None, volumes=None, network=None)
         )
 
 
@@ -145,7 +147,8 @@ class DockerRunner:
                     cap_add=self.configfile.run.cap_add,
                     security_opt=self.configfile.run.security_opt,
                     detach=True,
-                    auto_remove=False)
+                    auto_remove=False,
+                    network=self.configfile.run.network)
             _docker_info(f'Container {self.name} running')
         except Exception as e:
             raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'

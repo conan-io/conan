@@ -92,15 +92,19 @@ class ConanFileDependencies(UserRequirementsDict):
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         if node.replaced_requires:
+            cant_be_removed = set()
             for old_req, new_req in node.replaced_requires.items():
                 # Two different replaced_requires can point to the same real requirement
                 existing = d[new_req]
                 added_req = new_req.copy_requirement()
                 added_req.ref = RecipeReference.loads(old_req)
                 d[added_req] = existing
+                if new_req.ref.name == added_req.ref.name:
+                    cant_be_removed.add(new_req)
             # Now remove the replaced from dependencies dict
             for new_req in node.replaced_requires.values():
-                d.pop(new_req, None)
+                if new_req not in cant_be_removed:
+                    d.pop(new_req, None)
         return ConanFileDependencies(d)
 
     def filter(self, require_filter, remove_system=True):

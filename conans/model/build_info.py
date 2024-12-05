@@ -510,8 +510,7 @@ class _Component:
                         # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
                         # Note: os.readlink() returns the path which the symbolic link points to.
                         real_path = os.path.realpath(full_path)
-                        if pattern.match(os.path.basename(real_path)):
-                            ret.add(real_path)
+                        ret.add(real_path)
                     else:
                         ret.add(full_path)
             return list(ret)
