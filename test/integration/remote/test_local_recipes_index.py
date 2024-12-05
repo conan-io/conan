@@ -386,6 +386,7 @@ class TestUserChannel:
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
         tc.run("graph info --requires=pkg/[*]@myuser/mychannel")
         assert "Version range '*' from requirement 'pkg/[*]@myuser/mychannel'" not in tc.out
+        assert "pkg/[*]@myuser/mychannel: pkg/1.0@myuser/mychannel" in tc.out
         assert "pkg/1.0@myuser/mychannel#0b23a5938afb0457079e41aac8991595 - Downloaded (local)" in tc.out
 
     @pytest.mark.parametrize("user_channel", ["@foo/bar", "@foo"])
