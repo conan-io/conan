@@ -170,7 +170,7 @@ def test_vcvars(powershell):
 def test_concatenate_build_and_run_env(powershell):
     # this tests that if we have both build and run env, they are concatenated correctly when using
     # powershell
-    client = TestClient(path_with_spaces=False)
+    client = TestClient(path_with_spaces=True)
     compiler_bat = "@echo off\necho MYTOOL {}!!\n"
     conanfile = textwrap.dedent("""\
         import os
@@ -200,13 +200,14 @@ def test_concatenate_build_and_run_env(powershell):
 
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run(f"install . -c tools.env.virtualenv:powershell={powershell}")
-
-    cmd = environment_wrap_command(ConanFileMock(),["conanrunenv", "conanbuildenv"],
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.env.virtualenv:powershell", powershell)
+    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
                                    client.current_folder,"mycompiler0.bat")
     client.run_command(cmd)
     assert "MYTOOL 0!!" in client.out
 
-    cmd = environment_wrap_command(ConanFileMock(),["conanrunenv", "conanbuildenv"],
+    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
                                    client.current_folder,"mycompiler1.bat")
     client.run_command(cmd)
     assert "MYTOOL 1!!" in client.out

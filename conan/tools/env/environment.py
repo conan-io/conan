@@ -63,7 +63,7 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
         if ps1s:
-            ps1_launchers = " ; ".join('{} -Command "&\'{}\'"'.format(powershell, f) for f in ps1s)
+            ps1_launchers = f'{powershell} -Command "' + " ; ".join('&\'{}\''.format(f) for f in ps1s) + '"'
             cmd = cmd.replace('"', "'")
             return '{} && {} ; cmd /c {}'.format(launchers, ps1_launchers, cmd)
         else:
@@ -72,7 +72,7 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
     elif ps1s:
-        ps1_launchers = " ; ".join('{} -Command "&\'{}\'"'.format(powershell, f) for f in ps1s)
+        ps1_launchers = f'{powershell} -Command "' + " ; ".join('&\'{}\''.format(f) for f in ps1s) + '"'
         cmd = cmd.replace('"', "'")
         return '{} ; cmd /c {}'.format(ps1_launchers, cmd)
     else:
