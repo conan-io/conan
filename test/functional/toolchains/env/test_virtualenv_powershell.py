@@ -7,8 +7,10 @@ import pytest
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
+from conan.tools.env.environment import environment_wrap_command
 from conans.util.files import save
 
 
@@ -160,3 +162,51 @@ def test_vcvars(powershell):
     assert "conanvcvars.ps1" in conanbuild
     #check that the conanvcvars.ps1 is setting the environment
     assert "conanvcvars.bat&set" in vcvars_ps1
+
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
+@pytest.mark.parametrize("powershell", ["powershell", "pwsh"])
+def test_concatenate_build_and_run_env(powershell):
+    # this tests that if we have both build and run env, they are concatenated correctly when using
+    # powershell
+    client = TestClient(path_with_spaces=False)
+    compiler_bat = "@echo off\necho MYTOOL {}!!\n"
+    conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Pkg(ConanFile):
+            exports_sources = "*"
+            package_type = "application"
+            def package(self):
+                copy(self, "*", self.build_folder, os.path.join(self.package_folder, "bin"))
+        """)
+
+    num_deps = 2
+    for i in range(num_deps):
+        client.save({"conanfile.py": conanfile,
+                     "mycompiler{}.bat".format(i): compiler_bat.format(i)})
+        client.run("create . --name=pkg{} --version=0.1".format(i))
+
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            tool_requires = "pkg0/0.1"
+            requires = "pkg1/0.1"
+            generators = "VirtualBuildEnv", "VirtualRunEnv"
+        """)
+
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run(f"install . -c tools.env.virtualenv:powershell={powershell}")
+
+    cmd = environment_wrap_command(ConanFileMock(),["conanrunenv", "conanbuildenv"],
+                                   client.current_folder,"mycompiler0.bat")
+    client.run_command(cmd)
+    assert "MYTOOL 0!!" in client.out
+
+    cmd = environment_wrap_command(ConanFileMock(),["conanrunenv", "conanbuildenv"],
+                                   client.current_folder,"mycompiler1.bat")
+    client.run_command(cmd)
+    assert "MYTOOL 1!!" in client.out
