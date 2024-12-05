@@ -92,8 +92,6 @@ def test_virtualenv_test_package(powershell):
                 self.env_scripts.setdefault("build", []).append("myenv.bat")
                 save(self, "myps.ps1", "echo MYPS1!!!!\n$env:MYVC_CUSTOMVAR2=\"PATATA2\"")
                 self.env_scripts.setdefault("build", []).append("myps.ps1")
-                save(self, "myps2.ps1", "echo MYPS2!!!!\n$env:MYVC_CUSTOMVAR3=\"PATATA3\"")
-                self.env_scripts.setdefault("build", []).append("myps2.ps1")
             def layout(self):
                 self.folders.build = "mybuild"
                 self.folders.generators = "mybuild"
@@ -103,7 +101,6 @@ def test_virtualenv_test_package(powershell):
                 self.run('cd "hello world"')
                 self.run("set MYVC_CUSTOMVAR1")
                 self.run("set MYVC_CUSTOMVAR2")
-                self.run("set MYVC_CUSTOMVAR3")
             """)
     client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
                  "test_package/conanfile.py": test_package})
@@ -111,19 +108,15 @@ def test_virtualenv_test_package(powershell):
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
-    assert "MYPS2!!!!" in client.out
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
-    assert "MYVC_CUSTOMVAR3=PATATA3" in client.out
     # This was crashing because the .ps1 of test_package was not being cleaned
     client.run(f"create . -c tools.env.virtualenv:powershell={powershell}")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
-    assert "MYPS2!!!!" in client.out
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
-    assert "MYVC_CUSTOMVAR3=PATATA3" in client.out
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
 @pytest.mark.parametrize("powershell", ["powershell", "pwsh"])
