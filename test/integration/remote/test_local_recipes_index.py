@@ -398,5 +398,5 @@ class TestUserChannel:
     def test_user_channel_requirement_only_at(self, c3i_user_channel_folder):
         tc = TestClient(light=True)
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
-        tc.run(f"graph info --requires=pkg/[*]@", assert_error=True)
+        tc.run(f"graph info --requires=pkg/[*]@")
         assert f"pkg/[*]: pkg/2.0" in tc.out
