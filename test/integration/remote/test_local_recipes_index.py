@@ -400,3 +400,9 @@ class TestUserChannel:
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
         tc.run(f"graph info --requires=pkg/[*]@")
         assert f"pkg/[*]: pkg/2.0" in tc.out
+
+        tc.run(f"graph info --requires=pkg/[<2]@", assert_error=True)
+        assert f" Package 'pkg/[<2]' not resolved" in tc.out
+
+        tc.run(f"graph info --requires=pkg/[<2]", assert_error=True)
+        assert f" Package 'pkg/[<2]' not resolved" in tc.out
