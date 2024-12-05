@@ -162,9 +162,8 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
 
 @pytest.mark.parametrize("lib, symlinks", [
     # symlinks == "real_file <- symlink1 <- symlink2 <- ... <- symlinkN"
-    ("mylib", "mylib.so <- mylib.1.0.0.so <- mylib.2.0.0.so.so"),
     # Issue related: https://github.com/conan-io/conan/issues/17417
-    ("libpng16", "libpng16.so.16.44.0 <- libpng16.so.16 <- libpng16.so <- libpng.so")
+    ("png", "libpng16.so.16.44.0 <- libpng16.so.16 <- libpng16.so <- libpng.so")
 ])
 @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
 def test_shared_link_locations_symlinks(lib, symlinks, conanfile):
