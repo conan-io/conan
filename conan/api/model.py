@@ -25,6 +25,7 @@ class Remote:
         self.disabled = disabled
         self.allowed_packages = allowed_packages
         self.remote_type = remote_type
+        self.caching = {}
 
     def __eq__(self, other):
         if other is None:
