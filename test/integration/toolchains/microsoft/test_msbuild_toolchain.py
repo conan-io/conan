@@ -8,7 +8,6 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("visual_studio")
-@pytest.mark.tool("clang", "16")
 @pytest.mark.parametrize(
     "compiler, version",
     [
@@ -28,6 +27,8 @@ def test_toolchain_win(compiler, version, runtime, runtime_type):
                 "compiler.runtime_type": runtime_type,
                 "build_type": "Release",
                 "arch": "x86_64"}
+    if compiler == "clang":
+        settings["compiler.runtime_version"] = "v144"
 
     # Build the profile according to the settings provided
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
