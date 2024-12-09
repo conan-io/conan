@@ -123,7 +123,13 @@ class ProfileLoader:
                    "conan_version": conan_version,
                    "detect_api": detect_api}
 
-        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        # If the profile is in the home profiles folder, use the profiles folder as search
+        # path too, to allow loading "common" profiles in common folders, not only children
+        loader_paths = base_path
+        if os.path.commonpath([profiles_folder]) == os.path.commonpath([profiles_folder,
+                                                                        profile_path]):
+            loader_paths = [base_path, profiles_folder]
+        rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
 
         try:
             text = rtemplate.render(context)
