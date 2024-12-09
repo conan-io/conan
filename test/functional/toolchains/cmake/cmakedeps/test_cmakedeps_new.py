@@ -218,6 +218,8 @@ class TestLibs:
             assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
             assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
 
+    # if not using cmake >= 3.23 the intermediate gamelib_test linkage fail
+    @pytest.mark.tool("cmake", "3.23")
     def test_multilevel_shared(self):
         # TODO: make this shared fixtures in conftest for multi-level shared testing
         c = TestClient(default_server_user=True)
