@@ -230,6 +230,26 @@ class TestLibs:
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=gamelib -d version=0.1 -d requires=engine/0.1")
+        cmake = textwrap.dedent("""\
+            cmake_minimum_required(VERSION 3.15)
+            project(gamelib CXX)
+
+            find_package(engine CONFIG REQUIRED)
+
+            add_library(gamelib src/gamelib.cpp)
+            target_include_directories(gamelib PUBLIC include)
+            target_link_libraries(gamelib PRIVATE engine::engine)
+
+            add_executable(gamelib_test src/gamelib_test.cpp)
+            target_link_libraries(gamelib_test PRIVATE gamelib)
+
+            set_target_properties(gamelib PROPERTIES PUBLIC_HEADER "include/gamelib.h")
+            install(TARGETS gamelib)
+            """)
+        # Testing that a local test executable links correctly with the new CMakeDeps
+        # It fails with the old CMakeDeps
+        c.save({"CMakeLists.txt": cmake,
+               "src/gamelib_test.cpp": '#include "gamelib.h"\nint main() { gamelib(); }'})
         c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
