@@ -131,7 +131,7 @@ class Node(object):
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
             down_require.required_nodes = require.required_nodes.copy()
-        down_require.required_nodes.append(self)
+        down_require.required_nodes.add(self)
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
