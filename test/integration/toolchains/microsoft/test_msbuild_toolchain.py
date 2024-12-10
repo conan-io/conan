@@ -7,7 +7,6 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.tool("visual_studio")
 @pytest.mark.parametrize(
     "compiler, version",
     [
@@ -35,10 +34,11 @@ def test_toolchain_win(compiler, version, runtime, runtime_type):
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.microsoft import MSBuildToolchain
+        from conan.tools.microsoft import MSBuildToolchain, VCVars
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             def generate(self):
+                VCVars(self)  # To not really requires VS installed
                 msbuild = MSBuildToolchain(self)
                 msbuild.properties["IncludeExternals"] = "true"
                 msbuild.generate()
