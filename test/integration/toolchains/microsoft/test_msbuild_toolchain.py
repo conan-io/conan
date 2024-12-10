@@ -34,17 +34,16 @@ def test_toolchain_win(compiler, version, runtime, runtime_type):
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.microsoft import MSBuildToolchain, VCVars
+        from conan.tools.microsoft import MSBuildToolchain
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             def generate(self):
-                VCVars(self)  # To not really requires VS installed
                 msbuild = MSBuildToolchain(self)
                 msbuild.properties["IncludeExternals"] = "true"
                 msbuild.generate()
             """)
     client.save({"conanfile.py": conanfile})
-    client.run("install . {}".format(settings))
+    client.run(f"install . {settings} -c tools.microsoft.msbuild:installation_path=")
     props = client.load("conantoolchain_release_x64.props")
     assert "<IncludeExternals>true</IncludeExternals>" in props
     assert "<LanguageStandard>stdcpp14</LanguageStandard>" in props
