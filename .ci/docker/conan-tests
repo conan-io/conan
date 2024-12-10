@@ -22,7 +22,7 @@ ENV PY36=3.6.15 \
     CLANGXX_14=/usr/bin/clang++-14 \
     BAZEL_6_5_0=6.5.0 \
     BAZEL_7_4_1=7.4.1 \
-    BAZEL_8_0_0=8.0.0 \
+    BAZEL_8_0_0=8.0.0
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
