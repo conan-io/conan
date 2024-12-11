@@ -76,7 +76,9 @@ def test_bazel_relative_paths():
         name = "dep_binaries",
         srcs = glob([
             "bin/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         visibility = ["//visibility:public"],
     )
     """)
@@ -180,7 +182,9 @@ def test_bazeldeps_and_tool_requires():
         srcs = glob([
             "bin1/**",
             "bin2/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         visibility = ["//visibility:public"],
     )
     """)

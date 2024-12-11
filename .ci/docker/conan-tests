@@ -20,8 +20,9 @@ ENV PY36=3.6.15 \
     GXX_11=/usr/bin/g++-11 \
     CLANG_14=/usr/bin/clang-14 \
     CLANGXX_14=/usr/bin/clang++-14 \
-    BAZEL_6_3_2=6.3.2 \
-    BAZEL_7_1_2=7.1.2
+    BAZEL_6_5_0=6.5.0 \
+    BAZEL_7_4_1=7.4.1 \
+    BAZEL_8_0_0=8.0.0
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -131,14 +132,19 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --set clang /usr/bin/clang-14 && \
     update-alternatives --set clang++ /usr/bin/clang++-14
 
-RUN mkdir -p /usr/share/bazel-$BAZEL_6_3_2/bin && \
-    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6_3_2}/bazel-${BAZEL_6_3_2}-linux-x86_64 && \
-    chmod +x bazel-${BAZEL_6_3_2}-linux-x86_64 && \
-    mv bazel-${BAZEL_6_3_2}-linux-x86_64 /usr/share/bazel-$BAZEL_6_3_2/bin/bazel && \
-    mkdir -p /usr/share/bazel-$BAZEL_7_1_2/bin && \
-    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_1_2}/bazel-${BAZEL_7_1_2}-linux-x86_64 && \
-    chmod +x bazel-${BAZEL_7_1_2}-linux-x86_64 && \
-    mv bazel-${BAZEL_7_1_2}-linux-x86_64 /usr/share/bazel-$BAZEL_7_1_2/bin/bazel
+RUN mkdir -p /usr/share/bazel-$BAZEL_6_5_0/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6_5_0}/bazel-${BAZEL_6_5_0}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_6_5_0}-linux-x86_64 && \
+    mv bazel-${BAZEL_6_5_0}-linux-x86_64 /usr/share/bazel-$BAZEL_6_5_0/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_7_4_1/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_4_1}/bazel-${BAZEL_7_4_1}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_7_4_1}-linux-x86_64 && \
+    mv bazel-${BAZEL_7_4_1}-linux-x86_64 /usr/share/bazel-$BAZEL_7_4_1/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_8_0_0/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_8_0_0}/bazel-${BAZEL_8_0_0}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_8_0_0}-linux-x86_64 && \
+    mv bazel-${BAZEL_8_0_0}-linux-x86_64 /usr/share/bazel-$BAZEL_8_0_0/bin/bazel
+
 
 USER conan
 WORKDIR $HOME
