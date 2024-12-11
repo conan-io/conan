@@ -24,10 +24,11 @@ class SettingsItem:
     - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
-    def __init__(self, definition, name, value):
+    def __init__(self, definition, name, value, cow=False):
         self._definition = definition  # range of possible values
         self._name = name  # settings.compiler
         self._value = value  # gcc
+        self._cow = cow
 
     @staticmethod
     def new(definition, name):
@@ -51,11 +52,7 @@ class SettingsItem:
     def copy(self):
         """ deepcopy, recursive
         """
-        if not isinstance(self._definition, dict):
-            definition = self._definition  # Not necessary to copy this, not mutable
-        else:
-            definition = {k: v.copy() for k, v in self._definition.items()}
-        return SettingsItem(definition, self._name, self._value)
+        return SettingsItem(self._definition, self._name, self._value, cow=True)
 
     def copy_conaninfo_settings(self):
         """ deepcopy, recursive
@@ -96,6 +93,9 @@ class SettingsItem:
         """ This is necessary to remove libcxx subsetting from compiler in config()
            del self.settings.compiler.stdlib
         """
+        if self._cow:
+            self._definition = {k: v.copy() for k, v in self._definition.items()}
+            self._cow = False
         child_setting = self._get_child(self._value)
         delattr(child_setting, item)
 
@@ -127,6 +127,9 @@ class SettingsItem:
         if item[0] == "_" or item.startswith("value"):
             return super(SettingsItem, self).__setattr__(item, value)
 
+        if self._cow:
+            self._definition = {k: v.copy() for k, v in self._definition.items()}
+            self._cow = False
         item = str(item)
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
@@ -180,7 +183,7 @@ class SettingsItem:
             subsetting.rm_safe(name)
 
 
-class Settings(object):
+class Settings2(object):
     def __init__(self, definition=None, name="settings", parent_value="settings"):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
@@ -359,3 +362,180 @@ class Settings(object):
         for key, element in self._data.items():
             ret[key] = element.possible_values()
         return ret
+
+
+class NewSettings:
+    def __init__(self, name="settings", value="settings", space=None):
+        self._name = name
+        self._value = value
+        self._data = {}
+        self._space = space  # {compiler: gcc: libcxx: libstdc++: kind: [hard, soft]}
+
+    def __str__(self):
+        return self._value or ""
+
+    def __contains__(self, value):
+        return value in (self._value or "")
+
+    @staticmethod
+    def loads(text):
+        try:
+            space = yaml.safe_load(text) or {}
+        except (yaml.YAMLError, AttributeError) as ye:
+            raise ConanException("Invalid settings.yml format: {}".format(ye))
+        return NewSettings(space={"settings": space})
+
+    def copy(self):
+        data = {k: v.copy() for k, v in self._data.items()}
+        settings = NewSettings(self._name, self._value, self._space)
+        settings._data = data
+        return settings
+
+    def copy_conaninfo_settings(self):
+        # FIXME: Relax ANY
+        data = {k: v.copy_conaninfo_settings() for k, v in self._data.items()}
+        settings = NewSettings(self._name, self._value, self._space)
+        settings._data = data
+        return settings
+
+    @staticmethod
+    def init(data):
+        def _stringify(d):
+            if d is None:
+                return
+            if isinstance(d, dict):
+                return {str(k): _stringify(v) for k, v in d.items()}
+            return [str(e) for e in d]
+
+        data = _stringify(data)
+        return NewSettings(space={"settings": data})
+
+    @staticmethod
+    def _check_value(name, value, space):
+        if value not in space:
+            values = list(space)
+            raise ConanException(f"Invalid setting '{value}' is not a valid '{name}' "
+                                 f"value.\nPossible values are {values}")
+
+    def __eq__(self, value):
+        self._check_value(self._name, value, self._space)
+        return self._value == value
+
+    def __setattr__(self, key, value):
+        if key.startswith("_"):
+            return super(NewSettings, self).__setattr__(key, value)
+
+        space = self._space.get(self._value)
+        values = space.get(key)
+        if values is None:
+            msg = f"'{self._name}.{key}' doesn't exist for '{self._value}'\n" \
+                  f"'{self._name}' possible configurations are {sorted(list(space.keys()))}"
+            raise ConanException(msg)
+        name = f"{self._name}.{key}"
+        self._check_value(name, value, values)
+        space = space[key]
+        self._data[key] = NewSettings(name, value, space=space)
+
+    def __getattr__(self, key):
+        space = self._space.get(self._value)
+        values = space.get(key)
+        if values is None:
+            raise ConanException(f"Setting '{key}' not defined in {space.keys()}")
+        try:
+            return self._data[key]
+        except KeyError:
+            return NewSettings(f"{self._name}.{key}", value="", space=values)
+
+    def get_safe(self, key, default=None):
+        try:
+            return getattr(self, key)._value
+        except ConanException:
+            return default
+
+    def __delattr__(self, key):
+        del self._data[key]
+
+    def rm_safe(self, name):
+        """ Removes the setting or subsetting from the definition. For example,
+        rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
+        of the current value of the "compiler"
+        """
+        if "." in name:
+            setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
+            try:
+                self._data[setting].rm_safe(remainder)  # call rm_safe("cppstd") for the "compiler"
+            except KeyError:
+                pass
+        else:
+            if name == "*":
+                self.clear()
+            else:
+                self._data.pop(name, None)
+
+    @property
+    def values_list(self):
+        result = []
+        for k, v in sorted(self._data.items()):
+            result.append((k, v._value))
+            child = v.values_list
+            for subk, subv in child:
+                result.append((f"{k}.{subk}", subv))
+        return result
+
+    def serialize(self):
+        """
+        Returns a dictionary with all the settings (and sub-settings) as ``field: value``
+        """
+        return {k: v for k, v in self.values_list}
+
+    def validate(self):
+        # FIXME: Really check
+        for k, v in self._data.items():
+            v.validate()
+
+    def items(self):
+        return self.values_list
+
+    def dumps(self):
+        result = [f"{k}={v}" for k, v in self.values_list]
+        return '\n'.join(result)
+
+    def update_values(self, values, raise_undefined=True):
+        """
+        Receives a list of tuples (compiler.version, value)
+        This is more an updater than a setter.
+        """
+        self._frozen = False  # Could be restored at the end, but not really necessary
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
+            list_settings = name.split(".")
+            attr = self
+            try:
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+                value = str(value) if value is not None else None
+                setattr(attr, list_settings[-1], value)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                if raise_undefined:
+                    raise
+
+    def constrained(self, constraint_def):
+        """ allows to restrict a given Settings object with the input of another Settings object
+        1. The other Settings object MUST be exclusively a subset of the former.
+           No additions allowed
+        2. If the other defines {"compiler": None} means to keep the full specification
+        """
+        constraint_def = constraint_def or []
+        if not isinstance(constraint_def, (list, tuple, set)):
+            raise ConanException("Please defines settings as a list or tuple")
+
+        # FIXME
+        #for field in constraint_def:
+        #    self._check_field(field)
+
+        to_remove = [k for k in self._data if k not in constraint_def]
+        for k in to_remove:
+            del self._data[k]
+
+
+Settings = NewSettings

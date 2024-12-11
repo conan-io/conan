@@ -5,7 +5,7 @@ import pytest
 
 from conan.internal.default_settings import default_settings_yml
 from conan.errors import ConanException
-from conans.model.settings import Settings, bad_value_msg, undefined_field
+from conans.model.settings import Settings, bad_value_msg, undefined_field, NewSettings
 
 
 def undefined_value(v):
@@ -503,3 +503,117 @@ def test_set_value_non_existing_values():
     # it does not raise any error
     settings.update_values([("foo", "A")], raise_undefined=False)
     settings.update_values([("foo.bar", "A")], raise_undefined=False)
+
+
+def test_copy():
+    settings = Settings.loads(default_settings_yml)
+    settings.compiler = "gcc"
+    settings.compiler.libcxx = "libstdc++"
+    import time
+    t = time.time()
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
+    for _ in range(10000):
+        new = settings.copy()
+    pr.disable()
+    print(time.time() - t)
+
+    from pstats import SortKey
+    sortby = SortKey.CUMULATIVE
+    import pstats
+    ps = pstats.Stats(pr).sort_stats(sortby)
+    ps.print_stats()
+
+
+@pytest.mark.parametrize("settings_class", [Settings, NewSettings])
+def test_new_settings(settings_class):
+    settings_yml = textwrap.dedent("""\
+        os: [Windows, Linux]
+        compiler:
+            gcc:
+                libcxx:
+                    libstdc++:
+                        "kind": ["hardened", "soft"]
+                    libstdc++11:
+        build_type: [None, Debug, Release]
+        """)
+
+    settings = settings_class.loads(settings_yml)
+
+    with pytest.raises(ConanException) as e:
+        settings.nonexist = "whatever"
+    assert "'settings.nonexist' doesn't exist for 'settings'\n" \
+           "'settings' possible configurations are ['build_type', 'compiler', 'os']" in str(e.value)
+
+    with pytest.raises(ConanException) as e:
+        settings.os = "Macos"
+    assert "Invalid setting 'Macos' is not a valid 'settings.os' value.\n" \
+           "Possible values are ['Windows', 'Linux']" in str(e.value)
+    with pytest.raises(ConanException) as e:
+        _ = (settings.os == "Macos")
+    assert "Invalid setting 'Macos' is not a valid 'settings.os' value.\n" \
+           "Possible values are ['Windows', 'Linux']" in str(e.value)
+    with pytest.raises(ConanException) as e:
+        settings.compiler = "mycomp"
+    assert "Invalid setting 'mycomp' is not a valid 'settings.compiler' value.\n" \
+           "Possible values are ['gcc']" in str(e.value)
+    with pytest.raises(ConanException) as e:
+        _ = (settings.compiler == "mycomp")
+    assert "Invalid setting 'mycomp' is not a valid 'settings.compiler' value.\n" \
+           "Possible values are ['gcc']" in str(e.value)
+
+    settings.os = "Windows"
+    assert settings.os == "Windows"
+    assert settings.os != "Linux"
+    assert settings.values_list == [('os', 'Windows')]
+    assert "os=Windows" in settings.dumps()
+
+    settings.compiler = "gcc"
+    assert settings.compiler == "gcc"
+    with pytest.raises(ConanException) as e:
+        settings.compiler.nonexist = "whatever"
+    assert "'settings.compiler.nonexist' doesn't exist for 'gcc'\n" \
+           "'settings.compiler' possible configurations are ['libcxx']" in str(e.value)
+
+    settings.compiler.libcxx = "libstdc++"
+    assert settings.compiler == "gcc"
+    assert settings.compiler.libcxx == "libstdc++"
+    assert settings.compiler.libcxx != "libstdc++11"
+    assert settings.values_list == [('compiler', 'gcc'),
+                                    ('compiler.libcxx', 'libstdc++'),
+                                    ('os', 'Windows')]
+    expected = textwrap.dedent("""\
+        compiler=gcc
+        compiler.libcxx=libstdc++
+        os=Windows""")
+    assert expected in settings.dumps()
+
+    settings.compiler.libcxx.kind = "hardened"
+    assert settings.compiler == "gcc"
+    assert settings.compiler.libcxx == "libstdc++"
+    assert settings.compiler.libcxx.kind == "hardened"
+    assert settings.values_list == [('compiler', 'gcc'),
+                                    ('compiler.libcxx', 'libstdc++'),
+                                    ('compiler.libcxx.kind', 'hardened'),
+                                    ('os', 'Windows')]
+    expected = textwrap.dedent("""\
+        compiler=gcc
+        compiler.libcxx=libstdc++
+        compiler.libcxx.kind=hardened
+        os=Windows""")
+    assert expected in settings.dumps()
+
+    # Now remove a setting
+    settings.rm_safe("compiler.libcxx")
+    assert settings.values_list == [('compiler', 'gcc'),
+                                    ('os', 'Windows')]
+    expected = textwrap.dedent("""\
+            compiler=gcc
+            os=Windows""")
+    assert expected in settings.dumps()
+
+    del settings.compiler
+    assert settings.values_list == [('os', 'Windows')]
+    expected = "os=Windows"
+    assert expected in settings.dumps()
