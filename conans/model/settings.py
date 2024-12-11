@@ -282,7 +282,7 @@ class Settings(object):
         del self._data[field]
 
     def __setattr__(self, field, value):
-        if field[0] == "_" or field.startswith("values"):
+        if field[0] == "_":
             return super(Settings, self).__setattr__(field, value)
 
         self._check_field(field)

@@ -116,7 +116,7 @@ class Node(object):
             return
 
         if src_node is not None:  # This happens when closing a loop, and we need to know the edge
-            d = [d for d in self.dependants if d.src is src_node][0]  # TODO: improve ugly
+            d = next(d for d in self.dependants if d.src is src_node)
         else:
             assert len(self.dependants) == 1
             d = self.dependants[0]
@@ -131,7 +131,7 @@ class Node(object):
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
             down_require.required_nodes = require.required_nodes.copy()
-        down_require.required_nodes.append(self)
+        down_require.required_nodes.add(self)
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
@@ -216,7 +216,6 @@ class Node(object):
 
     def add_edge(self, edge):
         if edge.src == self:
-            assert edge not in self.dependencies
             self.dependencies.append(edge)
         else:
             self.dependants.append(edge)
@@ -360,8 +359,8 @@ class DepsGraph(object):
     def add_node(self, node):
         self.nodes.append(node)
 
-    def add_edge(self, src, dst, require):
-        assert src in self.nodes and dst in self.nodes
+    @staticmethod
+    def add_edge(src, dst, require):
         edge = Edge(src, dst, require)
         src.add_edge(edge)
         dst.add_edge(edge)
