@@ -36,7 +36,7 @@ class Requirement:
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
-        self.required_nodes = []  # store which intermediate nodes are required, to compute "Skip"
+        self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -260,7 +260,7 @@ class Requirement:
         # current require already defined it or not
         if self.package_id_mode is None:
             self.package_id_mode = other.package_id_mode
-        self.required_nodes.extend(other.required_nodes)
+        self.required_nodes.update(other.required_nodes)
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """

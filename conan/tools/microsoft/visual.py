@@ -288,17 +288,17 @@ def _vcvars_versions(conanfile):
             return None, None
         toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
         vs_version = {"v140": "14",
-                        "v141": "15",
-                        "v142": "16",
-                        "v143": "17",
-                        "v144": "17"}.get(toolset_version)
+                      "v141": "15",
+                      "v142": "16",
+                      "v143": "17",
+                      "v144": "17"}.get(toolset_version)
         if vs_version is None:
             raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
         vcvars_ver = {"v140": "14.0",
-                        "v141": "14.1",
-                        "v142": "14.2",
-                        "v143": "14.3",
-                        "v144": "14.4"}.get(toolset_version)
+                      "v141": "14.1",
+                      "v142": "14.2",
+                      "v143": "14.3",
+                      "v144": "14.4"}.get(toolset_version)
         if vcvars_ver and msvc_update is not None:
             vcvars_ver += f"{msvc_update}"
     else:

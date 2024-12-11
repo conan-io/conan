@@ -68,7 +68,8 @@ def test_deduce_shared_link_locations(conanfile):
 @pytest.mark.parametrize("lib_name, libs", [
     ("liblog4cxx.so.15.2.0", ["log4cxx"]),
     ("libapr-1.0.dylib", ["apr-1"]),
-    ("libapr-1.so.0.7.4", ["apr-1"])
+    ("libapr-1.so.0.7.4", ["apr-1"]),
+    ("libgrpc++_alts.so.1.67.1", ["grpc++_alts"])
 ])
 def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     """
