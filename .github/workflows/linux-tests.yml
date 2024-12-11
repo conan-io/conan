@@ -19,7 +19,7 @@ jobs:
   build_container:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.set_tag.outputs.tag }}
+      image_tag: ${{ steps.dockerfile_hash.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,13 +40,17 @@ jobs:
       - name: Check if image exists
         id: check_image
         run: |
-          docker manifest inspect ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} || echo "no-image"
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} > /dev/null 2>&1; then
+            echo "status=exists" >> $GITHUB_OUTPUT
+          else
+            echo "status=no-image" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push image if not exists
-        if: steps.pull_image.outputs.stdout == 'no-image'
+        if: steps.check_image.outputs.status == 'no-image'
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.set_tag.outputs.tag }} -f ./.ci/docker/conan-tests .
-          docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.set_tag.outputs.tag }}
+          docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} -f ./.ci/docker/conan-tests .
+          docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }}
 
   linux_test_suite:
     needs: build_container
@@ -94,6 +98,7 @@ jobs:
           fi
 
   linux_docker_tests:
+    needs: build_container
     runs-on: ubuntu-latest
     name: Docker Runner Tests
     strategy:
