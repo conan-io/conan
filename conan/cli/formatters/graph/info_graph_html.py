@@ -24,7 +24,7 @@ graph_info_html = r"""
         </style>
 
         <div style="display: grid; grid-template-columns: 75% 25%; grid-template-rows: 30px auto; height: 100vh;">
-            <div id="mylegend" style="background-color: lightgrey; grid-column-end: span 2;"></div>
+            <div id="mylegend" style="background-color: lightgrey; grid-column-end: span 2;height: 100%"></div>
             <div id="mynetwork"></div>
             <div style="background-color: lightgrey;min-height:100%;height:0;overflow-y: auto;">
                 <div>

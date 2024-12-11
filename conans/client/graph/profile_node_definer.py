@@ -31,8 +31,9 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     else:
         _initialize_conanfile(conanfile, profile_host, settings_host, ref)
         # Host profile with some build profile information
-        conanfile.buildenv_build = profile_build.buildenv.get_profile_env(ref, conanfile._conan_is_consumer)
-        conanfile.conf_build = profile_build.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)
+        is_consumer = conanfile._conan_is_consumer  # noqa
+        conanfile.buildenv_build = profile_build.buildenv.get_profile_env(ref, is_consumer)
+        conanfile.conf_build = profile_build.conf.get_conanfile_conf(ref, is_consumer)
     conanfile.settings_build = settings_build
     conanfile.settings_target = None
 
@@ -60,7 +61,7 @@ def _per_package_settings(conanfile, profile, ref):
         pkg_settings = []
 
         for pattern, settings in package_settings_values.items():
-            if ref_matches(ref, pattern, conanfile._conan_is_consumer):
+            if ref_matches(ref, pattern, conanfile._conan_is_consumer):  # noqa
                 pkg_settings.extend(settings)
 
         if pkg_settings:
@@ -80,7 +81,8 @@ def _initialize_conanfile(conanfile, profile, settings, ref):
     conanfile.settings._frozen = True
     conanfile._conan_buildenv = profile.buildenv
     conanfile._conan_runenv = profile.runenv
-    conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
+    # Maybe this can be done lazy too
+    conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # noqa
 
 
 def consumer_definer(conanfile, profile_host, profile_build):

@@ -76,7 +76,9 @@ def test_bazel_relative_paths():
         name = "dep_binaries",
         srcs = glob([
             "bin/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         visibility = ["//visibility:public"],
     )
     """)
@@ -180,7 +182,9 @@ def test_bazeldeps_and_tool_requires():
         srcs = glob([
             "bin1/**",
             "bin2/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         visibility = ["//visibility:public"],
     )
     """)
@@ -679,8 +683,14 @@ def test_tool_requires():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import save
 
         class PkgBazelConan(ConanFile):
+
+            def package(self):
+                import os
+                libdirs = os.path.join(self.package_folder, "lib")
+                save(self, os.path.join(libdirs, "libtool.lib"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["libtool"]
@@ -690,8 +700,15 @@ def test_tool_requires():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import save
 
         class PkgBazelConan(ConanFile):
+
+            def package(self):
+                import os
+                libdirs = os.path.join(self.package_folder, "lib")
+                save(self, os.path.join(libdirs, "other_cmp1.lib"), "")
+                save(self, os.path.join(libdirs, "other_cmp2.lib"), "")
 
             def package_info(self):
                 self.cpp_info.set_property("bazel_target_name", "libother")
@@ -726,6 +743,20 @@ def test_tool_requires():
     client.run("install . -pr:h default -pr:b default")
     assert 'name = "tool"' in client.load("build-tool/BUILD.bazel")
     assert textwrap.dedent("""\
+    # Components precompiled libs
+    cc_import(
+        name = "other_cmp1_precompiled",
+        static_library = "lib/other_cmp1.lib",
+    )
+
+    cc_import(
+        name = "other_cmp2_precompiled",
+        static_library = "lib/other_cmp2.lib",
+    )
+
+
+    # Root package precompiled libs
+
     # Components libraries declaration
     cc_library(
         name = "component1",
@@ -736,6 +767,10 @@ def test_tool_requires():
             "include",
         ],
         visibility = ["//visibility:public"],
+        deps = [
+            # do not sort
+            ":other_cmp1_precompiled",
+        ],
     )
 
     cc_library(
@@ -747,6 +782,10 @@ def test_tool_requires():
             "include",
         ],
         visibility = ["//visibility:public"],
+        deps = [
+            # do not sort
+            ":other_cmp2_precompiled",
+        ],
     )
 
     cc_library(
@@ -800,9 +839,14 @@ def test_tool_requires_not_created_if_no_activated():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import save
 
         class PkgBazelConan(ConanFile):
 
+            def package(self):
+                import os
+                libdirs = os.path.join(self.package_folder, "lib")
+                save(self, os.path.join(libdirs, "libtool.lib"), "")
             def package_info(self):
                 self.cpp_info.libs = ["libtool"]
         """)
@@ -833,9 +877,14 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import save
 
         class PkgBazelConan(ConanFile):
 
+            def package(self):
+                import os
+                libdirs = os.path.join(self.package_folder, "lib")
+                save(self, os.path.join(libdirs, "libtool.lib"), "")
             def package_info(self):
                 self.cpp_info.libs = ["libtool"]
         """)
@@ -1137,7 +1186,7 @@ def test_shared_windows_find_libraries():
 
     cc_import(
         name = "libssl_precompiled",
-        shared_library = "bin/libcrypto-3-x64.dll",
+        shared_library = "bin/libssl-3-x64.dll",
         interface_library = "lib/libssl.lib",
     )
     """)

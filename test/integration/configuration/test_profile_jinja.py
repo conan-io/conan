@@ -55,6 +55,24 @@ def test_profile_template_import():
     assert "os=FreeBSD" in client.out
 
 
+def test_profile_template_import_sibling():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% import "sub2/profile_vars" as vars %}
+        [settings]
+        os = {{ vars.a }}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        """)
+    client.save_home({"profiles/sub1/profile1": tpl1,
+                      "profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -pr=sub1/profile1")
+    assert "os=FreeBSD" in client.out
+
+
 def test_profile_template_include():
     client = TestClient()
     tpl1 = textwrap.dedent("""
@@ -69,6 +87,42 @@ def test_profile_template_include():
                  "profile1": tpl1,
                  "profile_vars": tpl2})
     client.run("install . -pr=profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include_sibling():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% include "sub2/profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
+        """)
+    client.save_home({"profiles/sub1/profile1": tpl1,
+                      "profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -pr=sub1/profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include_from_cache():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% include "sub2/profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
+        """)
+    client.save_home({"profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile(),
+                 "sub1/profile1": tpl1})
+    client.run("install . -pr=sub1/profile1")
     assert "os=FreeBSD" in client.out
 
 

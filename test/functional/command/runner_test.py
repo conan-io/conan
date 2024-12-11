@@ -36,6 +36,7 @@ def dockerfile_path(name=None):
     return path
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared():
     """
@@ -44,7 +45,7 @@ def test_create_docker_runner_cache_shared():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -55,7 +56,7 @@ def test_create_docker_runner_cache_shared():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -79,6 +80,7 @@ def test_create_docker_runner_cache_shared():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_from_cache():
     """
@@ -87,7 +89,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -98,7 +100,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -122,6 +124,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_folder():
     """
@@ -130,7 +133,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -141,7 +144,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -165,6 +168,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
@@ -173,7 +177,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -184,7 +188,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     profile_host_copy = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -202,7 +206,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     profile_host_clean = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -235,6 +239,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_profile_default_folder():
     """
@@ -243,7 +248,7 @@ def test_create_docker_runner_profile_default_folder():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -253,7 +258,7 @@ def test_create_docker_runner_profile_default_folder():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -280,6 +285,7 @@ def test_create_docker_runner_profile_default_folder():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_dockerfile_file_path():
     """
@@ -288,7 +294,7 @@ def test_create_docker_runner_dockerfile_file_path():
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -298,7 +304,7 @@ def test_create_docker_runner_dockerfile_file_path():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -324,9 +330,9 @@ def test_create_docker_runner_dockerfile_file_path():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
     conanfile = textwrap.dedent("""
     import os
@@ -367,7 +373,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
                                             calls=["hello"])})
     profile = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -383,12 +389,13 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     remove=True
     """)
     client.save({"profile": profile})
-    settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type, shared)
+    settings = "-s os=Linux -s build_type={} -o hello/*:shared={}".format(build_type, shared)
     # create should also work
     client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile():
     """
@@ -408,7 +415,7 @@ def test_create_docker_runner_from_configfile():
 
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -418,7 +425,7 @@ def test_create_docker_runner_from_configfile():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -443,12 +450,18 @@ def test_create_docker_runner_from_configfile():
     assert "Removing container" in client.out
 
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_from_configfile_with_args():
     """
     Tests the ``conan create . ``
     """
     client = TestClient()
+
+    # Ensure the network exists
+    docker_client = docker.from_env()
+    docker_client.networks.create("my-network")
+
     configfile = textwrap.dedent(f"""
         image: conan-runner-default-test-with-args
         build:
@@ -458,13 +471,14 @@ def test_create_docker_runner_from_configfile_with_args():
                 BASE_IMAGE: ubuntu:22.04
         run:
             name: my-conan-runner-container-with-args
+            network: my-network
         """)
     client.save({"configfile.yaml": configfile})
 
 
     profile_build = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -474,7 +488,7 @@ def test_create_docker_runner_from_configfile_with_args():
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17
@@ -498,7 +512,9 @@ def test_create_docker_runner_from_configfile_with_args():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
+    docker_client.networks.get("my-network").remove()
 
+@pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_default_build_profile():
     """
@@ -508,7 +524,7 @@ def test_create_docker_runner_default_build_profile():
 
     profile_host = textwrap.dedent(f"""\
     [settings]
-    arch=x86_64
+    arch={{{{ detect_api.detect_arch() }}}}
     build_type=Release
     compiler=gcc
     compiler.cppstd=gnu17

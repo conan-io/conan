@@ -68,6 +68,10 @@ def print_graph_basic(graph):
                        "it might be removed in 3.0.")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
+    for req in graph.resolved_ranges:
+        if str(req.version) == "[]":
+            output.warning("Empty version range usage is discouraged. Use [*] instead", warn_tag="deprecated")
+            break
 
     overrides = graph.overrides()
     if overrides:
@@ -91,6 +95,7 @@ def print_graph_basic(graph):
                     output.info(f"        {src_ref}->{option}={conflict_value}", Color.BRIGHT_CYAN)
         output.info("    It is recommended to define options values in profiles, not in recipes",
                     Color.BRIGHT_CYAN)
+        output.warning("There are options conflicts in the dependency graph", warn_tag="risk")
 
 
 def print_graph_packages(graph):

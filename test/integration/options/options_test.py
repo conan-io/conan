@@ -744,11 +744,16 @@ class TestImportantOptions:
 
 class TestConflictOptionsWarnings:
 
-    def test_options_warnings(self):
+    @pytest.mark.parametrize("important", [True, False])
+    def test_options_warnings(self, important):
         c = TestClient()
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3], default=1)
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
-        libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1", options={"myoption": 2})
+        if important:
+            libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1") \
+                                              .with_default_option("liba*:myoption!", 2)
+        else:
+            libc = GenConanfile("libc", "0.1").with_requirement("liba/0.1", options={"myoption": 2})
         app = GenConanfile().with_requires("libb/0.1", "libc/0.1")
 
         c.save({"liba/conanfile.py": liba,
@@ -767,3 +772,18 @@ class TestConflictOptionsWarnings:
                 It is recommended to define options values in profiles, not in recipes
             """)
         assert expected in c.out
+        assert "WARN: risk: There are options conflicts in the dependency graph" in c.out
+
+
+def test_get_safe_none_option_checks():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("foo", "1.0")
+            .with_package("self.output.info(f'get_safe is None: {self.options.get_safe(\"myoption\") is None}')",
+                          "self.output.info(f'get_safe is not None: {self.options.get_safe(\"myoption\") is not None}')",
+                          "self.output.info(f'get_safe == None: {self.options.get_safe(\"myoption\") == None}')",
+                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')" )})
+    tc.run("create .")
+    assert "get_safe is None: True" in tc.out
+    assert "get_safe is not None: False" in tc.out
+    assert "get_safe == None: True" in tc.out
+    assert "get_safe != None: False" in tc.out
