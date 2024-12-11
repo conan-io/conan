@@ -365,10 +365,21 @@ class Settings2(object):
 
 
 class NewSettings:
-    def __init__(self, name="settings", value="settings", space=None):
+    def __init__(self, initial_data=None, name="settings", value="settings", space=None):
         self._name = name
         self._value = value
         self._data = {}
+        if initial_data is not None:
+            assert space is None
+
+            def _stringify(d):
+                if d is None:
+                    return
+                if isinstance(d, dict):
+                    return {str(k): _stringify(v) for k, v in d.items()}
+                return [str(e) if e is not None else None for e in d]
+
+            space = {"settings": _stringify(initial_data)}
         self._space = space  # {compiler: gcc: libcxx: libstdc++: kind: [hard, soft]}
 
     def __str__(self):
@@ -380,42 +391,42 @@ class NewSettings:
     @staticmethod
     def loads(text):
         try:
-            space = yaml.safe_load(text) or {}
+            data = yaml.safe_load(text) or {}
         except (yaml.YAMLError, AttributeError) as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
-        return NewSettings(space={"settings": space})
+        return NewSettings(initial_data=data)
 
     def copy(self):
         data = {k: v.copy() for k, v in self._data.items()}
-        settings = NewSettings(self._name, self._value, self._space)
+        settings = NewSettings(name=self._name, value=self._value, space=self._space)
         settings._data = data
         return settings
 
     def copy_conaninfo_settings(self):
         # FIXME: Relax ANY
         data = {k: v.copy_conaninfo_settings() for k, v in self._data.items()}
-        settings = NewSettings(self._name, self._value, self._space)
+        settings = NewSettings(name=self._name, value=self._value, space=self._space)
         settings._data = data
         return settings
 
     @staticmethod
-    def init(data):
-        def _stringify(d):
-            if d is None:
-                return
-            if isinstance(d, dict):
-                return {str(k): _stringify(v) for k, v in d.items()}
-            return [str(e) for e in d]
-
-        data = _stringify(data)
-        return NewSettings(space={"settings": data})
-
-    @staticmethod
     def _check_value(name, value, space):
-        if value not in space:
+        if value not in space and "ANY" not in space:
             values = list(space)
+            url = "http://docs.conan.io/2/knowledge/faq.html#error-invalid-setting"
             raise ConanException(f"Invalid setting '{value}' is not a valid '{name}' "
-                                 f"value.\nPossible values are {values}")
+                                 f'value.\nPossible values are {values}\nRead "{url}"')
+
+    def _check_field(self, field):
+        if self._value is None:
+            raise ConanException(f"'{self._name}' value not defined")
+        space = self._space.get(self._value)
+        values = space.get(field)
+        if values is None:
+            msg = f"'{self._name}.{field}' doesn't exist for '{self._value}'\n" \
+                  f"'{self._name}' possible configurations are {sorted(list(space.keys()))}"
+            raise ConanException(msg)
+        return values
 
     def __eq__(self, value):
         self._check_value(self._name, value, self._space)
@@ -425,32 +436,29 @@ class NewSettings:
         if key.startswith("_"):
             return super(NewSettings, self).__setattr__(key, value)
 
-        space = self._space.get(self._value)
-        values = space.get(key)
-        if values is None:
-            msg = f"'{self._name}.{key}' doesn't exist for '{self._value}'\n" \
-                  f"'{self._name}' possible configurations are {sorted(list(space.keys()))}"
-            raise ConanException(msg)
+        child_space = self._check_field(key)
         name = f"{self._name}.{key}"
-        self._check_value(name, value, values)
-        space = space[key]
-        self._data[key] = NewSettings(name, value, space=space)
+        value = str(value)
+        self._check_value(name, value, child_space)
+        self._data[key] = NewSettings(name=name, value=value, space=child_space)
 
     def __getattr__(self, key):
-        space = self._space.get(self._value)
-        values = space.get(key)
-        if values is None:
-            raise ConanException(f"Setting '{key}' not defined in {space.keys()}")
+        child_space = self._check_field(key)
         try:
             return self._data[key]
         except KeyError:
-            return NewSettings(f"{self._name}.{key}", value="", space=values)
+            return NewSettings(name=f"{self._name}.{key}", value=None, space=child_space)
 
     def get_safe(self, key, default=None):
         try:
-            return getattr(self, key)._value
+            tmp = self
+            for prop in key.split("."):
+                tmp = getattr(tmp, prop, None)
         except ConanException:
             return default
+        if tmp is not None and tmp._value is not None:  # In case of subsettings is None
+            return tmp._value
+        return default
 
     def __delattr__(self, key):
         del self._data[key]
@@ -468,7 +476,7 @@ class NewSettings:
                 pass
         else:
             if name == "*":
-                self.clear()
+                self._data.clear()
             else:
                 self._data.pop(name, None)
 
@@ -529,13 +537,18 @@ class NewSettings:
         if not isinstance(constraint_def, (list, tuple, set)):
             raise ConanException("Please defines settings as a list or tuple")
 
-        # FIXME
-        #for field in constraint_def:
-        #    self._check_field(field)
+        for field in constraint_def:
+            self._check_field(field)
 
         to_remove = [k for k in self._data if k not in constraint_def]
         for k in to_remove:
             del self._data[k]
+
+    def possible_values(self):
+        """Check the range of values of the definition of a setting
+        """
+        # FIXME
+        return self._space["settings"] if self._name == "settings" else self._space
 
 
 Settings = NewSettings

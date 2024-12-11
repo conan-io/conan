@@ -32,7 +32,8 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing", assert_error=True)
-        self.assertIn("ERROR: settings.yml: null setting can't have subsettings", client.out)
+        self.assertIn("ERROR: The recipe pkg/0.1@lasote/testing is constraining settings. "
+                      "'settings.compiler' doesn't exist for 'settings'", client.out)
 
     def test_settings_constraint_error_type(self):
         # https://github.com/conan-io/conan/issues/3022

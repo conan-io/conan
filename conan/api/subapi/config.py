@@ -187,4 +187,4 @@ class ConfigAPI:
 
             appending_recursive_dict_update(settings, settings_user)
 
-        return Settings.init(settings)
+        return Settings(settings)
