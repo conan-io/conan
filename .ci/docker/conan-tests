@@ -9,20 +9,20 @@ ENV PY36=3.6.15 \
     PY39=3.9.2 \
     PY312=3.12.3 \
     PY313=3.13.0 \
-    CMAKE_3_15_7=/usr/share/cmake-3.15.7/bin/cmake \
-    CMAKE_3_16_9=/usr/share/cmake-3.16.9/bin/cmake \
-    CMAKE_3_17_5=/usr/share/cmake-3.17.5/bin/cmake \
-    CMAKE_3_19_7=/usr/share/cmake-3.19.7/bin/cmake \
-    CMAKE_3_23_5=/usr/share/cmake-3.23.5/bin/cmake \
+    CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
+    CMAKE_3_16=/usr/share/cmake-3.16.9/bin/cmake \
+    CMAKE_3_17=/usr/share/cmake-3.17.5/bin/cmake \
+    CMAKE_3_19=/usr/share/cmake-3.19.7/bin/cmake \
+    CMAKE_3_23=/usr/share/cmake-3.23.5/bin/cmake \
     GCC_9=/usr/bin/gcc-9 \
     GXX_9=/usr/bin/g++-9 \
     GCC_11=/usr/bin/gcc-11 \
     GXX_11=/usr/bin/g++-11 \
     CLANG_14=/usr/bin/clang-14 \
     CLANGXX_14=/usr/bin/clang++-14 \
-    BAZEL_6_5_0=6.5.0 \
-    BAZEL_7_4_1=7.4.1 \
-    BAZEL_8_0_0=8.0.0
+    BAZEL_6=6.5.0 \
+    BAZEL_7=7.4.1 \
+    BAZEL_8=8.0.0
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -115,11 +115,11 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     tar -xvzf cmake-3.19.7-Linux-x86_64.tar.gz && mv cmake-3.19.7-Linux-x86_64 /usr/share/cmake-3.19.7 && \
     wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz   && \
     tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15_7 10 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16_9 20 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17_5 30 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19_7 40 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23_5 50
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
@@ -132,18 +132,18 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --set clang /usr/bin/clang-14 && \
     update-alternatives --set clang++ /usr/bin/clang++-14
 
-RUN mkdir -p /usr/share/bazel-$BAZEL_6_5_0/bin && \
-    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6_5_0}/bazel-${BAZEL_6_5_0}-linux-x86_64 && \
-    chmod +x bazel-${BAZEL_6_5_0}-linux-x86_64 && \
-    mv bazel-${BAZEL_6_5_0}-linux-x86_64 /usr/share/bazel-$BAZEL_6_5_0/bin/bazel && \
-    mkdir -p /usr/share/bazel-$BAZEL_7_4_1/bin && \
-    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7_4_1}/bazel-${BAZEL_7_4_1}-linux-x86_64 && \
-    chmod +x bazel-${BAZEL_7_4_1}-linux-x86_64 && \
-    mv bazel-${BAZEL_7_4_1}-linux-x86_64 /usr/share/bazel-$BAZEL_7_4_1/bin/bazel && \
-    mkdir -p /usr/share/bazel-$BAZEL_8_0_0/bin && \
-    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_8_0_0}/bazel-${BAZEL_8_0_0}-linux-x86_64 && \
-    chmod +x bazel-${BAZEL_8_0_0}-linux-x86_64 && \
-    mv bazel-${BAZEL_8_0_0}-linux-x86_64 /usr/share/bazel-$BAZEL_8_0_0/bin/bazel
+RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6}/bazel-${BAZEL_6}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_6}-linux-x86_64 && \
+    mv bazel-${BAZEL_6}-linux-x86_64 /usr/share/bazel-$BAZEL_6/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_7/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7}/bazel-${BAZEL_7}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_7}-linux-x86_64 && \
+    mv bazel-${BAZEL_7}-linux-x86_64 /usr/share/bazel-$BAZEL_7/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_8/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_8}/bazel-${BAZEL_8}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_8}-linux-x86_64 && \
+    mv bazel-${BAZEL_8}-linux-x86_64 /usr/share/bazel-$BAZEL_8/bin/bazel
 
 
 USER conan

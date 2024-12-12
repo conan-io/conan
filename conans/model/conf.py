@@ -322,7 +322,7 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices:
+            if choices is not None and v not in choices and v is not None:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
