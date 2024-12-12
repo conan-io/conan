@@ -548,7 +548,8 @@ class EnvVars:
                 is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
                 ConanOutput().warning(
                     "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
-                    "Please use 'powershell' or 'pwsh'.", warn_tag="deprecated"
+                    "Please use 'powershell' or 'pwsh'. "
+                    "Use `tools.env.virtualenv:powershell=!` to unset the conf, equivalent to the old False value behaviour", warn_tag="deprecated"
                 )
             except ConanException:
                 is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell", "pwsh"])
