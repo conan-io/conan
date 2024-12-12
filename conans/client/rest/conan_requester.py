@@ -97,20 +97,11 @@ class _SourceURLCredentials:
 
 
 class ConanRequester:
+    _http_requester_imp = None
 
     def __init__(self, config, cache_folder=None):
-        # TODO: Make all this lazy, to avoid fully configuring Requester, for every api call
-        #  even if it doesn't use it
-        # FIXME: Trick for testing when requests is mocked
-        if hasattr(requests, "Session"):
-            self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=self._get_retries(config))
-            self._http_requester.mount("http://", adapter)
-            self._http_requester.mount("https://", adapter)
-        else:
-            self._http_requester = requests
-
         self._url_creds = _SourceURLCredentials(cache_folder)
+        self._max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
@@ -123,9 +114,21 @@ class ConanRequester:
                                    platform.machine()])
         self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
 
-    @staticmethod
-    def _get_retries(config):
-        retry = config.get("core.net.http:max_retries", default=2, check_type=int)
+    @property
+    def _http_requester(self):
+        if ConanRequester._http_requester_imp is None:
+            # FIXME: Trick for testing when requests is mocked
+            if hasattr(requests, "Session"):
+                ConanRequester._http_requester_imp = requests.Session()
+                adapter = HTTPAdapter(max_retries=self._get_retries())
+                ConanRequester._http_requester_imp.mount("http://", adapter)
+                ConanRequester._http_requester_imp.mount("https://", adapter)
+            else:
+                ConanRequester._http_requester_imp = requests
+        return ConanRequester._http_requester_imp
+
+    def _get_retries(self):
+        retry = self._max_retries
         if retry == 0:
             return 0
         retry_status_code_set = {
