@@ -52,13 +52,7 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         raise ConanException("Cannot wrap command with different envs,"
                              "{} - {}".format(bats+ps1s, shs))
 
-    try:
-        powershell = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str,
-                                        choices=["powershell", "pwsh"]) or "powershell"
-    except ConanException:
-        powershell = "powershell"
-
-    powershell = "powershell.exe" if powershell == "powershell" else "pwsh"
+    powershell = conanfile.conf.get("tools.env.virtualenv:powershell") or "powershell.exe"
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -531,7 +525,8 @@ class EnvVars:
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
-        If the conf "tools.env.virtualenv:powershell" is set to True it will generate powershell
+        If the conf "tools.env.virtualenv:powershell" is not an empty string
+        it will generate powershell
         launchers if Windows.
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
@@ -548,11 +543,14 @@ class EnvVars:
                 is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
                 ConanOutput().warning(
                     "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
-                    "Please use 'powershell' or 'pwsh'. "
-                    "Use `tools.env.virtualenv:powershell=!` to unset the conf, equivalent to the old False value behaviour", warn_tag="deprecated"
+                    "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments if needed "
+                    "(for example: 'powershell.exe -argument'). "
+                    "To unset this configuration, use `tools.env.virtualenv:powershell=!`, which matches "
+                    "the previous 'False' behavior.",
+                    warn_tag="deprecated"
                 )
             except ConanException:
-                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str, choices=["powershell", "pwsh"])
+                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
