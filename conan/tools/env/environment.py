@@ -52,11 +52,8 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         raise ConanException("Cannot wrap command with different envs,"
                              "{} - {}".format(bats+ps1s, shs))
 
-    try:
-        powershell = conanfile.conf.get(
-            "tools.env.virtualenv:powershell", check_type=str) or "powershell.exe"
-    except ConanException:
-        powershell = "powershell.exe"
+    powershell = "powershell.exe" if conanfile.conf.get(
+        "tools.env.virtualenv:powershell") is True else conanfile.conf.get("tools.env.virtualenv:powershell")
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
