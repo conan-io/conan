@@ -34,17 +34,23 @@ class TargetConfigurationTemplate2:
         return f"{f}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
-        result = []
+        result = {}
         requires = info.parsed_requires()
         pkg_name = self._conanfile.ref.name
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
+
+        def _dep_type(dep_info):
+            return {str(PackageType.SHARED): "SHARED",
+                    str(PackageType.STATIC): "STATIC",
+                    str(PackageType.HEADER): "INTERFACE"}.get(str(dep_info.type))
+
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            targets = []
             for d in transitive_reqs.values():
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
-                targets.append(dep_target or f"{d.ref.name}::{d.ref.name}")
-            return targets
+                dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
+                result[dep_target] = {"type": _dep_type(d.cpp_info)}
+            return result
 
         for required_pkg, required_comp in requires:
             if required_pkg is None:  # Points to a component of same package
@@ -53,7 +59,7 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                result.append(dep_target)
+                result[dep_target] = {"type": _dep_type(dep_comp)}
             else:  # Different package
                 try:
                     dep = transitive_reqs[required_pkg]
@@ -71,7 +77,7 @@ class TargetConfigurationTemplate2:
                         comp = required_comp
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or f"{required_pkg}::{required_comp}"
-                    result.append(dep_target)
+                    result[dep_target] = {"type": _dep_type(dep_comp)}
         return result
 
     @property
@@ -148,7 +154,8 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
-        requires = " ".join(self._requires(info, components))
+        requires = self._requires(info, components)
+        assert isinstance(requires, dict)
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # TODO: Missing link language
@@ -201,15 +208,14 @@ class TargetConfigurationTemplate2:
         if libs and root_target_name not in libs:
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
-                all_requires = []
+                all_requires = {}
                 for defaultc in cpp_info.default_components:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
-                    all_requires.append(comp_name)
-                all_requires = " ".join(all_requires)
+                    all_requires[comp_name] = {}  # It is an interface, it doesn't matter
             else:
-                all_requires = " ".join(libs.keys())
+                all_requires = {k: {}  for k in libs.keys()}
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -341,12 +347,23 @@ class TargetConfigurationTemplate2:
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}
                               "{{lib_info["link_location"]}}")
         {% endif %}
-        {% if lib_info.get("requires") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
-        {% endif %}
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
+
+        # Information of transitive dependencies
+        {% for require_target, require_info in lib_info["requires"].items() %}
+        # Requirement {{require_target}} => {{require_info}}
+        {% if lib_info["type"] == "STATIC" %}
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              {{config_wrapper(config, require_target)}})
+        {% elif lib_info["type"] == "SHARED" %}
+        set_target_properties({{lib}} PROPERTIES IMPORTED_LINK_DEPENDENT_LIBRARIES_{{config}}
+                              {{require_target}})
+        {% else %}
+        target_link_libraries({{lib}} INTERFACE {{require_target}})
+        {% endif %}
+        {% endfor %}
 
         {% endfor %}
 
