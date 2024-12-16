@@ -16,7 +16,7 @@ class WorkspaceAPI:
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
-        self._workspace = Workspace()
+        self._workspace = Workspace(conan_api)
 
     def home_folder(self):
         return self._workspace.home_folder()

@@ -503,6 +503,7 @@ class TestClient:
         return self.cache.store
 
     def update_servers(self):
+        remotes = RemotesAPI(self)
         api = ConanAPI(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)

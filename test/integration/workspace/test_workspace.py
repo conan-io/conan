@@ -192,6 +192,36 @@ class TestAddRemove:
             # Doesn't fail
             assert "other/14.5 - Editable" in c.out
 
+    def test_api_error(self):
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import load
+            class Lib(ConanFile):
+                name= "pkg"
+                def set_version(self):
+                    self.version = self.run("echo 2.1")
+            """)
+
+        workspace = textwrap.dedent("""\
+           import os
+           name = "myws"
+
+           def editables(*args, **kwargs):
+               result = {}
+               conanfile = workspace_api.load("dep1/conanfile.py")
+               result[f"{conanfile.name}/{conanfile.version}"] = {"path": "dep1/conanfile.py"}
+               return result
+            """)
+
+        c.save({"conanws.py": workspace,
+                "dep1/conanfile.py": conanfile})
+        c.run("workspace info --format=json")
+        print(c.out)
+        info = json.loads(c.stdout)
+        assert info["editables"] == {"pkg/2.1": {"path": "dep1/conanfile.py"}}
+
     def test_error_uppercase(self):
         c = TestClient(light=True)
         c.save({"conanws.py": "name='myws'",

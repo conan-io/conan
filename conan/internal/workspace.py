@@ -20,13 +20,18 @@ def _find_ws_folder():
 
 
 class _UserWorkspaceAPI:
-    def __init__(self, folder):
+    def __init__(self, folder, conan_api):
         self.folder = folder
+        self._conan_api = conan_api
 
     def load(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path)
         from conans.client.loader import ConanFileLoader
-        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=None)
+        #cmd_wrap = CmdWrapper(home_paths.wrapper_path)
+        #helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache,
+        #                           self.cache_folder)
+        helpers=None
+        #loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
@@ -35,7 +40,8 @@ class _UserWorkspaceAPI:
 class Workspace:
     TEST_ENABLED = False
 
-    def __init__(self):
+    def __init__(self, conan_api):
+        self._conan_api = conan_api
         self._folder = _find_ws_folder()
         if self._folder:
             ConanOutput().warning(f"Workspace found: {self._folder}")
@@ -58,7 +64,7 @@ class Workspace:
             py_file = os.path.join(self._folder, "conanws.py")
             if os.path.exists(py_file):
                 self._py, _ = load_python_file(py_file)
-                setattr(self._py, "workspace_api", _UserWorkspaceAPI(self._folder))
+                setattr(self._py, "workspace_api", _UserWorkspaceAPI(self._folder, conan_api))
                 setattr(self._py, "conanws_data", self._yml)
 
     @property
