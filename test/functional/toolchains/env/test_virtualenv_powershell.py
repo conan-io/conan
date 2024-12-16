@@ -166,7 +166,7 @@ def test_vcvars(powershell):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", '"powershell.exe -NoProfile"', '"pwsh -NoProfile"'])
+@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
 def test_concatenate_build_and_run_env(powershell):
     # this tests that if we have both build and run env, they are concatenated correctly when using
     # powershell
@@ -199,7 +199,7 @@ def test_concatenate_build_and_run_env(powershell):
         """)
 
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run(f"install . -c tools.env.virtualenv:powershell={powershell}")
+    client.run(f'install . -c tools.env.virtualenv:powershell="{powershell}"')
     conanfile = ConanFileMock()
     conanfile.conf.define("tools.env.virtualenv:powershell", powershell)
     cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
