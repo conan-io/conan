@@ -593,13 +593,15 @@ class _Component:
             out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
+        if self._type is None:  # Get by default the package type of the recipe "package_type"
+            self._type = conanfile.package_type
         if self._exe:   # exe is a new field, it should have the correct location
             return
         if self._location or self._link_location:
             if self._type is None or self._type is PackageType.HEADER:
                 raise ConanException("Incorrect cpp_info defining location without type or header")
             return
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+        if self._type not in [PackageType.UNKNOWN, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
             return
         num_libs = len(self.libs)
         if num_libs == 0:
@@ -798,7 +800,7 @@ class CppInfo:
 
             common = self._package.clone()
             common.libs = []
-            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            common.type = PackageType.HEADER  # the type of components is a string!
             common.requires = list(result.components.keys()) + (self.requires or [])
             result.components["_common"] = common
         else:

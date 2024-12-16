@@ -37,19 +37,27 @@ class TargetConfigurationTemplate2:
         result = {}
         requires = info.parsed_requires()
         pkg_name = self._conanfile.ref.name
+        pkg_type = info.type
+        assert isinstance(pkg_type, PackageType), f"Pkg type {pkg_type} {type(pkg_type)}"
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
 
-        def _dep_type(dep_info):
-            return {str(PackageType.SHARED): "SHARED",
-                    str(PackageType.STATIC): "STATIC",
-                    str(PackageType.HEADER): "INTERFACE"}.get(str(dep_info.type))
+        def _link_type(req):
+            if pkg_type is PackageType.STATIC:
+                if not req.libs:  # not using the libs at all
+                    if req.headers:
+                        return "COMPILE_ONLY"
+                    return None
+                else:
+                    if req.headers:
+                        return "FULL"
+                    return "LINK_ONLY"
 
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            for d in transitive_reqs.values():
+            for r, d in transitive_reqs.items():
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
-                result[dep_target] = {"type": _dep_type(d.cpp_info)}
+                result[dep_target] = {"link_type": _link_type(r)}
             return result
 
         for required_pkg, required_comp in requires:
@@ -59,10 +67,11 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                result[dep_target] = {"type": _dep_type(dep_comp)}
+                result[dep_target] = {"link_type": "FULL"}
             else:  # Different package
                 try:
-                    dep = transitive_reqs[required_pkg]
+                    # FIXME: This can be a problem for packages with requires+tool-requires to same
+                    r, dep = transitive_reqs._get(required_pkg)
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
@@ -77,12 +86,13 @@ class TargetConfigurationTemplate2:
                         comp = required_comp
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or f"{required_pkg}::{required_comp}"
-                    result[dep_target] = {"type": _dep_type(dep_comp)}
+                    result[dep_target] = {"link_type": _link_type(r)}
         return result
 
     @property
     def _context(self):
         cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
+        assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
@@ -158,10 +168,9 @@ class TargetConfigurationTemplate2:
         assert isinstance(requires, dict)
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
-        # TODO: Missing link language
         # FIXME: Filter by lib traits!!!!!
-        if not self._require.headers:  # If not depending on headers, paths and
-            includedirs = defines = None
+        #if not self._require.headers:  # If not depending on headers, paths and
+        #    includedirs = defines = None
         system_libs = " ".join(info.system_libs)
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
@@ -355,8 +364,19 @@ class TargetConfigurationTemplate2:
         {% for require_target, require_info in lib_info["requires"].items() %}
         # Requirement {{require_target}} => {{require_info}}
         {% if lib_info["type"] == "STATIC" %}
+        {% if require_info["link_type"] == "COMPILE_ONLY" %}
+        if(${CMAKE_VERSION} VERSION_LESS "3.27")
+            message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.2")
+        endif()
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              $<COMPILE_ONLY:{{config_wrapper(config, require_target)}})
+        {% elif require_info["link_type"] == "LINK_ONLY" %}
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              $<LINK_ONLY:{{config_wrapper(config, require_target)}}>)
+        {% elif require_info["link_type"] == "FULL" %}
         set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
                               {{config_wrapper(config, require_target)}})
+        {% endif %}
         {% elif lib_info["type"] == "SHARED" %}
         set_target_properties({{lib}} PROPERTIES IMPORTED_LINK_DEPENDENT_LIBRARIES_{{config}}
                               {{require_target}})
