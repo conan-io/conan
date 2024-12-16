@@ -109,19 +109,24 @@ class AutotoolsToolchain:
         ret = {}
         if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
             return ret
-
         # User variables have more priority than Conan ones
         build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
         for var in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "host"]:
             if build_env.get(var) is not None:
                 ret[var] = build_env[var]
-        # Automatic guessing made by Conan
+
+        arch = self._conanfile.settings.get_safe("arch")
+        android_target = {'armv7': 'armv7a-linux-androideabi',
+                          'armv8': 'aarch64-linux-android',
+                          'x86': 'i686-linux-android',
+                          'x86_64': 'x86_64-linux-android'}.get(arch)
+        ret.setdefault("host", android_target)
+        # Automatic guessing made by Conan (need the NDK path variable defined)
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
         if ndk_path:
             if self._conanfile.conf.get("tools.build:compiler_executables"):
                 self._conanfile.output.warning("tools.build:compiler_executables conf has no effect"
                                                " when tools.android:ndk_path is defined too.")
-            arch = self._conanfile.settings.get_safe("arch")
             os_build = self._conanfile.settings_build.get_safe("os")
             ndk_os_folder = {
                 'Macos': 'darwin',
@@ -138,22 +143,21 @@ class AutotoolsToolchain:
             ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
                                    f"{ndk_os_folder}-x86_64", "bin")
             android_api_level = self._conanfile.settings.get_safe("os.api_level")
-            android_target = {'armv7': 'armv7a-linux-androideabi',
-                              'armv8': 'aarch64-linux-android',
-                              'x86': 'i686-linux-android',
-                              'x86_64': 'x86_64-linux-android'}.get(arch)
             os_build = self._conanfile.settings_build.get_safe('os')
             ext = ".cmd" if os_build == "Windows" else ""
-            ret = {
-                "CC": ret.get("CC", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}")),
-                "CXX": ret.get("CXX", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}")),
-                "LD": ret.get("LD", os.path.join(ndk_bin, "ld")),
-                "STRIP": ret.get("STRIP", os.path.join(ndk_bin, "llvm-strip")),
-                "RANLIB": ret.get("RANLIB", os.path.join(ndk_bin, "llvm-ranlib")),
-                "AS": ret.get("AS", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}")),
-                "AR": ret.get("AR", os.path.join(ndk_bin, "llvm-ar")),
-                "host": ret.get("host", android_target)
+            conan_vars = {
+                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
+                "LD": os.path.join(ndk_bin, "ld"),
+                "STRIP": os.path.join(ndk_bin, "llvm-strip"),
+                "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
+                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
+                "AR": os.path.join(ndk_bin, "llvm-ar"),
             }
+            for var in conan_vars:
+                # Do not take into account any deduced file if it does not exist
+                if os.path.exists(conan_vars[var]):
+                    ret.setdefault(var, conan_vars[var])
         return ret
 
     def _get_msvc_runtime_flag(self):
