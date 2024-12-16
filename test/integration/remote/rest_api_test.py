@@ -43,7 +43,7 @@ class RestApiTest(unittest.TestCase):
                 save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
-                ConanRequester._http_requester_imp = TestRequester({"default", cls.server},)
+                ConanRequester._http_requester_imp = TestRequester({"myremote", cls.server},)
                 localdb = LocalDBMock()
 
                 mocked_user_input = UserInput(non_interactive=False)
