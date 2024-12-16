@@ -413,9 +413,9 @@ class MesonToolchain:
         os_build = self._conanfile.settings_build.get_safe('os')
         compiler_extension = ".cmd" if os_build == "Windows" else ""
         # User has more prio than Conan
-        self.c = self.c or os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
-        self.cpp = self.cpp or os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
-        self.ar = self.ar or os.path.join(ndk_bin, "llvm-ar")
+        self.c = os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
+        self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
         # Now, it's time to get all the flags defined by the user
