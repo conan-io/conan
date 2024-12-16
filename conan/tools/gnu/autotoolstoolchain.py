@@ -8,7 +8,7 @@ from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, libcxx_flags, cstd_flag
-from conan.tools.env import Environment
+from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conans.model.pkg_type import PackageType
@@ -109,6 +109,13 @@ class AutotoolsToolchain:
         ret = {}
         if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
             return ret
+
+        # User variables have more priority than Conan ones
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        for var in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "host"]:
+            if build_env.get(var) is not None:
+                ret[var] = build_env[var]
+        # Automatic guessing made by Conan
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
         if ndk_path:
             if self._conanfile.conf.get("tools.build:compiler_executables"):
@@ -138,14 +145,14 @@ class AutotoolsToolchain:
             os_build = self._conanfile.settings_build.get_safe('os')
             ext = ".cmd" if os_build == "Windows" else ""
             ret = {
-                "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
-                "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
-                "LD": os.path.join(ndk_bin, "ld"),
-                "STRIP": os.path.join(ndk_bin, "llvm-strip"),
-                "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
-                "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
-                "AR": os.path.join(ndk_bin, "llvm-ar"),
-                "host": android_target
+                "CC": ret.get("CC", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}")),
+                "CXX": ret.get("CXX", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}")),
+                "LD": ret.get("LD", os.path.join(ndk_bin, "ld")),
+                "STRIP": ret.get("STRIP", os.path.join(ndk_bin, "llvm-strip")),
+                "RANLIB": ret.get("RANLIB", os.path.join(ndk_bin, "llvm-ranlib")),
+                "AS": ret.get("AS", os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}")),
+                "AR": ret.get("AR", os.path.join(ndk_bin, "llvm-ar")),
+                "host": ret.get("host", android_target)
             }
         return ret
 
@@ -162,7 +169,7 @@ class AutotoolsToolchain:
         return []
 
     def _add_msvc_flags(self, flags):
-        # This is to avoid potential duplicate with users recipes -FS (alreday some in ConanCenter)
+        # This is to avoid potential duplicate with users recipes -FS (already some in ConanCenter)
         return [f for f in self.msvc_extra_flags if f not in flags]
 
     @staticmethod
