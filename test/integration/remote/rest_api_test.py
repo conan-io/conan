@@ -18,7 +18,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import LocalDBMock
 from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import get_free_port
+from conan.test.utils.tools import get_free_port, TestRequester
 from conans.util.files import md5, save
 
 
@@ -43,6 +43,7 @@ class RestApiTest(unittest.TestCase):
                 save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
+                ConanRequester._http_requester_imp = TestRequester({"default", cls.server},)
                 localdb = LocalDBMock()
 
                 mocked_user_input = UserInput(non_interactive=False)
@@ -61,6 +62,7 @@ class RestApiTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        ConanRequester._http_requester_imp = None
         cls.server.stop()
 
     def tearDown(self):
