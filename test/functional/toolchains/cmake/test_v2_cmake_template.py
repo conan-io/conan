@@ -20,6 +20,7 @@ def test_cmake_lib_template():
 @pytest.mark.tool("cmake")
 def test_cmake_lib_template_create(matrix_client_shared_debug):
     client = matrix_client_shared_debug
+    client.run("new cmake_lib -d name=matrix -d version=1.0")
     # Create works
     client.run("create . --build=never")
     assert "matrix/1.0: Hello World Release!" in client.out
