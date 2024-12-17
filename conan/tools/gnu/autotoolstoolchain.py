@@ -109,10 +109,10 @@ class AutotoolsToolchain:
             return ret
         # User variables have more priority than Conan ones
         build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-        for var in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "ADDR2LINE", "NM", "OBJCOPY",
+        for var_name in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "ADDR2LINE", "NM", "OBJCOPY",
                     "OBJDUMP", "READELF", "ELFEDIT", "host"]:
-            if build_env.get(var) is not None:
-                ret[var] = build_env[var]
+            if build_env.get(var_name) is not None:
+                ret[var_name] = build_env[var_name]
 
         arch = self._conanfile.settings.get_safe("arch")
         android_target = {'armv7': 'armv7a-linux-androideabi',
@@ -161,13 +161,13 @@ class AutotoolsToolchain:
                 "ELFEDIT": os.path.join(ndk_bin, "llvm-elfedit")
             }
             build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-            for var in conan_vars:
+            for var_name, var_path in conan_vars.items():
                 # User variables have more priority than Conan ones
-                if build_env.get(var) is not None:
-                    ret[var] = build_env[var]
+                if build_env.get(var_name) is not None:
+                    ret[var_name] = build_env[var_name]
                 # Do not take into account any deduced file if it does not exist
-                elif os.path.exists(conan_vars[var]):
-                    ret[var] = conan_vars[var]
+                elif os.path.exists(var_path):
+                    ret[var_name] = var_path
         return ret
 
     def _get_msvc_runtime_flag(self):
