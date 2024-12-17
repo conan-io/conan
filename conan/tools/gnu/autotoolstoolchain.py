@@ -167,7 +167,7 @@ class AutotoolsToolchain:
                     ret[var] = build_env[var]
                 # Do not take into account any deduced file if it does not exist
                 elif os.path.exists(conan_vars[var]):
-                    ret.setdefault(var, conan_vars[var])
+                    ret[var] = conan_vars[var]
         return ret
 
     def _get_msvc_runtime_flag(self):
