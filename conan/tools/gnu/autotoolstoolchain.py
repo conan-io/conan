@@ -69,10 +69,8 @@ class AutotoolsToolchain:
             # If cross-building and tools.android:ndk_path is defined, let's try to guess the Android
             # cross-building flags
             self.android_cross_flags = self._resolve_android_cross_compilation()
-            # Host triplet
-            if self.android_cross_flags:
-                self._host = self.android_cross_flags.pop("host")
-            elif not self._host:
+            # If it's not defined the triplet
+            if not self._host:
                 os_host = conanfile.settings.get_safe("os")
                 arch_host = conanfile.settings.get_safe("arch")
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)["triplet"]
@@ -111,7 +109,8 @@ class AutotoolsToolchain:
             return ret
         # User variables have more priority than Conan ones
         build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-        for var in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "host"]:
+        for var in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "ADDR2LINE", "NM", "OBJCOPY",
+                    "OBJDUMP", "READELF", "ELFEDIT", "host"]:
             if build_env.get(var) is not None:
                 ret[var] = build_env[var]
 
@@ -120,7 +119,8 @@ class AutotoolsToolchain:
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
-        ret.setdefault("host", android_target)
+        # Setting host if it was not already defined yet
+        self._host = self._host or android_target
         # Automatic guessing made by Conan (need the NDK path variable defined)
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
         if ndk_path:
@@ -153,10 +153,20 @@ class AutotoolsToolchain:
                 "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
                 "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
                 "AR": os.path.join(ndk_bin, "llvm-ar"),
+                "ADDR2LINE": os.path.join(ndk_bin, "llvm-addr2line"),
+                "NM": os.path.join(ndk_bin, "llvm-nm"),
+                "OBJCOPY": os.path.join(ndk_bin, "llvm-objcopy"),
+                "OBJDUMP": os.path.join(ndk_bin, "llvm-objdump"),
+                "READELF": os.path.join(ndk_bin, "llvm-readelf"),
+                "ELFEDIT": os.path.join(ndk_bin, "llvm-elfedit")
             }
+            build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
             for var in conan_vars:
+                # User variables have more priority than Conan ones
+                if build_env.get(var) is not None:
+                    ret[var] = build_env[var]
                 # Do not take into account any deduced file if it does not exist
-                if os.path.exists(conan_vars[var]):
+                elif os.path.exists(conan_vars[var]):
                     ret.setdefault(var, conan_vars[var])
         return ret
 
