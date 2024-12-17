@@ -366,6 +366,9 @@ def test_using_frozen_center():
     c.run("remote update conancenter --url=https://center.conan.io")
     assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
 
+    c.run("remote disable conancenter")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+
 
 def test_wrong_remotes_json_file():
     c = TestClient(light=True)
