@@ -1,0 +1,31 @@
+name: 'Code coverage'
+description: 'Properly rename and upload coverage artifact for later process'
+
+inputs:
+  python-version:
+    description: 'Python version in which the tests was ran'
+    required: true
+
+  test-type:
+    description: 'Tests suite name'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: mv .coverage .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+
+      - name: Rename coverage file (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: powershell Rename-Item .coverage coverage-${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}.coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          path: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          include-hidden-files: true

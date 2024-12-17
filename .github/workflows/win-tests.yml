@@ -1,27 +1,14 @@
 name: Windows Tests
 
 on:
-  push:
-    branches:
-      - develop2
-      - release/*
-  pull_request:
-    branches:
-      - '*'
-      - 'release/*'
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   unit_integration_tests:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
-
+        python-version: [3.13, 3.8, 3.6]
     name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -65,13 +52,19 @@ jobs:
         shell: pwsh
         run: |
           git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=100 -n=auto
+          pytest test/unittests test/integration --durations=100 -n=auto --cov=conan --cov-report=term-missing:skip-covered
+
+      - name: Code coverage
+        uses: ./.github/actions/code-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: unit-integration
 
   functional_tests:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
+        python-version: [3.13, 3.8, 3.6]
 
     name: Functional Tests (${{ matrix.python-version }})
     steps:
@@ -260,4 +253,10 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=100
+          pytest test/functional -n=auto --durations=100 --cov=conan --cov-report=term-missing:skip-covered
+
+      - name: Code coverage
+        uses: ./.github/actions/code-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: functional
