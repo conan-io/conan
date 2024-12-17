@@ -6,14 +6,14 @@ from conans.model.info import load_binary_info
 from conans.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE_TXT, CONANINFO
 from conan.test.utils.tools import TestClient,  GenConanfile
-from conans.util.files import save, load
+from conans.util.files import load
 
 
 @pytest.fixture()
 def client():
     c = TestClient()
-    save(c.cache.settings_path, "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]\narch_build: [x86_64]")
-    save(c.cache.default_profile_path, "[settings]\nos=Windows")
+    c.save_home({"settings.yaml": "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]\narch_build: [x86_64]",
+                 "profiles/default":  "[settings]\nos=Windows"})
 
     def base_conanfile(name):
         return GenConanfile(name, "0.1").with_option("language", [0, 1])\

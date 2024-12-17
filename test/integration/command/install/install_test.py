@@ -14,8 +14,8 @@ from conans.util.files import mkdir, save
 @pytest.fixture()
 def client():
     c = TestClient(default_server_user=True)
-    save(c.cache.settings_path, "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]")
-    save(c.cache.default_profile_path, "[settings]\nos=Windows")
+    c.save_home({"settings.yml": "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]",
+                 "profiles/default": "[settings]\nos=Windows"})
     return c
 
 

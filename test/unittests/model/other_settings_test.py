@@ -25,7 +25,7 @@ class SettingsTest(unittest.TestCase):
 """
         client = TestClient()
         save(client.cache.settings_path, settings)
-        save(client.cache.default_profile_path, "")
+        client.save_home({"profiles/default": ""})
         conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "os", "compiler"

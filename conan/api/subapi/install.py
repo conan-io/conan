@@ -2,7 +2,7 @@ import os
 
 from conan.internal.api.install.generators import write_generators
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
 from conan.internal.deploy import do_deploys
 
 from conans.client.graph.install_graph import InstallGraph
@@ -21,7 +21,7 @@ class InstallAPI:
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
         """
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf,
                                     self.conan_api.local.editable_packages)
         install_graph = InstallGraph(deps_graph)
@@ -35,7 +35,7 @@ class InstallAPI:
         :param only_info: Only allow reporting and checking, but never install
         :param graph: Dependency graph to intall packages for
         """
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf,
                                     self.conan_api.local.editable_packages)
         installer.install_system_requires(graph, only_info)
@@ -46,7 +46,7 @@ class InstallAPI:
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf,
                                     self.conan_api.local.editable_packages)
         installer.install_sources(graph, remotes)

@@ -20,10 +20,10 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save, rmdir, copytree_compat
 
 
-def add_local_recipes_index_remote(conan_api, remote):
+def add_local_recipes_index_remote(home_folder, remote):
     if remote.remote_type != LOCAL_RECIPES_INDEX:
         return
-    local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+    local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
     repo_folder = os.path.join(local_recipes_index_path, remote.name)
 
     output = ConanOutput()
@@ -43,9 +43,9 @@ def add_local_recipes_index_remote(conan_api, remote):
     save(trim_hook, hook_content)
 
 
-def remove_local_recipes_index_remote(conan_api, remote):
+def remove_local_recipes_index_remote(home_folder, remote):
     if remote.remote_type == LOCAL_RECIPES_INDEX:
-        local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+        local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
         local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
         ConanOutput().info(f"Removing temporary files for '{remote.name}' "
                            f"local-recipes-index remote")

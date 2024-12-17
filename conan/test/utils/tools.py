@@ -24,6 +24,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
@@ -459,7 +460,7 @@ class TestClient:
             save(self.cache.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
-        save(self.cache.default_profile_path, text)
+        save(os.path.join(self.cache_folder, "profiles", "default"), text)
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 
@@ -483,14 +484,6 @@ class TestClient:
                 PkgCache.__init__(self, cache_folder, global_conf)
                 HomePaths.__init__(self, cache_folder)
 
-            @property
-            def plugins_path(self):  # Temporary to not break tests
-                return os.path.join(self._home, "extensions", "plugins")
-
-            @property
-            def default_profile_path(self):
-                return os.path.join(self._home, "profiles", "default")
-
         return MyCache(self.cache_folder)
 
     @property
@@ -503,17 +496,15 @@ class TestClient:
         return self.cache.store
 
     def update_servers(self):
-        api = ConanAPI(cache_folder=self.cache_folder)
-        for r in api.remotes.list():
-            api.remotes.remove(r.name)
-
+        remotes = []
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
-                api.remotes.add(Remote(name, server.repo_api_url))
+                remotes.append(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
-                api.remotes.add(Remote(name, server.fake_url))
+                remotes.append(Remote(name, server.fake_url))
             else:
-                api.remotes.add(Remote(name, server))
+                remotes.append(Remote(name, server))
+        _save(HomePaths(self.cache_folder).remotes_path, remotes)
 
     @contextmanager
     def chdir(self, newdir):
@@ -563,7 +554,7 @@ class TestClient:
         try:
             if self._custom_commands_folder:
                 with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
-                                             self._custom_commands_folder}):
+                                         self._custom_commands_folder}):
                     command.run(args)
             else:
                 command.run(args)

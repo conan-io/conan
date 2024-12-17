@@ -113,7 +113,7 @@ class MyConanfile(ConanFile):
 
         # Test with the 'default' profile
         env_variable = "env_variable=profile_default"
-        save(client.cache.default_profile_path, "[settings]\nos=Windows\n[buildenv]\n" + env_variable)
+        client.save_home({"profiles/default": "[settings]\nos=Windows\n[buildenv]\n" + env_variable})
         client.run("create . --name=name --version=version --user=user --channel=channel")
         self.assertIn(">>> " + env_variable, client.out)
 
