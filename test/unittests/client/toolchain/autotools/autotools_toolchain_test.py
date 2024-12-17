@@ -395,16 +395,16 @@ def test_crossbuild_to_android(build_env_mock):
 
     # Defining the ndk_path too
     ndk_path = temp_folder()
-    ld_file = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "darwin-x86_64", "bin", "ld")
-    save(conanfile, ld_file, "")
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "darwin-x86_64", "bin")
+    save(conanfile, os.path.join(ndk_bin, "ld"), "")
     conanfile.conf.define("tools.android:ndk_path", ndk_path)
     at = AutotoolsToolchain(conanfile)
     env_vars = at.vars()
     assert env_vars.get("CC") is None
     assert env_vars.get("CXX") is None
     assert at._host == "aarch64-linux-android"
-    assert env_vars["LD"] == ld_file  # exists
-    assert env_vars.get("STRIP") is None
+    assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
+    assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
 
 
 def test_apple_isysrootflag():
