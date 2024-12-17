@@ -199,9 +199,7 @@ def test_set_prefix():
 
 def test_unknown_compiler():
     client = TestClient()
-    settings = load(client.cache.settings_path)
-    settings = settings.replace("gcc:", "xlc:\n    gcc:", 1)
-    save(client.cache.settings_path, settings)
+    save(client.paths.settings_path_user, "compiler:\n  xlc:\n")
     client.save({"conanfile.py": GenConanfile().with_settings("compiler", "build_type")
                 .with_generator("GnuToolchain")
                  })

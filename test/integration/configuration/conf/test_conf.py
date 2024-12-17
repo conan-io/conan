@@ -94,7 +94,7 @@ def test_composition_conan_conf(client):
         tools.microsoft.msbuild:vs_version=Slow
         tools.cmake.cmaketoolchain:generator=Extra
         """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
         tools.build:verbosity=quiet
@@ -116,7 +116,7 @@ def test_new_config_file(client):
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmaketoolchain:generator=X
         """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     client.run("install .")
     assert "tools.build:verbosity$quiet" in client.out
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
@@ -129,7 +129,7 @@ def test_new_config_file(client):
             *:tools.cmake.cmaketoolchain:generator=X
             cache:read_only=True
             """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     client.run("install .", assert_error=True)
     assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
@@ -140,7 +140,7 @@ def test_new_config_file_required_version():
     conf = textwrap.dedent("""\
         core:required_conan_version=>=2.0
         """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     client.run("install .", assert_error=True)
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
             in client.out)
@@ -151,7 +151,7 @@ def test_composition_conan_conf_overwritten_by_cli_arg(client):
         tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=Slow
         """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
         tools.build:verbosity=quiet
@@ -177,7 +177,7 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
     conf = textwrap.dedent("""\
         tools.build:cflags=["-Wall"]
         """)
-    save(client.cache.new_config_path, conf)
+    save(client.paths.new_config_path, conf)
     client.run('install . -c "tools.build:cflags+=[\'-Werror\']" '
                '-c "tools.microsoft.msbuildtoolchain:compile_options={\'ExceptionHandling\': \'Async\'}"')
 
@@ -186,7 +186,7 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
 
 
 def test_jinja_global_conf(client):
-    save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
+    save(client.paths.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
                                        "user.mycompany:other = {{platform.system()}}\n"
                                        "user.mycompany:dist = {{distro.id() if distro else '42'}}\n"
                                        "user.conan:version = {{conan_version}}-{{conan_version>0.1}}")
@@ -211,7 +211,7 @@ def test_jinja_global_conf_include(client):
         {% set myvar = 42 %}
         user.mycompany:parallel = {{myvar}}
         """)
-    save(client.cache.new_config_path, global_conf)
+    save(client.paths.new_config_path, global_conf)
     save(os.path.join(client.cache_folder, "user_global.conf"), user_global_conf)
     client.run("install .")
     assert "user.mycompany:parallel=42" in client.out
@@ -221,7 +221,7 @@ def test_jinja_global_conf_include(client):
 def test_jinja_global_conf_paths():
     c = TestClient()
     global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
-    save(c.cache.new_config_path, global_conf)
+    save(c.paths.new_config_path, global_conf)
     c.run("config show *")
     cache_folder = c.cache_folder.replace("\\", "/")
     assert f"user.mycompany:myfile: {os.path.join(cache_folder, 'myfile')}" in c.out
@@ -236,7 +236,7 @@ def test_profile_detect_os_arch():
         user.myteam:myconf2={{detect_api.detect_arch()}}
         """)
 
-    save(c.cache.new_config_path, global_conf)
+    save(c.paths.new_config_path, global_conf)
     c.run("config show *")
     _os = detect_api.detect_os()
     _arch = detect_api.detect_arch()
@@ -296,7 +296,7 @@ def test_nonexisting_conf():
 
 def test_nonexisting_conf_global_conf():
     c = TestClient()
-    save(c.cache.new_config_path, "tools.unknown:conf=value")
+    save(c.paths.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
     assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
@@ -305,7 +305,7 @@ def test_nonexisting_conf_global_conf():
 def test_global_conf_auto_created():
     c = TestClient()
     c.run("config list")  # all commands will trigger
-    global_conf = load(c.cache.new_config_path)
+    global_conf = load(c.paths.new_config_path)
     assert "# core:non_interactive = True" in global_conf
 
 
@@ -351,7 +351,7 @@ def test_build_test_consumer_only():
                 def generate(self):
                     self.output.info(f'SKIP-TEST: {self.conf.get("tools.build:skip_test")}')
             """)
-    save(c.cache.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
+    save(c.paths.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg,
             "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
@@ -388,7 +388,7 @@ def test_conf_should_be_immutable():
             def generate(self):
                 self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
         """)
-    save(c.cache.new_config_path, 'user.myteam:myconf=["root_value"]')
+    save(c.paths.new_config_path, 'user.myteam:myconf=["root_value"]')
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
     c.run("create dep")
@@ -408,7 +408,7 @@ def test_especial_strings_fail():
         user.mycompany:myfunct = re.search
         user.mycompany:mydict = {1: 're', 2: 'fnmatch'}
         """)
-    save(c.cache.new_config_path, global_conf)
+    save(c.paths.new_config_path, global_conf)
     c.run("config show *")
     assert "user.mycompany:myfile: re" in c.out
     assert "user.mycompany:myother: fnmatch" in c.out

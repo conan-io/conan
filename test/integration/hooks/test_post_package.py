@@ -17,7 +17,7 @@ def test_post_package():
         def post_package(conanfile):
             save(conanfile, os.path.join(conanfile.package_folder, "myfile.txt"), "content!!")
         """)
-    hook_path = os.path.join(t.cache.hooks_path, "complete_hook", "hook_complete.py")
+    hook_path = os.path.join(t.paths.hooks_path, "complete_hook", "hook_complete.py")
     save(hook_path, complete_hook)
     t.save({'conanfile.py': GenConanfile("pkg", "0.1")})
     t.run("create .")

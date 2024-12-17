@@ -79,7 +79,7 @@ def test_add_msys2_path_automatically():
     except KeyError:
         pytest.skip("msys2 path not defined")
 
-    save(client.cache.new_config_path, textwrap.dedent("""
+    save(client.paths.new_config_path, textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
             """.format(bash_path)))

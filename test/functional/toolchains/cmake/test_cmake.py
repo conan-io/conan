@@ -213,7 +213,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path, "tools.build:jobs=1")
+        save(self.client.paths.new_config_path, "tools.build:jobs=1")
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
@@ -473,7 +473,7 @@ def test_msvc_vs_versiontoolset():
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.cache.new_config_path, "tools.microsoft.msbuild:vs_version=15")
+    save(client.paths.new_config_path, "tools.microsoft.msbuild:vs_version=15")
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
