@@ -107,7 +107,6 @@ class AutotoolsToolchain:
         ret = {}
         if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
             return ret
-
         # Setting host if it was not already defined yet
         arch = self._conanfile.settings.get_safe("arch")
         android_target = {'armv7': 'armv7a-linux-androideabi',
@@ -116,6 +115,7 @@ class AutotoolsToolchain:
                           'x86_64': 'x86_64-linux-android'}.get(arch)
         self._host = self._host or android_target
         # Automatic guessing made by Conan (need the NDK path variable defined)
+        conan_vars = {}
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
         if ndk_path:
             if self._conanfile.conf.get("tools.build:compiler_executables"):
@@ -154,14 +154,12 @@ class AutotoolsToolchain:
                 "READELF": os.path.join(ndk_bin, "llvm-readelf"),
                 "ELFEDIT": os.path.join(ndk_bin, "llvm-elfedit")
             }
-            build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-            for var_name, var_path in conan_vars.items():
-                # User variables have more priority than Conan ones
-                if build_env.get(var_name) is not None:
-                    ret[var_name] = build_env[var_name]
-                # Do not take into account any deduced file if it does not exist
-                elif os.path.exists(var_path):
-                    ret[var_name] = var_path
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        for var_name, var_path in conan_vars.items():
+            # User variables have more priority than Conan ones, so if it was defined within
+            # the build env then do nothing
+            if build_env.get(var_name) is None:
+                ret[var_name] = var_path
         return ret
 
     def _get_msvc_runtime_flag(self):

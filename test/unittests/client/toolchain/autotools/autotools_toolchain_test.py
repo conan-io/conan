@@ -378,6 +378,7 @@ def test_crossbuild_to_android(build_env_mock):
     Issue related: https://github.com/conan-io/conan/issues/17441
     """
     vars = MagicMock()
+    # VirtualBuildEnv defines these variables
     vars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
     build_env_mock.return_value = vars
 
@@ -386,8 +387,8 @@ def test_crossbuild_to_android(build_env_mock):
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
     at = AutotoolsToolchain(conanfile)
     env_vars = at.vars()
-    assert env_vars["CC"] == "my-clang"
-    assert env_vars["CXX"] == "my-clang++"
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
     assert at._host == "aarch64-linux-android"
     assert env_vars.get("LD") is None
     assert env_vars.get("STRIP") is None
@@ -399,8 +400,8 @@ def test_crossbuild_to_android(build_env_mock):
     conanfile.conf.define("tools.android:ndk_path", ndk_path)
     at = AutotoolsToolchain(conanfile)
     env_vars = at.vars()
-    assert env_vars["CC"] == "my-clang"
-    assert env_vars["CXX"] == "my-clang++"
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
     assert at._host == "aarch64-linux-android"
     assert env_vars["LD"] == ld_file  # exists
     assert env_vars.get("STRIP") is None
