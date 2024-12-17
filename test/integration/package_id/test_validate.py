@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import textwrap
 import unittest
@@ -421,7 +420,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -529,7 +528,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -589,7 +588,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -752,7 +751,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -835,7 +834,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -875,7 +874,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_a_conanfile = textwrap.dedent("""
             from conan import ConanFile

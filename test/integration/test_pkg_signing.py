@@ -1,9 +1,7 @@
-import os
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 def test_pkg_sign():
@@ -37,7 +35,7 @@ def test_pkg_sign():
                 if os.path.isfile(os.path.join(artifacts_folder, f)):
                     assert f in contents
         """)
-    save(os.path.join(c.cache.plugins_path, "sign", "sign.py"), signer)
+    c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
     c.run("upload * -r=default -c")
     assert "Signing ref:  pkg/0.1" in c.out
@@ -50,7 +48,7 @@ def test_pkg_sign():
     assert "Verifying ref:  pkg/0.1" in c.out
     assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     assert "VERIFYING  conanfile.py" in c.out
-    assert "VERIFYING  conan_sources.tgz" not in c.out # Sources not retrieved now
+    assert "VERIFYING  conan_sources.tgz" not in c.out  # Sources not retrieved now
     # Lets force the retrieval of the sources
     c.run("install --requires=pkg/0.1 --build=*")
     assert "Verifying ref:  pkg/0.1" in c.out

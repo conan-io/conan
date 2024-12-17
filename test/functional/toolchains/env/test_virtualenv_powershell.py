@@ -7,8 +7,10 @@ import pytest
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
+from conan.tools.env.environment import environment_wrap_command
 from conans.util.files import save
 
 
@@ -28,7 +30,7 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    save(client.cache.new_config_path, "tools.env.virtualenv:powershell=True\n")
+    save(client.cache.new_config_path, "tools.env.virtualenv:powershell=powershell.exe\n")
     return client
 
 
@@ -73,7 +75,8 @@ def test_virtualenv(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-def test_virtualenv_test_package():
+@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
+def test_virtualenv_test_package(powershell):
     """ The test_package could crash if not cleaning correctly the test_package
     output folder. This will still crassh if the layout is not creating different build folders
     https://github.com/conan-io/conan/issues/12764
@@ -110,7 +113,7 @@ def test_virtualenv_test_package():
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
     # This was crashing because the .ps1 of test_package was not being cleaned
-    client.run("create . -c tools.env.virtualenv:powershell=True")
+    client.run(f"create . -c tools.env.virtualenv:powershell={powershell}")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
@@ -118,7 +121,8 @@ def test_virtualenv_test_package():
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-def test_vcvars():
+@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
+def test_vcvars(powershell):
     client = TestClient()
     conanfile = textwrap.dedent(r"""
         from conan import ConanFile
@@ -141,15 +145,15 @@ def test_vcvars():
     hello_cpp = gen_function_cpp(name="main")
     cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
     client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
-
-    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja")
-    client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
+    powershell_exe = "powershell.exe" if powershell == "powershell" else "pwsh"
+    client.run(f"build . -c tools.env.virtualenv:powershell={powershell} -c tools.cmake.cmaketoolchain:generator=Ninja")
+    client.run_command(rf'{powershell_exe} -Command ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message
     assert "conanvcvars.ps1: Activated environment" in client.out
     #check that the new env variables are set
     assert "VSCMD_ARG_VCVARS_VER" in client.out
 
-    client.run_command(r'powershell.exe ".\build\Release\generators\conanvcvars.ps1"')
+    client.run_command(rf'{powershell_exe} -Command ".\build\Release\generators\conanvcvars.ps1"')
     assert client.out.strip() == "conanvcvars.ps1: Activated environment"
 
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
@@ -158,3 +162,52 @@ def test_vcvars():
     assert "conanvcvars.ps1" in conanbuild
     #check that the conanvcvars.ps1 is setting the environment
     assert "conanvcvars.bat&set" in vcvars_ps1
+
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
+@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
+def test_concatenate_build_and_run_env(powershell):
+    # this tests that if we have both build and run env, they are concatenated correctly when using
+    # powershell
+    client = TestClient(path_with_spaces=True)
+    compiler_bat = "@echo off\necho MYTOOL {}!!\n"
+    conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Pkg(ConanFile):
+            exports_sources = "*"
+            package_type = "application"
+            def package(self):
+                copy(self, "*", self.build_folder, os.path.join(self.package_folder, "bin"))
+        """)
+
+    num_deps = 2
+    for i in range(num_deps):
+        client.save({"conanfile.py": conanfile,
+                     "mycompiler{}.bat".format(i): compiler_bat.format(i)})
+        client.run("create . --name=pkg{} --version=0.1".format(i))
+
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            tool_requires = "pkg0/0.1"
+            requires = "pkg1/0.1"
+            generators = "VirtualBuildEnv", "VirtualRunEnv"
+        """)
+
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run(f'install . -c tools.env.virtualenv:powershell="{powershell}"')
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.env.virtualenv:powershell", powershell)
+    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
+                                   client.current_folder,"mycompiler0.bat")
+    client.run_command(cmd)
+    assert "MYTOOL 0!!" in client.out
+
+    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
+                                   client.current_folder,"mycompiler1.bat")
+    client.run_command(cmd)
+    assert "MYTOOL 1!!" in client.out

@@ -4,7 +4,7 @@ from typing import Optional, List
 
 from conan.api.model import Remote, PackagesList
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
 from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -20,7 +20,7 @@ class DownloadAPI:
         If the recipe is already in the cache it will be skipped,
         but the specified metadata will be downloaded."""
         output = ConanOutput()
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         assert ref.revision, f"Reference '{ref}' must have revision"
         try:
             app.cache.recipe_layout(ref)  # raises if not found
@@ -53,7 +53,7 @@ class DownloadAPI:
         If the package is already in the cache it will be skipped,
         but the specified metadata will be downloaded."""
         output = ConanOutput()
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         try:
             app.cache.recipe_layout(pref.ref)  # raises if not found
         except ConanException:

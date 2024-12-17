@@ -6,6 +6,7 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient, GenConanfile
 
@@ -90,7 +91,7 @@ def test_conanfile_txt(client):
     assert "mycmake/1.0" in client.out
     assert "openssl/1.0" in client.out
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuild", client.current_folder, "mycmake.{}".format(ext))
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder, "mycmake.{}".format(ext))
     client.run_command(cmd)
 
     assert "MYCMAKE=Release!!" in client.out
@@ -120,14 +121,14 @@ def test_complete(client):
     client.run("install . -s build_type=Debug --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuild", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder,
                                    cmd="mycmake.{}".format(ext))
     client.run_command(cmd)
     assert "MYCMAKE=Release!!" in client.out
     assert "MYOPENSSL=Release!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command("conanrun", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(),"conanrun", client.current_folder,
                                    cmd="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                       sep=os.sep))
     client.run_command(cmd)
