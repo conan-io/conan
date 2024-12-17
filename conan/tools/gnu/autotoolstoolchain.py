@@ -107,19 +107,13 @@ class AutotoolsToolchain:
         ret = {}
         if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
             return ret
-        # User variables have more priority than Conan ones
-        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-        for var_name in ["CC", "CXX", "LD", "STRIP", "RANLIB", "AS", "AR", "ADDR2LINE", "NM", "OBJCOPY",
-                    "OBJDUMP", "READELF", "ELFEDIT", "host"]:
-            if build_env.get(var_name) is not None:
-                ret[var_name] = build_env[var_name]
 
+        # Setting host if it was not already defined yet
         arch = self._conanfile.settings.get_safe("arch")
         android_target = {'armv7': 'armv7a-linux-androideabi',
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
-        # Setting host if it was not already defined yet
         self._host = self._host or android_target
         # Automatic guessing made by Conan (need the NDK path variable defined)
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
