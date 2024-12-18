@@ -225,7 +225,7 @@ class TestPackageID:
         or package_id
         """
         client = TestClient(light=True)
-        save(client.cache.new_config_path, f"core.package_id:default_unknown_mode={package_id_mode}")
+        save(client.paths.new_config_path, f"core.package_id:default_unknown_mode={package_id_mode}")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
@@ -236,7 +236,7 @@ class TestPackageID:
         Changing the platform_requires revision affects consumers if package_revision_mode=recipe_revision
         """
         client = TestClient(light=True)
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=recipe_revision_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=recipe_revision_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0#r1",
                      "profile2": "[platform_requires]\ndep/1.0#r2"})
@@ -256,7 +256,7 @@ class TestPackageID:
         platform_requires do not have settings or package_id, so it is ignored
         """
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile -s os=Linux")

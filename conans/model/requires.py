@@ -255,6 +255,7 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
+        # necessary even if no propagation, order of requires matter
         self.is_test = self.is_test or other.is_test
         # package_id_mode is not being propagated downstream. So it is enough to check if the
         # current require already defined it or not
@@ -347,7 +348,6 @@ class Requirement:
 
         if self.test:
             downstream_require.test = True
-        downstream_require.is_test = require.is_test
 
         # If the current one is resolving conflicts, the downstream one will be too
         downstream_require.force = require.force

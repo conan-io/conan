@@ -71,7 +71,7 @@ class TestRevisionModeSCM:
         t = TestClient()
         recipe_excluded = f'revision_mode_excluded = {recipe_excluded}' if recipe_excluded else ""
         conf_excluded = f'core.scm:excluded={conf_excluded}' if conf_excluded else ""
-        save(t.cache.global_conf_path, conf_excluded)
+        save(t.paths.global_conf_path, conf_excluded)
         conanfile = GenConanfile("pkg", "0.1").with_class_attribute('revision_mode = "scm"') \
                                               .with_class_attribute(recipe_excluded)
         commit = t.init_git_repo({'conanfile.py': str(conanfile),

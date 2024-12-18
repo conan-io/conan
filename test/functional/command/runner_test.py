@@ -116,7 +116,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     remove=True
     """)
 
-    client.save({"default_host": profile_host, "default_build": profile_build}, path=client.cache.profiles_path)
+    client.save({"default_host": profile_host, "default_build": profile_build}, path=client.paths.profiles_path)
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h default_host -pr:b default_build")
 

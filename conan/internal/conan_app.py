@@ -55,6 +55,9 @@ class ConanBasicApp:
         auth_manager = ConanApiAuthManager(self.requester, cache_folder, localdb, global_conf)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
+        global_editables = conan_api.local.editable_packages
+        ws_editables = conan_api.workspace.editable_packages
+        self.editable_packages = global_editables.update_copy(ws_editables)
 
 
 class ConanApp(ConanBasicApp):
@@ -63,8 +66,8 @@ class ConanApp(ConanBasicApp):
         - LocalAPI to read editable packages
         """
         super().__init__(conan_api)
-        self.proxy = ConanProxy(self, conan_api.local.editable_packages)
-        self.range_resolver = RangeResolver(self, self.global_conf, conan_api.local.editable_packages)
+        self.proxy = ConanProxy(self, self.editable_packages)
+        self.range_resolver = RangeResolver(self, self.global_conf, self.editable_packages)
 
         self.pyreq_loader = PyRequireLoader(self, self.global_conf)
         cmd_wrap = CmdWrapper(HomePaths(self.cache_folder).wrapper_path)

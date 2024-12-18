@@ -27,7 +27,8 @@ class WorkspaceAPI:
     def config_folder(self):
         return self._workspace.config_folder()
 
-    def editables(self):
+    @property
+    def editable_packages(self):
         return self._workspace.editables()
 
     def open(self, require, remotes, cwd=None):
