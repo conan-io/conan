@@ -215,7 +215,7 @@ def test_concatenate_build_and_run_env(powershell):
 
 @pytest.mark.parametrize("powershell", [None, True, False])
 def test_powershell_deprecated_message(powershell):
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         class Pkg(ConanFile):
