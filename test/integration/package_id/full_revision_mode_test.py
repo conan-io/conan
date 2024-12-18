@@ -14,7 +14,7 @@ class FullRevisionModeTest(unittest.TestCase):
         libb_ref = RecipeReference.loads("libb/0.1@user/testing")
 
         clienta = TestClient()
-        save(clienta.cache.new_config_path,
+        save(clienta.paths.new_config_path,
              "core.package_id:default_unknown_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conan import ConanFile

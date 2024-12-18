@@ -205,8 +205,8 @@ def test_profile_template_profile_name():
                  "profile_folder/foobar": tpl1,
                  "another_folder/foo.profile": tpl1,
                  "include_folder/include_default": tpl2,
-                 os.path.join(client.cache.profiles_path, "baz"): tpl1,
-                 os.path.join(client.cache.profiles_path, "default"): default})
+                 os.path.join(client.paths.profiles_path, "baz"): tpl1,
+                 os.path.join(client.paths.profiles_path, "default"): default})
 
     # show only file name as profile name
     client.run("install . -pr=profile_folder/foobar")

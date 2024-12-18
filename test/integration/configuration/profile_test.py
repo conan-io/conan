@@ -61,7 +61,7 @@ class ProfileTest(unittest.TestCase):
         profile = '''
         [settings
         '''
-        clang_profile_path = os.path.join(self.client.cache.profiles_path, "clang")
+        clang_profile_path = os.path.join(self.client.paths.profiles_path, "clang")
         save(clang_profile_path, profile)
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
@@ -117,7 +117,7 @@ class ProfileTest(unittest.TestCase):
                                         ("compiler.runtime", "dynamic"),
                                         ("arch", "x86")])
 
-        create_profile(self.client.cache.profiles_path, "vs_12_86",
+        create_profile(self.client.paths.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
         self.client.save({"conanfile.py": conanfile_scope_env})
@@ -142,7 +142,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"hello0/*": tmp_settings}
-        create_profile(self.client.cache.profiles_path,
+        create_profile(self.client.paths.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
         # Try to override some settings in install command
@@ -153,13 +153,13 @@ class ProfileTest(unittest.TestCase):
 
         # If other package is specified compiler is not modified
         package_settings = {"NoExistsRecipe": tmp_settings}
-        create_profile(self.client.cache.profiles_path,
+        create_profile(self.client.paths.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
 
         # Mix command line package settings with profile
         package_settings = {"hello0/*": tmp_settings}
-        create_profile(self.client.cache.profiles_path, "vs_12_86_hello0_gcc",
+        create_profile(self.client.paths.profiles_path, "vs_12_86_hello0_gcc",
                        settings=profile_settings, package_settings=package_settings)
 
         # Try to override some settings in install command
@@ -197,7 +197,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"*@lasote/*": tmp_settings}
-        _create_profile(self.client.cache.profiles_path,
+        _create_profile(self.client.paths.profiles_path,
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
@@ -207,7 +207,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("(hello0/0.1@lasote/testing): 4.8", info)
 
         package_settings = {"*@other/*": tmp_settings}
-        _create_profile(self.client.cache.profiles_path,
+        _create_profile(self.client.paths.profiles_path,
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
@@ -243,7 +243,7 @@ class ProfileTest(unittest.TestCase):
         assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
     def test_install_profile_options(self):
-        create_profile(self.client.cache.profiles_path, "vs_12_86",
+        create_profile(self.client.paths.profiles_path, "vs_12_86",
                        options={"hello0*:language": 1,
                                 "hello0*:static": False})
 
@@ -304,7 +304,7 @@ class DefaultNameConan(ConanFile):
         self.client.run("export . --user=lasote --channel=stable")
 
         # Create a profile that doesn't activate the require
-        create_profile(self.client.cache.profiles_path, "scopes_env",
+        create_profile(self.client.paths.profiles_path, "scopes_env",
                        settings={"os": "Linux"})
 
         # Install with the previous profile
@@ -313,7 +313,7 @@ class DefaultNameConan(ConanFile):
                 winrequire/0.1@lasote/stable''', self.client.out)
 
         # Create a profile that activate the require
-        create_profile(self.client.cache.profiles_path, "scopes_env",
+        create_profile(self.client.paths.profiles_path, "scopes_env",
                        settings={"os": "Windows"})
 
         # Install with the previous profile
@@ -414,7 +414,7 @@ def test_profile_from_cache_path():
         https://github.com/conan-io/conan/pull/8685
     """
     client = TestClient()
-    path = os.path.join(client.cache.profiles_path, "android", "profile1")
+    path = os.path.join(client.paths.profiles_path, "android", "profile1")
     save(path, "[settings]\nos=Android")
     client.save({"conanfile.txt": ""})
     client.run("install . -pr=android/profile1")

@@ -200,7 +200,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote add my-remote2 http://someurl2 --insecure")
         client.run("remote add my-remote3 http://someurl3")
 
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote")
         self.assertEqual(data["remotes"][0]["url"], "http://someurl")
@@ -226,7 +226,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote disable my-remote3")
         assert "my-remote3" in client.out
         assert "Enabled: False" in client.out
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote0")
         self.assertEqual(data["remotes"][0]["url"], "http://someurl0")
@@ -242,7 +242,7 @@ class RemoteModificationTest(unittest.TestCase):
 
         client.run("remote disable * --format=json")
 
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertEqual(remote["disabled"], True)
@@ -252,7 +252,7 @@ class RemoteModificationTest(unittest.TestCase):
             assert remote["enabled"] is False
 
         client.run("remote enable *")
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
@@ -292,7 +292,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         self.assertIn("unrecognized arguments: some_invalid_option=foo", client.out)
-        data = json.loads(load(client.cache.remotes_path))
+        data = json.loads(load(client.paths.remotes_path))
         self.assertEqual(data["remotes"], [])
 
 

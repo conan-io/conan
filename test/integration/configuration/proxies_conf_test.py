@@ -22,7 +22,7 @@ class TestProxiesConfTest:
                 return resp
 
         client = TestClient(requester_class=MyHttpRequester)
-        save(client.cache.new_config_path, 'core.net.http:proxies = {"myproxykey": "myvalue"}')
+        save(client.paths.new_config_path, 'core.net.http:proxies = {"myproxykey": "myvalue"}')
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import download
@@ -50,7 +50,7 @@ class TestProxiesConfTest:
                 return resp
 
         client = TestClient(requester_class=MyHttpRequester)
-        save(client.cache.new_config_path,
+        save(client.paths.new_config_path,
              'core.net.http:no_proxy_match = ["MyExcludedUrl*", "*otherexcluded_one*"]\n'
              'core.net.http:proxies = {"http": "value"}')
         for url in ("**otherexcluded_one***", "MyUrl", "MyExcludedUrl***", "**MyExcludedUrl***"):
@@ -128,7 +128,7 @@ class TestProxiesConfTest:
                 return resp
 
         client = TestClient(requester_class=MyHttpRequester)
-        save(client.cache.new_config_path, 'core.net.http:clean_system_proxy = True')
+        save(client.paths.new_config_path, 'core.net.http:clean_system_proxy = True')
 
         with environment_update({"http_proxy": "my_system_proxy"}):
             client.save({"conanfile.py": conanfile})

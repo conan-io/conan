@@ -175,7 +175,7 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.cache.new_config_path,
+        save(client.paths.new_config_path,
              "core.package_id:default_unknown_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
