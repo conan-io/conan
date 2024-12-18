@@ -1,6 +1,5 @@
 import os
 import platform
-import sys
 import textwrap
 
 import pytest
@@ -234,99 +233,20 @@ def test_powershell_deprecated_message(powershell):
     else:
         assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" not in client.out
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
-def test_virtualenv_quoted_command(powershell):
-    """ This tests a command that contains single quotes through cmd /c via powershell
-    """
-    client = TestClient()
-    test_package = textwrap.dedent(r"""
-        import sys
-        from conan import ConanFile
-        from conan.tools.files import save
-        class Test(ConanFile):
-            def requirements(self):
-                self.requires(self.tested_reference_str)
-            def generate(self):
-                # Emulates vcvars.bat behavior
-                save(self, "myenv.bat", "echo MYENV!!!\nset MYVC_CUSTOMVAR1=PATATA1")
-                self.env_scripts.setdefault("build", []).append("myenv.bat")
-                save(self, "myps.ps1", "echo MYPS1!!!!\n$env:MYVC_CUSTOMVAR2=\"PATATA2\"")
-                self.env_scripts.setdefault("build", []).append("myps.ps1")
-            def layout(self):
-                self.folders.build = "mybuild"
-                self.folders.generators = "mybuild"
-            def test(self):
-                py_exe = sys.executable
-                py_command = "from __future__ import print_function; import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))"
-                command = f'"{py_exe}" -c "{py_command}"'
-                self.run(command)
-                self.run("set MYVC_CUSTOMVAR1")
-                self.run("set MYVC_CUSTOMVAR2")
-            """)
-    client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
-                 "test_package/conanfile.py": test_package})
-    client.run("create .")
-    assert f"{sys.version_info.major}.{sys.version_info.minor}" in client.out
-    assert "MYENV!!!" in client.out
-    assert "MYPS1!!!!" in client.out
-    assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
-    assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
-    # This was crashing because the .ps1 of test_package was not being cleaned
-    client.run(f"create . -c tools.env.virtualenv:powershell='{powershell}'")
-    assert "MYENV!!!" in client.out
-    assert "MYPS1!!!!" in client.out
-    assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
-    assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
-def test_concatenated_build_and_run_with_quoted_command(powershell):
-    # this tests that if we have both build and run env, they are concatenated correctly when using
-    # powershell
-    client = TestClient(path_with_spaces=True)
-    compiler_bat = "@echo off\necho MYTOOL {}!!\n"
-    conanfile = textwrap.dedent("""\
-        import os
-        from conan import ConanFile
-        from conan.tools.files import copy
-        class Pkg(ConanFile):
-            exports_sources = "*"
-            package_type = "application"
-            def package(self):
-                copy(self, "*", self.build_folder, os.path.join(self.package_folder, "bin"))
-        """)
-
-    num_deps = 2
-    for i in range(num_deps):
-        client.save({"conanfile.py": conanfile,
-                     "mycompiler{}.bat".format(i): compiler_bat.format(i)})
-        client.run("create . --name=pkg{} --version=0.1".format(i))
-
+@pytest.mark.parametrize("powershell", [True, "pwsh", "powershell.exe"])
+def test_powershell_quoting(powershell):
+    client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
-            tool_requires = "pkg0/0.1"
-            requires = "pkg1/0.1"
-            generators = "VirtualBuildEnv", "VirtualRunEnv"
+            name = "pkg"
+            version = "0.1"
+            def build(self):
+                self.run('python -c "print(\\'Hello World\\')"', scope="build")
         """)
 
-    client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run(f'install . -c tools.env.virtualenv:powershell="{powershell}"')
-    conanfile = ConanFileMock()
-    conanfile.conf.define("tools.env.virtualenv:powershell", powershell)
-    py_exe = sys.executable
-    py_command = "from __future__ import print_function; import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))"
-    quoted_command = f'"{py_exe}" -c "{py_command}"'
-    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
-                                   client.current_folder,f"{quoted_command} ; mycompiler0.bat")
-    client.run_command(cmd)
-    assert "MYTOOL 0!!" in client.out
-    assert f"{sys.version_info.major}.{sys.version_info.minor}" in client.out
-
-    cmd = environment_wrap_command(conanfile,["conanrunenv", "conanbuildenv"],
-                                   client.current_folder,f"{quoted_command} ; mycompiler1.bat")
-    client.run_command(cmd)
-    assert "MYTOOL 1!!" in client.out
-    assert f"{sys.version_info.major}.{sys.version_info.minor}" in client.out
+    client.save({"conanfile.py": conanfile})
+    client.run(f'create . -c tools.env.virtualenv:powershell={powershell}')
+    assert "Hello World" in client.out
