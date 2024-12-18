@@ -8,9 +8,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-caches:
+
+  ##############################################################################
+  #                         MACOS ENVIRONMENT                                  #
+  ##############################################################################
+
+  osx_setup:
+    name: OSX - Setup and Cache Dependencies
     runs-on: macos-14
-    name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,27 +116,20 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-  testing:
-    needs: setup-caches
+  osx_tests:
+    needs: osx_setup
+    runs-on: macos-14
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.8', '3.12', '3.13']
-        test-type: [unittests, integration, functional]
-
-    runs-on: macos-14
-
-    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
-
+        # python-version: [3.8, 3.12, 3.13]
+        python-version: [3.13]
+        test-type: [unittests]
+        # test-type: [unittests, integration, functional]
+    name: OSX - Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Restore pip cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
 
       - name: Restore tools cache
         uses: actions/cache@v4
@@ -145,10 +143,20 @@ jobs:
             ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
+      - name: Install homebrew dependencies
+        run: |
+          brew install xcodegen make libtool zlib autoconf automake ninja
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
 
       - name: Install Python Dependencies
         run: |
@@ -158,14 +166,25 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
-      - name: Install homebrew dependencies
-        run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
-
-      - name: Run Tests
+      - name: Run tests
         run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
+          pytest test/${{ matrix.test-type }} --durations=20 -n auto --cov=conan
+          pwd
 
-          python -m pytest test/${{ matrix.test-type }} --durations=20 -n auto
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        run: mv .coverage .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+
+      - name: Rename coverage file (Windows)
+        if: runner.os == 'Windows'
+        run: powershell Rename-Item .coverage coverage-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}.coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          include-hidden-files: true

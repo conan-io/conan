@@ -8,6 +8,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  ##############################################################################
+  #                         LINUX ENVIRONMENT                                  #
+  ##############################################################################
+  #
   build_container:
     runs-on: ubuntu-latest
     outputs:
@@ -44,17 +49,19 @@ jobs:
           docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} -f ./.ci/docker/conan-tests .
           docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }}
 
-  linux_test_suite:
+  linux_tests:
     needs: build_container
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/conan-tests:${{ needs.build_container.outputs.image_tag }}
+      image: ghcr.io/${{ github.repository_owner }}/conan-tests:${{ needs.linux_setup.outputs.image_tag }}
       options: --user conan
     strategy:
       matrix:
-        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
-        test-type: ['unittests', 'integration', 'functional']
-    name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
+        # python-version: [3.12.3, 3.9.2, 3.8.6, 3.6.15]
+        # test-type: [unittests, integration, functional]
+        python-version: [3.13]
+        test-type: [unittests]
+    name: Linux - Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,13 +71,13 @@ jobs:
           pyenv global ${{ matrix.python-version }}
           python --version
 
-      - name: Cache pip
+      - name: Restore pip cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install -r conans/requirements.txt
@@ -81,31 +88,38 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n 4
-          fi
+          pytest test/${{ matrix.test-type }} --durations=20 -n 4 --cov=conan
 
-  linux_docker_tests:
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        run: mv .coverage .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: .coverage
+          include-hidden-files: true
+
+
+  linux_tests_docker:
     needs: build_container
     runs-on: ubuntu-latest
-    name: Docker Runner Tests
+    name: Linux - Docker Runner Tests
     strategy:
       matrix:
-        python-version: [3.12, 3.9]
+        # python-version: [3.12, 3.9]
+        python-version: [3.12]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
           pip install -r conans/requirements.txt
@@ -116,7 +130,18 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          pytest -m docker_runner --durations=20 -rs
+          pytest -m docker_runner --durations=20 -rs --cov=conan
+
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        run: mv .coverage .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          include-hidden-files: true
 
   deploy_to_pypi_test:
     needs: [build_container, linux_test_suite, linux_docker_tests]

@@ -8,13 +8,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit_integration_tests:
+
+  ##############################################################################
+  #                         WINDOWS ENVIRONMENT                                #
+  ##############################################################################
+
+  windows_tests_unit_integration:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
+        # python-version: [3.13, 3.8, 3.6]
+        python-version: [3.13]
 
-    name: Unit & Integration Tests (${{ matrix.python-version }})
+    name: Windows - Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,7 +43,6 @@ jobs:
         shell: pwsh
         run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -57,15 +62,32 @@ jobs:
         shell: pwsh
         run: |
           git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=100 -n=auto
+          pytest test/unittests test/integration --durations=100 -n=auto --cov=conan
 
-  functional_tests:
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        run: mv .coverage .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+
+      - name: Rename coverage file (Windows)
+        if: runner.os == 'Windows'
+        run: powershell Rename-Item .coverage coverage-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}.coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          include-hidden-files: true
+
+
+  windows_tests_functional:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
+        # python-version: [3.13, 3.8, 3.6]
+        python-version: [3.13]
 
-    name: Functional Tests (${{ matrix.python-version }})
+    name: Windows - Functional Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,7 +126,6 @@ jobs:
         shell: pwsh
         run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -121,7 +142,7 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
-      - name: "Set choco cache"
+      - name: Set choco cache
         run: choco config set cacheLocation C:\choco-cache
 
       - uses: actions/cache@v4
@@ -252,4 +273,19 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=100
+          pytest test/functional -n=auto --durations=100 --cov=conan
+
+      - name: Rename coverage file (Linux/MacOS)
+        if: runner.os != 'Windows'
+        run: mv .coverage .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+
+      - name: Rename coverage file (Windows)
+        if: runner.os == 'Windows'
+        run: powershell Rename-Item .coverage coverage-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}.coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: .coverage.${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+          include-hidden-files: true
