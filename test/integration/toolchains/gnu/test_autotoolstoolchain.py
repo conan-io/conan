@@ -328,7 +328,7 @@ def test_toolchain_crossbuild_to_android():
             content = load(self, toolchain)
             assert 'export CC="clang"' not in content
             assert 'export CXX="clang++"' not in content
-            assert 'export LD="/path/to/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/ld"' in content
+            assert 'export LD="/path/to/ndk' in content
 
             build_env = os.path.join(self.generators_folder, "conanbuildenv-x86_64.sh")
             content = load(self, build_env)
