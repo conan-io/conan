@@ -451,7 +451,7 @@ class _Component:
                 if existing is not None and isinstance(existing, list) and not overwrite:
                     existing.extend(v)
                 else:
-                    current_values[k] = v
+                    current_values[k] = copy.copy(v)
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
