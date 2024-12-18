@@ -94,7 +94,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
 def test_migration_db_lru():
     t = TestClient()
     storage = temp_folder()
-    save(t.cache.global_conf_path, f"core.cache:storage_path={storage}")
+    save(t.paths.global_conf_path, f"core.cache:storage_path={storage}")
     t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     t.run("create .")
     # Any command generates the profile and compatibility plugin files

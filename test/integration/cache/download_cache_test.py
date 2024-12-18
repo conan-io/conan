@@ -138,7 +138,7 @@ class TestDownloadCache:
         assert "some content 3" in client.load("myfile3.txt")
 
         # disabling cache will make it fail
-        save(client.cache.new_config_path, "")
+        save(client.paths.new_config_path, "")
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
         assert "Not found" in client.out

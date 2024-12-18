@@ -24,6 +24,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
@@ -457,7 +458,7 @@ class TestClient:
         # create default profile
         if light:
             text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.cache.settings_path, "os: [Linux, Windows]")
+            save(self.paths.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
@@ -476,15 +477,11 @@ class TestClient:
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        api = ConanAPI(cache_folder=self.cache_folder)
-        global_conf = api.config.global_conf
+        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
 
-        class MyCache(PkgCache, HomePaths):  # Temporary class to avoid breaking all tests
-            def __init__(self, cache_folder):
-                PkgCache.__init__(self, cache_folder, global_conf)
-                HomePaths.__init__(self, cache_folder)
-
-        return MyCache(self.cache_folder)
+    @property
+    def paths(self):
+        return HomePaths(self.cache_folder)
 
     @property
     def base_folder(self):

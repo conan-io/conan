@@ -38,10 +38,10 @@ class HelloConan(ConanFile):
 
     def test_runtime_not_present_ok(self):
         self.client.run("install .")
-        default_settings = load(self.client.cache.settings_path)
+        default_settings = load(self.client.paths.settings_path)
         default_settings = default_settings.replace("runtime:", "# runtime:")
         default_settings = default_settings.replace("runtime_type:", "# runtime_type:")
-        save(self.client.cache.settings_path, default_settings)
+        save(self.client.paths.settings_path, default_settings)
         self.client.save_home({
             "profiles/default": "[settings]\nos=Windows\ncompiler=msvc\ncompiler.version=191"
         })

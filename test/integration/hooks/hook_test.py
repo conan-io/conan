@@ -71,7 +71,7 @@ class TestHooks:
 
     def test_complete_hook(self):
         c = TestClient()
-        hook_path = os.path.join(c.cache.hooks_path, "complete_hook", "hook_complete.py")
+        hook_path = os.path.join(c.paths.hooks_path, "complete_hook", "hook_complete.py")
         save(hook_path, complete_hook)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
 
@@ -127,9 +127,9 @@ class TestHooks:
                 my_printer(conanfile.output)
             """)
         c = TestClient()
-        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
-        init_path = os.path.join(c.cache.hooks_path, "my_hook", "custom_module", "__init__.py")
-        custom_path = os.path.join(c.cache.hooks_path, "my_hook", "custom_module", "custom.py")
+        hook_path = os.path.join(c.paths.hooks_path, "my_hook", "hook_my_hook.py")
+        init_path = os.path.join(c.paths.hooks_path, "my_hook", "custom_module", "__init__.py")
+        custom_path = os.path.join(c.paths.hooks_path, "my_hook", "custom_module", "custom.py")
         c.save({init_path: "",
                 custom_path: custom_module,
                 hook_path: my_hook,
@@ -147,7 +147,7 @@ class TestHooks:
             def pre_export(conanfile):
                 raise Exception("Boom")
             """)
-        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
+        hook_path = os.path.join(c.paths.hooks_path, "my_hook", "hook_my_hook.py")
         c.save({hook_path: my_hook,
                 "conanfile.py": GenConanfile("pkg", "1.0")})
 
@@ -162,7 +162,7 @@ class TestHooks:
            def post_build_fail(conanfile):
                conanfile.output.info("Hello")
            """)
-        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
+        hook_path = os.path.join(c.paths.hooks_path, "my_hook", "hook_my_hook.py")
         save(hook_path, my_hook)
         conanfile = textwrap.dedent("""
             from conan import ConanFile

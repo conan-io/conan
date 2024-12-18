@@ -12,7 +12,10 @@ EDITABLE_PACKAGES_FILE = 'editable_packages.json'
 
 
 class EditablePackages:
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder=None):
+        if cache_folder is None:
+            self._edited_refs = {}
+            return
         self._edited_file = normpath(join(cache_folder, EDITABLE_PACKAGES_FILE))
         if os.path.exists(self._edited_file):
             edited = load(self._edited_file)
@@ -21,6 +24,17 @@ class EditablePackages:
                                  for r, d in edited_js.items()}
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}
+
+    def update_copy(self, ws_editables):
+        """
+        Create a new instance with the union of the editable packages of self and other
+        """
+        if ws_editables is None:
+            return self
+        result = EditablePackages()
+        result._edited_refs = self._edited_refs.copy()
+        result._edited_refs.update(ws_editables)
+        return result
 
     @property
     def edited_refs(self):
