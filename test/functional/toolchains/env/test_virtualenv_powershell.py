@@ -213,7 +213,6 @@ def test_concatenate_build_and_run_env(powershell):
     assert "MYTOOL 1!!" in client.out
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
 @pytest.mark.parametrize("powershell", [None, True, False])
 def test_powershell_deprecated_message(powershell):
     client = TestClient(light=True)
@@ -235,6 +234,7 @@ def test_powershell_deprecated_message(powershell):
         assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" not in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
 @pytest.mark.parametrize("powershell", [True, "pwsh", "powershell.exe"])
 def test_powershell_quoting(powershell):
     client = TestClient(path_with_spaces=False)
