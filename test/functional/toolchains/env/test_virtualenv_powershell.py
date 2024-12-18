@@ -213,6 +213,7 @@ def test_concatenate_build_and_run_env(powershell):
     assert "MYTOOL 1!!" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
 @pytest.mark.parametrize("powershell", [None, True, False])
 def test_powershell_deprecated_message(powershell):
     client = TestClient(light=True)
