@@ -211,3 +211,24 @@ def test_concatenate_build_and_run_env(powershell):
                                    client.current_folder,"mycompiler1.bat")
     client.run_command(cmd)
     assert "MYTOOL 1!!" in client.out
+
+
+@pytest.mark.parametrize("powershell", [None, True, False])
+def test_powershell_deprecated_message(powershell):
+    client = TestClient(light=True)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            name = "pkg"
+            version = "0.1"
+        """)
+
+    client.save({"conanfile.py": conanfile})
+    powershell_arg = f'-c tools.env.virtualenv:powershell={powershell}' if powershell is not None else ""
+    client.run(f'install . {powershell_arg}')
+    # only show message if the value is set to False or True if not set do not show message
+    if powershell is not None:
+        assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" in client.out
+    else:
+        assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" not in client.out
