@@ -192,16 +192,18 @@ class TestAddRemove:
             # Doesn't fail
             assert "other/14.5 - Editable" in c.out
 
-    def test_api_error(self):
+    def test_api_dynamic_version_run(self):
+        # https://github.com/conan-io/conan/issues/17306
         c = TestClient(light=True)
         conanfile = textwrap.dedent("""
-            import os
+            from io import StringIO
             from conan import ConanFile
-            from conan.tools.files import load
             class Lib(ConanFile):
                 name= "pkg"
                 def set_version(self):
-                    self.version = self.run("echo 2.1")
+                    my_buf = StringIO()
+                    self.run('echo 2.1', stdout=my_buf)
+                    self.version = my_buf.getvalue().strip()
             """)
 
         workspace = textwrap.dedent("""\
@@ -209,16 +211,13 @@ class TestAddRemove:
            name = "myws"
 
            def editables(*args, **kwargs):
-               result = {}
                conanfile = workspace_api.load("dep1/conanfile.py")
-               result[f"{conanfile.name}/{conanfile.version}"] = {"path": "dep1/conanfile.py"}
-               return result
+               return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1/conanfile.py"}}
             """)
 
         c.save({"conanws.py": workspace,
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
-        print(c.out)
         info = json.loads(c.stdout)
         assert info["editables"] == {"pkg/2.1": {"path": "dep1/conanfile.py"}}
 

@@ -4,6 +4,8 @@ from pathlib import Path
 import yaml
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.conan_app import CmdWrapper, ConanFileHelpers
 from conans.client.loader import load_python_file
 from conan.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
@@ -27,11 +29,10 @@ class _UserWorkspaceAPI:
     def load(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path)
         from conans.client.loader import ConanFileLoader
-        #cmd_wrap = CmdWrapper(home_paths.wrapper_path)
-        #helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache,
-        #                           self.cache_folder)
-        helpers=None
-        #loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
+        cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
+        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api.config.global_conf,
+                                   cache=None, home_folder=self._conan_api.home_folder)
+        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
