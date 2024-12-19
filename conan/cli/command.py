@@ -85,7 +85,6 @@ class BaseConanCommand:
         parser_args, _ = parser.parse_known_args(*args)
 
         formatarg = getattr(parser_args, "format", "text")
-
         out_file = getattr(parser_args, "out_file", None)
 
         try:
