@@ -103,8 +103,6 @@ class ConanRequester:
     def __init__(self, config, cache_folder=None):
         self._url_creds = _SourceURLCredentials(cache_folder)
         self._max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
-        if ConanRequester._http_requester_imp is not None and hasattr(requests, "Session"):
-            ConanRequester._adapter.max_retries = self._get_retries()
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
