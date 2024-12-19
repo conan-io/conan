@@ -193,7 +193,7 @@ def graph_info(conan_api, parser, subparser, *args):
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     subparser.add_argument("--out-file", action=OnceArgument,
-                        help="Filename of the file to save the output of the formatter.")
+                           help="Filename of the file to save the output of the formatter.")
 
     args = parser.parse_args(*args)
 
