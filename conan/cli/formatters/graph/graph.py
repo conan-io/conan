@@ -138,11 +138,11 @@ def format_graph_dot(result):
     cli_out_write(_render_graph(graph, None, template, template_folder))
 
 
-def format_graph_json(result):
+def format_graph_json(result, filename=None):
     graph = result["graph"]
     field_filter = result.get("field_filter")
     package_filter = result.get("package_filter")
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
     json_result = json.dumps({"graph": serial}, indent=4)
-    cli_out_write(json_result)
+    cli_out_write(json_result, filename=filename)

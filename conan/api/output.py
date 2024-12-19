@@ -8,6 +8,7 @@ import colorama
 from colorama import Fore, Style
 
 from conan.errors import ConanException
+from conans.util.files import save
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
@@ -285,10 +286,14 @@ class ConanOutput:
         self.stream.flush()
 
 
-def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
+def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0, filename=None):
     """
     Output to be used by formatters to dump information to stdout
     """
+    if filename is not None:
+        ConanOutput().info(f"Formatted output saved to '{filename}'")
+        save(filename, data)
+        return
     if (fg or bg) and _color_enabled(sys.stdout):  # need color
         data = f"{' ' * indentation}{fg or ''}{bg or ''}{data}{Style.RESET_ALL}{endline}"
         sys.stdout.write(data)

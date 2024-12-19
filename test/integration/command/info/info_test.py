@@ -435,3 +435,12 @@ def test_graph_info_bundle():
 
     c.run("graph info . -c tools.graph:vendor=build --build='lib*'")
     c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
+def test_write_formatter_to_file():
+    c = TestClient(light=True)
+    c.save({"conanfile.py":  GenConanfile("pkg", "0.1")})
+    c.run("graph info .  --format=graph.json")
+    assert "Formatted output saved to 'graph.json'" in c.out
+    graph = json.loads(c.load("graph.json"))
+    assert len(graph["graph"]["nodes"]) == 1

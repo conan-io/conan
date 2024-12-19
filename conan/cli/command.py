@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -89,13 +90,21 @@ class BaseConanCommand:
         except AttributeError:
             formatarg = default_format
 
+        filename = None
+        if "." in formatarg:
+            filename = formatarg
+            _, formatarg = formatarg.rsplit(".", 1)
+
         try:
             formatter = self._formatters[formatarg]
         except KeyError:
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        formatter(info)
+        if filename and "filename" in inspect.signature(formatter).parameters.keys():
+            formatter(info, filename=filename)
+        else:
+            formatter(info)
 
     @staticmethod
     def _dispatch_errors(info):
