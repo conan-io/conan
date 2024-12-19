@@ -8,7 +8,6 @@ import colorama
 from colorama import Fore, Style
 
 from conan.errors import ConanException
-from conans.util.files import save
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
