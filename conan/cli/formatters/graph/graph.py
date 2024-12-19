@@ -11,7 +11,7 @@ from conans.client.graph.graph import BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
 from conans.client.graph.graph_error import GraphConflictError
 from conans.client.installer import build_id
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 # FIXME: Check all this code when format_graph_[html/dot] use serialized graph
@@ -138,11 +138,15 @@ def format_graph_dot(result):
     cli_out_write(_render_graph(graph, None, template, template_folder))
 
 
-def format_graph_json(result, filename=None):
+def format_graph_json(result, out_file=None):
     graph = result["graph"]
     field_filter = result.get("field_filter")
     package_filter = result.get("package_filter")
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
     json_result = json.dumps({"graph": serial}, indent=4)
-    cli_out_write(json_result, filename=filename)
+    if out_file is not None:
+        ConanOutput().info(f"Formatted output saved to '{out_file}'")
+        save(out_file, json_result)
+        return
+    cli_out_write(json_result)

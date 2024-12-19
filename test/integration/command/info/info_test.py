@@ -440,7 +440,7 @@ def test_graph_info_bundle():
 def test_write_formatter_to_file():
     c = TestClient(light=True)
     c.save({"conanfile.py":  GenConanfile("pkg", "0.1")})
-    c.run("graph info .  --format=graph.json")
+    c.run("graph info .  --format=json --out-file=graph.json")
     assert "Formatted output saved to 'graph.json'" in c.out
     graph = json.loads(c.load("graph.json"))
     assert len(graph["graph"]["nodes"]) == 1

@@ -84,16 +84,9 @@ class BaseConanCommand:
     def _format(self, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
 
-        default_format = "text"
-        try:
-            formatarg = parser_args.format or default_format
-        except AttributeError:
-            formatarg = default_format
+        formatarg = getattr(parser_args, "format", "text")
 
-        filename = None
-        if "." in formatarg:
-            filename = formatarg
-            _, formatarg = formatarg.rsplit(".", 1)
+        out_file = getattr(parser_args, "out_file", None)
 
         try:
             formatter = self._formatters[formatarg]
@@ -101,8 +94,8 @@ class BaseConanCommand:
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        if filename and "filename" in inspect.signature(formatter).parameters.keys():
-            formatter(info, filename=filename)
+        if out_file and "out_file" in inspect.signature(formatter).parameters.keys():
+            formatter(info, out_file=out_file)
         else:
             formatter(info)
 
