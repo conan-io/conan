@@ -240,3 +240,22 @@ def test_consumer_unexpected():
     tc.run("create cmake")
     tc.run("create . -b=missing -pr=profile")
     assert "cmake/1.0 -> True" not in tc.out
+
+
+@pytest.mark.parametrize("languages", [
+    "['C', 'CXX']",
+    "['CXX']",
+    "'CXX'",
+])
+def test_language_unexpected(languages):
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile().with_class_attribute(f"languages = {languages}")})
+    tc.run("inspect .", assert_error=True)
+    assert "Only 'C' and 'C++' languages are allowed in 'languages' attribute" in tc.out
+
+
+def test_empty_languages():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile().with_class_attribute("languages = []")})
+    tc.run("inspect .")
+    assert "Only 'C' and 'C++' languages are allowed in 'languages' attribute" not in tc.out

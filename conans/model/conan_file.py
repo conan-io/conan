@@ -95,6 +95,8 @@ class ConanFile:
             self.generators = [self.generators]
         if isinstance(self.languages, str):
             self.languages = [self.languages]
+        if not all(lang == "C" or lang == "C++" for lang in self.languages):
+            raise ConanException("Only 'C' and 'C++' languages are allowed in 'languages' attribute")
         if isinstance(self.settings, str):
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
