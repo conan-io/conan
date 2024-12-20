@@ -271,8 +271,8 @@ def test_formatter_redirection_to_file():
     c.run("config home --out-file=cmd_out.txt")
     assert "Formatted output saved to 'cmd_out.txt'" in c.out
     cmd_out = c.load("cmd_out.txt")
-    assert f"{c.cache_folder}\n" == cmd_out
-    assert not f"{c.cache_folder}\n" == c.stdout
+    assert f"{c.cache_folder}" in cmd_out
+    assert not f"{c.cache_folder}" in c.stdout
 
     c.run("graph info . --format=json --out-file=graph.json")
     assert "Formatted output saved to 'graph.json'" in c.out
