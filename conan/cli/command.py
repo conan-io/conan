@@ -1,6 +1,6 @@
 import argparse
-import inspect
 import textwrap
+from contextlib import redirect_stdout
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -68,6 +68,8 @@ class BaseConanCommand:
         if formatters:
             help_message = "Select the output format: {}".format(", ".join(formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
+        parser.add_argument("--out-file", action=OnceArgument,
+                            help="Write the output of the command to the specified file instead of stdout.")
 
     @property
     def name(self):
@@ -84,7 +86,7 @@ class BaseConanCommand:
     def _format(self, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
 
-        formatarg = getattr(parser_args, "format", "text")
+        formatarg = getattr(parser_args, "format", None) or "text"
         out_file = getattr(parser_args, "out_file", None)
 
         try:
@@ -93,8 +95,11 @@ class BaseConanCommand:
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        if out_file and "out_file" in inspect.signature(formatter).parameters.keys():
-            formatter(info, out_file=out_file)
+        if out_file:
+            with open(out_file, 'w') as f:
+                with redirect_stdout(f):
+                    formatter(info)
+            ConanOutput().info(f"Formatted output saved to '{out_file}'")
         else:
             formatter(info)
 
