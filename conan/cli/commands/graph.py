@@ -192,7 +192,6 @@ def graph_info(conan_api, parser, subparser, *args):
                            help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
-
     args = parser.parse_args(*args)
 
     # parameter validation
