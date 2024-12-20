@@ -9,6 +9,7 @@ import urllib3
 from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 
 from conan import __version__
@@ -198,6 +199,7 @@ class ConanRequester:
             for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):
                 popped = True if os.environ.pop(var_name, None) else popped
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
+        ConanOutput(scope="HttpRequest").trace(f"{method}: {url}")
         try:
             all_kwargs = self._add_kwargs(url, kwargs)
             tmp = getattr(self._http_requester, method)(url, **all_kwargs)

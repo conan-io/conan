@@ -212,12 +212,12 @@ class ConanOutput:
 
     def trace(self, msg):
         if self._conan_output_level <= LEVEL_TRACE:
-            self._write_message(msg, fg=Color.BRIGHT_WHITE)
+            self._write_message(msg, fg=Color.BLUE)
         return self
 
     def debug(self, msg):
         if self._conan_output_level <= LEVEL_DEBUG:
-            self._write_message(msg)
+            self._write_message(msg, fg=Color.MAGENTA)
         return self
 
     def verbose(self, msg, fg=None, bg=None):
