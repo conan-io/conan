@@ -274,19 +274,19 @@ def test_formatter_redirection_to_file():
     assert f"{c.cache_folder}\n" == cmd_out
     assert not f"{c.cache_folder}\n" == c.stdout
 
-    c.run("graph info .  --format=json --out-file=graph.json")
+    c.run("graph info . --format=json --out-file=graph.json")
     assert "Formatted output saved to 'graph.json'" in c.out
     graph = json.loads(c.load("graph.json"))
     assert len(graph["graph"]["nodes"]) == 1
     assert not "nodes" in c.stdout
 
-    c.run("graph info .  --format=html --out-file=graph.html")
+    c.run("graph info . --format=html --out-file=graph.html")
     assert "Formatted output saved to 'graph.html'" in c.out
     html = c.load("graph.html")
     assert "<head>" in html
     assert not "<head>" in c.stdout
 
-    c.run("install .  --format=json --out-file=graph.json")
+    c.run("install . --format=json --out-file=graph.json")
     assert "Formatted output saved to 'graph.json'" in c.out
     graph = json.loads(c.load("graph.json"))
     assert len(graph["graph"]["nodes"]) == 1
