@@ -256,6 +256,10 @@ class RemotesAPI:
         user, token, _ = localdb.get_login(remote.url)
         return user
 
+    @property
+    def requester(self):
+        return self._requester
+
 
 def _load(remotes_file):
     if not os.path.exists(remotes_file):
