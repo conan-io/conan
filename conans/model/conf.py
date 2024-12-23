@@ -33,6 +33,7 @@ BUILT_IN_CONFS = {
     "core.sources:download_urls": "List of URLs to download backup sources from",
     "core.sources:upload_url": "Remote URL to upload backup sources to",
     "core.sources:exclude_urls": "URLs which will not be backed up",
+    "core.sources.patch:extra_path": "Extra path to search for patch files for conan create",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
