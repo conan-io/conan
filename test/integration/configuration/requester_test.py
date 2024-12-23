@@ -49,12 +49,11 @@ class ConanRequesterHeadersTests(unittest.TestCase):
     def test_user_agent(self):
         mock_http_requester = MagicMock()
         with mock.patch("conans.client.rest.conan_requester.requests", mock_http_requester):
-            with mock.patch("conans.client.rest.conan_requester.ConanRequester._http_requester_imp", mock_http_requester):
-                requester = ConanRequester(ConfDefinition())
-                requester.get(url="aaa")
-                headers = requester._http_requester.get.call_args[1]["headers"]
-                self.assertIn("Conan/%s" % __version__, headers["User-Agent"])
+            requester = ConanRequester(ConfDefinition())
+            requester.get(url="aaa")
+            headers = requester._http_requester.get.call_args[1]["headers"]
+            self.assertIn("Conan/%s" % __version__, headers["User-Agent"])
 
-                requester.get(url="aaa", headers={"User-Agent": "MyUserAgent"})
-                headers = requester._http_requester.get.call_args[1]["headers"]
-                self.assertEqual("MyUserAgent", headers["User-Agent"])
+            requester.get(url="aaa", headers={"User-Agent": "MyUserAgent"})
+            headers = requester._http_requester.get.call_args[1]["headers"]
+            self.assertEqual("MyUserAgent", headers["User-Agent"])

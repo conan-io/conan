@@ -275,6 +275,16 @@ class TestRequester:
                 kwargs["headers"] = {}
             kwargs["headers"].update(mock_request.headers)
 
+    def mount(self, *args, **kwargs):
+        pass
+
+    def Session(self):
+        return self
+
+    @property
+    def codes(self):
+        return requests.codes
+
 
 class TestServer(object):
     def __init__(self, read_permissions=None,
@@ -531,8 +541,7 @@ class TestClient:
     def mocked_servers(self, requester=None):
         _req = requester or TestRequester(self.servers)
         with mock.patch("conans.client.rest.conan_requester.requests", _req):
-            with mock.patch("conans.client.rest.conan_requester.ConanRequester._http_requester_imp", _req):
-                yield
+            yield
 
     @contextmanager
     def mocked_io(self):

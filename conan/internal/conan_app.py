@@ -44,9 +44,8 @@ class ConanApp:
         self.cache = PkgCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
-
-        # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(global_conf, cache_folder)
+        # FIXME: ugly private access
+        self.requester = conan_api.remotes._requester
         # To handle remote connections
         # Wraps RestApiClient to add authentication support (same interface)
         self.localdb = LocalDB(cache_folder)

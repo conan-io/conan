@@ -7,6 +7,7 @@ from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
@@ -30,6 +31,8 @@ class RemotesAPI:
         # This method is private, the subapi is not instantiated by users
         self.conan_api = conan_api
         self._remotes_file = HomePaths(self.conan_api.cache_folder).remotes_path
+        # Wraps an http_requester to inject proxies, certs, etc
+        self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """

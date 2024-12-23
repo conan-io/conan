@@ -43,7 +43,6 @@ class RestApiTest(unittest.TestCase):
                 save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
-                ConanRequester._http_requester_imp = TestRequester({"myremote", cls.server},)
                 localdb = LocalDBMock()
 
                 mocked_user_input = UserInput(non_interactive=False)
@@ -62,7 +61,6 @@ class RestApiTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ConanRequester._http_requester_imp = None
         cls.server.stop()
 
     def tearDown(self):

@@ -97,12 +97,14 @@ class _SourceURLCredentials:
 
 
 class ConanRequester:
-    _http_requester_imp = None
-    _adapter = None
 
     def __init__(self, config, cache_folder=None):
         self._url_creds = _SourceURLCredentials(cache_folder)
         self._max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
+        self._http_requester = requests.Session()
+        _adapter = HTTPAdapter(max_retries=self._get_retries())
+        self._http_requester.mount("http://", _adapter)
+        self._http_requester.mount("https://", _adapter)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
@@ -114,19 +116,6 @@ class ConanRequester:
                                    "Python " + platform.python_version(),
                                    platform.machine()])
         self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
-
-    @property
-    def _http_requester(self):
-        if ConanRequester._http_requester_imp is None:
-            # FIXME: Trick for testing when requests is mocked
-            if hasattr(requests, "Session"):
-                ConanRequester._http_requester_imp = requests.Session()
-                ConanRequester._adapter = HTTPAdapter(max_retries=self._get_retries())
-                ConanRequester._http_requester_imp.mount("http://", ConanRequester._adapter)
-                ConanRequester._http_requester_imp.mount("https://", ConanRequester._adapter)
-            else:
-                ConanRequester._http_requester_imp = requests
-        return ConanRequester._http_requester_imp
 
     def _get_retries(self):
         retry = self._max_retries
