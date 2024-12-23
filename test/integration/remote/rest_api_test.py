@@ -18,7 +18,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import LocalDBMock
 from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import get_free_port, TestRequester
+from conan.test.utils.tools import get_free_port
 from conans.util.files import md5, save
 
 

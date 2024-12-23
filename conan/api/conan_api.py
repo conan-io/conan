@@ -40,10 +40,7 @@ class ConanAPI:
         # Migration system
         migrator = ClientMigrator(self.cache_folder, conan_version)
         migrator.migrate()
-        self.reinit()
 
-
-    def reinit(self):
         self.config = ConfigAPI(self)
         self.remotes = RemotesAPI(self)
         self.command = CommandAPI(self)
