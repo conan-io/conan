@@ -18,7 +18,7 @@ def test_called_before_digest():
         def post_export(conanfile):
             save(conanfile, os.path.join(conanfile.export_folder, "myfile.txt"), "content!!")
         """)
-    hook_path = os.path.join(t.cache.hooks_path, "complete_hook", "hook_complete.py")
+    hook_path = os.path.join(t.paths.hooks_path, "complete_hook", "hook_complete.py")
     save(hook_path, complete_hook)
     t.save({'conanfile.py': GenConanfile("pkg", "0.1")})
     t.run("export .")

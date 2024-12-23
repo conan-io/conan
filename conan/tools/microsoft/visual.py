@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
@@ -155,7 +156,19 @@ class VCVars:
         create_env_script(conanfile, content, conan_vcvars_bat, scope)
         _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        try:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            if is_ps1 is not None:
+                ConanOutput().warning(
+                    "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
+                    "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments if needed "
+                    "(for example: 'powershell.exe -argument'). "
+                    "To unset this configuration, use `tools.env.virtualenv:powershell=!`, which matches "
+                    "the previous 'False' behavior.",
+                    warn_tag="deprecated"
+                )
+        except ConanException:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
         if is_ps1:
             content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
@@ -288,17 +301,17 @@ def _vcvars_versions(conanfile):
             return None, None
         toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
         vs_version = {"v140": "14",
-                        "v141": "15",
-                        "v142": "16",
-                        "v143": "17",
-                        "v144": "17"}.get(toolset_version)
+                      "v141": "15",
+                      "v142": "16",
+                      "v143": "17",
+                      "v144": "17"}.get(toolset_version)
         if vs_version is None:
             raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
         vcvars_ver = {"v140": "14.0",
-                        "v141": "14.1",
-                        "v142": "14.2",
-                        "v143": "14.3",
-                        "v144": "14.4"}.get(toolset_version)
+                      "v141": "14.1",
+                      "v142": "14.2",
+                      "v143": "14.3",
+                      "v144": "14.4"}.get(toolset_version)
         if vcvars_ver and msvc_update is not None:
             vcvars_ver += f"{msvc_update}"
     else:

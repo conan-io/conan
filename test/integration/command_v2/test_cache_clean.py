@@ -121,7 +121,7 @@ def test_cache_multiple_builds_diff_prev_clean():
 def test_cache_clean_custom_storage():
     c = TestClient()
     t = temp_folder(path_with_spaces=False)
-    save(c.cache.global_conf_path, f"core.cache:storage_path={t}")
+    save(c.paths.global_conf_path, f"core.cache:storage_path={t}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_cmake_build()})
     c.run("create .", assert_error=True)
     build_folder = re.search(r"pkg/0.1: Building your package in (\S+)", str(c.out)).group(1)

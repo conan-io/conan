@@ -22,10 +22,10 @@ def test_ignore_paths_when_listing_profiles():
     ignore_path = '.DS_Store'
 
     # just in case
-    os.makedirs(c.cache.profiles_path, exist_ok=True)
+    os.makedirs(c.paths.profiles_path, exist_ok=True)
     # This a "touch" equivalent
-    open(os.path.join(c.cache.profiles_path, '.DS_Store'), 'w').close()
-    os.utime(os.path.join(c.cache.profiles_path, ".DS_Store"))
+    open(os.path.join(c.paths.profiles_path, '.DS_Store'), 'w').close()
+    os.utime(os.path.join(c.paths.profiles_path, ".DS_Store"))
 
     c.run("profile list")
 

@@ -18,7 +18,8 @@ concurrency:
 jobs:
   build_container:
     runs-on: ubuntu-latest
-    name: Build and Publish Docker Image for testing Conan
+    outputs:
+      image_tag: ${{ steps.dockerfile_hash.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,37 +35,28 @@ jobs:
         id: dockerfile_hash
         run: |
           DOCKERFILE_HASH=$(find ./.ci/docker/conan-tests -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
-          echo "hash=$DOCKERFILE_HASH" >> $GITHUB_OUTPUT
+          echo "tag=$DOCKERFILE_HASH" >> $GITHUB_OUTPUT
 
-      - name: Cache Docker image
-        id: cache_docker_image
-        uses: actions/cache@v4
-        with:
-          path: docker_image_cache
-          key: ${{ runner.os }}-docker-${{ steps.dockerfile_hash.outputs.hash }}
-
-      - name: Load Docker image from cache
-        if: steps.cache_docker_image.outputs.cache-hit == 'true'
-        run: docker load -i docker_image_cache/conan-tests.tar
-
-      - name: Build Docker image (if not cached)
-        if: steps.cache_docker_image.outputs.cache-hit != 'true'
+      - name: Check if image exists
+        id: check_image
         run: |
-          docker build \
-          -t ghcr.io/${{ github.repository_owner }}/conan-tests:latest \
-          -f ./.ci/docker/conan-tests .
-          mkdir -p docker_image_cache
-          docker save ghcr.io/${{ github.repository_owner }}/conan-tests:latest -o docker_image_cache/conan-tests.tar
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} > /dev/null 2>&1; then
+            echo "status=exists" >> $GITHUB_OUTPUT
+          else
+            echo "status=no-image" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Push Docker image to GHCR
-        if: steps.cache_docker_image.outputs.cache-hit != 'true'
-        run: docker push ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+      - name: Build and push image if not exists
+        if: steps.check_image.outputs.status == 'no-image'
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} -f ./.ci/docker/conan-tests .
+          docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }}
 
   linux_test_suite:
     needs: build_container
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/conan-tests:latest
+      image: ghcr.io/${{ github.repository_owner }}/conan-tests:${{ needs.build_container.outputs.image_tag }}
       options: --user conan
     strategy:
       matrix:
@@ -106,6 +98,7 @@ jobs:
           fi
 
   linux_docker_tests:
+    needs: build_container
     runs-on: ubuntu-latest
     name: Docker Runner Tests
     strategy:

@@ -343,7 +343,9 @@ class _BazelBUILDGenerator:
             {% for bindir in obj["bindirs"] %}
             "{{ bindir }}/**",
             {% endfor %}
-        ]),
+        ],
+        allow_empty = True
+        ),
         visibility = ["//visibility:public"],
     )
     {% endif %}

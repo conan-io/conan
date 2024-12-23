@@ -47,7 +47,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def test_change_mode_conf(self):
         # change the policy in conan.conf
-        save(self.client2.cache.new_config_path, "core.package_id:default_python_mode=patch_mode")
+        save(self.client2.paths.new_config_path, "core.package_id:default_python_mode=patch_mode")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
         self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1,
@@ -62,7 +62,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def test_unrelated_conf(self):
         # change the policy in conan.conf
-        save(self.client2.cache.new_config_path,
+        save(self.client2.paths.new_config_path,
              "core.package_id:default_python_mode=unrelated_mode")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
@@ -104,7 +104,7 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
 
     def test(self):
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_python_mode=full_version_mode")
+        save(client.paths.new_config_path, "core.package_id:default_python_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=tool --version=1.1.1")
 

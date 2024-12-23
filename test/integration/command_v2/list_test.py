@@ -13,7 +13,7 @@ from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.env import environment_update
-from conans.util.files import load, save
+from conans.util.files import save
 
 
 class TestParamErrors:
@@ -620,14 +620,13 @@ def test_list_prefs_query_custom_settings():
     # https://github.com/conan-io/conan/issues/13071
     """
     c = TestClient(default_server_user=True)
-    settings = load(c.cache.settings_path)
-    settings += textwrap.dedent("""\
+    settings = textwrap.dedent("""\
         newsetting:
             value1:
             value2:
                 subsetting: [1, 2, 3]
         """)
-    save(c.cache.settings_path, settings)
+    save(c.paths.settings_path_user, settings)
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("newsetting")})
     c.run("create . -s newsetting=value1")
     c.run("create . -s newsetting=value2 -s newsetting.subsetting=1")

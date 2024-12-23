@@ -64,8 +64,9 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
-            ~/Applications/bazel/6.3.2
-            ~/Applications/bazel/7.1.2
+            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/7.4.1
+            ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
@@ -111,7 +112,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          for version in 6.3.2 7.1.2; do
+          for version in 6.5.0 7.4.1 8.0.0; do
             mkdir -p ${HOME}/Applications/bazel/${version}
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
@@ -146,8 +147,9 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
-            ~/Applications/bazel/6.3.2
-            ~/Applications/bazel/7.1.2
+            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/7.4.1
+            ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Set up Python ${{ matrix.python-version }}

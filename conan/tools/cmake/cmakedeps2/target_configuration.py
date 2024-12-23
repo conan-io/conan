@@ -4,6 +4,7 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.pkg_type import PackageType
@@ -166,7 +167,7 @@ class TargetConfigurationTemplate2:
                   "system_libs": system_libs}
 
         if info.frameworks:
-            self._conanfile.output.warning("frameworks not supported yet in new CMakeDeps generator")
+            ConanOutput(scope=str(self._conanfile)).warning("frameworks not supported yet in new CMakeDeps generator")
 
         if info.libs:
             if len(info.libs) != 1:

@@ -451,7 +451,7 @@ class _Component:
                 if existing is not None and isinstance(existing, list) and not overwrite:
                     existing.extend(v)
                 else:
-                    current_values[k] = v
+                    current_values[k] = copy.copy(v)
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
@@ -550,9 +550,11 @@ class _Component:
             elif ext == ".dll":
                 dll_location = _find_matching(bindirs, libname)
         else:
-            regex_static = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:a|lib)")
-            regex_shared = re.compile(rf"(?:lib)?{libname}(?:[._-].+)?\.(?:so|dylib)")
-            regex_dll = re.compile(rf"(?:.+)?({libname}|{component_name})(?:.+)?\.dll")
+            lib_sanitized = re.escape(libname)
+            component_sanitized = re.escape(component_name)
+            regex_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+            regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
+            regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
             static_location = _find_matching(libdirs, regex_static)
             shared_location = _find_matching(libdirs, regex_shared)
             if static_location or not shared_location:

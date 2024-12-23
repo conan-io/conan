@@ -180,7 +180,7 @@ def test_package_id_validate_settings():
 class TestBuildRequiresHeaderOnly:
     def test_header_only(self):
         c = TestClient(light=True)
-        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        save(c.paths.global_conf_path, "core.package_id:default_build_mode=minor_mode")
         pkg = textwrap.dedent("""\
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -201,7 +201,7 @@ class TestBuildRequiresHeaderOnly:
 
     def test_header_only_implements(self):
         c = TestClient(light=True)
-        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        save(c.paths.global_conf_path, "core.package_id:default_build_mode=minor_mode")
         pkg = textwrap.dedent("""\
             from conan import ConanFile
             class Pkg(ConanFile):
