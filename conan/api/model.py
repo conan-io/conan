@@ -46,6 +46,9 @@ class Remote:
     def __repr__(self):
         return str(self)
 
+    def invalidate_cache(self):
+        self.caching = {}
+
 
 class MultiPackagesList:
     def __init__(self):

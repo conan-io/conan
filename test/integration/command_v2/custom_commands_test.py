@@ -422,10 +422,11 @@ class TestCommandAPI:
 
 
 class TestCommandsRemoteCaching:
-    def test_custom_command_with_subcommands(self):
+    def test_remotes_cache(self):
         complex_command = textwrap.dedent("""
             import json
             from conan.cli.command import conan_command
+            from conan.api.output import ConanOutput
 
             @conan_command()
             def mycache(conan_api, parser, *args, **kwargs):
@@ -445,6 +446,15 @@ class TestCommandsRemoteCaching:
                 deps_graph = conan_api.graph.load_graph_requires(["pkg/0.1"], None, host, build,
                                                                  None, remotes, None, None)
                 conan_api.graph.analyze_binaries(deps_graph, None, remotes=remotes)
+
+                # Now invalidate the cache and see how it breaks
+                try:
+                    remotes[0].invalidate_cache()
+                    deps_graph = conan_api.graph.load_graph_requires(["pkg/0.1"], None, host, build,
+                                                                     None, remotes, None, None)
+                    conan_api.graph.analyze_binaries(deps_graph, None, remotes=remotes)
+                except Exception as e:
+                    ConanOutput().warning(f"Cache invalidated, as expected: {e}")
             """)
 
         c = TestClient(default_server_user=True)
@@ -457,4 +467,5 @@ class TestCommandsRemoteCaching:
         c.run("upload * -r=default -c")
         c.run("remove * -c")
         c.run("mycache")
-        # Does not break, caching is working
+        # Does not break unexpectedly, caching is working
+        assert "WARN: Cache invalidated, as expected: Invalid URL 'broken" in c.out
