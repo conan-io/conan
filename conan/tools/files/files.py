@@ -451,6 +451,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
@@ -463,6 +464,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
             return False
     content = content.replace(search, replace)
     save(conanfile, file_path, content, encoding=encoding)
+    return True
 
 
 def collect_libs(conanfile, folder=None):
