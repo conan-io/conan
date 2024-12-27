@@ -192,5 +192,9 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     assert "'--force" not in new_autoreconf_args
     # Add new value to make_args
     at.make_args.update({"--new-complex-flag": "new-value"})
+    at.make_args.update({"--new-empty-flag": ""})
+    at.make_args.update({"--new-no-value-flag": None})
     new_make_args = cmd_args_to_string(GnuToolchain._dict_to_list(at.make_args))
     assert "--new-complex-flag=new-value" in new_make_args
+    assert "--new-empty-flag=" in new_make_args
+    assert "--new-no-value-flag" in new_make_args and "--new-no-value-flag=" not in new_make_args
