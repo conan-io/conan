@@ -2,6 +2,8 @@ import argparse
 import textwrap
 from contextlib import redirect_stdout
 
+import colorama
+
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conans.model.conf import CORE_CONF_PATTERN
@@ -101,7 +103,10 @@ class BaseConanCommand:
                     formatter(info)
             ConanOutput().info(f"Formatted output saved to '{out_file}'")
         else:
+            # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
+            colorama.deinit()
             formatter(info)
+            colorama.reinit()
 
     @staticmethod
     def _dispatch_errors(info):
