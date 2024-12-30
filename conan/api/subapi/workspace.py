@@ -87,20 +87,23 @@ class WorkspaceAPI:
         @param product:
         @return: The reference of the added package
         """
-        path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+        full_path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
+        conanfile = app.loader.load_named(full_path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         ref.validate_ref()
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self._workspace.add(ref, path, output_folder=output_folder,  product=product)
+        self._workspace.add(ref, full_path, output_folder=output_folder,  product=product)
         return ref
 
-    def remove(self, path):
+    def remove(self, path, cwd=None):
         return self._workspace.remove(path)
 
     def info(self):
         return self._workspace.serialize()
+
+    def editable_from_path(self, path):
+        return self._workspace.editable_from_path(path)

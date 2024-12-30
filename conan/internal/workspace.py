@@ -74,7 +74,7 @@ class Workspace:
 
     @property
     def products(self):
-        return [RecipeReference.loads(p) for p in self._attr("products") or []]
+        return self._attr("products")
 
     @property
     def folder(self):
@@ -113,12 +113,14 @@ class Workspace:
         """
         self._check_ws()
         self._yml = self._yml or {}
-        editable = {"path": self._rel_path(path)}
+        assert os.path.isfile(path)
+        path = self._rel_path(os.path.dirname(path))
+        editable = {"path": path}
         if output_folder:
             editable["output_folder"] = self._rel_path(output_folder)
         self._yml.setdefault("editables", {})[str(ref)] = editable
         if product:
-            self._yml.setdefault("products", []).append(str(ref))
+            self._yml.setdefault("products", []).append(path)
         save(self._yml_file, yaml.dump(self._yml))
 
     def _rel_path(self, path):
@@ -132,13 +134,19 @@ class Workspace:
                                  f"{self._folder}")
         return path.replace("\\", "/")  # Normalize to unix path
 
+    def editable_from_path(self, path):
+        editables = self._attr("editables")
+        for ref, info in editables.items():
+            if info["path"].replace("\\", "/") == path:
+                return RecipeReference.loads(ref)
+
     def remove(self, path):
         self._check_ws()
         self._yml = self._yml or {}
         found_ref = None
         path = self._rel_path(path)
         for ref, info in self._yml.get("editables", {}).items():
-            if os.path.dirname(info["path"]).replace("\\", "/") == path:
+            if info["path"].replace("\\", "/") == path:
                 found_ref = ref
                 break
         if not found_ref:
@@ -148,13 +156,16 @@ class Workspace:
         return found_ref
 
     def editables(self):
+        """
+        @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
+        """
         if not self._folder:
             return
         editables = self._attr("editables")
         if editables:
             editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
             for v in editables.values():
-                v["path"] = os.path.normpath(os.path.join(self._folder, v["path"]))
+                v["path"] = os.path.normpath(os.path.join(self._folder, v["path"], "conanfile.py"))
                 if v.get("output_folder"):
                     v["output_folder"] = os.path.normpath(os.path.join(self._folder,
                                                                        v["output_folder"]))

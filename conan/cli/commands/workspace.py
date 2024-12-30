@@ -109,6 +109,8 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     """
     Build the current workspace, starting from the "products"
     """
+    subparser.add_argument("path", nargs="?",
+                           help='Path to a package folder in the user workspace')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -123,21 +125,25 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    products = conan_api.workspace.products
-    ConanOutput().title(f"Building workspace products {products}")
-
     build_mode = args.build or []
     if "editable" not in build_mode:
         ConanOutput().info("Adding '--build=editable' as build mode")
         build_mode.append("editable")
 
+    if args.path:
+        products = [args.path]
+    else:  # all products
+        products = conan_api.workspace.products
+        ConanOutput().title(f"Building workspace products {products}")
+
     editables = conan_api.workspace.editable_packages
     # TODO: This has to be improved to avoid repetition when there are multiple products
     for product in products:
         ConanOutput().subtitle(f"Building workspace product: {product}")
-        editable = editables.get(product)
-        if editable is None:
-            raise ConanException(f"Product {product} not defined in the workspace as editable")
+        product_ref = conan_api.workspace.editable_from_path(product)
+        if product_ref is None:
+            raise ConanException(f"Product '{product}' not defined in the workspace as editable")
+        editable = editables[product_ref]
         editable_path = editable["path"]
         deps_graph = conan_api.graph.load_graph_consumer(editable_path, None, None, None, None,
                                                          profile_host, profile_build, lockfile,
@@ -150,7 +156,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
         conan_api.install.install_consumer(deps_graph, None, os.path.dirname(editable_path),
                                            editable.get("output_folder"))
-        ConanOutput().title(f"Calling build() for the product {product}")
+        ConanOutput().title(f"Calling build() for the product {product_ref}")
         conanfile = deps_graph.root.conanfile
         conan_api.local.build(conanfile)
 
