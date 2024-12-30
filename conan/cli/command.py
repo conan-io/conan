@@ -66,12 +66,13 @@ class BaseConanCommand:
         return [formatter for formatter in self._formatters if formatter != "text"]
 
     def _init_formatters(self, parser):
-        formatters = self._help_formatters
-        if formatters:
-            help_message = "Select the output format: {}".format(", ".join(formatters))
+        if self._help_formatters:
+            help_message = "Select the output format: {}".format(", ".join(self._help_formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
-        parser.add_argument("--out-file", action=OnceArgument,
-                            help="Write the output of the command to the specified file instead of stdout.")
+        # Add the out-file argument if any formatters exist, even the default one not shown in help
+        if self._formatters:
+            parser.add_argument("--out-file", action=OnceArgument,
+                                help="Write the output of the command to the specified file instead of stdout.")
 
     @property
     def name(self):
