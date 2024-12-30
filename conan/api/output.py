@@ -293,9 +293,9 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
         data = f"{' ' * indentation}{fg or ''}{bg or ''}{data}{Style.RESET_ALL}{endline}"
         sys.stdout.write(data)
     else:
+        data = f"{' ' * indentation}{data}{endline}"
         # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
         colorama.deinit()
-        data = f"{' ' * indentation}{data}{endline}"
         sys.stdout.write(data)
         colorama.reinit()
 
