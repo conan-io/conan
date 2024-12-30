@@ -319,3 +319,22 @@ class TestOpenAdd:
                                              "EditableBuild")})
         assert "pkga/0.1: WARN: BUILD PKGA!" in c.out
         assert "pkgb/0.1: WARN: BUILD PKGB!" in c.out
+
+
+class TestWorkspaceBuild:
+    def test_build(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
+               .with_requires("pkga/0.1")})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb --product")
+        c.run("workspace info --format=json")
+        assert json.loads(c.stdout)["products"] == ["pkgb/0.1"]
+        c.run("workspace build")
+        c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                             "EditableBuild")})
+        assert "pkga/0.1: WARN: BUILD PKGA!" in c.out
+        assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out

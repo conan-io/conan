@@ -73,6 +73,10 @@ class Workspace:
         return self._attr("name") or os.path.basename(self._folder)
 
     @property
+    def products(self):
+        return [RecipeReference.loads(p) for p in self._attr("products") or []]
+
+    @property
     def folder(self):
         return self._folder
 
@@ -102,7 +106,7 @@ class Workspace:
             raise ConanException("Workspace not defined, please create a "
                                  "'conanws.py' or 'conanws.yml' file")
 
-    def add(self, ref, path, output_folder):
+    def add(self, ref, path, output_folder, product=False):
         """
         Add a new editable to the current workspace 'conanws.yml' file.
         If existing, the 'conanws.py' must use this via 'conanws_data' attribute
@@ -113,6 +117,8 @@ class Workspace:
         if output_folder:
             editable["output_folder"] = self._rel_path(output_folder)
         self._yml.setdefault("editables", {})[str(ref)] = editable
+        if product:
+            self._yml.setdefault("products", []).append(str(ref))
         save(self._yml_file, yaml.dump(self._yml))
 
     def _rel_path(self, path):
@@ -158,4 +164,5 @@ class Workspace:
         self._check_ws()
         return {"name": self.name,
                 "folder": self._folder,
+                "products": self._attr("products"),
                 "editables": self._attr("editables")}
