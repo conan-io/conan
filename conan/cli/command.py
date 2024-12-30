@@ -2,8 +2,6 @@ import argparse
 import textwrap
 from contextlib import redirect_stdout
 
-import colorama
-
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conans.model.conf import CORE_CONF_PATTERN
