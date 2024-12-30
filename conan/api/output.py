@@ -294,10 +294,14 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
         sys.stdout.write(data)
     else:
         data = f"{' ' * indentation}{data}{endline}"
-        # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
-        colorama.deinit()
-        sys.stdout.write(data)
-        colorama.reinit()
+        if sys.stdout.isatty():
+            # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
+            # skip deinit/reinit if stdout is not a TTY to preserve redirected output to file
+            colorama.deinit()
+            sys.stdout.write(data)
+            colorama.reinit()
+        else:
+            sys.stdout.write(data)
 
 
 class TimedOutput:
