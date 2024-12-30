@@ -30,11 +30,10 @@ class TestProfileDetectAPI:
             """)
 
         client.save({"profile1": tpl1})
-        client.run("profile show -pr=profile1")
+        client.run("profile show -pr=profile1 --context=host")
         #FIXME: check update setting
         update = str(int(detect_api.detect_msvc_update("194")) % 10)
         expected = textwrap.dedent(f"""\
-            Host profile:
             [settings]
             compiler=msvc
             compiler.cppstd=14
@@ -63,13 +62,12 @@ class TestProfileDetectAPI:
             """)
 
         client.save({"profile1": tpl1})
-        client.run("profile show -pr=profile1")
+        client.run("profile show -pr=profile1 --context=host")
         libc_name, libc_version = detect_api.detect_libc()
         assert libc_name is not None
         assert libc_version is not None
         _, version, _ = detect_api.detect_gcc_compiler()
         expected = textwrap.dedent(f"""\
-            Host profile:
             [settings]
             compiler=gcc
             compiler.version={version}
@@ -93,3 +91,27 @@ class TestProfileDetectAPI:
         client.run("profile show -pr=profile1")
         sdk_version = detect_api.detect_sdk_version(sdk="macosx")
         assert f"os.sdk_version={sdk_version}" in client.out
+
+@pytest.mark.parametrize("context", [None, "host", "build"])
+@pytest.mark.parametrize("f", ["json", "text"])
+def test_profile_show_aggregate_usecase(context, f):
+    tc = TestClient(light=True)
+
+    context_arg = f"--context {context}" if context else ""
+    tc.run(f'profile show {context_arg} -s:h="os=Windows" -s:b="os=Linux" --format={f}')
+
+    if context == "host":
+        if f == "text":
+            assert "Host profile:" not in tc.stdout
+            assert "Host profile:" in tc.stderr
+        assert "Linux" not in tc.out
+    if context == "build":
+        if f == "text":
+            assert "Build profile:" not in tc.stdout
+            assert "Build profile:" in tc.stderr
+        assert "Windows" not in tc.out
+
+    if context in (None, "host"):
+        assert "Windows" in tc.out
+    if context in (None, "build"):
+        assert "Linux" in tc.out

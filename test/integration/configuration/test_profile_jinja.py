@@ -241,12 +241,11 @@ class TestProfileDetectAPI:
             """)
 
         client.save({"profile1": tpl1})
-        client.run("profile show -pr=profile1")
+        client.run("profile show -pr=profile1 --context=host")
         pr = client.get_default_host_profile()
         the_os = pr.settings['os']
         arch = pr.settings['arch']
         expected = textwrap.dedent(f"""\
-            Host profile:
             [settings]
             arch={arch}
             os={the_os}

@@ -187,7 +187,13 @@ class RemoteManager:
             raise
 
     def search_recipes(self, remote, pattern):
-        return self._call_remote(remote, "search", pattern)
+        cached_method = remote.caching.setdefault("search_recipes", {})
+        try:
+            return cached_method[pattern]
+        except KeyError:
+            result = self._call_remote(remote, "search", pattern)
+            cached_method[pattern] = result
+            return result
 
     def search_packages(self, remote, ref):
         packages = self._call_remote(remote, "search_packages", ref)
@@ -234,7 +240,14 @@ class RemoteManager:
                        if k in ("shared", "fPIC", "header_only")]
             if options:
                 headers['Conan-PkgID-Options'] = ';'.join(options)
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+
+        cached_method = remote.caching.setdefault("get_latest_package_reference", {})
+        try:
+            return cached_method[pref]
+        except KeyError:
+            result = self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+            cached_method[pref] = result
+            return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"

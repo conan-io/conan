@@ -237,7 +237,7 @@ class GnuToolchain:
 
     @staticmethod
     def _dict_to_list(flags):
-        return [f"{k}={v}" if v else k for k, v in flags.items()]
+        return [f"{k}={v}" if v is not None else k for k, v in flags.items()]
 
     @property
     def cxxflags(self):
