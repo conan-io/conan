@@ -69,10 +69,9 @@ class BaseConanCommand:
         if self._help_formatters:
             help_message = "Select the output format: {}".format(", ".join(self._help_formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
-        # Add the out-file argument if any formatters exist, even the default one not shown in help
-        if self._formatters:
-            parser.add_argument("--out-file", action=OnceArgument,
-                                help="Write the output of the command to the specified file instead of stdout.")
+
+        parser.add_argument("--out-file", action=OnceArgument,
+                            help="Write the output of the command to the specified file instead of stdout.")
 
     @property
     def name(self):
@@ -104,10 +103,7 @@ class BaseConanCommand:
                     formatter(info)
             ConanOutput().info(f"Formatted output saved to '{out_file}'")
         else:
-            # https://github.com/conan-io/conan/issues/17245 avoid colorama crash and overhead
-            colorama.deinit()
             formatter(info)
-            colorama.reinit()
 
     @staticmethod
     def _dispatch_errors(info):
