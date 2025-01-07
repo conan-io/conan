@@ -724,6 +724,8 @@ class TestListRemotes:
 
     def test_search_no_matching_recipes(self, client):
         expected_output = textwrap.dedent("""\
+        Connecting to remote 'default' with user 'admin'
+        Connecting to remote 'other' with user 'admin'
         Local Cache
           ERROR: Recipe 'whatever/0.1' not found
         default

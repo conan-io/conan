@@ -30,7 +30,9 @@ class TestSearch:
         assert "error: the following arguments are required: reference" in self.client.out
 
     def test_search_no_matching_recipes(self, remotes):
-        expected_output = ("remote1\n"
+        expected_output = ("Connecting to remote 'remote1' anonymously\n"
+                           "Connecting to remote 'remote2' anonymously\n"
+                           "remote1\n"
                            "  ERROR: Recipe 'whatever' not found\n"
                            "remote2\n"
                            "  ERROR: Recipe 'whatever' not found\n")

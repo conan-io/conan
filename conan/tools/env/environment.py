@@ -318,10 +318,9 @@ class Environment:
 
     def vars(self, conanfile, scope="build"):
         """
-        Return an EnvVars object from the current Environment object
         :param conanfile: Instance of a conanfile, usually ``self`` in a recipe
         :param scope: Determine the scope of the declared variables.
-        :return:
+        :return: An EnvVars object from the current Environment object
         """
         return EnvVars(conanfile, self._values, scope)
 
