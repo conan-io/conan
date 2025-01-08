@@ -331,6 +331,15 @@ class ConanLib(ConanFile):
         # Login again correctly
         client.run("remote login default lasote -p mypass")
 
+    def test_login_multiremote(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"admin": "password"})
+        servers["other"] = TestServer(users={"admin": "password"})
+        c = TestClient(servers=servers, inputs=["admin", "password", "wrong", "wrong"])
+        # This must fail, not autthenticate in the next remote
+        c.run("remote login *", assert_error=True)
+        assert "ERROR: Wrong user or password. [Remote: other]" in c.out
+
 
 def test_user_removed_remote_removed():
     # Make sure that removing a remote clears the credentials
