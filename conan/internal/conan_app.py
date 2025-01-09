@@ -46,13 +46,9 @@ class ConanBasicApp:
         cache_folder = conan_api.home_folder
         self.cache_folder = cache_folder
         self.cache = PkgCache(self.cache_folder, global_conf)
-
-        # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(global_conf, cache_folder)
-        # To handle remote connections
         # Wraps RestApiClient to add authentication support (same interface)
         localdb = LocalDB(cache_folder)
-        auth_manager = ConanApiAuthManager(self.requester, cache_folder, localdb, global_conf)
+        auth_manager = ConanApiAuthManager(conan_api.remotes.requester, cache_folder, localdb, global_conf)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
         global_editables = conan_api.local.editable_packages
@@ -71,6 +67,6 @@ class ConanApp(ConanBasicApp):
 
         self.pyreq_loader = PyRequireLoader(self, self.global_conf)
         cmd_wrap = CmdWrapper(HomePaths(self.cache_folder).wrapper_path)
-        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, self.global_conf, self.cache,
-                                             self.cache_folder)
+        conanfile_helpers = ConanFileHelpers(conan_api.remotes.requester, cmd_wrap, self.global_conf,
+                                             self.cache, self.cache_folder)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
