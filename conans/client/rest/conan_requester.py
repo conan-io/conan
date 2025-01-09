@@ -101,9 +101,9 @@ class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
         self._url_creds = _SourceURLCredentials(cache_folder)
-        self._max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
+        _max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
         self._http_requester = requests.Session()
-        _adapter = HTTPAdapter(max_retries=self._get_retries())
+        _adapter = HTTPAdapter(max_retries=self._get_retries(_max_retries))
         self._http_requester.mount("http://", _adapter)
         self._http_requester.mount("https://", _adapter)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
@@ -118,8 +118,9 @@ class ConanRequester:
                                    platform.machine()])
         self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
 
-    def _get_retries(self):
-        retry = self._max_retries
+    @staticmethod
+    def _get_retries(max_retries):
+        retry = max_retries
         if retry == 0:
             return 0
         retry_status_code_set = {
