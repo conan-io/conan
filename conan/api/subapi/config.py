@@ -10,7 +10,7 @@ from conan.api.output import ConanOutput
 
 from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp, ConanBasicApp
 from conan.internal.default_settings import default_settings_yml
 from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -36,7 +36,7 @@ class ConfigAPI:
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conan.internal.api.config.config_installer import configuration_install
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
 
