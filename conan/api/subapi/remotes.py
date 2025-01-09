@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
@@ -221,7 +221,7 @@ class RemotesAPI:
         :param username: the user login as ``str``
         :param password: password ``str``
         """
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         app.remote_manager.authenticate(remote, username, password)
 
     def user_logout(self, remote: Remote):
@@ -244,7 +244,7 @@ class RemotesAPI:
     def user_auth(self, remote: Remote, with_user=False, force=False):
         # TODO: Review
         localdb = LocalDB(self._home_folder)
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if with_user:
             user, token, _ = localdb.get_login(remote.url)
             if not user:
