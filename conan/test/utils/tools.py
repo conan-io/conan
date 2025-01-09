@@ -277,6 +277,16 @@ class TestRequester:
                 kwargs["headers"] = {}
             kwargs["headers"].update(mock_request.headers)
 
+    def mount(self, *args, **kwargs):
+        pass
+
+    def Session(self):
+        return self
+
+    @property
+    def codes(self):
+        return requests.codes
+
 
 class TestServer(object):
     def __init__(self, read_permissions=None,

@@ -100,18 +100,12 @@ class _SourceURLCredentials:
 class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
-        # TODO: Make all this lazy, to avoid fully configuring Requester, for every api call
-        #  even if it doesn't use it
-        # FIXME: Trick for testing when requests is mocked
-        if hasattr(requests, "Session"):
-            self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=self._get_retries(config))
-            self._http_requester.mount("http://", adapter)
-            self._http_requester.mount("https://", adapter)
-        else:
-            self._http_requester = requests
-
         self._url_creds = _SourceURLCredentials(cache_folder)
+        _max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
+        self._http_requester = requests.Session()
+        _adapter = HTTPAdapter(max_retries=self._get_retries(_max_retries))
+        self._http_requester.mount("http://", _adapter)
+        self._http_requester.mount("https://", _adapter)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
@@ -125,8 +119,8 @@ class ConanRequester:
         self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
 
     @staticmethod
-    def _get_retries(config):
-        retry = config.get("core.net.http:max_retries", default=2, check_type=int)
+    def _get_retries(max_retries):
+        retry = max_retries
         if retry == 0:
             return 0
         retry_status_code_set = {
