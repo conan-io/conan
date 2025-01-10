@@ -225,7 +225,7 @@ class TestPackageID:
         or package_id
         """
         client = TestClient(light=True)
-        save(client.cache.new_config_path, f"core.package_id:default_build_mode={package_id_mode}")
+        save(client.paths.new_config_path, f"core.package_id:default_build_mode={package_id_mode}")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
                      "profile": "[platform_tool_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
@@ -236,7 +236,7 @@ class TestPackageID:
         Changing the system_tool_require revision affects consumers if package_revision_mode=recipe_revision
         """
         client = TestClient(light=True)
-        save(client.cache.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
+        save(client.paths.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
                      "profile": "[platform_tool_requires]\ndep/1.0#r1",
                      "profile2": "[platform_tool_requires]\ndep/1.0#r2"})

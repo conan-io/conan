@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp, ConanBasicApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
@@ -196,7 +196,7 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanApp(self.conan_api)
+        conan_app = ConanBasicApp(self.conan_api)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)

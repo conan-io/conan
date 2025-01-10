@@ -20,7 +20,8 @@ class _LockRequires:
     It is implemented this way to allow adding package_id:prev information later,
     otherwise it could be a bare list
     """
-    def __init__(self):
+    def __init__(self, ordered=True):
+        self._ordered = ordered
         self._requires = OrderedDict()  # {require: package_ids}
 
     def __contains__(self, item):
@@ -51,7 +52,7 @@ class _LockRequires:
                 result._requires[RecipeReference.loads(d[0])] = d[1]
         return result
 
-    def add(self, ref, package_ids=None):
+    def add(self, ref, package_ids=None, config=False):
         if ref.revision is not None:
             old_package_ids = self._requires.pop(ref, None)  # Get existing one
             if old_package_ids is not None:
@@ -99,7 +100,8 @@ class _LockRequires:
         self.sort()
 
     def sort(self):
-        self._requires = OrderedDict(reversed(sorted(self._requires.items())))
+        if self._ordered:
+            self._requires = OrderedDict(reversed(sorted(self._requires.items())))
 
     def merge(self, other):
         """
@@ -115,13 +117,13 @@ class _LockRequires:
         self.sort()
 
 
-class Lockfile(object):
+class Lockfile:
 
     def __init__(self, deps_graph=None, lock_packages=False):
         self._requires = _LockRequires()
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
-        self._conf_requires = _LockRequires()
+        self._conf_requires = _LockRequires(ordered=False)
         self._alias = {}
         self._overrides = Overrides()
         self.partial = False
@@ -154,7 +156,6 @@ class Lockfile(object):
         self._requires.sort()
         self._build_requires.sort()
         self._python_requires.sort()
-        self._conf_requires.sort()
 
     @staticmethod
     def load(path):
@@ -209,8 +210,7 @@ class Lockfile(object):
             self._python_requires.sort()
         if config_requires:
             for r in config_requires:
-                self._conf_requires.add(r)
-            self._conf_requires.sort()
+                self._conf_requires.add(r, config=True)
 
     def remove(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
         def _remove(reqs, self_reqs, name):

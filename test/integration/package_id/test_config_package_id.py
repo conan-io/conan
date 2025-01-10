@@ -16,8 +16,8 @@ from conans.util.files import save
 def test_config_package_id(config_version, mode, result):
     c = TestClient()
     config_version = json.dumps({"config_version": [config_version]})
-    save(c.cache.config_version_path, config_version)
-    save(c.cache.global_conf_path, f"core.package_id:config_mode={mode}")
+    save(c.paths.config_version_path, config_version)
+    save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     c.run("list pkg/0.1:* --format=json")

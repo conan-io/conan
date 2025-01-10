@@ -135,7 +135,7 @@ class TestGitBasicCapture:
         assert "pkg/0.1: DIRTY: True" in c.out
 
         conf_excluded = f'core.scm:excluded+=["other.txt"]'
-        save(c.cache.global_conf_path, conf_excluded)
+        save(c.paths.global_conf_path, conf_excluded)
         c.run("export .")
         assert "pkg/0.1: DIRTY: False" in c.out
 

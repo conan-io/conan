@@ -17,6 +17,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conan.test.utils.tools import TestClient, zipdir
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, mkdir, save, save_files
 
 
@@ -80,8 +81,8 @@ myfuncpy = """def mycooladd(a, b):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
-        save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
+        save(os.path.join(self.client.paths.profiles_path, "default"), "#default profile empty")
+        save(os.path.join(self.client.paths.profiles_path, "linux"), "#empty linux profile")
 
     @staticmethod
     def _create_profile_folder(folder=None):
@@ -135,7 +136,7 @@ class ConfigInstallTest(unittest.TestCase):
         return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
-        settings_path = self.client.cache.settings_path
+        settings_path = self.client.paths.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         api = self.client.api
         cache_remotes = api.remotes.list()
@@ -143,11 +144,11 @@ class ConfigInstallTest(unittest.TestCase):
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),
         ])
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["default", "linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path,
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         self.assertEqual("#Custom pylint",
@@ -261,12 +262,12 @@ class ConfigInstallTest(unittest.TestCase):
         assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
 
     def test_without_profile_folder(self):
-        shutil.rmtree(self.client.cache.profiles_path)
+        shutil.rmtree(self.client.paths.profiles_path)
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
 
     def test_install_url(self):
@@ -497,7 +498,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run('config install "%s/.git" --args "-b other_branch"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
-        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
+        file_path = os.path.join(self.client.paths.hooks_path, "cust", "cust.py")
         assert load(file_path) == ""
 
         # Add changes to that branch and update
@@ -526,12 +527,12 @@ class ConfigInstallTest(unittest.TestCase):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
-        make_file_read_only(self.client.cache.settings_path)
-        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+        make_file_read_only(self.client.paths.settings_path)
+        self.assertFalse(os.access(self.client.paths.settings_path, os.W_OK))
 
         # config install should overwrite the existing read-only file
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
     def test_dont_copy_file_permissions(self):
         source_folder = self._create_profile_folder()
@@ -539,7 +540,7 @@ class ConfigInstallTest(unittest.TestCase):
         make_file_read_only(os.path.join(source_folder, 'remotes.json'))
 
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
 
 class ConfigInstallSchedTest(unittest.TestCase):
@@ -588,7 +589,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
-        conf = load(client.cache.new_config_path)
+        conf = load(client.paths.new_config_path)
         dirs = os.listdir(client.cache_folder)
         assert ".git" not in dirs
 
@@ -745,34 +746,42 @@ class TestConfigInstallPkg:
 
 
 class TestConfigInstallPkgLockfiles:
-    @pytest.fixture()
-    def client(self):
+    @pytest.fixture(scope="class")
+    def servers(self):
         c = TestClient(default_server_user=True)
-        c.save({"conanfile.py": GenConanfile("myconf", "0.1").with_package_type("configuration")})
-        c.run("export-pkg .")
+        c.save({"conanfile.py": GenConanfile().with_package_type("configuration")})
+        c.run("export-pkg . --name=myconf_a --version=0.1")
+        c.run("export-pkg . --name=myconf_a --version=0.2")
+        c.run("export-pkg . --name=myconf_b --version=0.1")
         c.run("upload * -r=default -c")
-        c.run("remove * -c")
-        return c
+        return c.servers
 
-    def test_lockfile(self, client):
+    def test_lockfile(self, servers):
         """ it should be able to install the config using a lockfile
         """
-        c = client
-        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+        c = TestClient(servers=servers)
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
+        assert "myconf_a/0.1" in c.out
+        assert "myconf_a/0.2" not in c.out
+        c.run("config install-pkg myconf_a/[*]")
+        assert "myconf_a/0.2" in c.out
+        assert "myconf_a/0.1" not in c.out
 
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
-        # Make sure we bump the version, otherwise only a package revision will be created
-        c2.save({"conanfile.py": GenConanfile("myconf", "0.2").with_package_type("configuration")})
-        c2.run("export-pkg .")
-        c2.run("upload * -r=default -c")
-
-        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
-        assert "myconf/0.1" in c.out
-        assert "myconf/0.2" not in c.out
-
-    def test_install_from_lockfile(self, client):
-        c = client
-        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
+    def test_install_from_lockfile(self, servers):
+        """ it should install things in the original order
+        """
+        c = TestClient(servers=servers)
+        c.run("config install-pkg myconf_b/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/0.2 --lockfile=config.lock --lockfile-out=config.lock --lockfile-partial")
+        c.run("config install-pkg myconf_a/0.1 --lockfile=config.lock --lockfile-out=config.lock --lockfile-partial")
+        lock = c.load("config.lock")
+        print(lock)
+        configs = json.loads(lock)["config_requires"]
+        configs = [str(RecipeReference.loads(c)) for c in configs]
+        print(configs)
+        # First are the newest installed
+        assert configs == ["myconf_a/0.1", "myconf_a/0.2", "myconf_b/0.1"]
         path = HomePaths(c.cache_folder).config_version_path
         os.remove(path)
         c.run("remove * -c")

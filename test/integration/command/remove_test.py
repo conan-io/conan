@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import unittest
@@ -250,7 +251,9 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     error = data.get("error", False)
     populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
     if not error:
-        assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
+        populated_client.run(f"list {r} --format=json")
+        origin = "default" if with_remote else "Local Cache"
+        assert set(json.loads(populated_client.stdout)[origin]) == set(data["recipes"])
     elif data.get("error_msg"):
         assert data.get("error_msg") in populated_client.out
 
@@ -351,18 +354,11 @@ def test_package_query_no_package_ref(populated_client):
     assert "--package-query supplied but the pattern does not match packages" in populated_client.out
 
 
-def _get_all_recipes(client, with_remote):
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
-    with client.mocked_servers():
-        return set([r.repr_notime() for r in api.search.recipes("*", remote=remote)])
-
-
 def _get_all_packages(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.packages_configurations(ref, remote=remote)])
         except NotFoundException:
@@ -371,9 +367,9 @@ def _get_all_packages(client, ref, with_remote):
 
 def _get_revisions_recipes(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.recipe_revisions(ref, remote=remote)])
         except NotFoundException:
@@ -382,9 +378,9 @@ def _get_revisions_recipes(client, ref, with_remote):
 
 def _get_revisions_packages(client, pref, with_remote):
     pref = PkgReference.loads(pref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
         except NotFoundException:

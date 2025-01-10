@@ -213,7 +213,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path, "tools.build:jobs=1")
+        save(self.client.paths.new_config_path, "tools.build:jobs=1")
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
@@ -473,7 +473,7 @@ def test_msvc_vs_versiontoolset():
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.cache.new_config_path, "tools.microsoft.msbuild:vs_version=15")
+    save(client.paths.new_config_path, "tools.microsoft.msbuild:vs_version=15")
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -584,8 +584,8 @@ class TestCmakeTestMethod:
     """
     test the cmake.test() helper
     """
-    def test_test(self):
-
+    def test_test(self, matrix_client_shared):
+        c = matrix_client_shared
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -595,7 +595,7 @@ class TestCmakeTestMethod:
                 exports_sources = "CMakeLists.txt", "example.cpp"
 
                 def build_requirements(self):
-                    self.test_requires("test/0.1")
+                    self.test_requires("matrix/1.0")
 
                 def build(self):
                     cmake = CMake(self)
@@ -608,25 +608,22 @@ class TestCmakeTestMethod:
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
             project(App CXX)
-            find_package(test CONFIG REQUIRED)
+            find_package(matrix CONFIG REQUIRED)
             add_executable(example example.cpp)
-            target_link_libraries(example test::test)
+            target_link_libraries(example matrix::matrix)
 
             enable_testing()
             add_test(NAME example
                       COMMAND example)
             """)
-        c = TestClient()
-        c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,
-                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+                "example.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
                clean_first=True)
 
         # The create flow must work
-        c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
+        c.run("create . --name=pkg --version=0.1 -pr:b=default -o matrix*:shared=True")
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
         assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
@@ -712,4 +709,3 @@ class TestCMakeFindPackagePreferConfig:
 
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
-
