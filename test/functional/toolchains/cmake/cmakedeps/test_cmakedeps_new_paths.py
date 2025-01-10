@@ -97,6 +97,8 @@ class TestRuntimeDirs:
         runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
         assert "<CONFIG:Release>" in runtime_lib_dirs
         assert "<CONFIG:Debug>" in runtime_lib_dirs
+        # too simple of a check, but this is impossible to test automatically
+        assert "set(CMAKE_VS_DEBUGGER_ENVIRONMENT" in contents
 
 
 @pytest.mark.tool("cmake")
