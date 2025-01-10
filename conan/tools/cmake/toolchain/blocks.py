@@ -126,7 +126,11 @@ class VSDebuggerEnvironment(Block):
         # for execution of applications with shared libraries within the VS IDE
 
         {% if vs_debugger_path %}
+        # if the file exists it will be loaded by FindFiles block and the variable defined there
+        if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
+        # This variable requires CMake>=3.27 to work
         set(CMAKE_VS_DEBUGGER_ENVIRONMENT "{{ vs_debugger_path }}")
+        endif()
         {% endif %}
         """)
 
@@ -521,7 +525,7 @@ class FindFiles(Block):
     template = textwrap.dedent("""\
         # Define paths to find packages, programs, libraries, etc.
         if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
-          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake")
+          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake")
           include("${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
         else()
 

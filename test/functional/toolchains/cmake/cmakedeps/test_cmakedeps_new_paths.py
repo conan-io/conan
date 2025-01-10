@@ -42,7 +42,7 @@ def test_cmake_generated(client):
     c = client
     c.run("create dep")
     c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake" in c.out
+    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Conan: Target declared imported INTERFACE library 'dep::dep'" in c.out
 
 
@@ -71,7 +71,7 @@ def test_cmake_in_package(client, lowercase):
     c.save({"dep/conanfile.py": dep})
     c.run("create dep")
     c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake" in c.out
+    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Hello from dep dep-Config.cmake!!!!!" in c.out
 
 
