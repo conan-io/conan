@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
@@ -29,7 +30,10 @@ class RemotesAPI:
     def __init__(self, conan_api):
         # This method is private, the subapi is not instantiated by users
         self.conan_api = conan_api
-        self._remotes_file = HomePaths(self.conan_api.cache_folder).remotes_path
+        self._home_folder = conan_api.home_folder
+        self._remotes_file = HomePaths(self._home_folder).remotes_path
+        # Wraps an http_requester to inject proxies, certs, etc
+        self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -107,7 +111,7 @@ class RemotesAPI:
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
-        add_local_recipes_index_remote(self.conan_api, remote)
+        add_local_recipes_index_remote(self._home_folder, remote)
         remotes = _load(self._remotes_file)
         if remote.remote_type != LOCAL_RECIPES_INDEX:
             _validate_url(remote.url)
@@ -142,9 +146,9 @@ class RemotesAPI:
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
         _save(self._remotes_file, remotes)
-        localdb = LocalDB(self.conan_api.cache_folder)
+        localdb = LocalDB(self._home_folder)
         for remote in removed:
-            remove_local_recipes_index_remote(self.conan_api, remote)
+            remove_local_recipes_index_remote(self._home_folder, remote)
             localdb.clean(remote_url=remote.url)
         return removed
 
@@ -201,7 +205,7 @@ class RemotesAPI:
 
     def user_info(self, remote: Remote):
         # TODO: Review
-        localdb = LocalDB(self.conan_api.cache_folder)
+        localdb = LocalDB(self._home_folder)
         user_info = {}
         user, token, _ = localdb.get_login(remote.url)
         user_info["name"] = remote.name
@@ -217,7 +221,7 @@ class RemotesAPI:
         :param username: the user login as ``str``
         :param password: password ``str``
         """
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         app.remote_manager.authenticate(remote, username, password)
 
     def user_logout(self, remote: Remote):
@@ -226,30 +230,35 @@ class RemotesAPI:
 
         :param remote: The ``Remote`` object to logout
         """
-        localdb = LocalDB(self.conan_api.cache_folder)
+        localdb = LocalDB(self._home_folder)
         # The localdb only stores url + username + token, not remote name, so use URL as key
         localdb.clean(remote_url=remote.url)
 
     def user_set(self, remote: Remote, username):
         # TODO: Review
-        localdb = LocalDB(self.conan_api.cache_folder)
+        localdb = LocalDB(self._home_folder)
         if username == "":
             username = None
         localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
 
     def user_auth(self, remote: Remote, with_user=False, force=False):
         # TODO: Review
-        app = ConanApp(self.conan_api)
+        localdb = LocalDB(self._home_folder)
+        app = ConanBasicApp(self.conan_api)
         if with_user:
-            user, token, _ = app.localdb.get_login(remote.url)
+            user, token, _ = localdb.get_login(remote.url)
             if not user:
                 var_name = f"CONAN_LOGIN_USERNAME_{remote.name.replace('-', '_').upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
         app.remote_manager.check_credentials(remote, force)
-        user, token, _ = app.localdb.get_login(remote.url)
+        user, token, _ = localdb.get_login(remote.url)
         return user
+
+    @property
+    def requester(self):
+        return self._requester
 
 
 def _load(remotes_file):

@@ -24,11 +24,11 @@ def test_search_recipes(remote_name):
 
     client.run("upload * -r=default -c")
 
-    # Search all the recipes locally and in the remote
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get(remote_name) if remote_name else None
-
     with client.mocked_servers():
+        # Search all the recipes locally and in the remote
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get(remote_name) if remote_name else None
+
         sot = api.search.recipes(query="f*", remote=remote)
         assert sot == [RecipeReference.loads("felipe/1.0"),
                        RecipeReference.loads("felipe/2.0"),

@@ -36,8 +36,9 @@ class ConfigAPI:
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conan.internal.api.config.config_installer import configuration_install
-        app = ConanApp(self.conan_api)
-        configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
+        cache_folder = self.conan_api.cache_folder
+        requester = self.conan_api.remotes.requester
+        configuration_install(cache_folder, requester, path_or_url, verify_ssl, config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
 
     def install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
@@ -90,7 +91,9 @@ class ConfigAPI:
                     return pkg.pref  # Already installed, we can skip repeating the install
 
         from conan.internal.api.config.config_installer import configuration_install
-        configuration_install(app, uri=pkg.conanfile.package_folder, verify_ssl=False,
+        cache_folder = self.conan_api.cache_folder
+        requester = self.conan_api.remotes.requester
+        configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
                               config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
         # We save the current package full reference in the file for future
         # And for ``package_id`` computation

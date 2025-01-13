@@ -12,7 +12,7 @@ def test_profile_local_folder_priority_cache():
     c.save({"profiles/default": f"include(otherprofile)",
             "profiles/otherprofile": "[settings]\nos=AIX",
             "conanfile.txt": ""})
-    save(os.path.join(c.cache.profiles_path, "otherprofile"), "[settings]\nos=FreeBSD")
+    save(os.path.join(c.paths.profiles_path, "otherprofile"), "[settings]\nos=FreeBSD")
 
     # Must use local path, otherwise look for it in the cache
     c.run("install . -pr=./profiles/default")
@@ -26,7 +26,7 @@ def test_profile_local_folder_priority_relative():
     c.save({"profiles/default": f"include(./otherprofile)",
             "profiles/otherprofile": "[settings]\nos=AIX",
             "conanfile.txt": ""})
-    save(os.path.join(c.cache.profiles_path, "otherprofile"), "[settings]\nos=FreeBSD")
+    save(os.path.join(c.paths.profiles_path, "otherprofile"), "[settings]\nos=FreeBSD")
 
     # Must use local path, otherwise look for it in the cache
     c.run("install . -pr=./profiles/default")
@@ -39,8 +39,8 @@ def test_profile_cache_folder_priority():
     c = TestClient()
     c.save({"otherprofile": "[settings]\nos=FreeBSD",
             "conanfile.txt": ""})
-    save(os.path.join(c.cache.profiles_path, "default"), "include(./otherprofile)")
-    save(os.path.join(c.cache.profiles_path, "otherprofile"), "[settings]\nos=AIX")
+    save(os.path.join(c.paths.profiles_path, "default"), "include(./otherprofile)")
+    save(os.path.join(c.paths.profiles_path, "otherprofile"), "[settings]\nos=AIX")
 
     c.run("install . -pr=default")
     assert "os=AIX" in c.out

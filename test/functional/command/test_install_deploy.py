@@ -13,42 +13,30 @@ from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.fixture(scope="module")
-def _client():
-    c = TestClient()
-    c.run("new cmake_lib -d name=hello -d version=0.1")
-    c.run("create . -o *:shared=True -tf=")
+@pytest.fixture()
+def client(matrix_client_shared):
+    c = matrix_client_shared
     conanfile = textwrap.dedent("""
-           import os
-           from conan import ConanFile
-           from conan.tools.files import save
-           class Tool(ConanFile):
-               name = "tool"
-               version = "1.0"
-               def package(self):
-                   save(self, os.path.join(self.package_folder, "build", "my_tools.cmake"),
-                        'set(MY_TOOL_VARIABLE "Hello world!")')
+       import os
+       from conan import ConanFile
+       from conan.tools.files import save
+       class Tool(ConanFile):
+           name = "tool"
+           version = "1.0"
+           def package(self):
+               save(self, os.path.join(self.package_folder, "build", "my_tools.cmake"),
+                    'set(MY_TOOL_VARIABLE "Hello world!")')
 
-               def package_info(self):
-                   self.cpp_info.includedirs = []
-                   self.cpp_info.libdirs = []
-                   self.cpp_info.bindirs = []
-                   path_build_modules = os.path.join("build", "my_tools.cmake")
-                   self.cpp_info.set_property("cmake_build_modules", [path_build_modules])
-               """)
+           def package_info(self):
+               self.cpp_info.includedirs = []
+               self.cpp_info.libdirs = []
+               self.cpp_info.bindirs = []
+               path_build_modules = os.path.join("build", "my_tools.cmake")
+               self.cpp_info.set_property("cmake_build_modules", [path_build_modules])
+           """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
     c.run("create .")
     return c
-
-
-@pytest.fixture()
-def client(_client):
-    """ this is much faster than creating and uploading everythin
-    """
-    client = TestClient(default_server_user=True)
-    shutil.rmtree(client.cache_folder)
-    shutil.copytree(_client.cache_folder, client.cache_folder)
-    return client
 
 
 @pytest.mark.tool("cmake")
@@ -56,7 +44,7 @@ def client(_client):
 def test_install_deploy(client, powershell):
     c = client
     custom_content = 'message(STATUS "MY_TOOL_VARIABLE=${MY_TOOL_VARIABLE}!")'
-    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello", "tool"],
+    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["matrix", "tool"],
                            custom_content=custom_content)
     deploy = textwrap.dedent("""
         import os, shutil
@@ -69,20 +57,20 @@ def test_install_deploy(client, powershell):
                 shutil.copytree(d.package_folder, new_folder)
                 d.set_deploy_folder(new_folder)
         """)
-    c.save({"conanfile.txt": "[requires]\nhello/0.1\ntool/1.0",
+    c.save({"conanfile.txt": "[requires]\nmatrix/1.0\ntool/1.0",
             "deploy.py": deploy,
             "CMakeLists.txt": cmake,
-            "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
+            "main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
            clean_first=True)
     pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
     c.run("install . -o *:shared=True "
           f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
-    deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
-    assert 'set(hello_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/hello")' in deps
-    assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
-    assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
+    deps = c.load(f"mydeploy/matrix-release-{arch}-data.cmake")
+    assert 'set(matrix_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/matrix")' in deps
+    assert 'set(matrix_INCLUDE_DIRS_RELEASE "${matrix_PACKAGE_FOLDER_RELEASE}/include")' in deps
+    assert 'set(matrix_LIB_DIRS_RELEASE "${matrix_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
     # We can fully move it to another folder, and still works
     tmp = os.path.join(temp_folder(), "relocated")
@@ -101,18 +89,18 @@ def test_install_deploy(client, powershell):
             cmd = r"mydeploy\conanrun.bat && Release\my_app.exe"
         # For Lunux: cmd = ". mydeploy/conanrun.sh && ./my_app"
         c2.run_command(cmd)
-        assert "hello/0.1: Hello World Release!" in c2.out
+        assert "matrix/1.0: Hello World Release!" in c2.out
 
 
 @pytest.mark.tool("cmake")
 def test_install_full_deploy_layout(client):
     c = client
     custom_content = 'message(STATUS "MY_TOOL_VARIABLE=${MY_TOOL_VARIABLE}!")'
-    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello", "tool"],
+    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["matrix", "tool"],
                            custom_content=custom_content)
     conanfile = textwrap.dedent("""
         [requires]
-        hello/0.1
+        matrix/1.0
         tool/1.0
         [generators]
         CMakeDeps
@@ -122,18 +110,18 @@ def test_install_full_deploy_layout(client):
         """)
     c.save({"conanfile.txt": conanfile,
             "CMakeLists.txt": cmake,
-            "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
+            "main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
            clean_first=True)
     c.run("install . -o *:shared=True --deployer=full_deploy.py")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
     folder = "/Release" if platform.system() != "Windows" else ""
     rel_path = "../../" if platform.system() == "Windows" else "../../../"
-    deps = c.load(f"build{folder}/generators/hello-release-{arch}-data.cmake")
-    assert 'set(hello_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/' \
-           f'{rel_path}full_deploy/host/hello/0.1/Release/{arch}")' in deps
-    assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
-    assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
+    deps = c.load(f"build{folder}/generators/matrix-release-{arch}-data.cmake")
+    assert 'set(matrix_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/' \
+           f'{rel_path}full_deploy/host/matrix/1.0/Release/{arch}")' in deps
+    assert 'set(matrix_INCLUDE_DIRS_RELEASE "${matrix_PACKAGE_FOLDER_RELEASE}/include")' in deps
+    assert 'set(matrix_LIB_DIRS_RELEASE "${matrix_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
     # We can fully move it to another folder, and still works
     tmp = os.path.join(temp_folder(), "relocated")
@@ -151,7 +139,7 @@ def test_install_full_deploy_layout(client):
             cmd = r"generators\conanrun.bat && Release\my_app.exe"
             # For Lunux: cmd = ". mydeploy/conanrun.sh && ./my_app"
             c2.run_command(cmd)
-            assert "hello/0.1: Hello World Release!" in c2.out
+            assert "matrix/1.0: Hello World Release!" in c2.out
 
 
 def test_copy_files_deploy():

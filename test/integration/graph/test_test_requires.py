@@ -203,6 +203,8 @@ def test_requires_transitive_diamond_components_order():
     like the above, but in different order
      libc  --(test-requires)---> liba
        |-----> libb -----------/
+    libc->liba => test=False, direct=True, is_test=True
+    direct_dependencies (components check) => False
     https://github.com/conan-io/conan/issues/17164
     """
     c = TestClient(light=True)
@@ -228,6 +230,48 @@ def test_requires_transitive_diamond_components_order():
     c.run("create libc")
     # This used to crash due to component not defined to liba
     assert "libc/0.1: Created package" in c.out
+
+
+def test_wrong_requirement_test_requires():
+    """ https://github.com/conan-io/conan/issues/17312
+
+    app --------> etas --------------> enum
+      \\-->hwinfo-/---(test_requires)---/
+       \\-----------------------------/
+
+    app->enum => test=False, direct=True, is_test=True
+    direct_dependencies (components check) => True
+    """
+    c = TestClient(light=True)
+    app = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "app"
+            version = "0.1"
+            requires = "etas/0.1", "enum/0.1", "hwinfo/0.1"
+
+            def generate(self):
+                for r, d in self.dependencies.items():
+                    assert not (r.direct and r.is_test)
+
+            def package_info(self):
+                self.cpp_info.requires = ["etas::etas", "enum::enum", "hwinfo::hwinfo"]
+            """)
+    files = {
+        "enum/conanfile.py": GenConanfile("enum", "0.1"),
+        "etas/conanfile.py": GenConanfile("etas", "0.1").with_requirement("enum/0.1"),
+        "hwinfo/conanfile.py": GenConanfile("hwinfo", "0.1").with_requirement("etas/0.1")
+                                                            .with_test_requires("enum/0.1"),
+        "app/conanfile.py": app,
+    }
+    c.save(files)
+    c.run("create enum")
+    c.run("create etas")
+    c.run("create hwinfo")
+    # The assert in generate() doesnt fail
+    c.run("install app")
+    # the package_info() doesn't fail
+    c.run("create app")
 
 
 def test_test_requires_options():

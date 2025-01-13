@@ -120,7 +120,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers",
+    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",

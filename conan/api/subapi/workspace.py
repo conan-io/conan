@@ -16,7 +16,7 @@ class WorkspaceAPI:
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
-        self._workspace = Workspace()
+        self._workspace = Workspace(conan_api)
 
     def home_folder(self):
         return self._workspace.home_folder()
@@ -27,7 +27,8 @@ class WorkspaceAPI:
     def config_folder(self):
         return self._workspace.config_folder()
 
-    def editables(self):
+    @property
+    def editable_packages(self):
         return self._workspace.editables()
 
     def open(self, require, remotes, cwd=None):

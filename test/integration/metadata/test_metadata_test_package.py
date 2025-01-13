@@ -25,7 +25,7 @@ class TestMetadataTestPackage:
                copy(conanfile, "*", src=folder,
                     dst=os.path.join(conanfile.recipe_metadata_folder, "test_package"))
             """)
-        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
+        hook_path = os.path.join(c.paths.hooks_path, "my_hook", "hook_my_hook.py")
         save(hook_path, my_hook)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
                 "test_package/conanfile.py": GenConanfile().with_test("pass")})

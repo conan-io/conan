@@ -25,6 +25,7 @@ class Remote:
         self.disabled = disabled
         self.allowed_packages = allowed_packages
         self.remote_type = remote_type
+        self.caching = {}
 
     def __eq__(self, other):
         if other is None:
@@ -44,6 +45,9 @@ class Remote:
 
     def __repr__(self):
         return str(self)
+
+    def invalidate_cache(self):
+        self.caching = {}
 
 
 class MultiPackagesList:
