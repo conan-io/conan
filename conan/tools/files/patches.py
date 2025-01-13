@@ -156,7 +156,7 @@ def export_conandata_patches(conanfile):
 
     _handle_patches(conanfile_patches, conanfile.recipe_folder)
 
-    # NOTE: This only works after drim_conandata, it assumes versions are gone now in the cache
+    # NOTE: This only works after trim_conandata, it assumes versions are gone now in the cache
     extra_path = conanfile.conf.get("core.sources.patch:extra_path")
     if extra_path:
         if not os.path.isdir(extra_path):
