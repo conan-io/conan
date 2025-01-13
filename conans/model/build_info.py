@@ -285,7 +285,7 @@ class _Component:
 
     @type.setter
     def type(self, value):
-        self._type = PackageType(value)
+        self._type = PackageType(value) if value is not None else None
 
     @property
     def location(self):
@@ -599,7 +599,8 @@ class _Component:
             if self._type is None or self._type is PackageType.HEADER:
                 raise ConanException("Incorrect cpp_info defining location without type or header")
             return
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+        if self._type is not None and self._type not in [PackageType.SHARED, PackageType.STATIC,
+                                                         PackageType.APP]:
             return
         num_libs = len(self.libs)
         if num_libs == 0:
