@@ -285,7 +285,7 @@ class _Component:
 
     @type.setter
     def type(self, value):
-        self._type = value
+        self._type = PackageType(value)
 
     @property
     def location(self):
@@ -789,7 +789,7 @@ class CppInfo:
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
             for lib in self.libs:
                 c = _Component()  # Do not do a full clone, we don't need the properties
-                c.type = self.type  # This should be a string
+                c.type = self.type
                 c.includedirs = self.includedirs
                 c.libdirs = self.libdirs
                 c.bindirs = self.bindirs
@@ -798,7 +798,7 @@ class CppInfo:
 
             common = self._package.clone()
             common.libs = []
-            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            common.type = PackageType.HEADER  # the type of components is a string!
             common.requires = list(result.components.keys()) + (self.requires or [])
             result.components["_common"] = common
         else:

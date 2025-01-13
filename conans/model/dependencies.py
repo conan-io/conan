@@ -130,7 +130,7 @@ class ConanFileDependencies(UserRequirementsDict):
         for k, v in self._data.items():
             for otherk, otherv in other._data.items():
                 if v == otherv:
-                    data[k] = v
+                    data[otherk] = v  # Use otherk to respect original replace_requires
         return ConanFileDependencies(data)
 
     @property
