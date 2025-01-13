@@ -182,6 +182,8 @@ def get_transitive_requires(consumer, dependency):
     # The build dependencies cannot be transitive in generators like CMakeDeps,
     # even if users make them visible
     pkg_deps = dependency.dependencies.filter({"direct": True, "build": False})
-    result = consumer.dependencies.transitive_requires(pkg_deps)
-    result = result.filter({"skip": False})
+    # First we filter the skipped dependencies
+    result = consumer.dependencies.filter({"skip": False})
+    # and we keep those that are really dependencies of the current package
+    result = result.transitive_requires(pkg_deps)
     return result
