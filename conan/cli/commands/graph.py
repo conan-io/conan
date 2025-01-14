@@ -302,7 +302,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
 
     ConanOutput().title("Retrieving and computing closest binaries")
     # compute ref and conaninfo of the first missing binary
-    ref, conaninfo = conan_api.graph.first_missing_binary(deps_graph, args.missing)
+    ref, conaninfo = conan_api.graph.find_first_missing_binary(deps_graph, args.missing)
     pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")
