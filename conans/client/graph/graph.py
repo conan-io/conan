@@ -346,6 +346,10 @@ class DepsGraph(object):
         self.options_conflicts = {}
         self.error = False
 
+    def lockfile(self):
+        from conan.internal.model.lockfile import Lockfile
+        return Lockfile(self)
+
     def overrides(self):
         return Overrides.create(self.nodes)
 

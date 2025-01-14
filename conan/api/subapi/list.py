@@ -224,6 +224,8 @@ class ListAPI:
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
+        """ (Experimental) Explain why a binary is missing in the cache
+        """
         ConanOutput().info(f"Missing binary: {ref}")
         ConanOutput().info(f"With conaninfo.txt (package_id):\n{conaninfo.dumps()}")
         conaninfo = load_binary_info(conaninfo.dumps())
