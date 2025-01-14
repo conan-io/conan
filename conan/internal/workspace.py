@@ -8,7 +8,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import CmdWrapper, ConanFileHelpers
 from conans.client.loader import load_python_file
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
 
 

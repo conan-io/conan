@@ -1,5 +1,5 @@
-from conans.model.conan_file import ConanFile
-from conan.tools.scm import Version as _Version
+from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.version import Version
 
 __version__ = '2.12.0-dev'
-conan_version = _Version(__version__)
+conan_version = Version(__version__)

@@ -1,6 +1,6 @@
 import pytest
 
-from conans.model.build_info import CppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
+from conan.internal.model.cpp_info import CppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
 
 
 def test_components_order():

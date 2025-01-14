@@ -4,13 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from conan.errors import ConanException
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
-from conans.model.build_info import CppInfo
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.cpp_info import CppInfo
+from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save
 
 

@@ -15,8 +15,8 @@ from conans.client.loader import ConanFileLoader
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import load, save, rmdir, copytree_compat
 
 

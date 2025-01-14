@@ -6,8 +6,8 @@ from collections import OrderedDict
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.version_range import VersionRange
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.version_range import VersionRange
 from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"

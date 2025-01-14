@@ -7,7 +7,7 @@ import fnmatch
 from collections import OrderedDict
 
 from conan.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conan.internal.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",

@@ -6,7 +6,7 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class GraphAPI:

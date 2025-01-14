@@ -11,8 +11,8 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conans.client.downloaders.download_cache import DownloadCache
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
 from conans.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
 

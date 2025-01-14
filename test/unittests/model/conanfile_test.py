@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 
-from conans.model.conan_file import ConanFile
+from conan.internal.model.conan_file import ConanFile
 from conan.test.utils.tools import TestClient
 
 

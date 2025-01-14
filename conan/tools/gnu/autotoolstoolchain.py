@@ -11,7 +11,7 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:

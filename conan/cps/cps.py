@@ -2,7 +2,7 @@ import json
 import os
 from enum import Enum
 
-from conans.model.build_info import CppInfo
+from conan.internal.model.cpp_info import CppInfo
 from conans.util.files import save, load
 
 

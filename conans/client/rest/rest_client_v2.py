@@ -16,9 +16,9 @@ from conans.client.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException, \
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
+from conan.internal.model.package_ref import PkgReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.thread import ExceptionThread
 

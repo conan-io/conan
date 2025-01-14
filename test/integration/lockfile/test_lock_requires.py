@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 

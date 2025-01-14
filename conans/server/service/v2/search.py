@@ -4,8 +4,8 @@ import re
 from fnmatch import translate
 
 from conan.internal.errors import ForbiddenException, RecipeNotFoundException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO
 from conans.server.utils.files import list_folder_subdirs
 from conans.util.files import load

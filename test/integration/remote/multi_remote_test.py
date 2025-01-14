@@ -2,7 +2,7 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer

@@ -1,4 +1,4 @@
-from conans.model.package_ref import PkgReference
+from conan.internal.model.package_ref import PkgReference
 
 
 def test_package_reference():

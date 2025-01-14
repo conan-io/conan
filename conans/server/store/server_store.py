@@ -4,8 +4,8 @@ from os.path import join, normpath, relpath
 from conan.internal.errors import RecipeNotFoundException, PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import CONAN_MANIFEST
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
