@@ -137,7 +137,7 @@ class Git:
             return bool(status)
         # Parse the status output, line by line, and match it with "_excluded"
         lines = [line.strip() for line in status.splitlines()]
-        lines = [line.split()[1] for line in lines if line]
+        lines = [line.split(maxsplit=1)[1] for line in lines if line]
         lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
         self._conanfile.output.debug(f"Filtered git status: {lines}")
         return bool(lines)
