@@ -16,10 +16,10 @@ from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition, BUILT_IN_CONFS
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
+from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS
+from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.settings import Settings
 from conans.util.files import load, save
 
 

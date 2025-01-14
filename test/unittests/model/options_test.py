@@ -3,8 +3,8 @@ import textwrap
 import pytest
 
 from conan.errors import ConanException
-from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.options import Options
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class TestOptions:

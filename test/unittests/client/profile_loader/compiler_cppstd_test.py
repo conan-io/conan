@@ -10,8 +10,8 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.profile.profile_loader import ProfileLoader
 from conan.internal.default_settings import default_settings_yml
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
-from conans.model.settings import Settings
+from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save
 

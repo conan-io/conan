@@ -7,7 +7,7 @@ import unittest
 import pytest
 import yaml
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import tgz_with_contents
 from conan.test.utils.tools import TestClient, GenConanfile

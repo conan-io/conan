@@ -9,9 +9,9 @@ from conan.internal.conan_app import ConanBasicApp
 from conan.internal.paths import CONANINFO
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conans.model.info import load_binary_info
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference, ref_matches
+from conan.internal.model.info import load_binary_info
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference, ref_matches
 from conans.util.dates import timelimit
 from conans.util.files import load
 

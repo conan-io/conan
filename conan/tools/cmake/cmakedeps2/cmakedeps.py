@@ -13,7 +13,7 @@ from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfiguratio
 from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 from conans.util.files import load
 
 FIND_MODE_MODULE = "module"

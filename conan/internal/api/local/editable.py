@@ -4,7 +4,7 @@ import json
 import os
 from os.path import join, normpath
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
 
 

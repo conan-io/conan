@@ -3,7 +3,7 @@ import os
 from conan.api.conan_api import ConanAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save
 
 

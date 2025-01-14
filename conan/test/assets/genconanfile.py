@@ -1,4 +1,4 @@
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class GenConanfile(object):

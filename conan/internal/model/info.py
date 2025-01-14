@@ -1,9 +1,9 @@
 import hashlib
 
 from conan.errors import ConanException
-from conans.model.dependencies import UserRequirementsDict
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference, Version
+from conan.internal.model.dependencies import UserRequirementsDict
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference, Version
 from conans.util.config_parser import ConfigParser
 
 

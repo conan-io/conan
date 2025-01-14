@@ -7,7 +7,7 @@ from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conan.internal.model.recipe_ref import ref_matches
 from conans.util.files import save
 
 

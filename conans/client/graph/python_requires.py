@@ -1,8 +1,8 @@
 import os
 
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.requires import Requirement
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.requires import Requirement
 
 
 class PyRequire(object):

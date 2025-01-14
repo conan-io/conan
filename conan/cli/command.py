@@ -4,7 +4,7 @@ from contextlib import redirect_stdout
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.model.conf import CORE_CONF_PATTERN
+from conan.internal.model.conf import CORE_CONF_PATTERN
 
 
 class OnceArgument(argparse.Action):
@@ -126,7 +126,7 @@ class ConanArgumentParser(argparse.ArgumentParser):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
         global_conf = self._conan_api.config.global_conf
         if args.core_conf:
-            from conans.model.conf import ConfDefinition
+            from conan.internal.model.conf import ConfDefinition
             confs = ConfDefinition()
             for c in args.core_conf:
                 if not CORE_CONF_PATTERN.match(c):

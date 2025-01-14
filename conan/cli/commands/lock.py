@@ -6,8 +6,8 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.model.graph_lock import Lockfile, LOCKFILE
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.lockfile import Lockfile, LOCKFILE
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 @conan_command(group="Consumer")

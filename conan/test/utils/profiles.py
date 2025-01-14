@@ -1,7 +1,7 @@
 import os
 
-from conans.model.options import Options
-from conans.model.profile import Profile
+from conan.internal.model.options import Options
+from conan.internal.model.profile import Profile
 from conans.util.files import save
 
 

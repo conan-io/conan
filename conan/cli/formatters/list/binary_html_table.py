@@ -1,6 +1,6 @@
 from collections import OrderedDict, defaultdict
 
-from conans.model.package_ref import PkgReference
+from conan.internal.model.package_ref import PkgReference
 
 
 class RowResult(object):

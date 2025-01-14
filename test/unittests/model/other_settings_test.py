@@ -2,8 +2,8 @@ import os
 import textwrap
 import unittest
 
-from conans.model.info import load_binary_info
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import load_binary_info
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
 from conans.util.files import load, save

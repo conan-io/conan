@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder

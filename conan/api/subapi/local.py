@@ -10,7 +10,7 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conans.client.hook_manager import HookManager
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import chdir
 
 

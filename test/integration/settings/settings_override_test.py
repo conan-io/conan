@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
