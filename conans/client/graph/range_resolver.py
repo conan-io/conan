@@ -1,7 +1,7 @@
 from conans.client.graph.proxy import should_update_reference
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.version_range import VersionRange
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.version_range import VersionRange
 
 
 class RangeResolver:

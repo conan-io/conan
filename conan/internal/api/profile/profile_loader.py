@@ -10,10 +10,10 @@ from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
-from conans.model.options import Options
-from conans.model.profile import Profile
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.conf import ConfDefinition, CORE_CONF_PATTERN
+from conan.internal.model.options import Options
+from conan.internal.model.profile import Profile
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.config_parser import ConfigParser
 from conans.util.files import mkdir, load_user_encoded
 

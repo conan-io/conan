@@ -19,7 +19,7 @@ from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conan.internal.api.install.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
-from conans.model.version import Version
+from conan.internal.model.version import Version
 from conans.util.files import load
 
 

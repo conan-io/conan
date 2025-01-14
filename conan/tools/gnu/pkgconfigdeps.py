@@ -8,7 +8,7 @@ from jinja2 import Template, StrictUndefined
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
 

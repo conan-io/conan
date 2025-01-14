@@ -1,4 +1,4 @@
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 
 def architecture_flag(conanfile):

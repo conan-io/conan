@@ -6,8 +6,8 @@ from conan.api.model import Remote, PackagesList
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanBasicApp
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class DownloadAPI:

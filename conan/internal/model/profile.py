@@ -2,9 +2,9 @@ import copy
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
-from conans.model.conf import ConfDefinition
-from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.options import Options
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class Profile:

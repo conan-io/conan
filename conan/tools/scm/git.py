@@ -4,7 +4,7 @@ import os
 from conan.api.output import Color
 from conan.tools.files import chdir, update_conandata
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 

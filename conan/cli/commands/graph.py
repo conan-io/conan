@@ -17,7 +17,7 @@ from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 from conan.internal.errors import NotFoundException
-from conans.model.recipe_ref import ref_matches, RecipeReference
+from conan.internal.model.recipe_ref import ref_matches, RecipeReference
 
 
 def explain_formatter_text(data):

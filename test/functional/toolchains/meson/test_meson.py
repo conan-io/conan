@@ -8,7 +8,7 @@ import pytest
 
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from test.functional.toolchains.meson._base import TestMesonBase
 
 

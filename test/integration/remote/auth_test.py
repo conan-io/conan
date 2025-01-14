@@ -8,7 +8,7 @@ from requests.models import Response
 
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.internal.errors import AuthenticationException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder

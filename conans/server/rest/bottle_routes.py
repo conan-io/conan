@@ -1,4 +1,4 @@
-from conans.model.rest_routes import RestRoutes
+from conans.client.rest.rest_routes import RestRoutes
 
 
 class BottleRoutes(RestRoutes):

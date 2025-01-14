@@ -1,7 +1,7 @@
 import os
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 

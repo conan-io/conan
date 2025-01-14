@@ -6,7 +6,7 @@ from conan.internal.api.export import cmd_export
 from conan.internal.methods import run_package_method
 from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE
 from conans.client.hook_manager import HookManager
-from conans.model.package_ref import PkgReference
+from conan.internal.model.package_ref import PkgReference
 from conans.util.files import mkdir
 
 

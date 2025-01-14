@@ -1,7 +1,7 @@
 import unittest
 
 from conan.api.output import ConanOutput
-from conans.model.manifest import FileTreeManifest
+from conan.internal.model.manifest import FileTreeManifest
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import redirect_output
 

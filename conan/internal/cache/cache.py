@@ -12,8 +12,8 @@ from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLay
 from conan.internal.cache.db.cache_database import CacheDatabase
 from conan.internal.errors import ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
 from conans.util.files import rmdir, renamedir, mkdir
 

@@ -2,7 +2,7 @@ import os
 import textwrap
 import unittest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
