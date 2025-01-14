@@ -395,6 +395,7 @@ class TestReplaceRequiresTransitiveGenerators:
                     self.cpp_info.location = "lib/zlib.lib"
                     self.cpp_info.set_property("cmake_file_name", "ZLIB")
                     self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+                    self.cpp_info.set_property("pkg_config_name", "ZLIB")
             """)
         openssl = textwrap.dedent("""
             from conan import ConanFile
@@ -418,7 +419,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps"
+                generators = "CMakeDeps", "PkgConfigDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -444,6 +445,10 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
         assert "target_link_libraries(openssl::openssl INTERFACE ZLIB::ZLIB)" in cmake
+
+        pkg_config = c.load("app/ZLIB.pc")
+        print(pkg_config)
+        # TODO: Check here the contents of both ZLIB.pc and openssl.pc
 
     @pytest.mark.parametrize("diamond", [True, False])
     def test_openssl_components(self, diamond):
