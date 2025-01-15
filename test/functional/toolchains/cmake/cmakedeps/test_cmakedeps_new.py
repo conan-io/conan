@@ -218,28 +218,38 @@ class TestLibs:
             assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
             assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
 
-    def test_multilevel_shared(self):
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_multilevel(self, shared):
         # TODO: make this shared fixtures in conftest for multi-level shared testing
         c = TestClient(default_server_user=True)
         c.run("new cmake_lib -d name=matrix -d version=0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=gamelib -d version=0.1 -d requires=engine/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
         assert "gamelib/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
+
+        # Make sure that transitive headers are private, fails to include, traits work
+        game_cpp = c.load("src/game.cpp")
+        for header in ("matrix", "engine"):
+            new_game_cpp = f"#include <{header}.h>\n" + game_cpp
+            c.save({"src/game.cpp": new_game_cpp})
+            c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}",
+                  assert_error=True)
+            assert f"{header}.h" in c.out
 
         # Make sure it works downloading to another cache
         c.run("upload * -r=default -c")
@@ -247,7 +257,7 @@ class TestLibs:
 
         c2 = TestClient(servers=c.servers)
         c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
-        c2.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c2.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
@@ -304,7 +314,8 @@ class TestLibsIntegration:
         c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
         assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
-        assert "target_link_libraries(pkg::pkg INTERFACE MyTargetDep)" in targets_cmake
+        assert 'set_target_properties(pkg::pkg PROPERTIES INTERFACE_LINK_LIBRARIES\n' \
+               '                      "$<$<CONFIG:RELEASE>:MyTargetDep>"' in targets_cmake
 
 
 class TestLibsLinkageTraits:
@@ -328,6 +339,28 @@ class TestLibsLinkageTraits:
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
+
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_transitive_headers(self, shared):
+        c = TestClient()
+        c.run("new cmake_lib -d name=matrix -d version=0.1")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
+        engine_h = c.load("include/engine.h")
+        engine_h = "#include <matrix.h>\n" + engine_h
+        c.save({"include/engine.h": engine_h})
+        conanfile = c.load("conanfile.py")
+        conanfile = conanfile.replace('self.requires("matrix/0.1")',
+                                      'self.requires("matrix/0.1", transitive_headers=True)')
+        c.save({"conanfile.py": conanfile})
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
+        c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        # it works
 
 
 @pytest.mark.tool("cmake")
