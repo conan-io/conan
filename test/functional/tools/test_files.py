@@ -450,8 +450,9 @@ def test_export_conandata_patches_no_patches():
     assert "No patches defined for version 1.0 in conandata.yml" in client.out
 
 
-def test_export_conandata_patches_extra_origin():
-    conanfile = textwrap.dedent("""
+@pytest.mark.parametrize("trim", [True, False])
+def test_export_conandata_patches_extra_origin(trim):
+    conanfile = textwrap.dedent(f"""
         import os
         from conan import ConanFile
         from conan.tools.files import export_conandata_patches, load, trim_conandata
@@ -461,7 +462,8 @@ def test_export_conandata_patches_extra_origin():
             version = "1.0"
 
             def export(self):
-                trim_conandata(self)
+                if {trim}:
+                    trim_conandata(self)
 
             def layout(self):
                 self.folders.source = "source_subfolder"
@@ -483,11 +485,23 @@ def test_export_conandata_patches_extra_origin():
     save(os.path.join(patches_folder, "mypkg", "conandata.yml"), conandata_yml)
     save(os.path.join(patches_folder, "mypkg", "patches", "mypatch.patch"), "mypatch!!!")
 
+    pkg_conandata = textwrap.dedent("""\
+        patches:
+            "1.1":
+                - patch_file: "patches/mypatch2.patch"
+    """)
     client.save({"conanfile.py": conanfile,
-                 "conandata.yml": "patches:"})
+                 "conandata.yml": pkg_conandata,
+                 "patches/mypatch2.patch": ""})
     client.run(f'create . -cc core.sources.patch:extra_path="{patches_folder}"')
     assert "mypkg/1.0: Applying extra patches" in client.out
     assert "mypkg/1.0: mypatch!!!" in client.out
 
     conandata = load(client.exported_layout().conandata())
+    assert "1.0" in conandata
     assert "patch_file: patches/mypatch.patch" in conandata
+
+    if trim:
+        assert "1.1" not in conandata
+    else:
+        assert "1.1" in conandata

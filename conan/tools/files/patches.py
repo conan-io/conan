@@ -124,6 +124,7 @@ def export_conandata_patches(conanfile):
     if conanfile.conan_data is None:
         raise ConanException("conandata.yml not defined")
 
+    conanfile.output.info(conanfile.conan_data)
     conanfile_patches = conanfile.conan_data.get('patches')
 
     def _handle_patches(patches, patches_folder):
@@ -174,8 +175,9 @@ def export_conandata_patches(conanfile):
         new_patches = _handle_patches(data.get('patches'), pkg_path)
 
         # Update the CONANDATA.YML
-        conanfile_patches = conanfile_patches or []
-        conanfile_patches.extend(new_patches)
+        conanfile_patches = conanfile_patches or {}
+        conanfile_patches.setdefault(conanfile.version, []).extend(new_patches)
+
         conanfile.conan_data['patches'] = conanfile_patches
         # Saving in the EXPORT folder
         conanfile_data_path = os.path.join(conanfile.export_folder, DATA_YML)
