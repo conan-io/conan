@@ -124,7 +124,6 @@ def export_conandata_patches(conanfile):
     if conanfile.conan_data is None:
         raise ConanException("conandata.yml not defined")
 
-    conanfile.output.info(conanfile.conan_data)
     conanfile_patches = conanfile.conan_data.get('patches')
 
     def _handle_patches(patches, patches_folder):
@@ -157,7 +156,6 @@ def export_conandata_patches(conanfile):
 
     _handle_patches(conanfile_patches, conanfile.recipe_folder)
 
-    # NOTE: This only works after trim_conandata, it assumes versions are gone now in the cache
     extra_path = conanfile.conf.get("core.sources.patch:extra_path")
     if extra_path:
         if not os.path.isdir(extra_path):
