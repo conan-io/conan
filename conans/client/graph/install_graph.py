@@ -576,8 +576,8 @@ class InstallGraph:
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
-                        "all dependencies) or --build-test (exclusive for 'test_package' " \
-                        "dependencies) to define what can be built from sources"
+                        "all dependencies) or --build-test (exclusive for 'conan create' building " \
+                        "test_package' dependencies) to define what can be built from sources"
         else:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"
