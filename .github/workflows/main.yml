@@ -48,24 +48,10 @@ jobs:
           coverage report
           coverage xml
 
-      - name: Pytest coverage comment
-        id: coverageComment
-        uses: MishaKav/pytest-coverage-comment@main
+      - name: Code coverage
+        uses: codecov/codecov-action@v5
         with:
-          pytest-xml-coverage-path: ./coverage.xml
-          xml-skip-covered: true    # Only display non fully covered files
-          hide-report: true         # Avoids GitHub message length limit issue
-
-      - name: Update coverage badge
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.PYTEST_COVERAGE_COMMENT }}
-          gistID: f305b2c105b15ff2b620a7a728b14934
-          filename: conan-coverage.json
-          label: Coverage Report
-          message: ${{ steps.coverageComment.outputs.coverage }}
-          color: ${{ steps.coverageComment.outputs.color }}
-          namedLogo: python
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - uses: geekyeggo/delete-artifact@v5
         with:
