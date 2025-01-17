@@ -290,7 +290,9 @@ def _save(remotes_file, remotes):
         if r.remote_type:
             remote["remote_type"] = r.remote_type
         remote_list.append(remote)
-    save(remotes_file, json.dumps({"remotes": remote_list}, indent=True))
+    # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
+    save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))
+    os.replace(remotes_file + ".tmp", remotes_file)
 
 
 def _filter(remotes, pattern, only_enabled=True):
