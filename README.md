@@ -7,10 +7,6 @@
 
 # Conan
 
-[![license](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.md)
-[![CI](https://github.com/conan-io/conan/actions/workflows/main.yml/badge.svg)](https://github.com/conan-io/conan/actions/workflows/main.yml)
-![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/perseoGI/f305b2c105b15ff2b620a7a728b14934/raw/conan-coverage.json)
-
 Decentralized, open-source (MIT), C/C++ package manager.
 
 - Homepage: https://conan.io/
