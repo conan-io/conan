@@ -4,7 +4,7 @@ import re
 from functools import total_ordering
 
 from conan.errors import ConanException
-from conans.model.version import Version
+from conan.internal.model.version import Version
 from conans.util.dates import timestamp_to_str
 
 

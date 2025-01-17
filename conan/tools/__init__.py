@@ -1,4 +1,4 @@
-from conans.model.build_info import CppInfo as _CppInfo
+from conan.internal.model.cpp_info import CppInfo as _CppInfo
 
 
 def CppInfo(conanfile):

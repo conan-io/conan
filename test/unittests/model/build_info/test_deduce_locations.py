@@ -4,13 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from conan.errors import ConanException
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import save
-from conans.model.build_info import CppInfo
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.cpp_info import CppInfo
+from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save
 
 
@@ -68,7 +67,8 @@ def test_deduce_shared_link_locations(conanfile):
 @pytest.mark.parametrize("lib_name, libs", [
     ("liblog4cxx.so.15.2.0", ["log4cxx"]),
     ("libapr-1.0.dylib", ["apr-1"]),
-    ("libapr-1.so.0.7.4", ["apr-1"])
+    ("libapr-1.so.0.7.4", ["apr-1"]),
+    ("libgrpc++_alts.so.1.67.1", ["grpc++_alts"])
 ])
 def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     """

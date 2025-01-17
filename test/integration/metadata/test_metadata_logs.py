@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.utils.tools import TestClient
 from conans.util.files import load, save
 
@@ -140,7 +140,7 @@ class TestHooksMetadataLogs:
                 copy(conanfile, "*", src=os.path.join(conanfile.build_folder, "logs"),
                      dst=os.path.join(conanfile.package_metadata_folder, "logs"))
             """)
-        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
+        hook_path = os.path.join(c.paths.hooks_path, "my_hook", "hook_my_hook.py")
         save(hook_path, my_hook)
         conanfile = textwrap.dedent("""
             import os

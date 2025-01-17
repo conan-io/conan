@@ -4,8 +4,8 @@ from mock import Mock
 
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph_builder import DepsGraph, Node
-from conans.model.conan_file import ConanFile
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class DepsGraphTest(unittest.TestCase):

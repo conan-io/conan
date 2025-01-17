@@ -12,7 +12,7 @@ from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class GnuToolchain:
@@ -237,7 +237,7 @@ class GnuToolchain:
 
     @staticmethod
     def _dict_to_list(flags):
-        return [f"{k}={v}" if v else k for k, v in flags.items()]
+        return [f"{k}={v}" if v is not None else k for k, v in flags.items()]
 
     @property
     def cxxflags(self):

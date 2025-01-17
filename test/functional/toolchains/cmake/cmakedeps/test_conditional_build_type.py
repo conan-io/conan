@@ -1,17 +1,13 @@
 import textwrap
 
-from conan.test.utils.tools import TestClient
 
-
-def test_conditional_build_type():
+def test_conditional_build_type(matrix_client_debug):
     # https://github.com/conan-io/conan/issues/15851
-    c = TestClient()
+    c = matrix_client_debug
     # A header-only library can't be used for testing, it doesn't fail
-    c.run("new cmake_lib -d name=pkga -d version=0.1")
-    c.run("create . -s build_type=Debug -tf=")
 
     c.save({}, clean_first=True)
-    c.run("new cmake_lib -d name=pkgb -d version=0.1 -d requires=pkga/0.1")
+    c.run("new cmake_lib -d name=pkgb -d version=0.1 -d requires=matrix/1.0")
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
@@ -31,8 +27,8 @@ def test_conditional_build_type():
                 deps.generate()
                 tc = CMakeToolchain(self)
                 if self.settings.build_type == "Debug":
-                    tc.cache_variables["USE_PKGA"] = 1
-                    tc.preprocessor_definitions["USE_PKGA"] = 1
+                    tc.cache_variables["USE_MATRIX"] = 1
+                    tc.preprocessor_definitions["USE_MATRIX"] = 1
                 tc.generate()
 
             def build(self):
@@ -49,7 +45,7 @@ def test_conditional_build_type():
 
             def requirements(self):
                 if self.settings.build_type == "Debug":
-                    self.requires("pkga/0.1")
+                    self.requires("matrix/1.0")
         """)
     cmake = textwrap.dedent("""\
         cmake_minimum_required(VERSION 3.15)
@@ -58,9 +54,9 @@ def test_conditional_build_type():
         add_library(pkgb src/pkgb.cpp)
         target_include_directories(pkgb PUBLIC include)
 
-        if(USE_PKGA)
-            find_package(pkga CONFIG REQUIRED)
-            target_link_libraries(pkgb PRIVATE pkga::pkga)
+        if(USE_MATRIX)
+            find_package(matrix CONFIG REQUIRED)
+            target_link_libraries(pkgb PRIVATE matrix::matrix)
         endif()
 
         set_target_properties(pkgb PROPERTIES PUBLIC_HEADER "include/pkgb.h")
@@ -69,13 +65,13 @@ def test_conditional_build_type():
     pkgb_cpp = textwrap.dedent(r"""
         #include <iostream>
         #include "pkgb.h"
-        #ifdef USE_PKGA
-        #include "pkga.h"
+        #ifdef USE_MATRIX
+        #include "matrix.h"
         #endif
 
         void pkgb(){
-            #ifdef USE_PKGA
-            pkga();
+            #ifdef USE_MATRIX
+            matrix();
             #endif
 
             #ifdef NDEBUG
@@ -89,13 +85,13 @@ def test_conditional_build_type():
             "CMakeLists.txt": cmake,
             "src/pkgb.cpp": pkgb_cpp})
     c.run("create . -s build_type=Debug -tf=")
-    assert "pkga/0.1" in c.out
-    c.run("create . -s build_type=Release -tf=")  # without dep to pkga
-    assert "pkga" not in c.out
+    assert "matrix/1.0" in c.out
+    c.run("create . -s build_type=Release -tf=")  # without dep to matrix
+    assert "matrix" not in c.out
 
     c.save({}, clean_first=True)
     c.run("new cmake_lib -d name=pkgc -d version=0.1 -d requires=pkgb/0.1")
     c.run("build . -s build_type=Debug")
     c.run("build . -s build_type=Release")
-    # This used to crash because "pkga::pkga"
+    # This used to crash because "matrix::matrix"
     assert "conanfile.py (pkgc/0.1): Running CMake.build()" in c.out

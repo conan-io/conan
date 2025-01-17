@@ -4,9 +4,10 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class TargetConfigurationTemplate2:
@@ -147,7 +148,7 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
-        requires = " ".join(self._requires(info, components))
+        requires = ";".join(self._requires(info, components))
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # TODO: Missing link language
@@ -166,7 +167,7 @@ class TargetConfigurationTemplate2:
                   "system_libs": system_libs}
 
         if info.frameworks:
-            self._conanfile.output.warning("frameworks not supported yet in new CMakeDeps generator")
+            ConanOutput(scope=str(self._conanfile)).warning("frameworks not supported yet in new CMakeDeps generator")
 
         if info.libs:
             if len(info.libs) != 1:
@@ -206,9 +207,9 @@ class TargetConfigurationTemplate2:
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
                     all_requires.append(comp_name)
-                all_requires = " ".join(all_requires)
+                all_requires = ";".join(all_requires)
             else:
-                all_requires = " ".join(libs.keys())
+                all_requires = ";".join(libs.keys())
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -341,7 +342,8 @@ class TargetConfigurationTemplate2:
                               "{{lib_info["link_location"]}}")
         {% endif %}
         {% if lib_info.get("requires") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              "{{config_wrapper(config, lib_info["requires"])}}")
         {% endif %}
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})

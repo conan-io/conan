@@ -7,10 +7,10 @@ from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_P
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import load
-from conans.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange
 
 LOCAL_RECIPES_INDEX = "local-recipes-index"
 
@@ -25,6 +25,7 @@ class Remote:
         self.disabled = disabled
         self.allowed_packages = allowed_packages
         self.remote_type = remote_type
+        self.caching = {}
 
     def __eq__(self, other):
         if other is None:
@@ -44,6 +45,9 @@ class Remote:
 
     def __repr__(self):
         return str(self)
+
+    def invalidate_cache(self):
+        self.caching = {}
 
 
 class MultiPackagesList:

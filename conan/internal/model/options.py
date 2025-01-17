@@ -1,5 +1,5 @@
 from conan.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conan.internal.model.recipe_ref import ref_matches
 
 _falsey_options = ["false", "none", "0", "off", ""]
 

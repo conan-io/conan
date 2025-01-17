@@ -16,7 +16,7 @@ def test_custom_global_generator():
                 pkg = self._conanfile.dependencies["pkg"].ref
                 self._conanfile.output.info(f"DEP: {pkg}!!")
         """)
-    save(os.path.join(c.cache.custom_generators_path, "mygen.py"), generator)
+    save(os.path.join(c.paths.custom_generators_path, "mygen.py"), generator)
     conanfile = textwrap.dedent("""
         [requires]
         pkg/0.1
@@ -72,8 +72,8 @@ def test_custom_global_generator_imports():
         def mygenerate(conanfile):
             conanfile.output.info("MYGENERATE WORKS!!")
         """)
-    save(os.path.join(c.cache.custom_generators_path, "mygen.py"), generator)
-    save(os.path.join(c.cache.custom_generators_path, "_myfunc.py"), myaux)
+    save(os.path.join(c.paths.custom_generators_path, "mygen.py"), generator)
+    save(os.path.join(c.paths.custom_generators_path, "_myfunc.py"), myaux)
 
     c.save({"conanfile.txt": ""})
     c.run("install . -g MyCustomGenerator")
@@ -94,7 +94,7 @@ def test_custom_global_generator_multiple():
                 def generate(self):
                     self._conanfile.output.info(f"MyGenerator{num}!!")
             """)
-        save(os.path.join(c.cache.custom_generators_path, f"mygen{num}.py"), generator)
+        save(os.path.join(c.paths.custom_generators_path, f"mygen{num}.py"), generator)
     conanfile = textwrap.dedent("""
         [requires]
         pkg/0.1

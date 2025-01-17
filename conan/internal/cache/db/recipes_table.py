@@ -2,7 +2,7 @@ import sqlite3
 
 from conan.internal.cache.db.table import BaseDbTable
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.dates import timestamp_now
 
 

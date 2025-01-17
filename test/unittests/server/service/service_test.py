@@ -3,9 +3,9 @@ import os
 import unittest
 
 from conan.internal.errors import NotFoundException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.manifest import FileTreeManifest
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.service.authorize import BasicAuthorizer
 from conans.server.service.v2.search import SearchService

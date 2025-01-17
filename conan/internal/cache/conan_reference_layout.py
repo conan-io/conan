@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 
-from conans.model.manifest import FileTreeManifest
+from conan.internal.model.manifest import FileTreeManifest
 from conan.internal.paths import CONANFILE, DATA_YML
 from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 

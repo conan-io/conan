@@ -9,7 +9,7 @@ import unittest
 import pytest
 
 from conans.client.remote_manager import uncompress_file
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 

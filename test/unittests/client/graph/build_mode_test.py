@@ -2,7 +2,7 @@ import pytest
 
 from conans.client.graph.build_mode import BuildMode
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.tools import redirect_output
 
