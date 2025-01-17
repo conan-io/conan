@@ -164,8 +164,12 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
+<<<<<<< HEAD
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
+=======
+        requires = ";".join(self._requires(info, components))
+>>>>>>> develop2
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # FIXME: Filter by lib traits!!!!!
@@ -222,9 +226,16 @@ class TargetConfigurationTemplate2:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
+<<<<<<< HEAD
                     all_requires[comp_name] = {}  # It is an interface, it doesn't matter
             else:
                 all_requires = {k: {}  for k in libs.keys()}
+=======
+                    all_requires.append(comp_name)
+                all_requires = ";".join(all_requires)
+            else:
+                all_requires = ";".join(libs.keys())
+>>>>>>> develop2
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -356,6 +367,13 @@ class TargetConfigurationTemplate2:
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}
                               "{{lib_info["link_location"]}}")
         {% endif %}
+<<<<<<< HEAD
+=======
+        {% if lib_info.get("requires") %}
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              "{{config_wrapper(config, lib_info["requires"])}}")
+        {% endif %}
+>>>>>>> develop2
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}

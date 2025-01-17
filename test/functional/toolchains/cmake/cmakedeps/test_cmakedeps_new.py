@@ -314,7 +314,8 @@ class TestLibsIntegration:
         c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
         assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
-        assert "target_link_libraries(pkg::pkg INTERFACE MyTargetDep)" in targets_cmake
+        assert 'set_target_properties(pkg::pkg PROPERTIES INTERFACE_LINK_LIBRARIES\n' \
+               '                      "$<$<CONFIG:RELEASE>:MyTargetDep>"' in targets_cmake
 
 
 class TestLibsLinkageTraits:
@@ -359,7 +360,7 @@ class TestLibsLinkageTraits:
         c.save({}, clean_first=True)
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
         c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
-        print(c.out)
+        # it works
 
 
 @pytest.mark.tool("cmake")
