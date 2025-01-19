@@ -218,6 +218,8 @@ class TestLibs:
             assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
             assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
 
+    # if not using cmake >= 3.23 the intermediate gamelib_test linkage fail
+    @pytest.mark.tool("cmake", "3.23")
     @pytest.mark.parametrize("shared", [False, True])
     def test_multilevel(self, shared):
         # TODO: make this shared fixtures in conftest for multi-level shared testing
@@ -231,6 +233,28 @@ class TestLibs:
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=gamelib -d version=0.1 -d requires=engine/0.1")
+
+        # This specific CMake fails for shared libraries with old CMakeDeps in Linux
+        cmake = textwrap.dedent("""\
+            cmake_minimum_required(VERSION 3.15)
+            project(gamelib CXX)
+
+            find_package(engine CONFIG REQUIRED)
+
+            add_library(gamelib src/gamelib.cpp)
+            target_include_directories(gamelib PUBLIC include)
+            target_link_libraries(gamelib PRIVATE engine::engine)
+
+            add_executable(gamelib_test src/gamelib_test.cpp)
+            target_link_libraries(gamelib_test PRIVATE gamelib)
+
+            set_target_properties(gamelib PROPERTIES PUBLIC_HEADER "include/gamelib.h")
+            install(TARGETS gamelib)
+            """)
+        # Testing that a local test executable links correctly with the new CMakeDeps
+        # It fails with the old CMakeDeps
+        c.save({"CMakeLists.txt": cmake,
+               "src/gamelib_test.cpp": '#include "gamelib.h"\nint main() { gamelib(); }'})
         c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)

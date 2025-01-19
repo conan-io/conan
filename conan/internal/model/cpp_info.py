@@ -495,7 +495,6 @@ class _Component:
             if matches:
                 return matches
 
-
         def _lib_match_by_regex(dir_, pattern):
             ret = set()
             # pattern is a regex compiled pattern, so let's iterate each file to find the library
@@ -514,7 +513,6 @@ class _Component:
                     else:
                         ret.add(full_path)
             return list(ret)
-
 
         def _find_matching(dirs, pattern):
             for d in dirs:

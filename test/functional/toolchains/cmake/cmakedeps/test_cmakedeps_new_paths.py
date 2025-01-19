@@ -42,7 +42,7 @@ def test_cmake_generated(client):
     c = client
     c.run("create dep")
     c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake" in c.out
+    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Conan: Target declared imported INTERFACE library 'dep::dep'" in c.out
 
 
@@ -71,7 +71,7 @@ def test_cmake_in_package(client, lowercase):
     c.save({"dep/conanfile.py": dep})
     c.run("create dep")
     c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_find_paths.cmake" in c.out
+    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Hello from dep dep-Config.cmake!!!!!" in c.out
 
 
@@ -97,6 +97,8 @@ class TestRuntimeDirs:
         runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
         assert "<CONFIG:Release>" in runtime_lib_dirs
         assert "<CONFIG:Debug>" in runtime_lib_dirs
+        # too simple of a check, but this is impossible to test automatically
+        assert "set(CMAKE_VS_DEBUGGER_ENVIRONMENT" in contents
 
 
 @pytest.mark.tool("cmake")
