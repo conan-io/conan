@@ -172,6 +172,8 @@ class _PathGenerator:
             {% endfor %}
             {% if host_runtime_dirs %}
             set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
+            # Only for VS, needs CMake>=3.27
+            set(CMAKE_VS_DEBUGGER_ENVIRONMENT "PATH=${CONAN_RUNTIME_LIB_DIRS};%PATH%")
             {% endif %}
             {% if cmake_program_path %}
             list(PREPEND CMAKE_PROGRAM_PATH {{ cmake_program_path }})
@@ -250,7 +252,10 @@ class _PathGenerator:
                     host_runtime_dirs.setdefault(config, []).append(paths)
 
         is_win = self._conanfile.settings.get_safe("os") == "Windows"
-        for req in self._conanfile.dependencies.host.values():
+
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
+        for req in list(host_req.values()) + list(test_req.values()):
             config = req.settings.get_safe("build_type", self._cmakedeps.configuration)
             aggregated_cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
