@@ -356,9 +356,7 @@ class TestWorkspaceBuild:
                .with_requires("pkga/0.1")})
         c.run("workspace add pkga")
         c.run("workspace add pkgb --product")
-        print(c.load("conanws.yml"))
         c.run("workspace info --format=json")
-        print(c.out)
         assert json.loads(c.stdout)["products"] == ["pkgb"]
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -380,6 +378,31 @@ class TestWorkspaceBuild:
         c.run("workspace build pkga")
         assert "conanfile.py (pkga/0.1): Calling build()" in c.out
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
+
+
+class TestClean:
+    def test_clean(self):
+        # Using cmake_layout, we can clean the build folders
+        c = TestClient()
+        c.save({"conanws.yml": ""})
+        pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
+        pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
+        layout = textwrap.dedent("""
+            def layout(self):
+                from conan.tools.cmake import cmake_layout
+                cmake_layout(self)
+            """)
+        c.save({"pkga/conanfile.py": str(pkga) + textwrap.indent(layout, "    "),
+                "pkgb/conanfile.py": str(pkgb) + textwrap.indent(layout, "    ")})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb --product")
+        c.run("workspace build")
+        assert os.path.exists(os.path.join(c.current_folder, "pkga", "build"))
+        assert os.path.exists(os.path.join(c.current_folder, "pkgb", "build"))
+        c.run("workspace clean")
+        print(c.out)
+        assert not os.path.exists(os.path.join(c.current_folder, "pkga", "build"))
+        assert not os.path.exists(os.path.join(c.current_folder, "pkgb", "build"))
 
 
 def test_new():

@@ -161,6 +161,23 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.local.build(conanfile)
 
 
+@conan_subcommand()
+def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Clean the temporary build folders when possible
+    """
+    parser.parse_args(*args)
+
+    editables = conan_api.workspace.editable_packages
+    # TODO: This has to be improved to avoid repetition when there are multiple products
+    for editable_ref, editable_info in editables.items():
+        ConanOutput().info(f"Editable: {editable_ref}")
+
+
+        editable_path = editable_info["path"]
+
+
+
 @conan_command(group="Consumer")
 def workspace(conan_api, parser, *args):
     """
