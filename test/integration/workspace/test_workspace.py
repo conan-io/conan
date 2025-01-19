@@ -356,7 +356,9 @@ class TestWorkspaceBuild:
                .with_requires("pkga/0.1")})
         c.run("workspace add pkga")
         c.run("workspace add pkgb --product")
+        print(c.load("conanws.yml"))
         c.run("workspace info --format=json")
+        print(c.out)
         assert json.loads(c.stdout)["products"] == ["pkgb"]
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -378,3 +380,13 @@ class TestWorkspaceBuild:
         c.run("workspace build pkga")
         assert "conanfile.py (pkga/0.1): Calling build()" in c.out
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
+
+
+def test_new():
+    # Very basic workspace for testing
+    c = TestClient()
+    c.run("new workspace")
+    c.run("workspace info")
+    assert "liba/0.1" in c.out
+    assert "libb/0.1" in c.out
+    assert "app1/0.2" in c.out
