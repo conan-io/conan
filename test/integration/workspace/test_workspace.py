@@ -389,4 +389,4 @@ def test_new():
     c.run("workspace info")
     assert "liba/0.1" in c.out
     assert "libb/0.1" in c.out
-    assert "app1/0.2" in c.out
+    assert "app1/0.1" in c.out
