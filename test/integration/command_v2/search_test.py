@@ -6,7 +6,7 @@ import pytest
 
 from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 

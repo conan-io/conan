@@ -3,7 +3,7 @@ import os
 import textwrap
 import unittest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load

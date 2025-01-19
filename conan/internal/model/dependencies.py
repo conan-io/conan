@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.conanfile_interface import ConanFileInterface
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.conanfile_interface import ConanFileInterface
 
 
 class UserRequirementsDict(object):

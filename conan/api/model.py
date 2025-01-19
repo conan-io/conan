@@ -7,10 +7,10 @@ from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_P
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import load
-from conans.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange
 
 LOCAL_RECIPES_INDEX = "local-recipes-index"
 

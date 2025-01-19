@@ -1,6 +1,6 @@
-from conans.model.info import ConanInfo, RequirementsInfo, PythonRequiresInfo
-from conans.model.options import Options
-from conans.model.settings import Settings
+from conan.internal.model.info import ConanInfo, RequirementsInfo, PythonRequiresInfo
+from conan.internal.model.options import Options
+from conan.internal.model.settings import Settings
 
 
 def test_false_values_affect_none():

@@ -1,7 +1,7 @@
 import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 
 def check_min_cstd(conanfile, cstd, gnu_extensions=False):

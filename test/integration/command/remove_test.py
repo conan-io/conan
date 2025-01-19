@@ -7,8 +7,8 @@ import pytest
 
 from conan.api.conan_api import ConanAPI
 from conan.internal.errors import NotFoundException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conan.test.utils.env import environment_update
 
@@ -356,9 +356,9 @@ def test_package_query_no_package_ref(populated_client):
 
 def _get_all_packages(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.packages_configurations(ref, remote=remote)])
         except NotFoundException:
@@ -367,9 +367,9 @@ def _get_all_packages(client, ref, with_remote):
 
 def _get_revisions_recipes(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.recipe_revisions(ref, remote=remote)])
         except NotFoundException:
@@ -378,9 +378,9 @@ def _get_revisions_recipes(client, ref, with_remote):
 
 def _get_revisions_packages(client, pref, with_remote):
     pref = PkgReference.loads(pref)
-    api = ConanAPI(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
         try:
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
         except NotFoundException:

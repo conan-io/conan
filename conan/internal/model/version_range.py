@@ -1,7 +1,7 @@
 from functools import total_ordering
 from typing import Optional
 
-from conans.model.version import Version
+from conan.internal.model.version import Version
 from conan.errors import ConanException
 
 

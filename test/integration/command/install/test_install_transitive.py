@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from conans.model.info import load_binary_info
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import load_binary_info
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE_TXT, CONANINFO
 from conan.test.utils.tools import TestClient,  GenConanfile
 from conans.util.files import load

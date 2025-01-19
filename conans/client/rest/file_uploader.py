@@ -1,3 +1,4 @@
+import io
 import os
 import time
 
@@ -81,27 +82,7 @@ class FileUploader(object):
                     time.sleep(retry_wait)
 
     def _upload_file(self, url, abs_path, headers, auth, ref):
-        class FileProgress:  # Wrapper just to provide an upload progress every 10 seconds
-            def __init__(self, f, total_size):
-                self._f = f
-                self._total = total_size
-                self._name = os.path.basename(f.name)
-                self._t = TimedOutput(interval=10)
-                self._read = 0
-
-            def __getattr__(self, item):
-                return getattr(self._f, item)
-
-            def read(self, n=-1):
-                read_bytes = self._f.read(n)
-                self._read += len(read_bytes)
-                self._t.info(f"{ref}: Uploading {self._name}: {int(self._read*100/self._total)}%")
-                return read_bytes
-
-        filesize = os.path.getsize(abs_path)
-        with open(abs_path, mode='rb') as file_handler:
-            big_file = filesize > 100000000  # 100 MB
-            file_handler = FileProgress(file_handler, filesize) if big_file else file_handler
+        with FileProgress(abs_path, mode='rb', msg=f"{ref}: Uploading") as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth,
@@ -113,3 +94,22 @@ class FileUploader(object):
                 raise
             except Exception as exc:
                 raise ConanException(exc)
+
+
+class FileProgress(io.FileIO):
+    def __init__(self, path: str, msg: str = "Uploading", report_interval: float = 1 , *args, **kwargs):
+        super().__init__(path, *args, **kwargs)
+        self._total_size = os.path.getsize(path)
+        self._filename = os.path.basename(path)
+        # Report only on big sizes (>100MB)
+        self._reporter = TimedOutput(interval=report_interval) if self._total_size > 100_000_000 else None
+        self._bytes_read = 0
+        self.msg = msg
+
+    def read(self, size: int = -1) -> bytes:
+        block = super().read(size)
+        self._bytes_read += len(block)
+        if self._reporter:
+            current_percentage = int(self._bytes_read * 100.0 / self._total_size) if self._total_size != 0 else 0
+            self._reporter.info(f"{self.msg} {self._filename}: {current_percentage}%")
+        return block

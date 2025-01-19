@@ -7,12 +7,12 @@ from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.env import environment_update
 from conan.api.input import UserInput
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.manifest import FileTreeManifest
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import LocalDBMock

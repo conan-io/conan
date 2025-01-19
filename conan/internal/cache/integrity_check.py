@@ -2,8 +2,8 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
 
 
 class IntegrityChecker:

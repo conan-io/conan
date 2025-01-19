@@ -4,9 +4,9 @@ import sqlite3
 from conan.api.output import ConanOutput
 from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
-from conans.model.version import Version
+from conan.internal.model.package_ref import PkgReference
+from conan.internal.model.recipe_ref import RecipeReference
+from conan.internal.model.version import Version
 
 
 class CacheDatabase:

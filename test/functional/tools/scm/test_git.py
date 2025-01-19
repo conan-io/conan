@@ -26,7 +26,7 @@ class TestGitBasicCapture:
             version = "0.1"
 
             def export(self):
-                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt"])
+                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt", "file with spaces.txt"])
                 commit = git.get_commit()
                 repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()
@@ -127,7 +127,8 @@ class TestGitBasicCapture:
         c.run("export . -vvv")
         assert "pkg/0.1: DIRTY: False" in c.out
         c.save({"myfile.txt": "changed",
-                "mynew.txt": "new"})
+                "mynew.txt": "new",
+                "file with spaces.txt": "hello"})
         c.run("export .")
         assert "pkg/0.1: DIRTY: False" in c.out
         c.save({"other.txt": "new"})

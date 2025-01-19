@@ -4,7 +4,7 @@ from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conans.client.graph.graph import Overrides
 from conan.errors import ConanException
-from conans.model.graph_lock import Lockfile, LOCKFILE
+from conan.internal.model.lockfile import Lockfile, LOCKFILE
 
 
 class LockfileAPI:

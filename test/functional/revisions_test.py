@@ -8,7 +8,7 @@ from mock import patch
 
 from conan.test.utils.env import environment_update
 from conan.internal.errors import RecipeNotFoundException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conan.test.utils.tools import TestServer, GenConanfile, TestClient
 from conans.util.files import load

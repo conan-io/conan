@@ -4,7 +4,7 @@ import os
 from conan.api.output import Color
 from conan.tools.files import chdir, update_conandata
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
@@ -137,7 +137,9 @@ class Git:
             return bool(status)
         # Parse the status output, line by line, and match it with "_excluded"
         lines = [line.strip() for line in status.splitlines()]
-        lines = [line.split()[1] for line in lines if line]
+        # line is of the form STATUS PATH, get the path by splitting
+        # (Taking into account that STATUS is one word, PATH might be many)
+        lines = [line.split(maxsplit=1)[1].strip('"') for line in lines if line]
         lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
         self._conanfile.output.debug(f"Filtered git status: {lines}")
         return bool(lines)

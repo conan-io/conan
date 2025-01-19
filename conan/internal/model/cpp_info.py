@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -495,7 +495,6 @@ class _Component:
             if matches:
                 return matches
 
-
         def _lib_match_by_regex(dir_, pattern):
             ret = set()
             # pattern is a regex compiled pattern, so let's iterate each file to find the library
@@ -514,7 +513,6 @@ class _Component:
                     else:
                         ret.add(full_path)
             return list(ret)
-
 
         def _find_matching(dirs, pattern):
             for d in dirs:
