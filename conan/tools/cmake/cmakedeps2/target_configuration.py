@@ -148,7 +148,7 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
-        requires = " ".join(self._requires(info, components))
+        requires = ";".join(self._requires(info, components))
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # TODO: Missing link language
@@ -207,9 +207,9 @@ class TargetConfigurationTemplate2:
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
                     all_requires.append(comp_name)
-                all_requires = " ".join(all_requires)
+                all_requires = ";".join(all_requires)
             else:
-                all_requires = " ".join(libs.keys())
+                all_requires = ";".join(libs.keys())
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -342,7 +342,8 @@ class TargetConfigurationTemplate2:
                               "{{lib_info["link_location"]}}")
         {% endif %}
         {% if lib_info.get("requires") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              "{{config_wrapper(config, lib_info["requires"])}}")
         {% endif %}
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
