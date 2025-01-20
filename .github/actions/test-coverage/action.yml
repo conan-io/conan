@@ -1,0 +1,41 @@
+name: 'Run tests and measure code coverage'
+description: 'Run tests enabling coverage in certain conditions and upload coverage artifacts for later process'
+
+inputs:
+  python-version:
+    description: 'Python version in which the tests was ran'
+    required: true
+
+  test-type:
+    description: 'Tests suite name'
+    required: true
+
+  duration:
+    description: 'Tests maximum duration'
+    required: true
+    default: '20'
+
+  tests:
+    description: 'Tests folder and options to run'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Run tests with coverage
+        shell: bash
+        run: |
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n auto ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
+
+      - name: Rename coverage file
+        if: github.ref == 'refs/heads/develop2'
+        shell: bash
+        run: mv .coverage .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+
+      - name: Upload coverage artifact
+        if: github.ref == 'refs/heads/develop2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          path: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          include-hidden-files: true

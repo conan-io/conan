@@ -161,16 +161,14 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
-
-      - name: Run Tests
-        run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
-          pytest test/${{ matrix.test-type }} --durations=20 -n auto ${{ env.PYTEST_COV_OPTIONS }}
 
-      - name: Code coverage
-        uses: ./.github/actions/code-coverage
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}
+          duration: 20

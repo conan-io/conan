@@ -82,15 +82,13 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install meson
 
-      - name: Run Tests
-        run: |
-          pytest test/${{ matrix.test-type }} --durations=20 -n auto ${{ env.PYTEST_COV_OPTIONS }}
-
-      - name: Code coverage
-        uses: ./.github/actions/code-coverage
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}
+          duration: 20
 
   linux_docker_tests:
     needs: build_container
@@ -117,12 +115,9 @@ jobs:
           pip install -r conans/requirements_runner.txt
 
       - name: Run tests
-        shell: bash
-        run: |
-          pytest -m docker_runner --durations=20 -rs ${{ env.PYTEST_COV_OPTIONS }}
-
-      - name: Code coverage
-        uses: ./.github/actions/code-coverage
+        uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
-          test-type: ${{ matrix.test-type }}
+          test-type: docker
+          tests: '-m docker_runner -rs'
+          duration: 20

@@ -15,9 +15,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  PYTEST_COV_OPTIONS: ${{ github.ref_name == 'develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
-
 jobs:
   linux_suite:
     uses: ./.github/workflows/linux-tests.yml
@@ -63,9 +60,7 @@ jobs:
             .coverage.*
 
   deploy_to_pypi_test:
-    needs: [linux_suite]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop2'
     name: Deploy to TestPyPI
     steps:
       - name: Checkout code

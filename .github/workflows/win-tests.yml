@@ -32,7 +32,6 @@ jobs:
         shell: pwsh
         run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -47,18 +46,15 @@ jobs:
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_dev.txt
           pip install -r conans/requirements_server.txt
+          git config --global core.autocrlf false
 
       - name: Run Unit & Integration Tests
-        shell: pwsh
-        run: |
-          git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=100 -n=auto ${{ env.PYTEST_COV_OPTIONS }}
-
-      - name: Code coverage
-        uses: ./.github/actions/code-coverage
+        uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: unit-integration
+          tests: test/unittests test/integration
+          duration: 100
 
   functional_tests:
     runs-on: windows-2022
@@ -220,7 +216,7 @@ jobs:
               Remove-Item $zipFile
           }
 
-      - name: Run Functional Tests
+      - name: Configure environment
         run: |
           git config --global core.autocrlf false
 
@@ -253,10 +249,11 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=100 ${{ env.PYTEST_COV_OPTIONS }}
-
-      - name: Code coverage
-        uses: ./.github/actions/code-coverage
+      - name: Run Functional Tests
+        if: ${{ env.PYTEST_COV_OPTIONS }}
+        uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
+          tests: test/functional
+          duration: 100
