@@ -9,8 +9,8 @@ from conan.test.utils.env import environment_update
 
 @pytest.mark.artifactory_ready
 class TestDownloadPatterns:
-    # FIXME The fixture is copied from TestUploadPatterns, reuse it
-    @pytest.fixture(scope="class")  # Takes 6 seconds, reuse it
+    # The fixture is very similar from TestUploadPatterns, but not worth extracting
+    @pytest.fixture(scope="class")
     def client(self):
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
@@ -32,7 +32,6 @@ class TestDownloadPatterns:
 
     @staticmethod
     def assert_downloaded(pattern, result, client, only_recipe=False, query=None):
-        # FIXME: Also common to TestUploadPatterns
         def ref_map(r):
             rev1 = "ad55a66b62acb63ffa99ea9b75c16b99"
             rev2 = "127fb537a658ad6a57153a038960dc53"

@@ -4,6 +4,7 @@ from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
+from conan.internal.model.recipe_ref import ref_matches
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM
@@ -15,7 +16,7 @@ from conan.errors import ConanException
 from conan.internal.model.conan_file import ConanFile
 from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.model.recipe_ref import RecipeReference, ref_matches
+from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
 
 

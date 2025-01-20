@@ -18,7 +18,7 @@ from conans.client.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conans.util.files import load, save
 

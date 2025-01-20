@@ -1303,3 +1303,55 @@ class TestCMakeComponents:
         c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
         cmake = c.load("dep-config.cmake")
         assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyCompC1 MyC2 c3)' in cmake
+
+
+class TestCppInfoChecks:
+    def test_check_exe_libs(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["mylib"]
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "Error in generator 'CMakeDeps': dep/0.1 " 'cpp_info has both .exe and .libs' in c.out
+
+    def test_exe_no_location(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "Error in generator 'CMakeDeps': dep/0.1 cpp_info has .exe and no .location" in c.out
+
+    def test_check_exe_wrong_type(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out

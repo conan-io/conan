@@ -1,7 +1,7 @@
 from conan.api.conan_api import ConanAPI
 from conan.test.utils.env import environment_update
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
