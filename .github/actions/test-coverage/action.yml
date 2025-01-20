@@ -19,13 +19,17 @@ inputs:
     description: 'Tests folder and options to run'
     required: true
 
+  workers:
+    description: 'Number of workers to run tests'
+    default: auto
+
 runs:
   using: 'composite'
   steps:
       - name: Run tests with coverage
         shell: bash
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n auto ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
