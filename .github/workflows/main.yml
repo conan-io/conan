@@ -15,6 +15,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTEST_COV_OPTIONS: ${{ github.ref_name == 'develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
+
 jobs:
   linux_suite:
     uses: ./.github/workflows/linux-tests.yml
@@ -31,6 +34,7 @@ jobs:
   code_coverage:
     runs-on: ubuntu-latest
     name: Code coverage
+    if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
     needs: [linux_suite, osx_suite, windows_suite]
     steps:
       - name: Checkout code

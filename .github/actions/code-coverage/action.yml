@@ -1,6 +1,11 @@
 name: 'Code coverage'
 description: 'Properly rename and upload coverage artifact for later process'
 
+on:
+  push:
+    branches:
+      - develop2
+
 inputs:
   python-version:
     description: 'Python version in which the tests was ran'

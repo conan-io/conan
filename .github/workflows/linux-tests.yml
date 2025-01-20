@@ -84,7 +84,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest test/${{ matrix.test-type }} --durations=20 -n auto --cov=conan --cov-report=term-missing:skip-covered
+          pytest test/${{ matrix.test-type }} --durations=20 -n auto ${{ env.PYTEST_COV_OPTIONS }}
 
       - name: Code coverage
         uses: ./.github/actions/code-coverage
@@ -119,7 +119,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          pytest -m docker_runner --durations=20 -rs --cov=conan --cov-report=term-missing:skip-covered
+          pytest -m docker_runner --durations=20 -rs ${{ env.PYTEST_COV_OPTIONS }}
 
       - name: Code coverage
         uses: ./.github/actions/code-coverage

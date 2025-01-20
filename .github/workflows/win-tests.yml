@@ -52,7 +52,7 @@ jobs:
         shell: pwsh
         run: |
           git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=100 -n=auto --cov=conan --cov-report=term-missing:skip-covered
+          pytest test/unittests test/integration --durations=100 -n=auto ${{ env.PYTEST_COV_OPTIONS }}
 
       - name: Code coverage
         uses: ./.github/actions/code-coverage
@@ -253,7 +253,7 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=100 --cov=conan --cov-report=term-missing:skip-covered
+          pytest test/functional -n=auto --durations=100 ${{ env.PYTEST_COV_OPTIONS }}
 
       - name: Code coverage
         uses: ./.github/actions/code-coverage
