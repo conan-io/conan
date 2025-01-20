@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.model.recipe_ref import RecipeReference as _RecipeReference
+from conan.api.model import RecipeReference as _RecipeReference
 
 _msg = """
 *******************************************************************

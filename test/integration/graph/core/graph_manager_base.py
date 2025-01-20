@@ -12,7 +12,7 @@ from conan.internal.model.conf import ConfDefinition
 from conan.internal.model.manifest import FileTreeManifest
 from conan.internal.model.options import Options
 from conan.internal.model.profile import Profile
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import GenConanfile

@@ -6,12 +6,13 @@ from conan.api.model import PackagesList
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
 from conan.internal.conan_app import ConanBasicApp
+from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.paths import CONANINFO
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference, ref_matches
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.dates import timelimit
 from conans.util.files import load
 

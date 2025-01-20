@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.model.package_ref import PkgReference as _PkgReference
+from conan.api.model import PkgReference as _PkgReference
 
 _msg = """
 *******************************************************************

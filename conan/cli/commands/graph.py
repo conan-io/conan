@@ -15,7 +15,7 @@ from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 from conan.internal.errors import NotFoundException
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 def explain_formatter_text(data):

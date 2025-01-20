@@ -33,4 +33,5 @@ class Remote:
         return str(self)
 
     def invalidate_cache(self):
+        # TODO: make it private
         self.caching = {}

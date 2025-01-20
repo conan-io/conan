@@ -8,7 +8,7 @@ from conan.tools.scm import Git
 from conan.errors import ConanException
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.source import retrieve_exports_sources
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.files import merge_directories
 
 

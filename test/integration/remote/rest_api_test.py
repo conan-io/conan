@@ -11,8 +11,8 @@ from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.env import environment_update
 from conan.api.input import UserInput
 from conan.internal.model.manifest import FileTreeManifest
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import LocalDBMock

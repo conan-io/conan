@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange
 
 

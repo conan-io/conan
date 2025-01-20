@@ -1,12 +1,13 @@
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.model.recipe_ref import ref_matches
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD, BINARY_MISSING
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conan.errors import ConanException
-from conan.internal.model.recipe_ref import RecipeReference, ref_matches
+from conan.api.model import RecipeReference
 
 
 class GraphAPI:
