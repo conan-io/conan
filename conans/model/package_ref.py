@@ -5,8 +5,9 @@ _msg = """
 *******************************************************************
 Private '{}'
 detected in user code (custom commands, extensions, recipes, etc).
-Please stop using it, use only public documented APIs, as this
-will break in next releases.
+Please stop using it, use only public documented APIs, , such as
+'from conan.api.model import PkgReference'
+as this will break in next releases.
 *******************************************************************
 """
 
