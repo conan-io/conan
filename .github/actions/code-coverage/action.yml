@@ -1,11 +1,6 @@
 name: 'Code coverage'
 description: 'Properly rename and upload coverage artifact for later process'
 
-on:
-  push:
-    branches:
-      - develop2
-
 inputs:
   python-version:
     description: 'Python version in which the tests was ran'
@@ -17,6 +12,7 @@ inputs:
 
 runs:
   using: "composite"
+  if: github.ref == 'refs/heads/develop2'
   steps:
       - name: Rename coverage file (Linux/MacOS)
         if: runner.os != 'Windows'
