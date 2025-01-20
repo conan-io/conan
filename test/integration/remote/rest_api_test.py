@@ -1,24 +1,19 @@
 import os
 import unittest
 
-from mock import Mock
-
-from conans.client.remote_manager import Remote
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClient
+from conan.api.model import Remote
 from conan.internal.model.conf import ConfDefinition
-from conan.test.utils.env import environment_update
-from conan.api.input import UserInput
 from conan.internal.model.manifest import FileTreeManifest
 from conan.internal.model.package_ref import PkgReference
 from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.mocks import LocalDBMock
+from conan.test.utils.env import environment_update
 from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import get_free_port
+from conans.client.rest.conan_requester import ConanRequester
+from conans.client.rest.rest_client import RestApiClient
 from conans.util.files import md5, save
 
 
@@ -39,25 +34,12 @@ class RestApiTest(unittest.TestCase):
                                                 write_permissions=write_perms)
                 cls.server.start()
 
-                filename = os.path.join(temp_folder(), "conan.conf")
-                save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
-                localdb = LocalDBMock()
 
-                mocked_user_input = UserInput(non_interactive=False)
-                mocked_user_input.get_username = Mock(return_value="private_user")
-                mocked_user_input.get_password = Mock(return_value="private_pass")
-
-                # FIXME: Missing mock
-                cls.auth_manager = ConanApiAuthManager(requester, temp_folder(), localdb, config)
-                cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
-                                    True)
-                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
-                cls.auth_manager._authenticate(cls.api, cls.remote, user="private_user",
-                                               password="private_pass")
-                # Need to define again with new token
-                cls.api = RestApiClient(cls.remote, localdb.access_token, requester, config)
+                remote = Remote("myremote", f"http://127.0.0.1:{cls.server.port}", True, True)
+                cls.api = RestApiClient(remote, None, requester, config)
+                cls.api._token = cls.api.authenticate(user="private_user", password="private_pass")
 
     @classmethod
     def tearDownClass(cls):

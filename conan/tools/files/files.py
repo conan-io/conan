@@ -261,6 +261,7 @@ def chdir(conanfile, newdir):
     finally:
         os.chdir(old_path)
 
+
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
           strip_root=False, extract_filter=None):
     """
@@ -349,6 +350,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 except Exception as e:
                     output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         output.writeln("")
+
 
 def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests

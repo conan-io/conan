@@ -11,7 +11,6 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 
 
-# FIXME: we could remove this whenever @conan_alias_command will be implemented
 class TestSearch:
 
     @pytest.fixture
