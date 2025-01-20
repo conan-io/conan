@@ -785,6 +785,11 @@ class CppInfo:
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            result.components["_common"] = common
+
             for lib in self.libs:
                 c = _Component()  # Do not do a full clone, we don't need the properties
                 c.type = self.type  # This should be a string
@@ -792,13 +797,8 @@ class CppInfo:
                 c.libdirs = self.libdirs
                 c.bindirs = self.bindirs
                 c.libs = [lib]
+                c.requires = ["_common"]
                 result.components[f"_{lib}"] = c
-
-            common = self._package.clone()
-            common.libs = []
-            common.type = str(PackageType.HEADER)  # the type of components is a string!
-            common.requires = list(result.components.keys()) + (self.requires or [])
-            result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components

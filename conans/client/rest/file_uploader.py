@@ -97,12 +97,12 @@ class FileUploader(object):
 
 
 class FileProgress(io.FileIO):
-    def __init__(self, path: str, msg: str = "Uploading", report_interval: float = 1 , *args, **kwargs):
+    def __init__(self, path: str, msg: str = "Uploading", interval: float = 1, *args, **kwargs):
         super().__init__(path, *args, **kwargs)
-        self._total_size = os.path.getsize(path)
+        self._size = os.path.getsize(path)
         self._filename = os.path.basename(path)
         # Report only on big sizes (>100MB)
-        self._reporter = TimedOutput(interval=report_interval) if self._total_size > 100_000_000 else None
+        self._reporter = TimedOutput(interval=interval) if self._size > 100_000_000 else None
         self._bytes_read = 0
         self.msg = msg
 
@@ -110,6 +110,6 @@ class FileProgress(io.FileIO):
         block = super().read(size)
         self._bytes_read += len(block)
         if self._reporter:
-            current_percentage = int(self._bytes_read * 100.0 / self._total_size) if self._total_size != 0 else 0
+            current_percentage = int(self._bytes_read * 100.0 / self._size) if self._size != 0 else 0
             self._reporter.info(f"{self.msg} {self._filename}: {current_percentage}%")
         return block
