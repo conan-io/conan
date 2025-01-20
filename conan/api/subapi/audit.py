@@ -53,7 +53,7 @@ class AuditAPI:
 
         return provider_cls(provider_name, provider_data)
 
-    def get_providers(self):
+    def list_providers(self):
         """
         Get all available providers.
         """

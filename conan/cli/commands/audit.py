@@ -216,7 +216,7 @@ def audit_provider(conan_api, parser, subparser, *args):
         conan_api.audit.add_provider(args.name, args.url, args.type, token)
         return []
     elif args.list:
-        providers = conan_api.audit.get_providers()
+        providers = conan_api.audit.list_providers()
         return providers
     elif args.auth:
         if not args.name:
