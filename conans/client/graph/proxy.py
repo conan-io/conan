@@ -117,6 +117,16 @@ class ConanProxy:
         if len(results) == 0:
             return None, None
 
+        if True:
+            filtered_results = []
+            revisions = set()
+            for r in results:
+                ref = r["ref"]
+                if ref.revision not in revisions:
+                    revisions.add(ref.revision)
+                    filtered_results.append(r)
+            results = filtered_results
+
         remotes_results = sorted(results, key=lambda k: k['ref'].timestamp, reverse=True)
         # get the latest revision from all remotes
         found_rrev = remotes_results[0]
