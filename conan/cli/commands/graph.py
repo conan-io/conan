@@ -13,11 +13,9 @@ from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conan.internal.deploy import do_deploys
-from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 from conan.internal.errors import NotFoundException
-from conan.internal.model.recipe_ref import ref_matches, RecipeReference
+from conan.api.model import RecipeReference
 
 
 def explain_formatter_text(data):
@@ -239,7 +237,7 @@ def graph_info(conan_api, parser, subparser, *args):
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
         if args.deployer:
             base_folder = args.deployer_folder or os.getcwd()
-            do_deploys(conan_api, deps_graph, args.deployer, None, base_folder)
+            conan_api.install.deploy(deps_graph, args.deployer, None, base_folder)
 
     return {"graph": deps_graph,
             "field_filter": args.filter,
@@ -303,17 +301,8 @@ def graph_explain(conan_api, parser,  subparser, *args):
     print_graph_packages(deps_graph)
 
     ConanOutput().title("Retrieving and computing closest binaries")
-    # compute ref and conaninfo
-    missing = args.missing
-    for node in deps_graph.ordered_iterate():
-        if ((not missing and node.binary == BINARY_MISSING)   # First missing binary or
-                or (missing and ref_matches(node.ref, missing, is_consumer=None))):  # specified one
-            ref = node.ref
-            conaninfo = node.conanfile.info
-            break
-    else:
-        raise ConanException("There is no missing binary")
-
+    # compute ref and conaninfo of the first missing binary
+    ref, conaninfo = conan_api.graph.find_first_missing_binary(deps_graph, args.missing)
     pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")

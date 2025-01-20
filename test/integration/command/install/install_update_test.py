@@ -2,7 +2,7 @@ import os
 import textwrap
 from time import sleep
 
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import load
 
@@ -194,5 +194,9 @@ def test_multi_remote_update_resolution():
     # now test the --update, it will pick up the latest revision, which is r3
     c.run("remove * -c")
     c.run("graph info --requires=pkg/0.1 --update")
-    print(c.out)
     assert f"pkg/0.1#{rev3} - Downloaded (r3)" in c.out
+
+    # But if we enable order-based first found timestamp, it will pick up r2
+    c.run("remove * -c")
+    c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy_old=True")
+    assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out

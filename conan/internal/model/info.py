@@ -2,15 +2,15 @@ import hashlib
 
 from conan.errors import ConanException
 from conan.internal.model.dependencies import UserRequirementsDict
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference, Version
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.config_parser import ConfigParser
 
 
 class _VersionRepr:
     """Class to return strings like 1.Y.Z from a Version object"""
 
-    def __init__(self, version: Version):
+    def __init__(self, version):
         self._version = version
 
     def stable(self):

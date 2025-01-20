@@ -14,6 +14,8 @@ class ConanProxy:
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
+        self._update_policy_old = conan_app.global_conf.get("core:update_policy_old",
+                                                            check_type=bool)
 
     def get_recipe(self, ref, remotes, update, check_update):
         """
@@ -117,7 +119,7 @@ class ConanProxy:
         if len(results) == 0:
             return None, None
 
-        if True:
+        if self._update_policy_old:  # Use only the first occurence of each revision in the remotes
             filtered_results = []
             revisions = set()
             for r in results:

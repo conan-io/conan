@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient
 
 
