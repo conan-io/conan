@@ -7,7 +7,7 @@ inputs:
     required: true
 
   test-type:
-    description: 'Tests suite name'
+    description: 'Test suite name'
     required: true
 
   duration:
@@ -29,7 +29,7 @@ runs:
       - name: Run tests with coverage
         shell: bash
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov-report=term-missing:skip-covered' || '' }}
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
