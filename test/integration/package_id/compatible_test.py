@@ -443,12 +443,17 @@ class TestNewCompatibility:
                    compiler.runtime=dynamic
                    """)
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
-                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0").with_setting("compiler"),
                  "profile": profile})
 
         tc.run("create dep -pr=profile -s compiler.cppstd=20")
-        tc.run("create . -pr=profile -s compiler.cppstd=17")
+        tc.run("install --requires=dep/1.0 -pr=profile -s compiler.cppstd=17")
         tc.assert_listed_binary({"dep/1.0": ("b6d26a6bc439b25b434113982791edf9cab4d004", "Cache")})
+
+        tc.run("remove * -c")
+        tc.run("create dep -pr=profile -s compiler.version=193 -s compiler.cppstd=20")
+        tc.run("install --requires=dep/1.0 -pr=profile -s compiler.cppstd=17")
+        assert "compiler.cppstd=20, compiler.version=193" in tc.out
+        tc.assert_listed_binary({"dep/1.0": ("535899bb58c3ca7d80a380313d31f4729e735d1c", "Cache")})
 
 
 class TestCompatibleBuild:
