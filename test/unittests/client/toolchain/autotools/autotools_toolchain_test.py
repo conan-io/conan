@@ -10,7 +10,7 @@ from conan.test.utils.test_files import temp_folder
 from conan.tools.build import load_toolchain_args
 from conan.tools.files import save
 from conan.tools.gnu import AutotoolsToolchain
-from conans.model.conf import Conf
+from conan.internal.model.conf import Conf
 
 
 def test_modify_environment():

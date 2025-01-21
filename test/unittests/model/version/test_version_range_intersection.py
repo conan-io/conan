@@ -1,6 +1,6 @@
 import pytest
 
-from conans.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange
 
 values = [
     # empty / any ranges

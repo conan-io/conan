@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 
 
 @pytest.fixture()

@@ -7,7 +7,7 @@ from conans.client.loader import load_python_file
 from conan.internal.api.profile.profile_loader import ProfileLoader
 from conan.internal.errors import scoped_traceback
 from conan.errors import ConanException
-from conans.model.profile import Profile
+from conan.internal.model.profile import Profile
 
 DEFAULT_PROFILE_NAME = "default"
 

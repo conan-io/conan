@@ -218,28 +218,62 @@ class TestLibs:
             assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
             assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
 
-    def test_multilevel_shared(self):
+    # if not using cmake >= 3.23 the intermediate gamelib_test linkage fail
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_multilevel(self, shared):
         # TODO: make this shared fixtures in conftest for multi-level shared testing
         c = TestClient(default_server_user=True)
         c.run("new cmake_lib -d name=matrix -d version=0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=gamelib -d version=0.1 -d requires=engine/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+
+        # This specific CMake fails for shared libraries with old CMakeDeps in Linux
+        cmake = textwrap.dedent("""\
+            cmake_minimum_required(VERSION 3.15)
+            project(gamelib CXX)
+
+            find_package(engine CONFIG REQUIRED)
+
+            add_library(gamelib src/gamelib.cpp)
+            target_include_directories(gamelib PUBLIC include)
+            target_link_libraries(gamelib PRIVATE engine::engine)
+
+            add_executable(gamelib_test src/gamelib_test.cpp)
+            target_link_libraries(gamelib_test PRIVATE gamelib)
+
+            set_target_properties(gamelib PROPERTIES PUBLIC_HEADER "include/gamelib.h")
+            install(TARGETS gamelib)
+            """)
+        # Testing that a local test executable links correctly with the new CMakeDeps
+        # It fails with the old CMakeDeps
+        c.save({"CMakeLists.txt": cmake,
+               "src/gamelib_test.cpp": '#include "gamelib.h"\nint main() { gamelib(); }'})
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         c.save({}, clean_first=True)
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
-        c.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
         assert "gamelib/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
+
+        # Make sure that transitive headers are private, fails to include, traits work
+        game_cpp = c.load("src/game.cpp")
+        for header in ("matrix", "engine"):
+            new_game_cpp = f"#include <{header}.h>\n" + game_cpp
+            c.save({"src/game.cpp": new_game_cpp})
+            c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}",
+                  assert_error=True)
+            assert f"{header}.h" in c.out
 
         # Make sure it works downloading to another cache
         c.run("upload * -r=default -c")
@@ -247,7 +281,7 @@ class TestLibs:
 
         c2 = TestClient(servers=c.servers)
         c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
-        c2.run(f"create . -o *:shared=True -c tools.cmake.cmakedeps:new={new_value}")
+        c2.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
@@ -304,7 +338,8 @@ class TestLibsIntegration:
         c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
         assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
-        assert "target_link_libraries(pkg::pkg INTERFACE MyTargetDep)" in targets_cmake
+        assert 'set_target_properties(pkg::pkg PROPERTIES INTERFACE_LINK_LIBRARIES\n' \
+               '                      "$<$<CONFIG:RELEASE>:MyTargetDep>"' in targets_cmake
 
 
 class TestLibsLinkageTraits:
@@ -328,6 +363,28 @@ class TestLibsLinkageTraits:
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
+
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_transitive_headers(self, shared):
+        c = TestClient()
+        c.run("new cmake_lib -d name=matrix -d version=0.1")
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
+        engine_h = c.load("include/engine.h")
+        engine_h = "#include <matrix.h>\n" + engine_h
+        c.save({"include/engine.h": engine_h})
+        conanfile = c.load("conanfile.py")
+        conanfile = conanfile.replace('self.requires("matrix/0.1")',
+                                      'self.requires("matrix/0.1", transitive_headers=True)')
+        c.save({"conanfile.py": conanfile})
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
+        c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        # it works
 
 
 @pytest.mark.tool("cmake")
@@ -1246,3 +1303,55 @@ class TestCMakeComponents:
         c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
         cmake = c.load("dep-config.cmake")
         assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyCompC1 MyC2 c3)' in cmake
+
+
+class TestCppInfoChecks:
+    def test_check_exe_libs(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["mylib"]
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "Error in generator 'CMakeDeps': dep/0.1 " 'cpp_info has both .exe and .libs' in c.out
+
+    def test_exe_no_location(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "Error in generator 'CMakeDeps': dep/0.1 cpp_info has .exe and no .location" in c.out
+
+    def test_check_exe_wrong_type(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.exe = "myexe"
+            """)
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out

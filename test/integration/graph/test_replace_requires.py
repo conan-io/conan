@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -513,7 +513,8 @@ class TestReplaceRequiresTransitiveGenerators:
         cmake = c.load("app/openssl-Targets-release.cmake")
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
-        assert "target_link_libraries(openssl::crypto INTERFACE ZLIB::ZLIB)" in cmake
+        assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
 
     @pytest.mark.parametrize("diamond", [True, False])
     @pytest.mark.parametrize("explicit_requires", [True, False])
@@ -582,7 +583,8 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
         # It should access the generic zlib-ng target
-        assert "target_link_libraries(openssl::openssl INTERFACE zlib-ng::zlib-ng)" in cmake
+        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
 
     @pytest.mark.parametrize("diamond", [True, False])
     @pytest.mark.parametrize("package_requires", [False, True])
@@ -653,6 +655,9 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
         if package_requires:
-            assert "target_link_libraries(openssl::crypto INTERFACE zlib-ng::zlib-ng)" in cmake
+            # The generic package requirement uses the package name zlib-ng
+            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+                   '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
         else:
-            assert "target_link_libraries(openssl::crypto INTERFACE ZLIB::ZLIB)" in cmake
+            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+                   '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake

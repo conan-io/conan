@@ -36,11 +36,11 @@ from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.profile import Profile
-from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
+from conan.internal.model.manifest import FileTreeManifest
+from conan.api.model import PkgReference
+from conan.internal.model.profile import Profile
+from conan.api.model import RecipeReference
+from conan.internal.model.settings import Settings
 from conan.test.assets import copy_assets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.artifactory import ArtifactoryServer

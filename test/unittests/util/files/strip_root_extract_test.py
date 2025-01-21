@@ -5,7 +5,7 @@ import zipfile
 
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
-from conans.model.manifest import gather_files
+from conan.internal.model.manifest import gather_files
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
