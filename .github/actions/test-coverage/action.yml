@@ -23,22 +23,21 @@ inputs:
     description: 'Number of workers to run tests'
     default: auto
 
-# pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
 runs:
   using: 'composite'
   steps:
       - name: Run tests with coverage
         shell: bash
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} --cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
 
       - name: Rename coverage file
-        # if: github.ref == 'refs/heads/develop2'
+        if: github.ref == 'refs/heads/develop2'
         shell: bash
         run: mv .coverage .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
 
       - name: Upload coverage artifact
-        # if: github.ref == 'refs/heads/develop2'
+        if: github.ref == 'refs/heads/develop2'
         uses: actions/upload-artifact@v4
         with:
           name: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
