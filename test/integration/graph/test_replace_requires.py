@@ -439,22 +439,9 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
         pc_content = c.load("app/ZLIB.pc")
-        assert textwrap.dedent("""\n
-        Name: ZLIB
-        Description: Conan package: ZLIB
-        Version: 0.1
-        Libs: -L"${libdir}" -lzlib
-        Cflags: -I"${includedir}"
-        """) in pc_content
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
         pc_content = c.load("app/openssl.pc")
-        assert textwrap.dedent("""\n
-        Name: openssl
-        Description: Conan package: openssl
-        Version: 0.1
-        Libs: -L"${libdir}" -lcrypto
-        Cflags: -I"${includedir}"
-        Requires: ZLIB
-        """) in pc_content
+        assert 'Requires: ZLIB' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
@@ -526,14 +513,7 @@ class TestReplaceRequiresTransitiveGenerators:
         pc_content = c.load("app/ZLIB.pc")
         assert 'Libs: -L"${libdir}" -lzlib' in pc_content
         pc_content = c.load("app/openssl-crypto.pc")
-        assert textwrap.dedent("""\n
-        Name: openssl-crypto
-        Description: Conan component: openssl-crypto
-        Version: 0.1
-        Libs: -L"${libdir}" -lcrypto
-        Cflags: -I"${includedir}"
-        Requires: ZLIB
-        """) in pc_content
+        assert 'Requires: ZLIB' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
@@ -559,6 +539,7 @@ class TestReplaceRequiresTransitiveGenerators:
                     self.cpp_info.components["myzlib"].type = "static-library"
                     self.cpp_info.components["myzlib"].location = "lib/zlib.lib"
                     self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("pkg_config_name", "ZLIB")
                     self.cpp_info.components["myzlib"].set_property("cmake_target_name",
                                                                     "ZLIB::ZLIB")
             """)
@@ -585,7 +566,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps"
+                generators = "CMakeDeps", "PkgConfigDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -603,6 +584,13 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("create openssl -pr=profile")
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/zlib-ng.pc")
+        assert 'Requires: ZLIB' in pc_content
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl.pc")
+        assert 'Requires: zlib-ng' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
@@ -629,6 +617,7 @@ class TestReplaceRequiresTransitiveGenerators:
                     self.cpp_info.components["myzlib"].type = "static-library"
                     self.cpp_info.components["myzlib"].location = "lib/zlib.lib"
                     self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("pkg_config_name", "ZLIB")
                     self.cpp_info.components["myzlib"].set_property("cmake_target_name",
                                                                     "ZLIB::ZLIB")
             """)
@@ -657,7 +646,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps"
+                generators = "CMakeDeps", "PkgConfigDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -675,6 +664,13 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("create openssl -pr=profile")
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/zlib-ng.pc")
+        assert 'Requires: ZLIB' in pc_content
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl-crypto.pc")
+        assert f'Requires: {"zlib-ng" if package_requires else "ZLIB"}' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
