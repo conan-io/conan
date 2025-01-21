@@ -250,7 +250,6 @@ jobs:
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
       - name: Run Functional Tests
-        if: ${{ env.PYTEST_COV_OPTIONS }}
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
