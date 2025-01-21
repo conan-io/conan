@@ -1,9 +1,6 @@
 import json
-import platform
 import textwrap
 import unittest
-
-import pytest
 
 from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
@@ -711,81 +708,56 @@ class TestCompatibleBuild:
             assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="MSVC combination requires Windows profile, but the basic idea works everywhere")
 def test_compatibility_new_setting_forwards_compat():
     """ This test tries to reflect the following scenario:
     - User adds a new setting (libc.version in this case)
     - This setting is forward compatible
     How is it solved with compatibility.py? Like this:
     """
-    settings_user_file = "libc_version: [1, 2, 3]"
     tc = TestClient()
-    tc.save_home({"settings_user.yml": settings_user_file})
-    tc.save({"conanfile.py": GenConanfile("dep", "1.0")
-            .with_settings("libc_version", "compiler")})
+    tc.save_home({"settings_user.yml": "libc_version: [1, 2, 3]"})
+    tc.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("libc_version", "compiler")})
     # The extra cppstd and compiler versions are for later demonstrations of combinations of settings
     # The cppstd=17 and compiler.version=193 are used thought until the last 2 install calls
-    tc.run("create . -s=libc_version=2 -s=compiler.cppstd=17 -s=compiler.version=193")
+    tc.run("create . -s=libc_version=2 -s=compiler.cppstd=17")
     dep_package_id = tc.created_package_id("dep/1.0")
-    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=17 -s=compiler.version=193", assert_error=True)
+    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=17", assert_error=True)
     # We can't compile, because the dep is not compatible
     assert "Missing prebuilt package for 'dep/1.0'" in tc.out
 
     # Let's create a compatibility extensions
     libc_compat = textwrap.dedent("""
-    from conan.tools.scm import Version
+        from conan.tools.scm import Version
 
-    def libc_compat(conanfile):
-        # Do we have the setting?
-        libc_version = conanfile.settings.get_safe("libc_version")
-        if libc_version is None:
-            return []
-        available_libc_versions = conanfile.settings.libc_version.possible_values()
-        ret = []
-        for possible_libc_version in available_libc_versions:
-            if Version(possible_libc_version) <= Version(libc_version):
-                ret.append({"settings": [("libc_version", possible_libc_version)]})
-        return ret
-    """)
-
-    # And add it to the compatibility.py plugin
-    compatibility_plugin = textwrap.dedent("""
-    from cppstd_compat import cppstd_compat
-    from libc_compat import libc_compat
-
-    def compatibility(conanfile):
-        cppstd_configs = cppstd_compat(conanfile)
-        libc_configs = libc_compat(conanfile)
-        results = []
-        for cppstd in cppstd_configs:
-            results.append(cppstd)
-            for libc in libc_configs:
-                new_settings = cppstd["settings"] + libc["settings"]
-                results.append({"settings": new_settings})
-        for libc in libc_configs:
-            results.append(libc)
-        # Note that this generates a large number of results,
-        # And checking the servers might be slow until improvements are made in the API
-        return results
-    """)
-
+        def libc_compat(conanfile):
+            # Do we have the setting?
+            libc_version = conanfile.settings.get_safe("libc_version")
+            if libc_version is None:
+                return []
+            available_libc_versions = conanfile.settings.libc_version.possible_values()
+            ret = []
+            for possible_libc_version in available_libc_versions:
+                if Version(possible_libc_version) <= Version(libc_version):
+                    ret.append([{"libc_version": possible_libc_version}])
+            return ret
+        """)
+    compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+    compat = "from libc_compat import libc_compat\n" + compat
+    compat = compat.replace("# Append more factors for your custom compatibility rules here",
+                            "factors.extend(libc_compat(conanfile))")
     tc.save_home({"extensions/plugins/compatibility/libc_compat.py": libc_compat,
-                  "extensions/plugins/compatibility/compatibility.py": compatibility_plugin})
+                  "extensions/plugins/compatibility/compatibility.py": compat})
 
     # Now we try again, this time app will find the compatible dep with libc_version 2
-    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=17 -s=compiler.version=193")
+    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=17")
     assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
 
     # And now we try to create the app with libc_version 1, which is still not compatible
-    tc.run("install --requires=dep/1.0 -s=libc_version=1 -s=compiler.cppstd=17 -s=compiler.version=193", assert_error=True)
+    tc.run("install --requires=dep/1.0 -s=libc_version=1 -s=compiler.cppstd=17", assert_error=True)
     assert "Missing prebuilt package for 'dep/1.0'" in tc.out
 
     # Now we try again, this time app will find the compatible dep with libc_version 2
     # And see how we're also compatible over a different cppstd
-    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14 -s=compiler.version=193")
-    assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, libc_version=2" in tc.out
-
-    # Now we try again, this time app will find the compatible dep with libc_version 2
-    # And see how we're also compatible over a different cppstd + msvc version fallback
-    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14 -s=compiler.version=194")
-    assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, compiler.version=193" in tc.out
+    tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
+    assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
+           f"libc_version=2" in tc.out
