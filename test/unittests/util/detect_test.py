@@ -7,7 +7,7 @@ from parameterized import parameterized
 
 from conan.internal.api.detect.detect_api import _cc_compiler
 from conan.internal.api.profile.detect import detect_defaults_settings
-from conans.model.version import Version
+from conan.internal.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import redirect_output
 from conan.test.utils.env import environment_update

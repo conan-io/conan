@@ -7,7 +7,7 @@ from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conan.internal.model.recipe_ref import ref_matches
 from conans.util.files import save
 
 
@@ -318,10 +318,9 @@ class Environment:
 
     def vars(self, conanfile, scope="build"):
         """
-        Return an EnvVars object from the current Environment object
         :param conanfile: Instance of a conanfile, usually ``self`` in a recipe
         :param scope: Determine the scope of the declared variables.
-        :return:
+        :return: An EnvVars object from the current Environment object
         """
         return EnvVars(conanfile, self._values, scope)
 

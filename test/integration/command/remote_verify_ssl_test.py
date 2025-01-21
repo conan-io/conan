@@ -1,5 +1,6 @@
 import unittest
 
+import requests
 from requests.models import Response
 
 from conan.test.utils.tools import TestClient
@@ -19,6 +20,15 @@ class RequesterMockTrue(object):
         assert "cacert.pem" in kwargs["verify"], "TEST FAILURE: cacert.pem not in verify kwarg"
         return resp
 
+    def Session(self):
+        return self
+
+    @property
+    def codes(self):
+        return requests.codes
+
+    def mount(self, *args, **kwargs):
+        pass
 
 class RequesterMockFalse(object):
 
@@ -28,6 +38,16 @@ class RequesterMockFalse(object):
     def get(self, url, *args, **kwargs):
         assert kwargs["verify"] is False, "TEST FAILURE: verify arg is not False"
         return resp
+
+    def Session(self):
+        return self
+
+    @property
+    def codes(self):
+        return requests.codes
+
+    def mount(self, *args, **kwargs):
+        pass
 
 
 class VerifySSLTest(unittest.TestCase):

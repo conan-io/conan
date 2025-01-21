@@ -193,10 +193,8 @@ def _is_compressed_file(filename):
     return any(filename.endswith(e) for e in tgz_exts)
 
 
-def configuration_install(app, uri, verify_ssl, config_type=None,
+def configuration_install(cache_folder, requester, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None, ignore=None):
-    requester = app.requester
-    cache_folder = app.cache_folder
     config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":

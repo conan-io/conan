@@ -419,3 +419,53 @@ class TestCommandAPI:
         c.run("export .")
         c.run("mycommand myremote myurl")
         assert json.loads(c.stdout) == {"myremote": "myurl"}
+
+
+class TestCommandsRemoteCaching:
+    def test_remotes_cache(self):
+        complex_command = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.api.output import ConanOutput
+
+            @conan_command()
+            def mycache(conan_api, parser, *args, **kwargs):
+                \""" this is a command with subcommands \"""
+
+                remotes = conan_api.remotes.list()
+                host = conan_api.profiles.get_profile(["default"])
+                build = conan_api.profiles.get_profile(["default"])
+
+                deps_graph = conan_api.graph.load_graph_requires(["pkg/0.1"], None, host, build,
+                                                                 None, remotes, None, None)
+                conan_api.graph.analyze_binaries(deps_graph, None, remotes=remotes)
+
+                # SECOND RUN!!!
+                # This will break if the caching is not working
+                remotes[0].url = "broken"
+                deps_graph = conan_api.graph.load_graph_requires(["pkg/0.1"], None, host, build,
+                                                                 None, remotes, None, None)
+                conan_api.graph.analyze_binaries(deps_graph, None, remotes=remotes)
+
+                # Now invalidate the cache and see how it breaks
+                try:
+                    remotes[0].invalidate_cache()
+                    deps_graph = conan_api.graph.load_graph_requires(["pkg/0.1"], None, host, build,
+                                                                     None, remotes, None, None)
+                    conan_api.graph.analyze_binaries(deps_graph, None, remotes=remotes)
+                except Exception as e:
+                    ConanOutput().warning(f"Cache invalidated, as expected: {e}")
+            """)
+
+        c = TestClient(default_server_user=True)
+        c.save_home({"extensions/commands/cmd_mycache.py": complex_command})
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_require("dep/0.1")})
+        c.run("create dep")
+        c.run("create pkg")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("mycache")
+        # Does not break unexpectedly, caching is working
+        assert "WARN: Cache invalidated, as expected: Invalid URL 'broken" in c.out

@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -285,7 +285,7 @@ class _Component:
 
     @type.setter
     def type(self, value):
-        self._type = value
+        self._type = PackageType(value) if value is not None else None
 
     @property
     def location(self):
@@ -487,14 +487,13 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def _auto_deduce_locations(self, conanfile, component_name):
+    def _auto_deduce_locations(self, conanfile, library_name):
 
         def _lib_match_by_glob(dir_, filename):
             # Run a glob.glob function to find the file given by the filename
             matches = glob.glob(f"{dir_}/{filename}")
             if matches:
                 return matches
-
 
         def _lib_match_by_regex(dir_, pattern):
             ret = set()
@@ -514,7 +513,6 @@ class _Component:
                     else:
                         ret.add(full_path)
             return list(ret)
-
 
         def _find_matching(dirs, pattern):
             for d in dirs:
@@ -540,6 +538,7 @@ class _Component:
         static_location = None
         shared_location = None
         dll_location = None
+        deduced_type = None
         # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
         _, ext = os.path.splitext(libname)
         if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
@@ -551,7 +550,7 @@ class _Component:
                 dll_location = _find_matching(bindirs, libname)
         else:
             lib_sanitized = re.escape(libname)
-            component_sanitized = re.escape(component_name)
+            component_sanitized = re.escape(library_name)
             regex_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
             regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
             regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
@@ -564,52 +563,78 @@ class _Component:
             if shared_location:
                 out.warning(f"Lib {libname} has both static {static_location} and "
                             f"shared {shared_location} in the same package")
-                if pkg_type is PackageType.STATIC:
+                if self._type is PackageType.STATIC or pkg_type is PackageType.STATIC:
                     self._location = static_location
-                    self._type = PackageType.STATIC
+                    deduced_type = PackageType.STATIC
                 else:
                     self._location = shared_location
-                    self._type = PackageType.SHARED
+                    deduced_type = PackageType.SHARED
             elif dll_location:
                 self._location = dll_location
                 self._link_location = static_location
-                self._type = PackageType.SHARED
+                deduced_type = PackageType.SHARED
             else:
                 self._location = static_location
-                self._type = PackageType.STATIC
+                deduced_type = PackageType.STATIC
         elif shared_location:
             self._location = shared_location
-            self._type = PackageType.SHARED
+            deduced_type = PackageType.SHARED
         elif dll_location:
             # Only .dll but no link library
             self._location = dll_location
-            self._type = PackageType.SHARED
+            deduced_type = PackageType.SHARED
         if not self._location:
             raise ConanException(f"{conanfile}: Cannot obtain 'location' for library '{libname}' "
                                  f"in {libdirs}. You can specify 'cpp_info.location' directly "
                                  f"or report in github.com/conan-io/conan/issues if you think it "
                                  f"should have been deduced correctly.")
+        if self._type is not None and self._type != deduced_type:
+            ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
+                           f" '{libname}' that declared .type='{self._type}'")
+        self._type = deduced_type
         if self._type != pkg_type:
             out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
+        name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
+            else f'{conanfile} cpp_info'
+        # executable
         if self._exe:   # exe is a new field, it should have the correct location
+            if self._type is None:
+                self._type = PackageType.APP
+            if self._type is not PackageType.APP:
+                raise ConanException(f"{name} incorrect .type {self._type} for .exe {self._exe}")
+            if self.libs:
+                raise ConanException(f"{name} has both .exe and .libs")
+            if not self.location:
+                raise ConanException(f"{name} has .exe and no .location")
             return
+        if self._type is PackageType.APP:
+            # old school Conan application packages withoud defining an exe, not an error
+            return
+
+        # libraries
+        if len(self.libs) > 1:  # it could be 0, as the libs itself is not necessary
+            raise ConanException(f"{name} has more than 1 library in .libs: {self.libs}, "
+                                 "cannot deduce locations")
+        # fully defined by user in conanfile, nothing to do.
         if self._location or self._link_location:
-            if self._type is None or self._type is PackageType.HEADER:
-                raise ConanException("Incorrect cpp_info defining location without type or header")
+            if self._type not in [PackageType.SHARED, PackageType.STATIC]:
+                raise ConanException(f"{name} location defined without defined library type")
             return
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+
+        # possible header only, which allows also an empty header-only only for common flags
+        if len(self.libs) == 0:
+            if self._type is None:
+                self._type = PackageType.HEADER
             return
-        num_libs = len(self.libs)
-        if num_libs == 0:
-            return
-        elif num_libs > 1:
-            raise ConanException(
-                f"More than 1 library defined in cpp_info.libs, cannot deduce CPS ({num_libs} libraries found)")
-        else:
-            # If no location is defined, it's time to guess the location
-            self._auto_deduce_locations(conanfile, component_name=component_name)
+
+        # automatic location deduction from a single .lib=["lib"]
+        if self._type not in [None, PackageType.SHARED, PackageType.STATIC]:
+            raise ConanException(f"{name} has a library but .type {self._type} is not static/shared")
+
+        # If no location is defined, it's time to guess the location
+        self._auto_deduce_locations(conanfile, library_name=component_name or conanfile.ref.name)
 
 
 class CppInfo:
@@ -781,12 +806,20 @@ class CppInfo:
         return ret
 
     def deduce_full_cpp_info(self, conanfile):
+        if conanfile.cpp_info.has_components and (conanfile.cpp_info.exe or conanfile.cpp_info.libs):
+            raise ConanException(f"{conanfile}: 'cpp_info' contains components and .exe or .libs")
+
         result = CppInfo()  # clone it
 
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            result.components["_common"] = common
+
             for lib in self.libs:
                 c = _Component()  # Do not do a full clone, we don't need the properties
                 c.type = self.type  # This should be a string
@@ -794,19 +827,14 @@ class CppInfo:
                 c.libdirs = self.libdirs
                 c.bindirs = self.bindirs
                 c.libs = [lib]
+                c.requires = ["_common"]
                 result.components[f"_{lib}"] = c
-
-            common = self._package.clone()
-            common.libs = []
-            common.type = str(PackageType.HEADER)  # the type of components is a string!
-            common.requires = list(result.components.keys()) + (self.requires or [])
-            result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components
             result.components = {k: v.clone() for k, v in self.components.items()}
 
-        result._package.deduce_locations(conanfile, component_name=conanfile.ref.name)
+        result._package.deduce_locations(conanfile)
         for comp_name, comp in result.components.items():
             comp.deduce_locations(conanfile, component_name=comp_name)
 

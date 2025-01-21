@@ -1,3 +1,5 @@
+import json
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conan.test.utils.env import environment_update
@@ -260,3 +262,32 @@ class TestWarningHandling:
         t.run("create . -vquiet", assert_error=True)
         assert "ERROR: Tagged error" not in t.out
         assert "ConanException: Untagged error" not in t.out
+
+
+def test_formatter_redirection_to_file():
+    c = TestClient(light=True)
+    c.save({"conanfile.py":  GenConanfile("pkg", "0.1")})
+
+    c.run("config home --out-file=cmd_out.txt")
+    assert "Formatted output saved to 'cmd_out.txt'" in c.out
+    cmd_out = c.load("cmd_out.txt")
+    assert f"{c.cache_folder}" in cmd_out
+    assert not f"{c.cache_folder}" in c.stdout
+
+    c.run("graph info . --format=json --out-file=graph.json")
+    assert "Formatted output saved to 'graph.json'" in c.out
+    graph = json.loads(c.load("graph.json"))
+    assert len(graph["graph"]["nodes"]) == 1
+    assert not "nodes" in c.stdout
+
+    c.run("graph info . --format=html --out-file=graph.html")
+    assert "Formatted output saved to 'graph.html'" in c.out
+    html = c.load("graph.html")
+    assert "<head>" in html
+    assert not "<head>" in c.stdout
+
+    c.run("install . --format=json --out-file=graph.json")
+    assert "Formatted output saved to 'graph.json'" in c.out
+    graph = json.loads(c.load("graph.json"))
+    assert len(graph["graph"]["nodes"]) == 1
+    assert not "nodes" in c.stdout

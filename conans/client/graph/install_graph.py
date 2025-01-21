@@ -1,14 +1,13 @@
 import json
 import os
-import shlex
 import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
 from conan.errors import ConanException, ConanInvalidConfiguration
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 
@@ -577,8 +576,8 @@ class InstallGraph:
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
-                        "all dependencies) or --build-test (exclusive for 'test_package' " \
-                        "dependencies) to define what can be built from sources"
+                        "all dependencies) or --build-test (exclusive for 'conan create' building " \
+                        "test_package' dependencies) to define what can be built from sources"
         else:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"

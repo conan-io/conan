@@ -1,10 +1,10 @@
 import json
 import textwrap
 import time
-import unittest
 from collections import OrderedDict
 from datetime import timedelta
 
+import pytest
 from mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
@@ -12,19 +12,19 @@ from conan.test.utils.tools import TestClient, TestServer
 from conan.test.utils.env import environment_update
 
 
-class UserTest(unittest.TestCase):
+class TestUser:
 
     def test_command_user_no_remotes(self):
         """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
         client = TestClient()
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             client.run("remote list-users")
-        self.assertIn("ERROR: No remotes defined", client.out)
+        assert "ERROR: No remotes defined" in client.out
 
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             client.run("remote login wrong_remote foo -p bar")
-        self.assertIn("ERROR: Remote 'wrong_remote' can't be found or is disabled", client.out)
+        assert "ERROR: Remote 'wrong_remote' can't be found or is disabled" in client.out
 
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
@@ -35,9 +35,9 @@ class UserTest(unittest.TestCase):
         client = TestClient(servers=servers)
 
         # Test with wrong remote right error is reported
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             client.run("remote login Test_Wrong_Remote foo")
-        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled", client.out)
+        assert "ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled" in client.out
 
         # Test user list for all remotes is reported
         client.run("remote list-users")
@@ -56,21 +56,17 @@ class UserTest(unittest.TestCase):
                   No user""") not in client.out
 
         client.run('remote set-user default john')
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
-                      client.out)
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'john'" in client.out
         localdb = LocalDB(client.cache_folder)
-        self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
+        assert ('john', None, None) == localdb.get_login(test_server.fake_url)
 
         client.run('remote set-user default will')
-        self.assertIn("Changed user of remote 'default' from 'john' (anonymous) to 'will'",
-                      client.out)
-        self.assertEqual(('will', None, None), localdb.get_login(test_server.fake_url))
+        assert "Changed user of remote 'default' from 'john' (anonymous) to 'will'" in client.out
+        assert ('will', None, None) == localdb.get_login(test_server.fake_url)
 
         client.run('remote logout default')
-        self.assertIn("Changed user of remote 'default' from 'will' (anonymous) "
-                      "to 'None' (anonymous)",
-                      client.out)
-        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
+        assert "Changed user of remote 'default' from 'will' (anonymous) to 'None' (anonymous)" in client.out
+        assert (None, None, None) == localdb.get_login(test_server.fake_url)
 
     def test_command_user_with_password(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -81,16 +77,14 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
         client.run('remote login default dummy -p ping_pong2', assert_error=True)
-        self.assertIn("ERROR: Wrong user or password", client.out)
+        assert "ERROR: Wrong user or password" in client.out
         client.run('remote login default admin -p password')
-        self.assertNotIn("ERROR: Wrong user or password", client.out)
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'admin'",
-                      client.out)
+        assert "ERROR: Wrong user or password" not in client.out
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'admin'" in client.out
         client.run('remote logout default')
-        self.assertIn("Changed user of remote 'default' from 'admin' (authenticated) "
-                      "to 'None' (anonymous)", client.out)
+        assert "Changed user of remote 'default' from 'admin' (authenticated) to 'None' (anonymous)" in client.out
         localdb = LocalDB(client.cache_folder)
-        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
+        assert (None, None, None) == localdb.get_login(test_server.fake_url)
         client.run('remote list-users')
         assert 'default:\n  No user' in client.out
 
@@ -103,13 +97,11 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.run(r'remote login default lasote -p="my \"password"')
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
-                      client.out)
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'lasote'" in client.out
         client.run('remote logout default')
         client.run(r'remote login default lasote -p "my \"password"')
-        self.assertNotIn("ERROR: Wrong user or password", client.out)
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
-                      client.out)
+        assert "ERROR: Wrong user or password" not in client.out
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'lasote'" in client.out
 
     def test_clean(self):
         test_server = TestServer()
@@ -129,8 +121,7 @@ class ConanLib(ConanFile):
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
         client.run("remote logout default")
-        self.assertIn("Changed user of remote 'default' from 'admin' (authenticated) "
-                      "to 'None' (anonymous)", client.out)
+        assert "Changed user of remote 'default' from 'admin' (authenticated) to 'None' (anonymous)" in client.out
         client.run("remote list-users")
         assert 'default:\n  No user' in client.out
         # --force will force re-authentication, otherwise not necessary to auth
@@ -143,8 +134,7 @@ class ConanLib(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["password"])
         client.run('remote login default admin -p')
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) "
-                      "to 'admin' (authenticated)", client.out)
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'admin' (authenticated)" in client.out
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
         """ Interactive password should not work.
@@ -155,10 +145,10 @@ class ConanLib(ConanFile):
         conan_conf = "core:non_interactive=True"
         client.save_home({"global.conf": conan_conf})
         client.run('remote login default admin -p', assert_error=True)
-        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
-        self.assertNotIn("Please enter a password for user 'admin'", client.out)
+        assert 'ERROR: Conan interactive mode disabled' in client.out
+        assert "Please enter a password for user 'admin'" not in client.out
         client.run("remote list-users")
-        self.assertIn("default:\n  No user", client.out)
+        assert "default:\n  No user" in client.out
 
     def test_authenticated(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
@@ -167,9 +157,8 @@ class ConanLib(ConanFile):
         servers["other_server"] = TestServer()
         client = TestClient(servers=servers, inputs=["lasote", "mypass", "mypass", "mypass"])
         client.run("remote logout default")
-        self.assertIn("Changed user of remote 'default' from "
-                      "'None' (anonymous) to 'None' (anonymous)", client.out)
-        self.assertNotIn("[authenticated]", client.out)
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'None' (anonymous)" in client.out
+        assert "[authenticated]" not in client.out
         client.run('remote set-user default bad_user')
         client.run("remote list-users")
         assert 'default:\n  Username: bad_user\n  authenticated: False' in client.out
@@ -181,8 +170,7 @@ class ConanLib(ConanFile):
         assert 'default:\n  Username: lasote\n  authenticated: True' in client.out
 
         client.run("remote login default danimtb -p passpass")
-        self.assertIn("Changed user of remote 'default' from 'lasote' "
-                      "(authenticated) to 'danimtb' (authenticated)", client.out)
+        assert "Changed user of remote 'default' from 'lasote' (authenticated) to 'danimtb' (authenticated)" in client.out
         client.run("remote list-users")
         assert 'default:\n  Username: danimtb\n  authenticated: True' in client.out
 
@@ -317,19 +305,26 @@ class ConanLib(ConanFile):
 
         # Now skip the auth but keeping the same user
         client.run("remote set-user default lasote")
-        self.assertIn("Changed user of remote 'default' from "
-                      "'lasote' (authenticated) to 'lasote' (authenticated)", client.out)
+        assert "Changed user of remote 'default' from 'lasote' (authenticated) to 'lasote' (authenticated)" in client.out
 
         # If we change the user the credentials are removed
         client.run("remote set-user default flanders")
-        self.assertIn("Changed user of remote 'default' from "
-                      "'lasote' (authenticated) to 'flanders' (anonymous)", client.out)
+        assert "Changed user of remote 'default' from 'lasote' (authenticated) to 'flanders' (anonymous)" in client.out
 
         client.run("remote login default lasote -p BAD_PASS", assert_error=True)
-        self.assertIn("Wrong user or password", client.out)
+        assert "Wrong user or password" in client.out
 
         # Login again correctly
         client.run("remote login default lasote -p mypass")
+
+    def test_login_multiremote(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"admin": "password"})
+        servers["other"] = TestServer(users={"admin": "password"})
+        c = TestClient(servers=servers, inputs=["admin", "password", "wrong", "wrong"])
+        # This must fail, not autthenticate in the next remote
+        c.run("remote login *", assert_error=True)
+        assert "ERROR: Wrong user or password. [Remote: other]" in c.out
 
 
 def test_user_removed_remote_removed():
@@ -430,6 +425,10 @@ class TestRemoteAuth:
                                                             "user", "pass", "user", "pass",
                                                             "user", "pass"])
         c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" not in c.out
         assert "user: myuser" in c.out
         # Invalidate server secret
         server.test_server.ra.api_v2.credentials_manager.secret = "potato"
@@ -460,3 +459,15 @@ class TestRemoteAuth:
         time.sleep(3)
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_auth_after_logout(self):
+        server = TestServer(users={"myuser": "password"})
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password"]*2)
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out
+        c.run("remote logout *")
+        assert "Changed user of remote 'default' from 'myuser' (authenticated) to 'None'" in c.out
+        c.run("remote auth *")
+        assert "Remote 'default' needs authentication, obtaining credentials" in c.out
+        assert "user: myuser" in c.out

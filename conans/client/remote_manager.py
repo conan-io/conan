@@ -12,9 +12,9 @@ from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
-from conans.model.info import load_binary_info
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import load_binary_info
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import rmdir, human_size
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
@@ -187,7 +187,13 @@ class RemoteManager:
             raise
 
     def search_recipes(self, remote, pattern):
-        return self._call_remote(remote, "search", pattern)
+        cached_method = remote.caching.setdefault("search_recipes", {})
+        try:
+            return cached_method[pattern]
+        except KeyError:
+            result = self._call_remote(remote, "search", pattern)
+            cached_method[pattern] = result
+            return result
 
     def search_packages(self, remote, ref):
         packages = self._call_remote(remote, "search_packages", ref)
@@ -234,7 +240,14 @@ class RemoteManager:
                        if k in ("shared", "fPIC", "header_only")]
             if options:
                 headers['Conan-PkgID-Options'] = ';'.join(options)
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+
+        cached_method = remote.caching.setdefault("get_latest_package_reference", {})
+        try:
+            return cached_method[pref]
+        except KeyError:
+            result = self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+            cached_method[pref] = result
+            return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"

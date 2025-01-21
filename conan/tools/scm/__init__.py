@@ -1,2 +1,2 @@
 from conan.tools.scm.git import Git
-from conans.model.version import Version
+from conan.internal.model.version import Version

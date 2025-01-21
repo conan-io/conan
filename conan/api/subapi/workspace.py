@@ -8,7 +8,7 @@ from conan.tools.scm import Git
 from conan.errors import ConanException
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.source import retrieve_exports_sources
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.files import merge_directories
 
 
@@ -16,7 +16,7 @@ class WorkspaceAPI:
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
-        self._workspace = Workspace()
+        self._workspace = Workspace(conan_api)
 
     def home_folder(self):
         return self._workspace.home_folder()

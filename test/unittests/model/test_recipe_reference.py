@@ -1,7 +1,7 @@
 import pytest
 
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 def test_recipe_reference():

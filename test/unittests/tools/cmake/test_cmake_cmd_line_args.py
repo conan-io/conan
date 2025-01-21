@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.cmake import _cmake_cmd_line_args
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock
 
 

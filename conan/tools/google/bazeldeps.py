@@ -7,8 +7,8 @@ from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
-from conans.model.dependencies import get_transitive_requires
-from conans.model.pkg_type import PackageType
+from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.model.pkg_type import PackageType
 from conans.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
