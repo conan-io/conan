@@ -62,6 +62,7 @@ jobs:
   deploy_to_pypi_test:
     runs-on: ubuntu-latest
     name: Deploy to TestPyPI
+    if: github.ref == 'refs/heads/develop2'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
