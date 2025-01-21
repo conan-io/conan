@@ -438,17 +438,32 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
+        pc_content = c.load("app/ZLIB.pc")
+        assert textwrap.dedent("""\n
+        Name: ZLIB
+        Description: Conan package: ZLIB
+        Version: 0.1
+        Libs: -L"${libdir}" -lzlib
+        Cflags: -I"${includedir}"
+        """) in pc_content
+        pc_content = c.load("app/openssl.pc")
+        assert textwrap.dedent("""\n
+        Name: openssl
+        Description: Conan package: openssl
+        Version: 0.1
+        Libs: -L"${libdir}" -lcrypto
+        Cflags: -I"${includedir}"
+        Requires: ZLIB
+        """) in pc_content
+
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
 
         cmake = c.load("app/openssl-Targets-release.cmake")
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
-        assert "target_link_libraries(openssl::openssl INTERFACE ZLIB::ZLIB)" in cmake
-
-        pkg_config = c.load("app/ZLIB.pc")
-        print(pkg_config)
-        # TODO: Check here the contents of both ZLIB.pc and openssl.pc
+        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
 
     @pytest.mark.parametrize("diamond", [True, False])
     def test_openssl_components(self, diamond):
@@ -465,6 +480,7 @@ class TestReplaceRequiresTransitiveGenerators:
                     self.cpp_info.location = "lib/zlib.lib"
                     self.cpp_info.set_property("cmake_file_name", "ZLIB")
                     self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+                    self.cpp_info.set_property("pkg_config_name", "ZLIB")
             """)
         openssl = textwrap.dedent("""
             from conan import ConanFile
@@ -488,7 +504,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps"
+                generators = "CMakeDeps", "PkgConfigDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -506,6 +522,18 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("create openssl -pr=profile")
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl-crypto.pc")
+        assert textwrap.dedent("""\n
+        Name: openssl-crypto
+        Description: Conan component: openssl-crypto
+        Version: 0.1
+        Libs: -L"${libdir}" -lcrypto
+        Cflags: -I"${includedir}"
+        Requires: ZLIB
+        """) in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
