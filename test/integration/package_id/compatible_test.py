@@ -742,14 +742,14 @@ def test_compatibility_new_setting_forwards_compat():
             available_libc_versions = conanfile.settings.libc_version.possible_values()
             ret = []
             for possible_libc_version in available_libc_versions:
-                if Version(possible_libc_version) <= Version(libc_version):
-                    ret.append([{"libc_version": possible_libc_version}])
+                if Version(possible_libc_version) < Version(libc_version):
+                    ret.append({"libc_version": possible_libc_version})
             return ret
         """)
     compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
     compat = "from libc_compat import libc_compat\n" + compat
     compat = compat.replace("# Append more factors for your custom compatibility rules here",
-                            "factors.extend(libc_compat(conanfile))")
+                            "factors.append(libc_compat(conanfile))")
     tc.save_home({"extensions/plugins/compatibility/libc_compat.py": libc_compat,
                   "extensions/plugins/compatibility/compatibility.py": compat})
 

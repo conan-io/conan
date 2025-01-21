@@ -16,6 +16,7 @@ from cppstd_compat import cppstd_compat
 
 def compatibility(conanfile):
     # By default, different compiler.cppstd are compatible
+    # factors is a list of lists
     factors = cppstd_compat(conanfile)
 
     # MSVC 194->193 fallback compatibility
