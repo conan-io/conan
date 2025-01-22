@@ -6,7 +6,7 @@ import textwrap
 import pytest
 from jinja2 import Template
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient
 
 """
@@ -331,8 +331,9 @@ def _run_and_get_lib_order(t, generator):
     return libs
 
 
+# needs at least 3.23.3 because of error with "empty identity"
 @pytest.mark.parametrize("generator", [None, "Xcode"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_deps(client, generator):
     if generator == "Xcode" and platform.system() != "Darwin":
         pytest.skip("Xcode is needed")

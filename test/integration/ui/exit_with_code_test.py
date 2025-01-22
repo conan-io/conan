@@ -32,6 +32,6 @@ class HelloConan(ConanFile):
 
 def test_wrong_home_error():
     client = TestClient()
-    save(client.cache.new_config_path, "core.cache:storage_path=//")
+    save(client.paths.new_config_path, "core.cache:storage_path=//")
     client.run("list *")
     assert "Couldn't initialize storage in" in client.out

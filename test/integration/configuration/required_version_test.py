@@ -3,7 +3,6 @@ import unittest
 import mock
 
 from conan import __version__
-from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
@@ -46,7 +45,7 @@ class RequiredVersionTest(unittest.TestCase):
         cache_folder = temp_folder()
         save(os.path.join(cache_folder, "global.conf"),
              f"core:required_conan_version={required_version}")
-        with self.assertRaises(ConanException) as error:
-            TestClient(cache_folder)
+        c = TestClient(cache_folder)
+        c.run("version", assert_error=True)
         self.assertIn("Current Conan version ({}) does not satisfy the defined one ({})"
-                      .format(__version__, required_version), str(error.exception))
+                      .format(__version__, required_version), c.out)

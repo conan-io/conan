@@ -4,9 +4,9 @@ from io import StringIO
 from conan import ConanFile
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanFileHelpers
-from conans.model.conf import Conf
-from conans.model.layout import Folders, Infos
-from conans.model.options import Options
+from conan.internal.model.conf import Conf
+from conan.internal.model.layout import Folders, Infos
+from conan.internal.model.options import Options
 
 
 class LocalDBMock(object):

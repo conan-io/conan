@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference
-from conans.model.version_range import VersionRange
+from conan.internal.model.pkg_type import PackageType
+from conan.api.model import RecipeReference
+from conan.internal.model.version_range import VersionRange
 
 
 class Requirement:
@@ -15,6 +15,7 @@ class Requirement:
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
+        self._required_ref = ref  # Store the original reference
         self._headers = headers  # This dependent node has headers that must be -I<headers-path>
         self._libs = libs
         self._build = build  # This dependent node is a build tool that runs at build time only
@@ -36,7 +37,7 @@ class Requirement:
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
-        self.required_nodes = []  # store which intermediate nodes are required, to compute "Skip"
+        self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -152,7 +153,8 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        result = {"ref": str(self.ref)}
+        result = {"ref": str(self.ref),
+                  "require": str(self._required_ref)}
         serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
                         "package_id_mode", "visible")
@@ -255,12 +257,13 @@ class Requirement:
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
+        # necessary even if no propagation, order of requires matter
         self.is_test = self.is_test or other.is_test
         # package_id_mode is not being propagated downstream. So it is enough to check if the
         # current require already defined it or not
         if self.package_id_mode is None:
             self.package_id_mode = other.package_id_mode
-        self.required_nodes.extend(other.required_nodes)
+        self.required_nodes.update(other.required_nodes)
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
@@ -347,7 +350,6 @@ class Requirement:
 
         if self.test:
             downstream_require.test = True
-        downstream_require.is_test = require.is_test
 
         # If the current one is resolving conflicts, the downstream one will be too
         downstream_require.force = require.force

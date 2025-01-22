@@ -145,10 +145,8 @@ class CustomSettingsTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        settings = default_settings_yml
-        settings = settings.replace("build_type: [null, Debug, Release, ",
-                                    "build_type: [null, Debug, MyRelease, ")
-        save(self.client.cache.settings_path, settings)
+        settings = "build_type: [MyRelease]"
+        save(self.client.paths.settings_path_user, settings)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")
 

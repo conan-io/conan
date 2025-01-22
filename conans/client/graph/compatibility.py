@@ -15,9 +15,40 @@ from cppstd_compat import cppstd_compat
 
 
 def compatibility(conanfile):
-    configs = cppstd_compat(conanfile)
-    # TODO: Append more configurations for your custom compatibility rules
-    return configs
+    # By default, different compiler.cppstd are compatible
+    # factors is a list of lists
+    factors = cppstd_compat(conanfile)
+
+    # MSVC 194->193 fallback compatibility
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    if compiler == "msvc":
+        msvc_fallback = {"194": "193"}.get(compiler_version)
+        if msvc_fallback:
+            factors.append([{"compiler.version": msvc_fallback}])
+
+    # Append more factors for your custom compatibility rules here
+
+    # Combine factors to compute all possible configurations
+    combinations = _factors_combinations(factors)
+    # Final compatibility settings combinations to check
+    return [{"settings": [(k, v) for k, v in comb.items()]} for comb in combinations]
+
+
+def _factors_combinations(factors):
+    combinations = []
+    for factor in factors:
+        if not combinations:
+            combinations = factor
+            continue
+        new_combinations = []
+        for comb in combinations:
+            for f in factor:
+                new_comb = comb.copy()
+                new_comb.update(f)
+                new_combinations.append(new_comb)
+        combinations.extend(new_combinations)
+    return combinations
 """
 
 
@@ -51,29 +82,7 @@ def cppstd_compat(conanfile):
             conanfile.output.warning(f'No cstd compatibility defined for compiler "{compiler}"')
         else:
             factors.append([{"compiler.cstd": v} for v in cstd_possible_values if v != cstd])
-
-    if compiler == "msvc":
-        msvc_fallback = {"194": "193"}.get(compiler_version)
-        if msvc_fallback:
-            factors.append([{"compiler.version": msvc_fallback}])
-
-    combinations = []
-    for factor in factors:
-        if not combinations:
-            combinations = factor
-            continue
-        new_combinations = []
-        for comb in combinations:
-            for f in factor:
-                new_comb = comb.copy()
-                new_comb.update(f)
-                new_combinations.append(new_comb)
-        combinations.extend(new_combinations)
-
-    ret = []
-    for comb in combinations:
-        ret.append({"settings": [(k, v) for k, v in comb.items()]})
-    return ret
+    return factors
 """
 
 

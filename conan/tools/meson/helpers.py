@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
-from conans.model.options import _PackageOption
+from conan.internal.model.options import _PackageOption
 
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag", "to_cstd_flag"]
 

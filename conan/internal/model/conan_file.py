@@ -4,13 +4,13 @@ from pathlib import Path
 from conan.api.output import ConanOutput, Color
 from conans.client.subsystems import command_env_wrapper
 from conan.errors import ConanException
-from conans.model.build_info import MockInfoProperty
-from conans.model.conf import Conf
-from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Infos, Layouts
-from conans.model.options import Options
-from conans.model.requires import Requirements
-from conans.model.settings import Settings
+from conan.internal.model.cpp_info import MockInfoProperty
+from conan.internal.model.conf import Conf
+from conan.internal.model.dependencies import ConanFileDependencies
+from conan.internal.model.layout import Folders, Infos, Layouts
+from conan.internal.model.options import Options
+from conan.internal.model.requires import Requirements
+from conan.internal.model.settings import Settings
 
 
 class ConanFile:
@@ -95,6 +95,8 @@ class ConanFile:
             self.generators = [self.generators]
         if isinstance(self.languages, str):
             self.languages = [self.languages]
+        if not all(lang == "C" or lang == "C++" for lang in self.languages):
+            raise ConanException("Only 'C' and 'C++' languages are allowed in 'languages' attribute")
         if isinstance(self.settings, str):
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,

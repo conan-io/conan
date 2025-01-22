@@ -5,7 +5,7 @@ import pytest
 from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
 from conan.errors import ConanException
-from conans.model.conf import Conf
+from conan.internal.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 

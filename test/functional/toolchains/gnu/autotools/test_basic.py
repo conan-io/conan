@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conan.test.assets.genconanfile import GenConanfile
@@ -96,7 +97,7 @@ def build_windows_subsystem(profile, make_program, subsystem):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(["conanbuildenv",
+    cmd = environment_wrap_command(ConanFileMock(), ["conanbuildenv",
                                     "conanautotoolstoolchain",
                                     "conanautotoolsdeps"], client.current_folder, make_program)
     client.run_command(cmd)

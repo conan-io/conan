@@ -249,7 +249,7 @@ def _warn_python_version():
 def _warn_frozen_center(conan_api):
     remotes = conan_api.remotes.list()
     for r in remotes:
-        if r.url == "https://center.conan.io":
+        if r.url == "https://center.conan.io" and not r.disabled:
             ConanOutput().warning(
                 "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
                 "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"

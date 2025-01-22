@@ -3,7 +3,6 @@ import os
 import platform
 import shutil
 import subprocess
-import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
@@ -11,6 +10,7 @@ from shutil import which
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
+from conans.client.rest.file_uploader import FileProgress
 from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
@@ -224,7 +224,8 @@ def rename(conanfile, src, dst):
     :param dst: Path to be renamed to.
     """
 
-    # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
+    # FIXME: This function has been copied from legacy. Needs to fix: which()
+    # call and wrap subprocess call.
     if os.path.exists(dst):
         raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
 
@@ -305,25 +306,12 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
-    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
-        def print_progress(the_size, uncomp_size):
-            the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
-            txt_msg = "Unzipping %d %%"
-            if the_size > print_progress.last_size + 1:
-                output.rewrite_line(txt_msg % the_size)
-                print_progress.last_size = the_size
-                if int(the_size) == 99:
-                    output.rewrite_line(txt_msg % 100)
-    else:
-        def print_progress(_, __):
-            pass
-
-    with zipfile.ZipFile(filename, "r") as z:
+    with FileProgress(filename, msg="Unzipping", mode="r") as file, zipfile.ZipFile(file) as z:
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
         if strip_root:
-            names = [n.replace("\\", "/") for n in z.namelist()]
+            names = [zi.filename.replace("\\", "/") for zi in zip_info]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
             if not common_folder and len(names) > 1:
                 raise ConanException("The zip file contains more than 1 folder in the root")
@@ -343,11 +331,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
 
-        print_progress.last_size = -1
         if platform.system() == "Windows":
             for file_ in zip_info:
                 extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
@@ -355,7 +341,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                     if keep_permissions:
@@ -371,7 +356,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
-    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+    with FileProgress(filename, msg="Uncompressing") as fileobj, tarfile.TarFile.open(fileobj=fileobj, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
@@ -379,8 +364,11 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
         else:
             members = tarredgzippedFile.getmembers()
 
+            if pattern:
+                members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                      tarredgzippedFile.getmembers()))
             if strip_root:
-                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
+                names = [member.name.replace("\\", "/") for member in members]
                 common_folder = os.path.commonprefix(names).split("/", 1)[0]
                 if not common_folder and len(names) > 1:
                     raise ConanException("The tgz file contains more than 1 folder in the root")
@@ -397,9 +385,6 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         linkpath = member.linkpath.replace("\\", "/")
                         member.linkpath = linkpath.split("/", 1)[1]
                         member.linkname = member.linkpath
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
             tarredgzippedFile.extractall(destination, members=members)
 
 
@@ -451,6 +436,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
@@ -463,6 +449,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
             return False
     content = content.replace(search, replace)
     save(conanfile, file_path, content, encoding=encoding)
+    return True
 
 
 def collect_libs(conanfile, folder=None):

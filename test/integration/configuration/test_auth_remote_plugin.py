@@ -1,10 +1,8 @@
-import os
 import textwrap
 
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 class TestAuthRemotePlugin:
@@ -16,7 +14,7 @@ class TestAuthRemotePlugin:
             def auth_remote_plugin(remote, user=None):
                 raise Exception("Test Error")
             """)
-        save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_remote.py": auth_plugin})
         c.run("remote logout default")
         c.run("remote login default", assert_error=True)
         assert "Error while processing 'auth_remote.py' plugin" in c.out
@@ -33,7 +31,7 @@ class TestAuthRemotePlugin:
             def auth_remote_plugin(remote, user=None):
                 return "admin", "{password}"
             """)
-        save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_remote.py": auth_plugin})
         c.run("remote logout default")
         c.run("remote login default", assert_error=should_fail)
         if should_fail:
@@ -41,17 +39,16 @@ class TestAuthRemotePlugin:
         else:
             assert "Changed user of remote 'default' from 'None' (anonymous) to 'admin' (authenticated)" in c.out
 
-
-    """ Test when the plugin do not give any user or password, we want the code to continue with
-        the rest of the input methods
-    """
     def test_auth_remote_plugin_fallback(self):
+        """ Test when the plugin do not give any user or password, we want the code to continue with
+            the rest of the input methods
+        """
         c = TestClient(default_server_user=True)
         auth_plugin = textwrap.dedent("""\
                 def auth_remote_plugin(remote, user=None):
                     return None, None
                 """)
-        save(os.path.join(c.cache.plugins_path, "auth_remote.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_remote.py": auth_plugin})
         c.run("remote logout default")
         c.run("remote login default")
         # As the auth plugin is not returning any password the code is falling back to the rest of

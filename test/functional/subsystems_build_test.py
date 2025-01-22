@@ -75,11 +75,13 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
+    # It's important not to have uname in Path, that could
+    # mean that we have Git bash or MingW in the Path and
+    # we mistakenly use tools from there when we want to use msys2 tools
     def test_tool_not_available(self):
         client = TestClient()
         client.run_command('uname', assert_error=True)
         assert "'uname' is not recognized as an internal or external command" in client.out
-
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:

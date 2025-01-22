@@ -3,8 +3,8 @@ import textwrap
 import pytest
 
 from conan.errors import ConanException
-from conans.model.version import Version
-from conans.model.version_range import VersionRange
+from conan.internal.model.version import Version
+from conan.internal.model.version_range import VersionRange
 from conan.test.utils.tools import TestClient
 
 values = [
@@ -112,6 +112,10 @@ def test_range(version_range, conditions, versions_in, versions_out):
     ['>1 <=2.0', False, ["1.1", "1.9", "2.0"], ["0.9", "1.0-pre.1", "1.0", "1.1-pre.1", "2.0-pre"]],
     # This should be old and new behaviors remain the same
     ['>1 <=2.0', True, ["1.1-pre.1", "1.1", "1.9", "2.0", "2.0-pre"], ["0.9", "1.0", "1.0-pre.1"]],
+
+    # Codified quirks
+    ['', False, ["1.0", "2.0"], ["1.0-pre.1", "2.0-pre.1"]],
+    ['', True, ["1.0", "2.0", "1.0-pre.1", "2.0-pre.1"], []],
 ])
 def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in, versions_out):
     r = VersionRange(version_range)

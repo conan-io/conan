@@ -16,9 +16,9 @@ from conans.client.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
-from conans.model.info import RequirementInfo, RequirementsInfo
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import RequirementInfo, RequirementsInfo
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 

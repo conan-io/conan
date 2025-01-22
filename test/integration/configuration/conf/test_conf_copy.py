@@ -1,4 +1,4 @@
-from conans.model.conf import Conf
+from conan.internal.model.conf import Conf
 
 
 def test_copy_conaninfo_conf():

@@ -9,7 +9,7 @@ class TransitiveIdsTest(unittest.TestCase):
     def test_transitive_library(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
         client.run("create . --name=liba --version=1.1")
@@ -39,7 +39,7 @@ class TransitiveIdsTest(unittest.TestCase):
         # So LibC package ID doesn't change, even if LibA changes
         # But LibD package ID changes, even if its direct dependency LibC doesn't
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         # LibA
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -134,7 +134,7 @@ class TransitiveIdsTest(unittest.TestCase):
     def test_transitive_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
         client.run("create . --name=liba --version=2.0")

@@ -1,7 +1,7 @@
 import os
 
-from conans.model.build_info import CppInfo
-from conans.model.conf import Conf
+from conan.internal.model.cpp_info import CppInfo
+from conan.internal.model.conf import Conf
 
 
 class Infos(object):

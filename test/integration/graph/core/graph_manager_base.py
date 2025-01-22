@@ -8,12 +8,12 @@ from conan.api.conan_api import ConanAPI
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.default_settings import default_settings_yml
-from conans.model.conf import ConfDefinition
-from conans.model.manifest import FileTreeManifest
-from conans.model.options import Options
-from conans.model.profile import Profile
-from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
+from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.manifest import FileTreeManifest
+from conan.internal.model.options import Options
+from conan.internal.model.profile import Profile
+from conan.api.model import RecipeReference
+from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import GenConanfile
 from conans.util.dates import revision_timestamp_now
@@ -41,25 +41,16 @@ class GraphManagerTest(unittest.TestCase):
             conanfile.with_option("shared", [True, False])
             conanfile.with_default_option("shared", option_shared)
 
-        self._put_in_cache(ref, conanfile)
+        self._cache_recipe(ref, conanfile)
 
     def recipe_conanfile(self, reference, conanfile):
         ref = RecipeReference.loads(reference)
-        self._put_in_cache(ref, conanfile)
+        self._cache_recipe(ref, conanfile)
 
-    def _put_in_cache(self, ref, conanfile):
-        ref = RecipeReference.loads("{}#123".format(ref))
-        ref.timestamp = revision_timestamp_now()
-        layout = self.cache.create_ref_layout(ref)
-        save(layout.conanfile(), str(conanfile))
-        manifest = FileTreeManifest.create(layout.export())
-        manifest.save(layout.export())
-
-    def _cache_recipe(self, ref, test_conanfile, revision=None):
-        # FIXME: This seems duplicated
+    def _cache_recipe(self, ref, test_conanfile):
         if not isinstance(ref, RecipeReference):
             ref = RecipeReference.loads(ref)
-        ref = RecipeReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
+        ref.revision = "123"
         ref.timestamp = revision_timestamp_now()
         recipe_layout = self.cache.create_ref_layout(ref)
         save(recipe_layout.conanfile(), str(test_conanfile))
@@ -73,7 +64,7 @@ class GraphManagerTest(unittest.TestCase):
             class Alias(ConanFile):
                 alias = "%s"
             """ % target)
-        self._put_in_cache(ref, conanfile)
+        self._cache_recipe(ref, conanfile)
 
     @staticmethod
     def recipe_consumer(reference=None, requires=None, build_requires=None, tool_requires=None):
@@ -102,16 +93,14 @@ class GraphManagerTest(unittest.TestCase):
         save(path, str(conanfile))
         return path
 
-    def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
-                    install=True, options_build=None):
+    def build_graph(self, content, profile_build_requires=None, install=True, options_build=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
-        return self.build_consumer(path, profile_build_requires, ref, create_ref, install,
+        return self.build_consumer(path, profile_build_requires, install,
                                    options_build=options_build)
 
-    def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
-                       install=True, options_build=None):
+    def build_consumer(self, path, profile_build_requires=None, install=True, options_build=None):
         profile_host = Profile()
         profile_host.settings["os"] = "Linux"
         profile_build = Profile()
