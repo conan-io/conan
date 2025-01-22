@@ -10,7 +10,7 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conans.client.hook_manager import HookManager
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.files import chdir
 
 
@@ -118,3 +118,6 @@ class LocalAPI:
         conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
+
+    def reinit(self):
+        self.editable_packages = EditablePackages(self._conan_api.home_folder)

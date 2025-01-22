@@ -3,9 +3,9 @@ from mock import mock
 
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conans.model.conan_file import ConanFile
-from conans.model.conf import Conf
-from conans.model.settings import Settings
+from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.conf import Conf
+from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 
 

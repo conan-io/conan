@@ -43,7 +43,7 @@ def _find_deployer(d, cache_deploy_folder):
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
-def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
+def do_deploys(home_folder, graph, deploy, deploy_package, deploy_folder):
     try:
         mkdir(deploy_folder)
     except Exception as e:
@@ -68,7 +68,7 @@ def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
                 with conanfile_exception_formatter(conanfile, "deploy"):
                     conanfile.deploy()
     # Handle the deploys
-    cache = HomePaths(conan_api.cache_folder)
+    cache = HomePaths(home_folder)
     for d in deploy or []:
         deployer = _find_deployer(d, cache.deployers_path)
         # IMPORTANT: Use always kwargs to not break if it changes in the future

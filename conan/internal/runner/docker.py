@@ -6,11 +6,10 @@ import shutil
 import yaml
 from conan.api.model import ListPattern
 from conan.api.output import Color, ConanOutput
-from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
 from conan.errors import ConanException
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 
 def config_parser(file_path):
@@ -63,7 +62,6 @@ def _docker_info(msg, error=False):
 
 class DockerRunner:
     def __init__(self, conan_api, command, host_profile, build_profile, args, raw_args):
-        import docker
         import docker.api.build
         try:
             docker_base_urls = [

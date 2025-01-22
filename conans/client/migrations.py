@@ -3,7 +3,6 @@ import sqlite3
 import textwrap
 
 from conan.api.output import ConanOutput
-from conan.api.subapi.config import ConfigAPI
 from conan.internal.default_settings import migrate_settings_file
 from conans.migrations import Migrator
 from conans.util.dates import timestamp_now
@@ -76,6 +75,7 @@ def _migrate_default_compatibility(cache_folder):
 
 
 def _migrate_pkg_db_lru(cache_folder, old_version):
+    from conan.api.subapi.config import ConfigAPI
     config = ConfigAPI.load_config(cache_folder)
     storage = config.get("core.cache:storage_path") or os.path.join(cache_folder, "p")
     db_filename = os.path.join(storage, 'cache.sqlite3')

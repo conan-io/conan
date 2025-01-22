@@ -4,8 +4,8 @@ import pytest
 
 from conan import ConanFile
 from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
-from conans.model.conf import ConfDefinition, Conf
-from conans.model.settings import Settings
+from conan.internal.model.conf import ConfDefinition, Conf
+from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import MockSettings, ConanFileMock, MockOptions
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import load

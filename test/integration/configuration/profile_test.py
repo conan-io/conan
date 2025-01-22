@@ -272,7 +272,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("remove '*' -c")
         # Create a simple recipe to require
         winreq_conanfile = '''
-from conans.model.conan_file import ConanFile
+from conan import ConanFile
 
 class winrequireDefaultNameConan(ConanFile):
     name = "winrequire"
@@ -286,7 +286,7 @@ class winrequireDefaultNameConan(ConanFile):
         self.client.run("export . --user=lasote --channel=stable")
 
         # Now require the first recipe depending on OS=windows
-        conanfile = '''from conans.model.conan_file import ConanFile
+        conanfile = '''from conan import ConanFile
 import os
 
 class DefaultNameConan(ConanFile):
@@ -339,7 +339,7 @@ class ProfileAggregationTest(unittest.TestCase):
     """)
 
     conanfile = dedent("""
-    from conans.model.conan_file import ConanFile
+    from conan import ConanFile
     import os
 
     class DefaultNameConan(ConanFile):
@@ -352,7 +352,7 @@ class ProfileAggregationTest(unittest.TestCase):
     """)
 
     consumer = dedent("""
-    from conans.model.conan_file import ConanFile
+    from conan import ConanFile
     import os
 
     class DefaultNameConan(ConanFile):

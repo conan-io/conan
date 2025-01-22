@@ -136,8 +136,8 @@ def test_requiremens_inspect():
             'options:',
             'options_definitions:',
             'package_type: None',
-            "requires: [{'ref': 'zlib/1.2.13', 'run': False, 'libs': True, 'skip': "
-            "False, 'test': False, 'force': False, 'direct': True, 'build': "
+            "requires: [{'ref': 'zlib/1.2.13', 'require': 'zlib/1.2.13', 'run': False, "
+            "'libs': True, 'skip': False, 'test': False, 'force': False, 'direct': True, 'build': "
             "False, 'transitive_headers': None, 'transitive_libs': None, 'headers': "
             "True, 'package_id_mode': None, 'visible': True}]",
             'revision_mode: hash',

@@ -1,7 +1,7 @@
 import textwrap
 
 from conan.tools.meson import Meson
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
