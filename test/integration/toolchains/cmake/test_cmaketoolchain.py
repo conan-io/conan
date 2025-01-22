@@ -1550,6 +1550,11 @@ def test_customize_cmakeuserpresets():
     c.run("install . -g CMakeToolchain -of=build -c tools.cmake.cmaketoolchain:user_presets=my.json")
     new = c.load("my.json")
     assert old == new
+    # also in subfolder
+    c.run("install . -g CMakeToolchain -of=build "
+          "-c tools.cmake.cmaketoolchain:user_presets=mysub/my.json")
+    assert os.path.exists(os.path.join(c.current_folder, "mysub", "my.json"))
+
     assert not os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
     c.run("install . -g CMakeToolchain -of=build -c tools.cmake.cmaketoolchain:user_presets=")
     assert not os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
