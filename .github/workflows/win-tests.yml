@@ -216,7 +216,7 @@ jobs:
               Remove-Item $zipFile
           }
 
-      - name: Configure environment
+      - name: Run Functional Tests
         run: |
           git config --global core.autocrlf false
 
@@ -249,10 +249,12 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-      - name: Run Functional Tests
+          # Run tests in this step context to preserve fragile environment
+          pytest test/functional -n=auto --durations=100 ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
+
+      - name: Code Coverage
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
-          tests: test/functional
           duration: 100

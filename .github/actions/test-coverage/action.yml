@@ -1,4 +1,4 @@
-name: 'Run tests and measure code coverage'
+
 description: 'Run tests enabling coverage in certain conditions and upload coverage artifacts for later process'
 
 inputs:
@@ -17,7 +17,7 @@ inputs:
 
   tests:
     description: 'Tests folder and options to run'
-    required: true
+    required: false
 
   workers:
     description: 'Number of workers to run tests'
@@ -27,6 +27,7 @@ runs:
   using: 'composite'
   steps:
       - name: Run tests with coverage
+        if: ${{ inputs.tests }}
         shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
           pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
