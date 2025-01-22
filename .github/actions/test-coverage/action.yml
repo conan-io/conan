@@ -27,7 +27,7 @@ runs:
   using: 'composite'
   steps:
       - name: Run tests with coverage
-        shell: bash
+        shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
           pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
 
