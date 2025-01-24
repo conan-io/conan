@@ -134,6 +134,9 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         products = [args.path]
     else:  # all products
         products = conan_api.workspace.products
+        if products is None:
+            raise ConanException("There are no products defined in the workspace, can't build\n"
+                                 "You can use 'conan build <path> --build=editable' to build")
         ConanOutput().title(f"Building workspace products {products}")
 
     editables = conan_api.workspace.editable_packages

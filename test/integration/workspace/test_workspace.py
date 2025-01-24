@@ -237,6 +237,15 @@ class TestAddRemove:
         c.run("workspace open dep/0.1", assert_error=True)
         assert "ERROR: Can't open a dependency that is already an editable: dep/0.1" in c.out
 
+    def test_remove_product(self):
+        c = TestClient(light=True)
+        c.save({"conanws.py": "name='myws'",
+                "mydeppkg/conanfile.py": GenConanfile("mydeppkg", "0.1")})
+        c.run("workspace add mydeppkg --product")
+        c.run("workspace remove mydeppkg")
+        c.run("workspace info")
+        assert "mydeppkg" not in c.out
+
 
 class TestOpenAdd:
     def test_without_git(self):
@@ -356,9 +365,7 @@ class TestWorkspaceBuild:
                .with_requires("pkga/0.1")})
         c.run("workspace add pkga")
         c.run("workspace add pkgb --product")
-        print(c.load("conanws.yml"))
         c.run("workspace info --format=json")
-        print(c.out)
         assert json.loads(c.stdout)["products"] == ["pkgb"]
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -380,6 +387,12 @@ class TestWorkspaceBuild:
         c.run("workspace build pkga")
         assert "conanfile.py (pkga/0.1): Calling build()" in c.out
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
+
+    def test_error_if_no_products(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        c.run("workspace build", assert_error=True)
+        assert "There are no products defined in the workspace, can't build" in c.out
 
 
 def test_new():

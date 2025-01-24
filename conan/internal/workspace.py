@@ -152,6 +152,8 @@ class Workspace:
         if not found_ref:
             raise ConanException(f"No editable package to remove from this path: {path}")
         self._yml["editables"].pop(found_ref)
+        if path in self._yml.get("products", []):
+            self._yml["products"].remove(path)
         save(self._yml_file, yaml.dump(self._yml))
         return found_ref
 
