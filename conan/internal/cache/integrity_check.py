@@ -32,7 +32,11 @@ class IntegrityChecker:
     def _recipe_corrupted(self, ref: RecipeReference):
         layout = self._cache.recipe_layout(ref)
         output = ConanOutput()
-        read_manifest, expected_manifest = layout.recipe_manifests()
+        try:
+            read_manifest, expected_manifest = layout.recipe_manifests()
+        except FileNotFoundError:
+            output.error(f"{ref.repr_notime()}: Manifest missing", error_type="exception")
+            return True
         # Filter exports_sources from read manifest if there are no exports_sources locally
         # This happens when recipe is downloaded without sources (not built from source)
         export_sources_folder = layout.export_sources()
@@ -52,7 +56,11 @@ class IntegrityChecker:
     def _package_corrupted(self, ref: PkgReference):
         layout = self._cache.pkg_layout(ref)
         output = ConanOutput()
-        read_manifest, expected_manifest = layout.package_manifests()
+        try:
+            read_manifest, expected_manifest = layout.package_manifests()
+        except FileNotFoundError:
+            output.error(f"{ref.repr_notime()}: Manifest missing", error_type="exception")
+            return True
 
         if read_manifest != expected_manifest:
             output.error(f"{ref}: Manifest mismatch", error_type="exception")
