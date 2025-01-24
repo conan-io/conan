@@ -217,8 +217,6 @@ class TargetConfigurationTemplate2:
         exes = {}
 
         if cpp_info.has_components:
-            assert not cpp_info.exe, "Package has components and exe"
-            assert not cpp_info.libs, "Package has components and libs"
             for name, comp in cpp_info.components.items():
                 if comp.exe or comp.type is PackageType.APP:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
@@ -228,8 +226,6 @@ class TargetConfigurationTemplate2:
                     exes[target] = exe_location
         else:
             if cpp_info.exe:
-                assert not cpp_info.libs, "Package has exe and libs"
-                assert cpp_info.location, "Package has exe and no location"
                 target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
                 target = target_name or f"{pkg_name}::{pkg_name}"
                 exe_location = self._path(cpp_info.location, pkg_folder, pkg_folder_var)

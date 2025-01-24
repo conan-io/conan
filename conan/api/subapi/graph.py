@@ -1,12 +1,13 @@
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.model.recipe_ref import ref_matches
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
-    CONTEXT_BUILD
+    CONTEXT_BUILD, BINARY_MISSING
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conan.errors import ConanException
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 class GraphAPI:
@@ -200,3 +201,14 @@ class GraphAPI:
         binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)
+
+    @staticmethod
+    def find_first_missing_binary(graph, missing=None):
+        """ (Experimental) Given a dependency graph, will return the first node with a
+        missing binary package
+        """
+        for node in graph.ordered_iterate():
+            if ((not missing and node.binary == BINARY_MISSING)  # First missing binary or specified
+                    or (missing and ref_matches(node.ref, missing, is_consumer=None))):
+                return node.ref, node.conanfile.info
+        raise ConanException("There is no missing binary")

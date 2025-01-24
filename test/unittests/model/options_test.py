@@ -4,7 +4,7 @@ import pytest
 
 from conan.errors import ConanException
 from conan.internal.model.options import Options
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 class TestOptions:

@@ -1,7 +1,7 @@
 import json
 import textwrap
 
-from conan.internal.model.package_ref import PkgReference
+from conan.api.model import PkgReference
 from conan.test.utils.tools import TestClient
 
 

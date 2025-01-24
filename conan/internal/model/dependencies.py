@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conan.errors import ConanException
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.model.conanfile_interface import ConanFileInterface
 
 
