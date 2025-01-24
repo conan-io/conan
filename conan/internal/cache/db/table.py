@@ -23,8 +23,8 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self._lock.acquire(timeout=10), "Conan failed to acquire database lock"
-        connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
+        assert self._lock.acquire(timeout=20), "Conan failed to acquire database lock"
+        connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
         try:
             yield connection
         finally:

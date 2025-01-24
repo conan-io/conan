@@ -70,6 +70,23 @@ class Node(object):
         self.replaced_requires = {}  # To track the replaced requires for self.dependencies[old-ref]
         self.skipped_build_requires = False
 
+    def subgraph(self):
+        nodes = [self]
+        opened = [self]
+        while opened:
+            new_opened = []
+            for o in opened:
+                for n in o.neighbors():
+                    if n not in nodes:
+                        nodes.append(n)
+                    if n not in opened:
+                        new_opened.append(n)
+            opened = new_opened
+
+        graph = DepsGraph()
+        graph.nodes = nodes
+        return graph
+
     def __lt__(self, other):
         """
         @type other: Node
