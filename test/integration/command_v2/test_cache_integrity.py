@@ -17,12 +17,26 @@ def test_cache_integrity():
     layout = t.created_layout()
     conaninfo = os.path.join(layout.package(), "conaninfo.txt")
     save(conaninfo, "[settings]")
+    t.run("create . --name pkg4 --version=4.0")
+    layout = t.created_layout()
+    conaninfo = os.path.join(layout.package(), "conaninfo.txt")
+    save(conaninfo, "[settings]")
 
     t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0: Integrity checked: ok" in t.out
     assert "pkg1/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Integrity checked: ok" in t.out
     assert "ERROR: pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out
     assert "ERROR: pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out
+    assert "ERROR: pkg4/4.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out
+
+    t.run("remove pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+    t.run("remove pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+    t.run("remove pkg4/4.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+    t.run("cache check-integrity *")
+    assert "pkg1/1.0: Integrity checked: ok" in t.out
+    assert "pkg2/2.0: Integrity checked: ok" in t.out
+    assert "pkg3/3.0: Integrity checked: ok" in t.out
+    assert "pkg4/4.0: Integrity checked: ok" in t.out
 
 
 def test_cache_integrity_export_sources():
