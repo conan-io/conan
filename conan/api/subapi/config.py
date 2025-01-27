@@ -208,7 +208,7 @@ class ConfigAPI:
         packages_folder = self.global_conf.get("core.cache:storage_path") or os.path.join(self.home(), "p")
         for content in contents:
             content_path = os.path.join(self.home(), content)
-            if content_path == packages_folder or content == "version.txt":
+            if content_path == packages_folder:
                 continue
             ConanOutput().debug(f"Removing {content_path}")
             if os.path.isdir(content_path):
