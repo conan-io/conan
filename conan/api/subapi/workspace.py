@@ -19,9 +19,15 @@ class WorkspaceAPI:
         self._workspace = Workspace(conan_api)
 
     def home_folder(self):
+        """
+        @return: The custom defined Conan home/cache folder if defined, else None
+        """
         return self._workspace.home_folder()
 
     def folder(self):
+        """
+        @return: the current workspace folder where the conanws.yml or conanws.py is located
+        """
         return self._workspace.folder
 
     def config_folder(self):
@@ -30,6 +36,10 @@ class WorkspaceAPI:
     @property
     def editable_packages(self):
         return self._workspace.editables()
+
+    @property
+    def products(self):
+        return self._workspace.products
 
     def open(self, require, remotes, cwd=None):
         app = ConanApp(self._conan_api)
@@ -63,21 +73,37 @@ class WorkspaceAPI:
         return dst_path
 
     def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-            output_folder=None, remotes=None):
-        path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+            output_folder=None, remotes=None, product=False):
+        """
+        Add a new editable package to the current workspace (the current workspace must exist)
+        @param path: The path to the folder containing the conanfile.py that defines the package
+        @param name: (optional) The name of the package to be added if not defined in recipe
+        @param version:
+        @param user:
+        @param channel:
+        @param cwd:
+        @param output_folder:
+        @param remotes:
+        @param product:
+        @return: The reference of the added package
+        """
+        full_path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
+        conanfile = app.loader.load_named(full_path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         ref.validate_ref()
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self._workspace.add(ref, path, output_folder=output_folder)
+        self._workspace.add(ref, full_path, output_folder=output_folder,  product=product)
         return ref
 
-    def remove(self, path):
+    def remove(self, path, cwd=None):
         return self._workspace.remove(path)
 
     def info(self):
         return self._workspace.serialize()
+
+    def editable_from_path(self, path):
+        return self._workspace.editable_from_path(path)

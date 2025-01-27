@@ -35,6 +35,9 @@ class RemotesAPI:
         # Wraps an http_requester to inject proxies, certs, etc
         self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
 
+    def reinit(self):
+        self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
+
     def list(self, pattern=None, only_enabled=True):
         """
         Obtain a list of ``Remote`` objects matching the pattern.

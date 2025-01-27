@@ -118,3 +118,6 @@ class LocalAPI:
         conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
+
+    def reinit(self):
+        self.editable_packages = EditablePackages(self._conan_api.home_folder)

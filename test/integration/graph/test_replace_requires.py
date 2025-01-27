@@ -150,6 +150,8 @@ def test_replace_requires_json_format():
     assert "pkg/0.1: pkg/0.2" in c.out  # The replacement happens
     graph = json.loads(c.stdout)
     assert graph["graph"]["replaced_requires"] == {"pkg/0.1": "pkg/0.2"}
+    assert graph["graph"]["nodes"]["0"]["dependencies"]["1"]["ref"] == "pkg/0.2"
+    assert graph["graph"]["nodes"]["0"]["dependencies"]["1"]["require"] == "pkg/0.1"
 
 
 def test_replace_requires_test_requires():
