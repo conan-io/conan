@@ -235,7 +235,9 @@ def test_config_clean(storage_path):
     assert os.path.exists(os.path.join(tc.cache_folder, "extensions"))
     assert not os.path.exists(os.path.join(tc.cache_folder, "extensions", "compatibility", "mycomp.py"))
     assert os.path.exists(absolut_storage_path)
+    # This will error because the call to clean will remove the profiles
     tc.run("create .", assert_error=True)
+    # Works after regenerating them!
     tc.run("profile detect")
     tc.run("create .")
 
