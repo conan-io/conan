@@ -37,7 +37,7 @@ class ConanProxyProvider:
                 self.url,
                 headers=headers,
                 json={
-                    "reference": ref,
+                    "reference": str(ref),
                 },
             )
             if response.status_code == 200:
@@ -81,7 +81,7 @@ class PrivateProvider:
 
     @staticmethod
     def _build_query(ref):
-        name, version = ref.split('/')
+        name, version = ref.name, ref.version
         full_query = f"""query packageVersionDetails {{
             {name}: packageVersion(name: "{name}", type: "conan", version: "{version}") {{
                 version
@@ -154,4 +154,50 @@ class PrivateProvider:
 
         if "errors" in response_json:
             return {"error": self._parse_error(response_json["errors"], ref)}
+        return response_json
+
+class OSVProvider:
+    def __init__(self, name, provider_data):
+        self.name = name
+        self.url = provider_data["url"]
+        self.data = provider_data
+        self._session = requests.Session()
+
+    def get_cves(self, refs):
+        result = {"data": {}}
+        for ref in refs:
+            response = self._get(ref)
+            if "error" in response or "vulns" not in response:
+                result["error"] = response.get("error", {"details": "Something went wrong"})
+                break
+            for vuln in response["vulns"]:
+                ref_vulns = result["data"].setdefault(str(ref.name), {})
+                edges = ref_vulns.setdefault('vulnerabilities', {}).setdefault('edges', [])
+                ref_vulns['version'] = str(ref.version)
+                edges.append({"node": {
+                    "name": vuln["id"],
+                    "description": vuln.get("summary") or vuln.get("details"),
+                    "references": [
+                        [reference["url"]] for reference in vuln["references"]
+                    ]
+                }})
+        return result
+
+    def _get(self, ref):
+        try:
+            data = {
+                "version": str(ref.version),
+                "package": {
+                    "name": ref.name,
+                }
+            }
+            response = self._session.post(self.url, json=data)
+            response.raise_for_status()
+        except Exception as e:
+            return {"error": {"details": "Something went wrong"}}
+
+        response_json = response.json()
+        if "error" in response_json:
+            return {"error": response_json["error"]}
+
         return response_json

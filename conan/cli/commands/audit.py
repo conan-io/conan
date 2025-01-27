@@ -167,12 +167,27 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List the vulnerabilities of the given reference.
     """
-    subparser.add_argument("reference", help="Reference to list vulnerabilities for")
+    subparser.add_argument("reference", help="Reference to list vulnerabilities for", nargs="?")
+    subparser.add_argument("--sbom", help="Path to the SBOM file")
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
+    if args.sbom and args.reference:
+        raise ConanException("Cannot use both reference and SBOM file at the same time")
+
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_CATALOG_NAME)
-    vulnerabilities = conan_api.audit.list(args.reference, provider)
+
+    if args.sbom:
+        with open(args.sbom, "r") as f:
+            sbom = json.load(f)
+        vulnerabilities = []
+        for package in sbom["components"]:
+            reference = f"{package['name']}/{package['version']}"
+            print(reference)
+            result = conan_api.audit.list(reference, provider)
+            vulnerabilities.extend(result)
+    else:
+        vulnerabilities = conan_api.audit.list(args.reference, provider)
 
     return vulnerabilities
 
@@ -199,7 +214,7 @@ def audit_provider(conan_api, parser, subparser, *args):
 
     subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
-    subparser.add_argument("--type", help="Provider type", choices=["catalog", "private"])
+    subparser.add_argument("--type", help="Provider type", choices=["catalog", "private", "osv"])
     subparser.add_argument("--token", help="Provider token")
     args = parser.parse_args(*args)
 

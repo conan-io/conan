@@ -1,7 +1,7 @@
 import json
 import os
 
-from conan.internal.api.audit.providers import ConanProxyProvider, PrivateProvider
+from conan.internal.api.audit.providers import ConanProxyProvider, PrivateProvider, OSVProvider
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save, load
@@ -21,14 +21,16 @@ class AuditAPI:
         self._provider_cls = {
             # TODO: Temp names, find better ones (specially, no mention of catalog)
             "conan-center-proxy": ConanProxyProvider,
-            "private": PrivateProvider
+            "private": PrivateProvider,
+            "osv": OSVProvider,
         }
 
     def scan(self, deps_graph, provider):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
-        refs = list(set(f"{node.ref.name}/{node.ref.version}" for node in deps_graph.nodes[1:]))
+        refs = list(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
+                        for node in deps_graph.nodes[1:]))
         return provider.get_cves(refs)
 
     def list(self, reference, provider):
@@ -37,7 +39,7 @@ class AuditAPI:
         """
         ref = RecipeReference.loads(reference)
         ref.validate_ref()
-        return provider.get_cves([reference])
+        return provider.get_cves([ref])
 
     def get_provider(self, provider_name):
         """
