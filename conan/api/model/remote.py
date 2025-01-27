@@ -2,16 +2,24 @@ LOCAL_RECIPES_INDEX = "local-recipes-index"
 
 
 class Remote:
-
+    """
+    The Remote class represents a remote registry of packages. It's a read-only opaque object that
+    should not be created directly, but obtained from the relevant ``RemotesAPI`` subapi methods.
+    """
     def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None,
                  remote_type=None):
         self.name = name  # Read only, is the key
+        """User-facing remote name"""
         self.url = url
+        """URL endpoint of the Conan remote"""
         self.verify_ssl = verify_ssl
+        #"""Whether to verify SSL certificates"""
         self.disabled = disabled
+        #"""If this remote is disabled, it won't be taken into account for Conan operations"""
         self.allowed_packages = allowed_packages
+        #"""Which packages this remote is allowed to fetch, or None if all packages are allowed"""
         self.remote_type = remote_type
-        self.caching = {}
+        self._caching = {}
 
     def __eq__(self, other):
         if other is None:
@@ -33,5 +41,7 @@ class Remote:
         return str(self)
 
     def invalidate_cache(self):
-        # TODO: make it private
-        self.caching = {}
+        """
+        Clears the package existence cache for this remote
+        """
+        self._caching = {}
