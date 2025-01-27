@@ -232,7 +232,8 @@ def test_config_clean(storage_path):
     assert "bar" not in tc.out
     tc.run("config show core.upload:retry")
     assert "7" not in tc.out
-    assert not os.path.exists(os.path.join(tc.cache_folder, "extensions"))
+    assert os.path.exists(os.path.join(tc.cache_folder, "extensions"))
+    assert not os.path.exists(os.path.join(tc.cache_folder, "extensions", "compatibility", "mycomp.py"))
     assert os.path.exists(absolut_storage_path)
 
 
