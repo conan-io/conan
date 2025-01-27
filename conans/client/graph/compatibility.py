@@ -97,7 +97,8 @@ def migrate_compatibility_files(cache_folder):
         return CONAN_GENERATED_COMMENT in first_line
 
     if _should_migrate_file(compatibility_file) and _should_migrate_file(cppstd_compat_file):
-        ConanOutput().success("Migrating compatibility.py plugin")
+        if os.path.exists(compatibility_file):
+            ConanOutput().success("Migrating compatibility.py plugin")
         save(compatibility_file, _default_compat)
         if os.path.exists(cppstd_compat_file):
             os.remove(cppstd_compat_file)
