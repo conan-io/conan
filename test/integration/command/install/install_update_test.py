@@ -1,5 +1,6 @@
 import os
 import textwrap
+import time
 from time import sleep
 
 from conan.api.model import RecipeReference
@@ -200,3 +201,40 @@ def test_multi_remote_update_resolution():
     c.run("remove * -c")
     c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy_old=True")
     assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out
+
+
+def test_multi_remote_update_resolution_2_remotes():
+    c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
+                   inputs=["admin", "password"] * 2, light=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    rev1 = c.exported_recipe_revision()
+    c.run("upload * -r=r1 -c")
+    # second revision
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
+    time.sleep(1)
+    c.run("export .")
+    rev2 = c.exported_recipe_revision()
+    assert rev1 != rev2
+    c.run("upload * -r=r1 -c")
+    c.run("list *#* -r=r1")
+    print(c.out)
+
+    time.sleep(1)
+    # Upload the first, old revision to the other remote
+    c.run(f"upload pkg/0.1#{rev1} -r=r2 -c")
+    assert rev1 in c.out
+    assert rev2 not in c.out
+    c.run("list *#* -r=r2")
+    print(c.out)
+
+    # now test the --update, it will pick up the latest revision, which is r3
+    c.run("remove * -c")
+    c.run("graph info --requires=pkg/0.1 --update")
+    assert f"pkg/0.1#{rev1} - Downloaded (r2)" in c.out
+
+    # But if we enable order-based first found timestamp, it will pick up r2
+    c.run("remove * -c")
+    c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy_old=True")
+    print(c.out)
+    assert f"pkg/0.1#{rev2} - Downloaded (r1)" in c.out
