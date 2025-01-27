@@ -8,7 +8,7 @@ from conan.errors import ConanException
 from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save, load
 
-CONAN_CENTER_CATALOG_NAME = "conan-center-catalog"
+CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
 
 
 class AuditAPI:
@@ -114,7 +114,7 @@ class AuditAPI:
 def _load_providers(providers_path, providers_auth_path):
     if not os.path.exists(providers_path):
         default_providers = {
-            CONAN_CENTER_CATALOG_NAME: {
+            CONAN_CENTER_AUDIT_PROVIDER_NAME: {
                 "url": "https://conancenter-stg-api.jfrog.team/api/v1/query",
                 "type": "conan-center-proxy"
             }

@@ -2,7 +2,7 @@ import textwrap
 
 import requests
 
-from conan.api.output import ConanOutput
+from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
 
@@ -17,13 +17,26 @@ class ConanProxyProvider:
 
     def get_cves(self, refs):
         if not self.token:
-            raise ConanException(textwrap.dedent(f"""
-                You dont have a token for the service, go register here https://conancenter-stg-api.jfrog.team/, and once you have, run:
+            from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
+            if self.name == CONAN_CENTER_AUDIT_PROVIDER_NAME:
+                output = ConanOutput()
 
-                conan audit auth-provider conan-center-catalog –-token=<mytoken>
+                output.write("\n")
+                output.write("Authentication required for the CVE provider: ", fg=Color.BRIGHT_RED, newline=False)
+                output.write(f"'{self.name}'\n", fg=Color.BRIGHT_WHITE)
 
-                And rerun this command
-            """))
+                output.write("\nTo resolve, please:\n")
+                output.write("  1. Visit: ", fg=Color.BRIGHT_WHITE, newline=False)
+                output.write("https://conancenter-stg-api.jfrog.team/\n", fg=Color.BRIGHT_BLUE)
+                output.write("  2. Register and obtain your token.\n", fg=Color.BRIGHT_WHITE)
+                output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
+
+                output.write(f"\n     conan audit provider --auth {self.name}  --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
+
+                output.write("\nOnce authenticated, re-run the command.\n\n")
+
+            raise ConanException("Missing authentication token. Please authenticate and retry.")
+
 
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json",
@@ -47,9 +60,29 @@ class ConanProxyProvider:
                 ConanOutput().error(f"Authentication error: {response.status_code}")
                 break
             elif response.status_code == 429:
+                reset_seconds = int(response.headers.get("x-ratelimit-reset", 0))
+                reset_in_hours = reset_seconds // 3600
+                reset_in_minutes = (reset_seconds % 3600) // 60
 
-                msg = "Rate limit exceeded. Results may be incomplete."
-                ConanOutput().warning(msg)
+                output = ConanOutput()
+                output.write("\n")
+                output.warning("Rate Limit Exceeded!\n")
+
+                if reset_in_hours > 0:
+                    output.write(
+                        f"You have exceeded the number of allowed requests. The limit will reset in {reset_in_hours} hour{'s' if reset_in_hours > 1 else ''} and {reset_in_minutes} minute{'s' if reset_in_minutes > 1 else ''}.\n",
+                        fg=Color.BRIGHT_WHITE,
+                    )
+                else:
+                    output.write(
+                        f"You have exceeded the number of allowed requests. The limit will reset in {reset_in_minutes} minute{'s' if reset_in_minutes > 1 else ''}.\n",
+                        fg=Color.BRIGHT_WHITE,
+                    )
+
+                output.write("For more information, visit: ", fg=Color.BRIGHT_WHITE, newline=False)
+                output.write("https://marketing-page-with-some-offering", newline=True, fg=Color.BRIGHT_BLUE)
+                output.write("\n")
+                ConanOutput().error("Rate limit exceeded.\n")
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user

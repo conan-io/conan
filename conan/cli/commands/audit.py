@@ -6,7 +6,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.input import UserInput
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import cli_out_write, Color, ConanOutput
-from conan.api.subapi.audit import CONAN_CENTER_CATALOG_NAME
+from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -106,10 +106,8 @@ def text_vuln_formatter(data_json):
     for line in summary_lines:
         cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
-    cli_out_write(
-        "\nVulnerability information provided by JFrog (https://jfrog.com/help/r/jfrog-catalog/jfrog-catalog)\n",
-        fg=Color.BRIGHT_WHITE
-    )
+    cli_out_write("\nVulnerability information provided by JFrog. Please check ", fg=Color.BRIGHT_GREEN)
+    cli_out_write("https://jfrog.com/advanced-security/ for more information.\n", fg=Color.BRIGHT_GREEN)
 
 def json_vuln_formatter(data):
     cli_out_write(json.dumps(data, indent=4))
@@ -156,7 +154,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     if deps_graph.error:
         return {"error": deps_graph.error}
 
-    provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_CATALOG_NAME)
+    provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
     vulnerabilities = conan_api.audit.scan(deps_graph, provider)
 
     return vulnerabilities
@@ -167,27 +165,12 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List the vulnerabilities of the given reference.
     """
-    subparser.add_argument("reference", help="Reference to list vulnerabilities for", nargs="?")
-    subparser.add_argument("--sbom", help="Path to the SBOM file")
+    subparser.add_argument("reference", help="Reference to list vulnerabilities for")
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
-    if args.sbom and args.reference:
-        raise ConanException("Cannot use both reference and SBOM file at the same time")
-
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_CATALOG_NAME)
-
-    if args.sbom:
-        with open(args.sbom, "r") as f:
-            sbom = json.load(f)
-        vulnerabilities = []
-        for package in sbom["components"]:
-            reference = f"{package['name']}/{package['version']}"
-            print(reference)
-            result = conan_api.audit.list(reference, provider)
-            vulnerabilities.extend(result)
-    else:
-        vulnerabilities = conan_api.audit.list(args.reference, provider)
+    vulnerabilities = conan_api.audit.list(args.reference, provider)
 
     return vulnerabilities
 
@@ -214,7 +197,7 @@ def audit_provider(conan_api, parser, subparser, *args):
 
     subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
-    subparser.add_argument("--type", help="Provider type", choices=["catalog", "private", "osv"])
+    subparser.add_argument("--type", help="Provider type", choices=["catalog", "private"])
     subparser.add_argument("--token", help="Provider token")
     args = parser.parse_args(*args)
 
