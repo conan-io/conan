@@ -19,13 +19,6 @@ from conan.errors import ConanException
 
 
 def cppstd_compat(conanfile):
-    # Ensure the old version of the compatibility plugin is not present,
-    # the cppstd_compat function should live in this file
-    try:
-        from cppstd_compat import cppstd_compat
-        conanfile.output.warning("The 'cppstd_compat' plugin should be moved to the main compatibility.py file.")
-    except ImportError:
-        pass
     # It will try to find packages with all the cppstd versions
     extension_properties = getattr(conanfile, "extension_properties", {})
     compiler = conanfile.settings.get_safe("compiler")
