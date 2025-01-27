@@ -235,6 +235,9 @@ def test_config_clean(storage_path):
     assert os.path.exists(os.path.join(tc.cache_folder, "extensions"))
     assert not os.path.exists(os.path.join(tc.cache_folder, "extensions", "compatibility", "mycomp.py"))
     assert os.path.exists(absolut_storage_path)
+    tc.run("create .", assert_error=True)
+    tc.run("profile detect")
+    tc.run("create .")
 
 
 def test_config_reinit():
