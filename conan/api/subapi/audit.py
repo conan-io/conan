@@ -105,9 +105,8 @@ class AuditAPI:
         providers = _load_providers(self._providers_path, self._providers_auth_path)
 
         assert provider.name in providers
-        # TODO: Store this somewhere else
         providers[provider.name]["token"] = token
-        provider["token"] = token
+        setattr(provider, "token", token)
         _save_providers(self._providers_path, self._providers_auth_path, providers)
 
 
@@ -125,16 +124,15 @@ def _load_providers(providers_path, providers_auth_path):
 
     providers_template = jinja2.Template(load(providers_path))
     providers = json.loads(providers_template.render(os=os))
-
     providers_tokens = json.loads(load(providers_auth_path))
-    for provider in providers.values():
-        if provider["name"] in providers_tokens:
-            provider["token"] = providers_tokens[provider["name"]]
+    for provider_name, provider in providers.items():
+        if provider_name in providers_tokens:
+            provider["token"] = providers_tokens[provider_name]
     return providers
 
 
 def _save_providers(providers_path, providers_auth_path, providers):
-    tokens = {name: getattr(provider, "token", None) for name, provider in providers.items()}
+    tokens = {name: provider.get("token", None) for name, provider in providers.items()}
     save(providers_auth_path, json.dumps(tokens))
 
     # Remove token before saving
