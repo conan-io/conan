@@ -1,6 +1,8 @@
 import json
 import os
 
+import jinja2
+
 from conan.internal.api.audit.providers import ConanProxyProvider, PrivateProvider, OSVProvider
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import RecipeReference
@@ -18,11 +20,12 @@ class AuditAPI:
         self.conan_api = conan_api
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
+        self._providers_auth_path = os.path.join(self._home_folder, "audit_providers_auth.json")
         self._provider_cls = {
             # TODO: Temp names, find better ones (specially, no mention of catalog)
             "conan-center-proxy": ConanProxyProvider,
             "private": PrivateProvider,
-            "osv": OSVProvider,
+            # "osv": OSVProvider,
         }
 
     def scan(self, deps_graph, provider):
@@ -46,7 +49,7 @@ class AuditAPI:
         Get the provider by name.
         """
         # TODO: More work remains to be done here, hardcoded for now for testing
-        providers = _load_providers(self._providers_path)
+        providers = _load_providers(self._providers_path, self._providers_auth_path)
         if provider_name not in providers:
             raise ConanException(f"Provider '{provider_name}' not found")
 
@@ -59,7 +62,7 @@ class AuditAPI:
         """
         Get all available providers.
         """
-        providers = _load_providers(self._providers_path)
+        providers = _load_providers(self._providers_path, self._providers_auth_path)
         result = []
         for name, provider_data in providers.items():
             provider_cls = self._provider_cls.get(provider_data["type"])
@@ -71,7 +74,7 @@ class AuditAPI:
         """
         Add a provider.
         """
-        providers = _load_providers(self._providers_path)
+        providers = _load_providers(self._providers_path, self._providers_auth_path)
         if name in providers:
             raise ConanException(f"Provider '{name}' already exists")
 
@@ -87,7 +90,7 @@ class AuditAPI:
         if token:
             # TODO: Store the token in a different file/place
             providers[name]["token"] = token
-        _save_providers(self._providers_path, providers)
+        _save_providers(self._providers_path, self._providers_auth_path, providers)
 
     # TODO: Should this be a provider, or just its name?
     #   Do we want users to call get_provider beforehand or should we handle it here?
@@ -99,15 +102,16 @@ class AuditAPI:
         if not provider:
             raise ConanException("Provider not found")
 
-        providers = _load_providers(self._providers_path)
+        providers = _load_providers(self._providers_path, self._providers_auth_path)
 
         assert provider.name in providers
         # TODO: Store this somewhere else
         providers[provider.name]["token"] = token
-        _save_providers(self._providers_path, providers)
+        provider["token"] = token
+        _save_providers(self._providers_path, self._providers_auth_path, providers)
 
 
-def _load_providers(providers_path):
+def _load_providers(providers_path, providers_auth_path):
     if not os.path.exists(providers_path):
         default_providers = {
             CONAN_CENTER_CATALOG_NAME: {
@@ -116,7 +120,24 @@ def _load_providers(providers_path):
             }
         }
         save(providers_path, json.dumps(default_providers, indent=4))
-    return json.loads(load(providers_path))
+    if not os.path.exists(providers_auth_path):
+        save(providers_auth_path, json.dumps({}))
 
-def _save_providers(providers_path, providers):
+    providers_template = jinja2.Template(load(providers_path))
+    providers = json.loads(providers_template.render(os=os))
+
+    providers_tokens = json.loads(load(providers_auth_path))
+    for provider in providers.values():
+        if provider["name"] in providers_tokens:
+            provider["token"] = providers_tokens[provider["name"]]
+    return providers
+
+
+def _save_providers(providers_path, providers_auth_path, providers):
+    tokens = {name: getattr(provider, "token", None) for name, provider in providers.items()}
+    save(providers_auth_path, json.dumps(tokens))
+
+    # Remove token before saving
+    for provider in providers.values():
+        provider.pop("token", None)
     save(providers_path, json.dumps(providers, indent=4))
