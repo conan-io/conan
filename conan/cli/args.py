@@ -19,6 +19,10 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
     --build=missing:[pattern] Build from source if a compatible binary does not exist, only for
                               packages matching pattern.
+    --build=compatible:[pattern] (Experimental) Build from source if a compatible binary does not
+                                 exist, and the requested package is invalid, the closest package
+                                 binary following the defined compatibility policies (method and
+                                 compatibility.py)
 '''
 
 
