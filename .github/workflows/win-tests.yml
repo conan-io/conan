@@ -254,6 +254,13 @@ jobs:
           Write-Host "CONAN_TEST_FOLDER=$($env:CONAN_TEST_FOLDER)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+      - name: Debug environment
+        shell: pwsh
+        run: |
+          Write-Host "PATH = $env:PATH"
+          Write-Host "CONAN_TEST_FOLDER = $env:CONAN_TEST_FOLDER"
+          Write-Host "MSYS2_PATH = $env:MSYS2_PATH"
+
       - name: Run Functional Tests
         uses: ./.github/actions/test-coverage
         with:
