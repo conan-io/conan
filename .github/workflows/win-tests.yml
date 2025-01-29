@@ -268,7 +268,3 @@ jobs:
           test-type: functional
           tests: test/functional
           duration: 100
-        env:
-          CONAN_TEST_FOLDER: ${{ env.CONAN_TEST_FOLDER }}
-          MSYS2_PATH: ${{ env.MSYS2_PATH }}
-          PATH: ${{ env.PATH }}
