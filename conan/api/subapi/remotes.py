@@ -40,12 +40,12 @@ class RemotesAPI:
 
     def list(self, pattern=None, only_enabled=True):
         """
-        Obtain a list of ``Remote`` objects matching the pattern.
+        Obtain a list of :ref:`Remote <conan.api.model.Remote>` objects matching the pattern.
 
         :param pattern: ``None``, single ``str`` or list of ``str``. If it is ``None``,
           all remotes will be returned (equivalent to ``pattern="*"``).
         :param only_enabled: boolean, by default return only enabled remotes
-        :return: A list of ``Remote`` objects
+        :return: A list of :ref:`Remote <conan.api.model.Remote>` objects
 
         """
         remotes = _load(self._remotes_file)
@@ -61,7 +61,7 @@ class RemotesAPI:
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
-        :return: the list of disabled ``Remote`` objects  (even if they were already disabled)
+        :return: the list of disabled :ref:`Remote <conan.api.model.Remote>` objects  (even if they were already disabled)
         """
         remotes = _load(self._remotes_file)
         disabled = _filter(remotes, pattern, only_enabled=False)
@@ -79,7 +79,7 @@ class RemotesAPI:
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
-        :return: the list of enabled ``Remote`` objects (even if they were already enabled)
+        :return: the list of enabled :ref:`Remote <conan.api.model.Remote>` objects (even if they were already enabled)
         """
         remotes = _load(self._remotes_file)
         enabled = _filter(remotes, pattern, only_enabled=False)
@@ -93,10 +93,10 @@ class RemotesAPI:
 
     def get(self, remote_name):
         """
-        Obtain a ``Remote`` object
+        Obtain a :ref:`Remote <conan.api.model.Remote>` object
 
         :param remote_name: the exact name of the remote to be returned
-        :return: the ``Remote`` object, or raise an Exception if the remote does not exist.
+        :return: the :ref:`Remote <conan.api.model.Remote>` object, or raise an Exception if the remote does not exist.
         """
         remotes = _load(self._remotes_file)
         try:
@@ -106,11 +106,11 @@ class RemotesAPI:
 
     def add(self, remote: Remote, force=False, index=None):
         """
-        Add a new ``Remote`` object to the existing ones
+        Add a new :ref:`Remote <conan.api.model.Remote>` object to the existing ones
 
 
-        :param remote: a ``Remote`` object to be added
-        :param force: do not fail if the remote already exist (but default it failes)
+        :param remote: a :ref:`Remote <conan.api.model.Remote>` object to be added
+        :param force: do not fail if the remote already exist (but default it fails)
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
@@ -143,7 +143,7 @@ class RemotesAPI:
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
-        :return: The list of removed ``Remote`` objects
+        :return: The list of removed :ref:`Remote <conan.api.model.Remote>` objects
         """
         remotes = _load(self._remotes_file)
         removed = _filter(remotes, pattern, only_enabled=False)
@@ -220,7 +220,7 @@ class RemotesAPI:
         """
         Perform user authentication against the given remote with the provided username and password
 
-        :param remote: a ``Remote`` object
+        :param remote: a :ref:`Remote <conan.api.model.Remote>` object
         :param username: the user login as ``str``
         :param password: password ``str``
         """
@@ -229,9 +229,9 @@ class RemotesAPI:
 
     def user_logout(self, remote: Remote):
         """
-        Logout from the given ``Remote``
+        Logout from the given :ref:`Remote <conan.api.model.Remote>`
 
-        :param remote: The ``Remote`` object to logout
+        :param remote: The :ref:`Remote <conan.api.model.Remote>` object to logout
         """
         localdb = LocalDB(self._home_folder)
         # The localdb only stores url + username + token, not remote name, so use URL as key

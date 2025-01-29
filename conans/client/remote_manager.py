@@ -187,7 +187,7 @@ class RemoteManager:
             raise
 
     def search_recipes(self, remote, pattern):
-        cached_method = remote.caching.setdefault("search_recipes", {})
+        cached_method = remote._caching.setdefault("search_recipes", {})
         try:
             return cached_method[pattern]
         except KeyError:
@@ -241,7 +241,7 @@ class RemoteManager:
             if options:
                 headers['Conan-PkgID-Options'] = ';'.join(options)
 
-        cached_method = remote.caching.setdefault("get_latest_package_reference", {})
+        cached_method = remote._caching.setdefault("get_latest_package_reference", {})
         try:
             return cached_method[pref]
         except KeyError:

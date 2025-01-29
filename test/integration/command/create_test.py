@@ -488,11 +488,11 @@ def test_create_format_json():
         '1': {'ref': 'hello/0.1', 'run': False, 'libs': True, 'skip': False,
               'test': False, 'force': False, 'direct': True, 'build': False,
               'transitive_headers': None, 'transitive_libs': None, 'headers': True,
-              'package_id_mode': None, 'visible': True},
+              'package_id_mode': None, 'visible': True, 'require': 'hello/0.1'},
         '2': {'ref': 'pkg/0.2', 'run': False, 'libs': True, 'skip': False, 'test': False,
               'force': False, 'direct': False, 'build': False, 'transitive_headers': None,
               'transitive_libs': None, 'headers': True, 'package_id_mode': None,
-              'visible': True}
+              'visible': True, 'require': 'pkg/0.2'}
     }
     assert consumer_info["dependencies"] == consumer_deps
     # hello/0.1 pkg information
@@ -505,7 +505,7 @@ def test_create_format_json():
             "ref": "pkg/0.2", "run": False, "libs": True, "skip": False, "test": False,
             "force": False, "direct": True, "build": False, "transitive_headers": None,
             "transitive_libs": None, "headers": True, "package_id_mode": "semver_mode",
-            "visible": True
+            "visible": True, 'require': 'pkg/0.2'
         }
     }
     assert hello_pkg_info["dependencies"] == hello_pkg_info_deps
