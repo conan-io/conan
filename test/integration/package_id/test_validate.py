@@ -699,7 +699,7 @@ class TestValidateCppstd:
         assert "compiler.cppstd=14" in client.out
         assert "compiler.cppstd=17" not in client.out
 
-    @pytest.mark.skipif(platform.system() == "Windows", "Needs at least 3 cppstd values available, msvc 191 does not")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Needs at least 3 cppstd values available, msvc 191 does not")
     def test_extension_properties_cppstd_compat_non_transitiveness(self):
         """
         The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
