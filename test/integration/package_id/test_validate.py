@@ -712,7 +712,7 @@ class TestValidateCppstd:
         tc.run("create dep -s=compiler.cppstd=20")
         tc.run("create . -s=compiler.cppstd=17")
 
-        tc.run("install --requires=app/1.0 -s=compiler.cppstd=11", assert_error=True)
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=14", assert_error=True)
         assert "dep/1.0: Found compatible package" in tc.out
         assert "ERROR: Missing binary: app/1.0" in tc.out
 
