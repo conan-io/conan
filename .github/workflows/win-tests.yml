@@ -254,8 +254,6 @@ jobs:
           Write-Host "CONAN_TEST_FOLDER=$($env:CONAN_TEST_FOLDER)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-          # Run tests in this step context to preserve fragile environment
-          pytest test/functional -n=auto --durations=100 ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
       - name: Run Functional Tests
         uses: ./.github/actions/test-coverage
         with:
