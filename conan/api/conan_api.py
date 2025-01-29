@@ -25,6 +25,11 @@ from conan.internal.model.version_range import validate_conan_version
 
 
 class ConanAPI:
+    """
+    This is the main object to interact with the Conan API. It provides all the subapis to work with
+    recipes, packages, remotes, etc., which are exposed as attributes of this class, and should
+    not be created directly.
+    """
     def __init__(self, cache_folder=None):
 
         version = sys.version_info
@@ -61,6 +66,9 @@ class ConanAPI:
         _check_conan_version(self)
 
     def reinit(self):
+        """
+        Reinitialize the Conan API. This is useful when the configuration changes.
+        """
         self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()

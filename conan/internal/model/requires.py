@@ -15,6 +15,7 @@ class Requirement:
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
+        self._required_ref = ref  # Store the original reference
         self._headers = headers  # This dependent node has headers that must be -I<headers-path>
         self._libs = libs
         self._build = build  # This dependent node is a build tool that runs at build time only
@@ -152,7 +153,8 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        result = {"ref": str(self.ref)}
+        result = {"ref": str(self.ref),
+                  "require": str(self._required_ref)}
         serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
                         "package_id_mode", "visible")

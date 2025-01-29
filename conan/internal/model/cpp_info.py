@@ -822,7 +822,7 @@ class CppInfo:
 
             for lib in self.libs:
                 c = _Component()  # Do not do a full clone, we don't need the properties
-                c.type = self.type  # This should be a string
+                c.type = self.type
                 c.includedirs = self.includedirs
                 c.libdirs = self.libdirs
                 c.bindirs = self.bindirs
