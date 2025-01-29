@@ -18,6 +18,7 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
 from conan.internal.cache.home_paths import HomePaths
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conans.util.files import load
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
@@ -36,6 +37,29 @@ class Cli:
         self._conan_api.command.cli = self
         self._groups = defaultdict(list)
         self._commands = {}
+
+    @staticmethod
+    def _warning_custom_commands_imports(custom_commands_path):
+        # Protect against usage of internal API
+        forbidden = ["from conan.internal", "from conan.tools", "from conan.test", "from conans"]
+        fails = {}
+        for root, _, fs in os.walk(custom_commands_path):
+            pyfiles = [os.path.join(root, f) for f in fs if f.endswith(".py")]
+            for f in pyfiles:
+                text = load(f)
+                for forbid in forbidden:
+                    if forbid in text:
+                        fails.setdefault(forbid, []).append(f)
+        if fails:
+            ConanOutput().warning("*" * 80)
+            for forbid, files in fails.items():
+                ConanOutput().warning(f"Forbidden internal import'{forbid}' in:")
+                for f in files:
+                    ConanOutput().warning(f"    {f}")
+            ConanOutput().warning("")
+            ConanOutput().warning("These imports will change in future releases")
+            ConanOutput().warning("Please, use only public documented API in docs.conan.io")
+            ConanOutput().warning("*" * 80)
 
     def add_commands(self):
         if Cli._builtin_commands is None:
@@ -60,6 +84,8 @@ class Cli:
         for custom_commands_path in custom_commands_folders:
             if not os.path.isdir(custom_commands_path):
                 return
+
+            self._warning_custom_commands_imports(custom_commands_path)
 
             sys.path.append(custom_commands_path)
             for module in pkgutil.iter_modules([custom_commands_path]):

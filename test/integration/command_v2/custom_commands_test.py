@@ -469,3 +469,26 @@ class TestCommandsRemoteCaching:
         c.run("mycache")
         # Does not break unexpectedly, caching is working
         assert "WARN: Cache invalidated, as expected: Invalid URL 'broken" in c.out
+
+
+class TestCustomCommandsImports:
+
+    def test_import_warning(self):
+        mycommand = textwrap.dedent("""
+            from conan.cli.command import conan_command
+            from conan.internal.paths import DATA_YML
+            from conans.util.files import load
+            from conan.api.output import ConanOutput
+
+            @conan_command()
+            def mycache(conan_api, parser, *args, **kwargs):
+                \""" this is a command with subcommands \"""
+                ConanOutput().info(f"DATA_YML: {DATA_YML}")
+            """)
+
+        c = TestClient()
+        c.save_home({"extensions/commands/cmd_mycache.py": mycommand})
+        c.run("mycache")
+        assert "WARN: Forbidden internal import'from conan.internal' in:" in c.out
+        assert "WARN: Forbidden internal import'from conans' in:" in c.out
+        assert "DATA_YML: conandata.yml"
