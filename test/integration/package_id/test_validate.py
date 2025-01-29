@@ -698,6 +698,25 @@ class TestValidateCppstd:
         assert "compiler.cppstd=14" in client.out
         assert "compiler.cppstd=17" not in client.out
 
+    def test_extension_properties_cppstd_compat_non_transitiveness(self):
+        """
+        The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
+        its dependencies will still be checked for compatibility
+        """
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
+                 "conanfile.py": GenConanfile("app", "1.0")
+                    .with_setting("compiler")
+                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                    .with_requirement("dep/1.0")})
+        tc.run("create dep -s=compiler.cppstd=20")
+        tc.run("create . -s=compiler.cppstd=17")
+
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=11", assert_error=True)
+        assert "dep/1.0: Found compatible package" in tc.out
+        assert "ERROR: Missing binary: app/1.0" in tc.out
+
+
 
 class TestCompatibleSettingsTarget(unittest.TestCase):
     """ aims to be a very close to real use case of tool being used across different settings_target
