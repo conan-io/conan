@@ -186,7 +186,7 @@ class GnuToolchain:
                     compiler = unix_path(self._conanfile, compiler)
                     ret[env_var] = compiler  # User/tools ones have precedence
         # Issue related: https://github.com/conan-io/conan/issues/15486
-        if self._is_cross_building and self._conanfile.conf_build:
+        if self._is_cross_building and getattr(self._conanfile, 'conf_build', False):
             compilers_build_mapping = (
                 self._conanfile.conf_build.get("tools.build:compiler_executables", default={},
                                                check_type=dict)

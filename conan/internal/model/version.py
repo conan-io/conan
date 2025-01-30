@@ -1,4 +1,5 @@
 from functools import total_ordering
+from typing import Optional
 
 from conan.errors import ConanException
 
@@ -193,3 +194,8 @@ class Version:
                     return self._nonzero_items < other._nonzero_items
             else:  # None of them is pre-release
                 return (self._nonzero_items, self._build) < (other._nonzero_items, other._build)
+
+    def in_range(self, version_range: str, resolve_prerelease: Optional[bool] = None):
+        """ Check if the version is in the specified range """
+        from conan.internal.model.version_range import VersionRange
+        return VersionRange(version_range).contains(self, resolve_prerelease=resolve_prerelease)

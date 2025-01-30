@@ -1,23 +1,12 @@
 name: Linux tests
 
 on:
-  push:
-    branches:
-      - develop2
-      - release/*
-  pull_request:
-    branches:
-      - '*'
-      - 'release/*'
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   build_container:
     runs-on: ubuntu-latest
+    name: Build Linux container
     outputs:
       image_tag: ${{ steps.dockerfile_hash.outputs.tag }}
     steps:
@@ -52,7 +41,7 @@ jobs:
           docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} -f ./.ci/docker/conan-tests .
           docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }}
 
-  linux_test_suite:
+  linux_tests:
     needs: build_container
     runs-on: ubuntu-latest
     container:
@@ -60,9 +49,16 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: ['3.12.3', '3.9.2', '3.8.6', '3.6.15']
-        test-type: ['unittests', 'integration', 'functional']
-    name: Conan ${{ matrix.test-type }} (${{ matrix.python-version }})
+        python-version: [3.12.3, 3.9.2, 3.8.6, 3.6.15]
+        test-type: [unittests, integration, functional]
+        include:
+        - test-type: unittests
+          test-name: Unit
+        - test-type: integration
+          test-name: Integration
+        - test-type: functional
+          test-name: Functional
+    name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,23 +83,20 @@ jobs:
           pip install meson
 
       - name: Run tests
-        shell: bash
-        run: |
-          if [ "${{ matrix.test-type }}" == "unittests" ]; then
-            pytest test/unittests --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "integration" ]; then
-            pytest test/integration --durations=20 -n 4
-          elif [ "${{ matrix.test-type }}" == "functional" ]; then
-            pytest test/functional --durations=20 -n 4
-          fi
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}
+          duration: 20
 
   linux_docker_tests:
     needs: build_container
     runs-on: ubuntu-latest
-    name: Docker Runner Tests
     strategy:
       matrix:
         python-version: [3.12, 3.9]
+    name: Docker Runner Tests (${{ matrix.python-version }})
     steps:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -122,50 +115,10 @@ jobs:
           pip install -r conans/requirements_runner.txt
 
       - name: Run tests
-        shell: bash
-        run: |
-          pytest -m docker_runner --durations=20 -rs
-
-  deploy_to_pypi_test:
-    needs: [build_container, linux_test_suite, linux_docker_tests]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop2'
-    name: Deploy to TestPyPI
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/test-coverage
         with:
-          python-version: '3.9'
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install twine
-
-      - name: Bump Dev Version
-        run: |
-          python .ci/bump_dev_version.py
-
-      - name: Build Package
-        run: |
-          python setup.py sdist
-
-      - name: Upload to TestPyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
-        run: |
-          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
-
-      - name: Deploy conan-server to TestPyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.TEST_PYPI_SERVER_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_SERVER_PASSWORD }}
-        run: |
-          rm -rf dist/
-          mv setup_server.py setup.py
-          python setup.py sdist
-          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+          python-version: ${{ matrix.python-version }}
+          test-type: docker
+          tests: '-m docker_runner -rs'
+          duration: 20
+          workers: 1

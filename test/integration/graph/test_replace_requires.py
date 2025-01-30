@@ -375,3 +375,315 @@ def test_replace_requires_multiple():
     # There are actually 2 dependencies, pointing to the same node
     assert "libepoxy/0.1: DEP: opengl: libgl" in c.out
     assert "libepoxy/0.1: DEP: egl: libgl" in c.out
+
+
+class TestReplaceRequiresTransitiveGenerators:
+    """ Generators are incorrectly managing replace_requires
+    # https://github.com/conan-io/conan/issues/17557
+    """
+
+    @pytest.mark.parametrize("diamond", [True, False])
+    def test_no_components(self, diamond):
+        c = TestClient()
+        zlib_ng = textwrap.dedent("""
+            from conan import ConanFile
+            class ZlibNG(ConanFile):
+                name = "zlib-ng"
+                version = "0.1"
+                package_type = "static-library"
+                def package_info(self):
+                    self.cpp_info.libs = ["zlib"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/zlib.lib"
+                    self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+                    self.cpp_info.set_property("pkg_config_name", "ZLIB")
+            """)
+        openssl = textwrap.dedent("""
+            from conan import ConanFile
+            class openssl(ConanFile):
+                name = "openssl"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "zlib/0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["crypto"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/crypto.lib"
+                    self.cpp_info.requires = ["zlib::zlib"]
+            """)
+        zlib = '"zlib/0.1"' if diamond else ""
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class App(ConanFile):
+                name = "app"
+                version = "0.1"
+                settings = "build_type"
+                requires = "openssl/0.1", {zlib}
+                package_type = "application"
+                generators = "CMakeDeps", "PkgConfigDeps"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            build_type = Release
+
+            [replace_requires]
+            zlib/0.1: zlib-ng/0.1
+            """)
+        c.save({"zlibng/conanfile.py": zlib_ng,
+                "openssl/conanfile.py": openssl,
+                "app/conanfile.py": conanfile,
+                "profile": profile})
+
+        c.run("create zlibng")
+        c.run("create openssl -pr=profile")
+        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl.pc")
+        assert 'Requires: ZLIB' in pc_content
+
+        cmake = c.load("app/ZLIB-Targets-release.cmake")
+        assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
+
+        cmake = c.load("app/openssl-Targets-release.cmake")
+        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
+        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+
+    @pytest.mark.parametrize("diamond", [True, False])
+    def test_openssl_components(self, diamond):
+        c = TestClient()
+        zlib_ng = textwrap.dedent("""
+            from conan import ConanFile
+            class ZlibNG(ConanFile):
+                name = "zlib-ng"
+                version = "0.1"
+                package_type = "static-library"
+                def package_info(self):
+                    self.cpp_info.libs = ["zlib"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/zlib.lib"
+                    self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
+                    self.cpp_info.set_property("pkg_config_name", "ZLIB")
+            """)
+        openssl = textwrap.dedent("""
+            from conan import ConanFile
+            class openssl(ConanFile):
+                name = "openssl"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "zlib/0.1"
+                def package_info(self):
+                    self.cpp_info.components["crypto"].libs = ["crypto"]
+                    self.cpp_info.components["crypto"].type = "static-library"
+                    self.cpp_info.components["crypto"].location = "lib/crypto.lib"
+                    self.cpp_info.components["crypto"].requires = ["zlib::zlib"]
+            """)
+        zlib = '"zlib/0.1"' if diamond else ""
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class App(ConanFile):
+                name = "app"
+                version = "0.1"
+                settings = "build_type"
+                requires = "openssl/0.1", {zlib}
+                package_type = "application"
+                generators = "CMakeDeps", "PkgConfigDeps"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            build_type = Release
+
+            [replace_requires]
+            zlib/0.1: zlib-ng/0.1
+            """)
+        c.save({"zlibng/conanfile.py": zlib_ng,
+                "openssl/conanfile.py": openssl,
+                "app/conanfile.py": conanfile,
+                "profile": profile})
+
+        c.run("create zlibng")
+        c.run("create openssl -pr=profile")
+        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl-crypto.pc")
+        assert 'Requires: ZLIB' in pc_content
+
+        cmake = c.load("app/ZLIB-Targets-release.cmake")
+        assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
+
+        cmake = c.load("app/openssl-Targets-release.cmake")
+        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
+        assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+
+    @pytest.mark.parametrize("diamond", [True, False])
+    @pytest.mark.parametrize("explicit_requires", [True, False])
+    def test_zlib_components(self, diamond, explicit_requires):
+        c = TestClient()
+        zlib_ng = textwrap.dedent("""
+            from conan import ConanFile
+            class ZlibNG(ConanFile):
+                name = "zlib-ng"
+                version = "0.1"
+                package_type = "static-library"
+                def package_info(self):
+                    self.cpp_info.components["myzlib"].libs = ["zlib"]
+                    self.cpp_info.components["myzlib"].type = "static-library"
+                    self.cpp_info.components["myzlib"].location = "lib/zlib.lib"
+                    self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("pkg_config_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("cmake_target_name",
+                                                                    "ZLIB::ZLIB")
+            """)
+        openssl = textwrap.dedent(f"""
+            from conan import ConanFile
+            class openssl(ConanFile):
+                name = "openssl"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "zlib/0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["crypto"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/crypto.lib"
+                    if {explicit_requires}:
+                        self.cpp_info.requires = ["zlib::zlib"]
+            """)
+        zlib = '"zlib/0.1"' if diamond else ""
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class App(ConanFile):
+                name = "app"
+                version = "0.1"
+                settings = "build_type"
+                requires = "openssl/0.1", {zlib}
+                package_type = "application"
+                generators = "CMakeDeps", "PkgConfigDeps"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            build_type = Release
+
+            [replace_requires]
+            zlib/0.1: zlib-ng/0.1
+            """)
+        c.save({"zlibng/conanfile.py": zlib_ng,
+                "openssl/conanfile.py": openssl,
+                "app/conanfile.py": conanfile,
+                "profile": profile})
+
+        c.run("create zlibng")
+        c.run("create openssl -pr=profile")
+        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/zlib-ng.pc")
+        assert 'Requires: ZLIB' in pc_content
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl.pc")
+        assert 'Requires: zlib-ng' in pc_content
+
+        cmake = c.load("app/ZLIB-Targets-release.cmake")
+        assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
+
+        cmake = c.load("app/openssl-Targets-release.cmake")
+        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
+        # It should access the generic zlib-ng target
+        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+               '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
+
+    @pytest.mark.parametrize("diamond", [True, False])
+    @pytest.mark.parametrize("package_requires", [False, True])
+    def test_both_components(self, diamond, package_requires):
+        c = TestClient()
+        zlib_ng = textwrap.dedent("""
+            from conan import ConanFile
+            class ZlibNG(ConanFile):
+                name = "zlib-ng"
+                version = "0.1"
+                package_type = "static-library"
+                def package_info(self):
+                    self.cpp_info.components["myzlib"].libs = ["zlib"]
+                    self.cpp_info.components["myzlib"].type = "static-library"
+                    self.cpp_info.components["myzlib"].location = "lib/zlib.lib"
+                    self.cpp_info.set_property("cmake_file_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("pkg_config_name", "ZLIB")
+                    self.cpp_info.components["myzlib"].set_property("cmake_target_name",
+                                                                    "ZLIB::ZLIB")
+            """)
+        openssl = textwrap.dedent(f"""
+            from conan import ConanFile
+            class openssl(ConanFile):
+                name = "openssl"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "zlib/0.1"
+                def package_info(self):
+                    self.cpp_info.components["crypto"].libs = ["crypto"]
+                    self.cpp_info.components["crypto"].type = "static-library"
+                    self.cpp_info.components["crypto"].location = "lib/crypto.lib"
+                    if {package_requires}:
+                        self.cpp_info.components["crypto"].requires = ["zlib::zlib"]
+                    else:
+                        self.cpp_info.components["crypto"].requires = ["zlib::myzlib"]
+            """)
+        zlib = '"zlib/0.1"' if diamond else ""
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class App(ConanFile):
+                name = "app"
+                version = "0.1"
+                settings = "build_type"
+                requires = "openssl/0.1", {zlib}
+                package_type = "application"
+                generators = "CMakeDeps", "PkgConfigDeps"
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            build_type = Release
+
+            [replace_requires]
+            zlib/0.1: zlib-ng/0.1
+            """)
+        c.save({"zlibng/conanfile.py": zlib_ng,
+                "openssl/conanfile.py": openssl,
+                "app/conanfile.py": conanfile,
+                "profile": profile})
+
+        c.run("create zlibng")
+        c.run("create openssl -pr=profile")
+        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        assert "zlib/0.1: zlib-ng/0.1" in c.out
+
+        pc_content = c.load("app/zlib-ng.pc")
+        assert 'Requires: ZLIB' in pc_content
+        pc_content = c.load("app/ZLIB.pc")
+        assert 'Libs: -L"${libdir}" -lzlib' in pc_content
+        pc_content = c.load("app/openssl-crypto.pc")
+        assert f'Requires: {"zlib-ng" if package_requires else "ZLIB"}' in pc_content
+
+        cmake = c.load("app/ZLIB-Targets-release.cmake")
+        assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
+
+        cmake = c.load("app/openssl-Targets-release.cmake")
+        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
+        if package_requires:
+            # The generic package requirement uses the package name zlib-ng
+            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+                   '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
+        else:
+            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
+                   '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake

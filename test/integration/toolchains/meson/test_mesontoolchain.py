@@ -98,10 +98,10 @@ def test_extra_flags_via_conf():
 
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
-    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4', '-Ddefine1=0']" in content
-    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
-    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+    assert "cpp_args = ['-flag0', '-other=val', '-m64', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
+    assert "c_args = ['-flag0', '-other=val', '-m64', '-flag3', '-flag4', '-Ddefine1=0']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
 
 
 def test_extra_flags_via_toolchain():
@@ -138,10 +138,32 @@ def test_extra_flags_via_toolchain():
             "profile": profile})
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
-    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4', '-Ddefine1=0']" in content
-    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
-    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+    assert "cpp_args = ['-flag0', '-other=val', '-m64', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
+    assert "c_args = ['-flag0', '-other=val', '-m64', '-flag3', '-flag4', '-Ddefine1=0']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
+
+
+def test_custom_arch_flag_via_toolchain():
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.arch_flag = "-mmy-flag"
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert re.search(r"c_args =.+-mmy-flag.+", content)
+    assert re.search(r"c_link_args =.+-mmy-flag.+", content)
+    assert re.search(r"cpp_args =.+-mmy-flag.+", content)
+    assert re.search(r"cpp_link_args =.+-mmy-flag.+", content)
+
 
 
 def test_linker_scripts_via_conf():
@@ -169,8 +191,8 @@ def test_linker_scripts_via_conf():
 
     t.run("install . -pr:b=profile -pr=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
-    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
 
 
 def test_correct_quotes():
