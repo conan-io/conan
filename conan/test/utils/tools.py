@@ -288,7 +288,7 @@ class TestRequester:
         return requests.codes
 
 
-class TestServer(object):
+class TestServer:
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):
@@ -298,6 +298,7 @@ class TestServer(object):
 
              'users':  {username: plain-text-passwd}
         """
+        __test__ = False
         # Unique identifier for this server, will be used by TestRequester
         # to determine where to call. Why? remote_manager just assing an url
         # to the rest_client, so rest_client doesn't know about object instances,
