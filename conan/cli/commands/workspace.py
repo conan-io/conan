@@ -164,6 +164,46 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.local.build(conanfile)
 
 
+@conan_subcommand()
+def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Build the current workspace, starting from the "products"
+    """
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    # Basic collaborators: remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None,
+                                               partial=args.lockfile_partial, overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    editables = conan_api.workspace.editable_packages
+    requires = [ref for ref in editables]
+    deps_graph = conan_api.graph.load_graph_requires(requires, [],
+                                                     profile_host, profile_build, lockfile,
+                                                     remotes, args.build, args.update)
+    deps_graph.report_graph_error()
+    print_graph_basic(deps_graph)
+
+    conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
+
+    ConanOutput().subtitle("Collapsed graph")
+    deps_graph.report_graph_error()
+    print_graph_basic(deps_graph)
+
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(deps_graph)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+    conan_api.install.install_consumer(deps_graph, None, ws_folder, None)
+
+
 @conan_command(group="Consumer")
 def workspace(conan_api, parser, *args):
     """

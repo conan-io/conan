@@ -395,11 +395,41 @@ class TestWorkspaceBuild:
         assert "There are no products defined in the workspace, can't build" in c.out
 
 
-def test_new():
-    # Very basic workspace for testing
-    c = TestClient()
-    c.run("new workspace")
-    c.run("workspace info")
-    assert "liba/0.1" in c.out
-    assert "libb/0.1" in c.out
-    assert "app1/0.1" in c.out
+class TestNew:
+    def test_new(self):
+        # Very basic workspace for testing
+        c = TestClient(light=True)
+        c.run("new workspace")
+        assert 'name = "liba"' in c.load("liba/conanfile.py")
+        c.run("workspace info")
+        assert "liba/0.1" in c.out
+        assert "libb/0.1" in c.out
+        assert "app1/0.1" in c.out
+
+    def test_new_dep(self):
+        c = TestClient(light=True)
+        c.run("new workspace -d requires=dep/0.1")
+        assert 'self.requires("dep/0.1")' in c.load("liba/conanfile.py")
+        assert 'name = "liba"' in c.load("liba/conanfile.py")
+        c.run("workspace info")
+        assert "liba/0.1" in c.out
+        assert "libb/0.1" in c.out
+        assert "app1/0.1" in c.out
+
+
+class TestMeta:
+    def test_meta_install(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile()})
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        c.save({"conanws.yml": "",
+                "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("dep1/0.1",
+                                                                               "dep2/0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1",
+                                                                               "dep1/0.1")},
+               clean_first=True)
+        c.run("workspace add liba")
+        c.run("workspace add libb")
+        c.run("workspace install")
+        print(c.out)

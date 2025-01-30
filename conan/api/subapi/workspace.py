@@ -1,12 +1,17 @@
 import os
 import shutil
+import types
 
+from conan import ConanFile
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conan.internal.workspace import Workspace
 from conan.tools.scm import Git
 from conan.errors import ConanException
-from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, CONTEXT_HOST, \
+    TransitiveRequirement, Node
+from conans.client.graph.profile_node_definer import consumer_definer
 from conans.client.source import retrieve_exports_sources
 from conan.api.model import RecipeReference
 from conans.util.files import merge_directories
@@ -107,3 +112,38 @@ class WorkspaceAPI:
 
     def editable_from_path(self, path):
         return self._workspace.editable_from_path(path)
+
+    def collapse_editables(self, deps_graph, profile_host, profile_build):
+        ConanOutput().title(f"Collapsing workspace editables")
+        conanfile = ConanFile(display_name="workspace root")
+
+        def layout(_self):
+            from conan.tools.cmake import cmake_layout
+            cmake_layout(_self)
+
+        conanfile.layout = types.MethodType(layout, conanfile)
+        consumer_definer(conanfile, profile_host, profile_build)
+        conanfile.generators = "CMakeToolchain", "CMakeDeps"
+        root_node = Node(None, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST,
+                         path=self.folder())
+        for node in deps_graph.nodes:
+            if node.recipe != RECIPE_EDITABLE:
+                continue
+            for r, t in node.transitive_deps.items():
+                if t.node.recipe == RECIPE_EDITABLE:
+                    continue
+                existing = root_node.transitive_deps.pop(r, None)
+                if existing is None:
+                    root_node.transitive_deps[r] = t
+                else:
+                    require = existing.require
+                    require.aggregate(r)
+                    root_node.transitive_deps[require] = TransitiveRequirement(require, t.node)
+
+        for r, t in root_node.transitive_deps.items():
+            deps_graph.add_edge(root_node, t.node, r)
+
+        # Now drop the root and the editables
+        deps_graph.nodes = [node for node in deps_graph.nodes[1:] if node.recipe != RECIPE_EDITABLE]
+        # And inject the new root
+        deps_graph.nodes.insert(0, root_node)
