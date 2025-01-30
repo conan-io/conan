@@ -179,8 +179,9 @@ class _PathGenerator:
                 continue
             previous = paths.get(req.ref.name)
             if previous:
-                self._conanfile.output.info(f"There is already a '{req.ref}' package "
-                                            f"contributing to {cmake_vars[dirs_name]}.")
+                self._conanfile.output.info(f"There is already a '{req.ref}' package contributing"
+                                            f" to {cmake_vars[dirs_name]}. Using the one"
+                                            f" defined by the context={dep.context}.")
             paths[req.ref.name] = cppinfo_dirs
         return [d for dirs in paths.values() for d in dirs]
 
@@ -240,8 +241,8 @@ class _PathGenerator:
 
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")
-        cmake_library_path = self._get_cmake_paths([(req, dep) for req, dep in host_req.items()], "libdirs")
-        cmake_include_path = self._get_cmake_paths([(req, dep) for req, dep in host_req.items()], "includedirs")
+        cmake_library_path = self._get_cmake_paths(host_req.items(), "libdirs")
+        cmake_include_path = self._get_cmake_paths(host_req.items(), "includedirs")
 
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
