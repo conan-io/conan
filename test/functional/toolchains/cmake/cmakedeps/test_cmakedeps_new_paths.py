@@ -171,7 +171,7 @@ class TestCMakeDepsPaths:
                     copy(self, "*.dll", self.source_folder, os.path.join(self.package_folder, "lib"))
         """)
         c.save({"conanfile.py": conanfile,
-                "hello.h": "", "libhello.lib": "", "libhello.a": "",
+                "hello.h": "", "hello.lib": "", "libhello.a": "",
                 "libhello.so": "", "libhello.dll": ""
         })
         c.run("create .")
