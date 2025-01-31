@@ -21,15 +21,15 @@ project(monorepo CXX)
 
 include(FetchContent)
 
-function(add_project PROJECT_PATH_AND_NAME)
-    message(STATUS "Adding project ${PROJECT_PATH_AND_NAME}")
+function(add_project SUBFOLDER)
+    message(STATUS "Adding project ${SUBFOLDER}")
     FetchContent_Declare(
-        ${PROJECT_PATH_AND_NAME}
-        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${PROJECT_PATH_AND_NAME}
+        ${SUBFOLDER}
+        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${SUBFOLDER}
         SYSTEM
         OVERRIDE_FIND_PACKAGE
     )
-    FetchContent_MakeAvailable(${PROJECT_PATH_AND_NAME})
+    FetchContent_MakeAvailable(${SUBFOLDER})
 endfunction()
 
 add_project(liba)
@@ -40,8 +40,25 @@ add_library(libb::libb ALIAS libb)
 add_project(app1)
 """
 
+conanfile = """\
+from conan import ConanFile
+from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+
+class MyWs(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
+"""
+
 workspace_files = {"conanws.yml": conanws_yml,
                    "CMakeLists.txt": cmake,
+                   "conanfile.py": conanfile,
                    ".gitignore": "build"}
 # liba
 files = {f"liba/{k}": v for k, v in cmake_lib_files.items()}

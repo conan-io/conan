@@ -183,6 +183,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
+    # Build a dependency graph with all editables as requirements
     editables = conan_api.workspace.editable_packages
     requires = [ref for ref in editables]
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
@@ -191,10 +192,14 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     deps_graph.report_graph_error()
     print_graph_basic(deps_graph)
 
-    conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
-
+    # Collapsing the graph
+    path = os.path.join(ws_folder, "conanfile.py")
+    if not os.path.exists(path):
+        raise ConanException("Workspace conanfile.py not found in the workspace folder")
+    root_node = conan_api.graph._load_root_consumer_conanfile(path, profile_host, profile_build,
+                                                              lockfile=lockfile, remotes=remotes)
+    conan_api.workspace.collapse_editables(root_node, deps_graph)
     ConanOutput().subtitle("Collapsed graph")
-    deps_graph.report_graph_error()
     print_graph_basic(deps_graph)
 
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,

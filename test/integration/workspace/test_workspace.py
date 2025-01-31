@@ -424,6 +424,7 @@ class TestMeta:
         c.run("create dep --name=dep1 --version=0.1")
         c.run("create dep --name=dep2 --version=0.1")
         c.save({"conanws.yml": "",
+                "conanfile.py": GenConanfile(),
                 "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("dep1/0.1",
                                                                                "dep2/0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1",
