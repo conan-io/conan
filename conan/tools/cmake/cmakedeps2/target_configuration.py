@@ -354,11 +354,18 @@ class TargetConfigurationTemplate2:
         # Requirement {{require_target}} => Full link: {{link}}
 
         {% if link %}
-        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
-                              "{{config_wrapper(config, require_target)}}")
+        # set property allows to append, and lib_info[requires] will iterate
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, require_target)}}")
         {% else %}
-        set_target_properties({{lib}} PROPERTIES IMPORTED_LINK_DEPENDENT_LIBRARIES_{{config}}
-                              {{require_target}})
+        if(${CMAKE_VERSION} VERSION_LESS "3.27")
+            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
+        endif()
+        # If the headers trait is not there, this will do nothing
+        target_link_libraries({{lib}} INTERFACE
+                              $<COMPILE_ONLY:{{config_wrapper(config, require_target)}}> )
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_LINK_DEPENDENT_LIBRARIES_{{config}}
+                     {{require_target}})
         {% endif %}
         {% endfor %}
         {% endif %}
