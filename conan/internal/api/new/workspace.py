@@ -15,8 +15,33 @@ products:
 - app1
 """
 
+cmake = """\
+cmake_minimum_required(VERSION 3.15)
+project(monorepo CXX)
+
+include(FetchContent)
+
+function(add_project PROJECT_PATH_AND_NAME)
+    message(STATUS "Adding project ${PROJECT_PATH_AND_NAME}")
+    FetchContent_Declare(
+        ${PROJECT_PATH_AND_NAME}
+        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${PROJECT_PATH_AND_NAME}
+        SYSTEM
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(${PROJECT_PATH_AND_NAME})
+endfunction()
+
+add_project(liba)
+# They should be defined in the liba/CMakeLists.txt, but we can fix it here
+add_library(liba::liba ALIAS liba)
+add_project(libb)
+add_library(libb::libb ALIAS libb)
+add_project(app1)
+"""
 
 workspace_files = {"conanws.yml": conanws_yml,
+                   "CMakeLists.txt": cmake,
                    ".gitignore": "build"}
 # liba
 files = {f"liba/{k}": v for k, v in cmake_lib_files.items()}
