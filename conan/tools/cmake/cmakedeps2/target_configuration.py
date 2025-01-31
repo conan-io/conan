@@ -73,10 +73,12 @@ class TargetConfigurationTemplate2:
                         # It must be the interface pkgname::pkgname target
                         assert required_pkg == required_comp
                         comp = None
+                        default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                     else:
                         comp = required_comp
+                        default_target = f"{required_pkg}::{required_comp}"
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
-                    dep_target = dep_target or f"{required_pkg}::{required_comp}"
+                    dep_target = dep_target or default_target
                     link = not (pkg_type is PackageType.SHARED and
                                 dep_comp.package_type is PackageType.SHARED)
                     result[dep_target] = link

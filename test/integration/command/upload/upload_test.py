@@ -12,8 +12,8 @@ from mock import patch
 from requests import Response
 
 from conan.errors import ConanException
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse

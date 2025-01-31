@@ -6,8 +6,7 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conan.internal.model.lockfile import Lockfile, LOCKFILE
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 @conan_command(group="Consumer")
@@ -68,17 +67,11 @@ def lock_merge(conan_api, parser, subparser, *args): # noqa
     Merge 2 or more lockfiles.
     """
     subparser.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                            help="Filename of the created lockfile")
 
     args = parser.parse_args(*args)
-
-    result = Lockfile()
-    for lockfile in args.lockfile:
-        lockfile = make_abs_path(lockfile)
-        graph_lock = Lockfile.load(lockfile)
-        result.merge(graph_lock)
-
+    result = conan_api.lockfile.merge_lockfiles(args.lockfile)
     lockfile_out = make_abs_path(args.lockfile_out)
     result.save(lockfile_out)
     ConanOutput().info("Generated lockfile: %s" % lockfile_out)
@@ -100,7 +93,7 @@ def lock_add(conan_api, parser, subparser, *args):
                            help='Add python-requires to lockfile')
     subparser.add_argument('--config-requires', action="append",
                            help='Add config-requires to lockfile')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                            help="Filename of the created lockfile")
     subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
     args = parser.parse_args(*args)
@@ -142,7 +135,7 @@ def lock_remove(conan_api, parser, subparser, *args):
                            help='Remove python-requires from lockfile')
     subparser.add_argument('--config-requires', action="append",
                            help='Remove config-requires from lockfile')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                            help="Filename of the created lockfile")
     subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
     args = parser.parse_args(*args)
@@ -170,7 +163,7 @@ def lock_update(conan_api, parser, subparser, *args):
                            help='Update python-requires from lockfile')
     subparser.add_argument('--config-requires', action="append",
                            help='Update config-requires from lockfile')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                            help="Filename of the created lockfile")
     subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
     args = parser.parse_args(*args)

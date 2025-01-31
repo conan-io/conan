@@ -37,9 +37,9 @@ from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.model.manifest import FileTreeManifest
-from conan.internal.model.package_ref import PkgReference
+from conan.api.model import PkgReference
 from conan.internal.model.profile import Profile
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.test.assets import copy_assets
 from conan.test.assets.genconanfile import GenConanfile
@@ -288,7 +288,9 @@ class TestRequester:
         return requests.codes
 
 
-class TestServer(object):
+class TestServer:
+    __test__ = False
+
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):

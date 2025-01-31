@@ -487,7 +487,7 @@ class _Component:
     def parsed_requires(self):
         return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
 
-    def _auto_deduce_locations(self, conanfile, component_name):
+    def _auto_deduce_locations(self, conanfile, library_name):
 
         def _lib_match_by_glob(dir_, filename):
             # Run a glob.glob function to find the file given by the filename
@@ -550,7 +550,7 @@ class _Component:
                 dll_location = _find_matching(bindirs, libname)
         else:
             lib_sanitized = re.escape(libname)
-            component_sanitized = re.escape(component_name)
+            component_sanitized = re.escape(library_name)
             regex_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
             regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
             regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
@@ -634,7 +634,7 @@ class _Component:
             raise ConanException(f"{name} has a library but .type {self._type} is not static/shared")
 
         # If no location is defined, it's time to guess the location
-        self._auto_deduce_locations(conanfile, component_name=component_name)
+        self._auto_deduce_locations(conanfile, library_name=component_name or conanfile.ref.name)
 
 
 class CppInfo:
@@ -815,26 +815,26 @@ class CppInfo:
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
+            common = self._package.clone()
+            common.libs = []
+            common.type = str(PackageType.HEADER)  # the type of components is a string!
+            result.components["_common"] = common
+
             for lib in self.libs:
                 c = _Component()  # Do not do a full clone, we don't need the properties
-                c.type = self.type  # This should be a string
+                c.type = self.type
                 c.includedirs = self.includedirs
                 c.libdirs = self.libdirs
                 c.bindirs = self.bindirs
                 c.libs = [lib]
+                c.requires = ["_common"]
                 result.components[f"_{lib}"] = c
-
-            common = self._package.clone()
-            common.libs = []
-            common.type = PackageType.HEADER  # the type of components is a string!
-            common.requires = list(result.components.keys()) + (self.requires or [])
-            result.components["_common"] = common
         else:
             result._package = self._package.clone()
             result.default_components = self.default_components
             result.components = {k: v.clone() for k, v in self.components.items()}
 
-        result._package.deduce_locations(conanfile, component_name=conanfile.ref.name)
+        result._package.deduce_locations(conanfile)
         for comp_name, comp in result.components.items():
             comp.deduce_locations(conanfile, component_name=comp_name)
 

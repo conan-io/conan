@@ -81,6 +81,15 @@ class LockfileAPI:
         return lockfile
 
     @staticmethod
+    def merge_lockfiles(lockfiles):
+        result = Lockfile()
+        for lockfile in lockfiles:
+            lockfile = make_abs_path(lockfile)
+            graph_lock = Lockfile.load(lockfile)
+            result.merge(graph_lock)
+        return result
+
+    @staticmethod
     def add_lockfile(lockfile=None, requires=None, build_requires=None, python_requires=None,
                      config_requires=None):
         if lockfile is None:

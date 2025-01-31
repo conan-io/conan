@@ -13,7 +13,7 @@ from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.options import Options
 from conan.internal.model.profile import Profile
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.config_parser import ConfigParser
 from conans.util.files import mkdir, load_user_encoded
 

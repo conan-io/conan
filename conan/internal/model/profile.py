@@ -4,7 +4,7 @@ from collections import OrderedDict, defaultdict
 from conan.tools.env.environment import ProfileEnvironment
 from conan.internal.model.conf import ConfDefinition
 from conan.internal.model.options import Options
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 class Profile:

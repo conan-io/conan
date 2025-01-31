@@ -1,7 +1,7 @@
 import pytest
 
 from conan.api.conan_api import ConanAPI
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 

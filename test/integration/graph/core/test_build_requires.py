@@ -5,7 +5,7 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphConflictError, GraphLoopError, GraphRuntimeError
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
 
