@@ -167,8 +167,13 @@ class TestCMakeDepsPaths:
                     copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
                     copy(self, "*.lib", self.source_folder, os.path.join(self.package_folder, "lib"))
                     copy(self, "*.a", self.source_folder, os.path.join(self.package_folder, "lib"))
+                    copy(self, "*.so", self.source_folder, os.path.join(self.package_folder, "lib"))
+                    copy(self, "*.dll", self.source_folder, os.path.join(self.package_folder, "lib"))
         """)
-        c.save({"conanfile.py": conanfile, "hello.h": "", "libhello.lib": "", "libhello.a": ""})
+        c.save({"conanfile.py": conanfile,
+                "hello.h": "", "libhello.lib": "", "libhello.a": "",
+                "libhello.so": "", "libhello.dll": ""
+        })
         c.run("create .")
         conanfile = textwrap.dedent(f"""
             from conan import ConanFile
