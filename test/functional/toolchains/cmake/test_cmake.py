@@ -488,7 +488,7 @@ def test_msvc_vs_versiontoolset():
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run("Release\\myapp.exe")
+                    self.run(r"Release\\myapp.exe")
             """)
     cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
     main = gen_function_cpp(name="main")
