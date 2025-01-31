@@ -409,7 +409,6 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
-    @pytest.mark.slow
     @pytest.mark.tool("cmake")
     def test_msbuild_generator(self):
         client = TestClient()

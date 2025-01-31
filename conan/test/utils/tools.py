@@ -288,7 +288,9 @@ class TestRequester:
         return requests.codes
 
 
-class TestServer(object):
+class TestServer:
+    __test__ = False
+
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):

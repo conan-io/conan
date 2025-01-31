@@ -1,21 +1,10 @@
 name: OSX Tests
 
 on:
-  push:
-    branches:
-      - develop2
-      - release/*
-  pull_request:
-    branches:
-      - '*'
-      - 'release/*'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
-  setup-caches:
+  osx_setup:
     runs-on: macos-14
     name: Setup and Cache Dependencies
     steps:
@@ -118,18 +107,22 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-  testing:
-    needs: setup-caches
+  osx_tests:
+    needs: osx_setup
+    runs-on: macos-14
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.8', '3.12', '3.13']
+        python-version: [3.8, 3.12, 3.13]
         test-type: [unittests, integration, functional]
-
-    runs-on: macos-14
-
-    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
-
+        include:
+        - test-type: unittests
+          test-name: Unit
+        - test-type: integration
+          test-name: Integration
+        - test-type: functional
+          test-name: Functional
+    name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -168,11 +161,14 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
-
-      - name: Run Tests
-        run: |
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
 
-          python -m pytest test/${{ matrix.test-type }} --durations=20 -n auto
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}
+          duration: 20

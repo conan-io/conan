@@ -1,27 +1,14 @@
 name: Windows Tests
 
 on:
-  push:
-    branches:
-      - develop2
-      - release/*
-  pull_request:
-    branches:
-      - '*'
-      - 'release/*'
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   unit_integration_tests:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
-
+        python-version: [3.13, 3.8, 3.6]
     name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -45,7 +32,6 @@ jobs:
         shell: pwsh
         run: echo "PIP_CACHE_DIR=$(pip cache dir)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -60,18 +46,21 @@ jobs:
           pip install -r conans/requirements.txt
           pip install -r conans/requirements_dev.txt
           pip install -r conans/requirements_server.txt
+          git config --global core.autocrlf false
 
       - name: Run Unit & Integration Tests
-        shell: pwsh
-        run: |
-          git config --global core.autocrlf false
-          pytest test/unittests test/integration --durations=100 -n=auto
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: unit-integration
+          tests: test/unittests test/integration
+          duration: 100
 
   functional_tests:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ['3.13', '3.8', '3.6']
+        python-version: [3.13, 3.8, 3.6]
 
     name: Functional Tests (${{ matrix.python-version }})
     steps:
@@ -227,7 +216,7 @@ jobs:
               Remove-Item $zipFile
           }
 
-      - name: Run Functional Tests
+      - name: Prepare environment for functional tests
         run: |
           git config --global core.autocrlf false
 
@@ -260,4 +249,15 @@ jobs:
           [System.Environment]::SetEnvironmentVariable('MSYS2_PATH', $msys2Path, [System.EnvironmentVariableTarget]::Process)
           Write-Host "Added MSYS2_PATH environment variable: $msys2Path"
 
-          pytest test/functional -n=auto --durations=100
+          # Export variables so they persist in the next steps
+          echo "PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "CONAN_TEST_FOLDER=$env:CONAN_TEST_FOLDER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Run Functional Tests
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: functional
+          tests: test/functional
+          duration: 100
