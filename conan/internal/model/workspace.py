@@ -4,7 +4,7 @@ import os
 import yaml
 
 from conan.api.output import ConanOutput
-from conan.errors import ConanException, ConanWorkspaceError
+from conan.errors import ConanException
 from conans.client.loader import load_python_file
 from conans.util.files import load, save
 
@@ -29,7 +29,7 @@ class Workspace:
         try:
             data = yaml.safe_load(load(data_path))
         except Exception as e:
-            raise ConanWorkspaceError("Invalid yml format at {}: {}".format("conanws.yml", e))
+            raise ConanException("Invalid yml format at {}: {}".format("conanws.yml", e))
         return data or {}
 
     def home_folder(self):
@@ -95,7 +95,6 @@ class Workspace:
 def load_workspace(ws_folder, conan_api):
     """ loads a conanfile basic object without evaluating anything, returns the module too
     """
-
     wspy = os.path.join(ws_folder, "conanws.py")
     if not os.path.isfile(wspy):
         ConanOutput().info(f"conanws.py doesn't exist in {ws_folder}, using default behavior")
@@ -107,7 +106,7 @@ def load_workspace(ws_folder, conan_api):
             ws = _parse_module(module, module_id)
             ws = ws(ws_folder, conan_api)
         except ConanException as e:
-            raise ConanWorkspaceError(f"Error loading conanws.py at '{wspy}': {e}")
+            raise ConanException(f"Error loading conanws.py at '{wspy}': {e}")
     return ws
 
 

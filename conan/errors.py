@@ -20,7 +20,3 @@ class ConanInvalidConfiguration(ConanException):
 
 class ConanMigrationError(ConanException):
     pass
-
-
-class ConanWorkspaceError(ConanException):
-    pass
