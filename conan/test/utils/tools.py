@@ -35,7 +35,7 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
-from conan.errors import ConanException
+from conan.errors import ConanException, ConanWorkspaceError
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
 from conan.internal.model.profile import Profile
@@ -554,6 +554,13 @@ class TestClient:
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
+        except ConanWorkspaceError as e:
+            trace = traceback.format_exc()
+            error = ERROR_GENERAL
+            sys.stderr.write("Error in Conan initialization: {}".format(e))
+            self._handle_cli_result(command_line, assert_error=assert_error, error=error,
+                                    trace=trace)
+            return error
         except ConanException as e:
             sys.stderr.write("Error in Conan initialization: {}".format(e))
             return ERROR_GENERAL

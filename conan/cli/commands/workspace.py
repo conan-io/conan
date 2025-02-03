@@ -13,7 +13,7 @@ from conan.errors import ConanException
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
-def workspace_root(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Return the folder containing the conanws.py/conanws.yml workspace file
     """
@@ -96,11 +96,10 @@ def _print_workspace_info(data):
 
 
 @conan_subcommand(formatters={"text": _print_workspace_info, "json": print_json})
-def workspace_info(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Display info for current workspace
     """
-    parser.parse_args(*args)
     return {"info": conan_api.workspace.info()}
 
 
@@ -134,7 +133,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         products = [args.path]
     else:  # all products
         products = conan_api.workspace.products
-        if products is None:
+        if not products:
             raise ConanException("There are no products defined in the workspace, can't build\n"
                                  "You can use 'conan build <path> --build=editable' to build")
         ConanOutput().title(f"Building workspace products {products}")
@@ -165,7 +164,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_command(group="Consumer")
-def workspace(conan_api, parser, *args):
+def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
