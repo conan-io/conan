@@ -737,9 +737,9 @@ class TestValidateCppstd:
                  "conanfile.py": GenConanfile("app", "1.0")
                     .with_setting("compiler")
                     .with_requirement("dep/1.0")})
-        tc.run("create lib -s=compiler.cppstd=20")
-        tc.run("create dep -s=compiler.cppstd=17")
-        tc.run("create . -s=compiler.cppstd=17")
+        tc.run("create lib -s=compiler.cppstd=17")
+        tc.run("create dep -s=compiler.cppstd=14")
+        tc.run("create . -s=compiler.cppstd=14")
 
         compat_path = os.path.join(tc.cache_folder, "extensions/plugins/compatibility/compatibility.py")
         compat_contents = load(compat_path)
@@ -754,7 +754,7 @@ class TestValidateCppstd:
         compat_contents = compat_contents.replace('extension_properties = getattr(conanfile, "extension_properties", {})', transitive_expansions)
         save(compat_path, compat_contents)
 
-        tc.run("install --requires=app/1.0 -s=compiler.cppstd=20", assert_error=True)
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=17", assert_error=True)
 
         assert "Missing prebuilt package for 'app/1.0', 'dep/1.0'" in tc.out
 
