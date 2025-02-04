@@ -204,6 +204,8 @@ def audit_provider(conan_api, parser, subparser, *args):
     if args.add:
         if not args.name or not args.url or not args.type:
             raise ConanException("Name, URL and type are required to add a provider")
+        conan_api.audit.add_provider(args.name, args.url, args.type)
+
         if not args.token:
             user_input = UserInput(conan_api.config.get("core:non_interactive"))
             ConanOutput().write(f"Please enter a token for {args.name} the provider: ")
@@ -211,8 +213,11 @@ def audit_provider(conan_api, parser, subparser, *args):
         else:
             token = args.token
 
-        conan_api.audit.add_provider(args.name, args.url, args.type, token)
-        return []
+        provider = conan_api.audit.get_provider(args.name)
+        if token:
+            conan_api.audit.auth_provider(provider, token)
+
+        return [provider]
     elif args.list:
         providers = conan_api.audit.list_providers()
         return providers
