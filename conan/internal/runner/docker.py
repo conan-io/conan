@@ -260,13 +260,18 @@ class DockerRunner:
 
         if self.cache in ['clean', 'copy']:
             # Copy all conan profiles and config files to docker workspace
-            for profile in set(self.args.profile_host + self.args.profile_build):
+            for profile in set(self.args.profile_host + (self.args.profile_build or [])):
                 profile_path = self.conan_api.profiles.get_path(profile)
                 dest_filename = self.abs_runner_home_path / 'profiles' / Path(profile)
                 if not dest_filename.exists():
                     dest_filename.parent.mkdir(parents=True, exist_ok=True)
                 self.logger.verbose(f"Copying profile '{profile}': {profile_path} -> {dest_filename}")
                 shutil.copy(profile_path, dest_filename)
+            if not self.args.profile_build:
+                dest_filename = self.abs_runner_home_path / 'profiles' / "default"
+                default_build_profile = self.conan_api.profiles.get_default_build()
+                self.logger.verbose(f"Copying default profile: {default_build_profile} -> {dest_filename}")
+                shutil.copy(default_build_profile, dest_filename.as_posix())
 
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 src_file = Path(self.conan_api.home_folder) / file_name

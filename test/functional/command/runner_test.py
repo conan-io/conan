@@ -542,8 +542,9 @@ def test_create_docker_runner_default_build_profile():
 
     client.save({"host_clean": profile_host})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_clean")
+    client.run("create . -pr:h host_clean -vverbose")
 
+    assert "Copying default profile" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
