@@ -805,3 +805,62 @@ def test_build_order_space_in_options():
     order = json.loads(tc.load("order.json"))
     assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
 
+
+def test_build_order_build_context_compatible():
+    c = TestClient()
+    foo = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import check_min_cppstd
+
+        class Pkg(ConanFile):
+            name = "foo"
+            version = "1.0"
+            settings = "os", "compiler"
+            def validate_build(self):
+                check_min_cppstd(self, 17)
+
+            def validate(self):
+                check_min_cppstd(self, 14)
+        """)
+    bar = GenConanfile("bar", "1.0").with_settings("os", "compiler").with_tool_requirement("foo/1.0")
+
+    profile = textwrap.dedent("""
+        [settings]
+        compiler=gcc
+        compiler.cppstd=gnu14
+        compiler.libcxx=libstdc++11
+        compiler.version=11
+        os=Linux
+        """)
+    c.save({"conanfile_foo.py": foo,
+            "conanfile_bar.py": bar,
+            "profile": profile})
+    c.run("export conanfile_foo.py")
+    c.run("export conanfile_bar.py")
+
+    #  "--require/bar.1.0" and "require=foo/1.0" along with `--build=missing` would cause both
+    # packages to be built in the host context - with foo being built with cppstd=17
+    # (because the default cppstd=14 is not enough) bar requires foo in the "build" context -
+    # where cppstd=14 - but it can reuse the one built for cppstd=17
+    # (via compatibility plugin)
+
+    # The three approaches are equivalent:
+    #  - Using "--build=missing" and forcing  "-s foo/*:compiler.cppstd=17", means, build missing
+    #    binaries, and for foo I want the compiler.cppstd=17 binary. This approach could build other
+    #    missing binaries too
+    #  - Using "--build=compatible:foo/*" and "--build=missing:bar/*" means, build only missing
+    #    binary for bar, and for "foo", build a compatible one if the main one is missing. This
+    #    approach prevents other packages (not foo/bar) from accidentally being built.
+    #  - Last approach, passing both "--build=missing:foo/*" and "--build=compatible:foo/*" is
+    #    similar to the other two in final behavior, but the --build=missing:foo avoids doing the
+    #    compatibility check for consumption of "foo", and goes directly to the build check
+
+    for approach in ("--build=missing -s foo/*:compiler.cppstd=17",
+                     '--build="compatible:foo/*" --build="missing:bar/*"',
+                     '--build="missing:foo/*" --build="compatible:foo/*" --build="missing:bar/*"'):
+        c.run(f'graph build-order --require=foo/1.0 --require=bar/1.0 -pr:a profile {approach}')
+        c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"],
+                                "bar/1.0": ["5e4ffcc1ff33697a4ee96f66f0d2228ec458f25c", "Build"]})
+        c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"]},
+                               build=True)
+
