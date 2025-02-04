@@ -102,51 +102,103 @@ class TestRuntimeDirs:
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.parametrize("requires, tool_requires", [(True, False), (False, True), (True, True)])
-def test_cmaketoolchain_path_find_program(requires, tool_requires):
-    """Test that executables in bindirs of tool_requires can be found with
-    find_program() in consumer CMakeLists.
-    """
-    c = TestClient()
+class TestCMakeDepsPaths:
 
-    conanfile = textwrap.dedent("""
-        import os
-        from conan.tools.files import copy
-        from conan import ConanFile
-        class TestConan(ConanFile):
-            name = "tool"
-            version = "1.0"
-            exports_sources = "*"
-            def package(self):
-                copy(self, "*", self.source_folder, os.path.join(self.package_folder, "bin"))
-    """)
-    c.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
-    c.run("create .")
+    @pytest.mark.parametrize("requires, tool_requires", [(True, False), (False, True), (True, True)])
+    def test_find_program_path(self, requires, tool_requires):
+        """Test that executables in bindirs of tool_requires can be found with
+        find_program() in consumer CMakeLists.
+        """
+        c = TestClient()
 
-    requires = 'requires = "tool/1.0"' if requires else ""
-    tool_requires = 'tool_requires = "tool/1.0"' if tool_requires else ""
-    conanfile = textwrap.dedent(f"""
-        from conan import ConanFile
-        from conan.tools.cmake import CMake
-        class PkgConan(ConanFile):
-            {requires}
-            {tool_requires}
-            settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeToolchain", "CMakeDeps"
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-    """)
-    consumer = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
-        find_program(HELLOPROG hello)
-        if(HELLOPROG)
-            message(STATUS "Found hello prog: ${HELLOPROG}")
-        endif()
-    """)
-    c.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Found hello prog" in c.out
-    if requires and tool_requires:
-        assert "There is already a 'tool/1.0' package contributing to CMAKE_PROGRAM_PATH" in c.out
+        conanfile = textwrap.dedent("""
+            import os
+            from conan.tools.files import copy
+            from conan import ConanFile
+            class TestConan(ConanFile):
+                name = "tool"
+                version = "1.0"
+                exports_sources = "*"
+                def package(self):
+                    copy(self, "*", self.source_folder, os.path.join(self.package_folder, "bin"))
+        """)
+        c.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
+        c.run("create .")
+
+        requires = 'requires = "tool/1.0"' if requires else ""
+        tool_requires = 'tool_requires = "tool/1.0"' if tool_requires else ""
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class PkgConan(ConanFile):
+                {requires}
+                {tool_requires}
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain", "CMakeDeps"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+        consumer = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(MyHello)
+            find_program(HELLOPROG hello)
+            if(HELLOPROG)
+                message(STATUS "Found hello prog: ${HELLOPROG}")
+            endif()
+        """)
+        c.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
+        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "Found hello prog" in c.out
+        if requires and tool_requires:
+            assert "There is already a 'tool/1.0' package contributing to CMAKE_PROGRAM_PATH" in c.out
+
+    def test_find_include_and_lib_paths(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conan.tools.files import copy
+            from conan import ConanFile
+            class TestConan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                exports_sources = "*"
+                def package(self):
+                    copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                    copy(self, "*.lib", self.source_folder, os.path.join(self.package_folder, "lib"))
+                    copy(self, "*.a", self.source_folder, os.path.join(self.package_folder, "lib"))
+                    copy(self, "*.so", self.source_folder, os.path.join(self.package_folder, "lib"))
+                    copy(self, "*.dll", self.source_folder, os.path.join(self.package_folder, "lib"))
+        """)
+        c.save({"conanfile.py": conanfile,
+                "hello.h": "", "hello.lib": "", "libhello.a": "",
+                "libhello.so": "", "libhello.dll": ""
+        })
+        c.run("create .")
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class PkgConan(ConanFile):
+                requires = "hello/1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain", "CMakeDeps"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+        consumer = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(MyHello)
+            find_file(HELLOINC hello.h)
+            find_library(HELLOLIB hello)
+            if(HELLOINC)
+                message(STATUS "Found hello header: ${HELLOINC}")
+            endif()
+            if(HELLOLIB)
+                message(STATUS "Found hello lib: ${HELLOLIB}")
+            endif()
+        """)
+        c.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
+        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "Found hello header" in c.out
+        assert "Found hello lib" in c.out
