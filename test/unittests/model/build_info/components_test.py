@@ -17,7 +17,6 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             cpp_info.required_components = ["liba::liba"]
-            cpp_info.components["comp"].required_components = ["liba::liba"]
 
     def test_no_components_inside_components(self):
         cpp_info = CppInfo()
