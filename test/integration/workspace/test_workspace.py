@@ -441,3 +441,21 @@ def test_new():
     assert "liba/0.1" in c.out
     assert "libb/0.1" in c.out
     assert "app1/0.1" in c.out
+
+
+class TestCreate:
+    def test_create(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
+               .with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_build_msg("BUILD PKGC!")
+               .with_requires("pkgb/0.1")
+                })
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc --product")
+        c.run("workspace create")
+        print(c.out)

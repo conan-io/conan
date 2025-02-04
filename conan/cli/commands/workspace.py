@@ -10,6 +10,7 @@ from conan.cli.commands.list import print_serial
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
@@ -161,6 +162,69 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         ConanOutput().title(f"Calling build() for the product {product_ref}")
         conanfile = deps_graph.root.conanfile
         conan_api.local.build(conanfile)
+
+
+@conan_subcommand()
+def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Build the current workspace, starting from the "products"
+    """
+    subparser.add_argument("path", nargs="?",
+                           help='Path to a package folder in the user workspace')
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    # Basic collaborators: remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None,
+                                               partial=args.lockfile_partial, overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    if args.path:
+        products = [args.path]
+    else:  # all products
+        products = conan_api.workspace.products
+        if not products:
+            raise ConanException("There are no products defined in the workspace, can't build\n"
+                                 "You can use 'conan build <path> --build=editable' to build")
+        ConanOutput().title(f"Building workspace products {products}")
+
+    editables = conan_api.workspace.editable_packages
+    install_order = InstallGraph(None)
+    # TODO: This has to be improved to avoid repetition when there are multiple products
+    for product in products:
+        ConanOutput().subtitle(f"Building workspace product: {product}")
+        product_ref = conan_api.workspace.editable_from_path(product)
+        if product_ref is None:
+            raise ConanException(f"Product '{product}' not defined in the workspace as editable")
+        editable = editables[product_ref]
+        editable_path = editable["path"]
+        deps_graph = conan_api.graph.load_graph_consumer(editable_path, None, None, None, None,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update)
+        deps_graph.report_graph_error()
+        print_graph_basic(deps_graph)
+        conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                         lockfile=lockfile)
+        print_graph_packages(deps_graph)
+        install_graph = InstallGraph(deps_graph, order_by="recipe",
+                                     profile_args=ProfileArgs.from_args(args))
+        # TODO: MERGE them
+        install_order.merge(install_graph)
+
+    install_order_serialized = install_order.install_build_order()
+    print(json.dumps(install_order_serialized, indent=4))
+    for level in install_order_serialized["order"]:
+        for elem in level:
+            # Filter editables
+            ConanOutput().subtitle(f"Creating {elem['ref']}")
+            # Compute args to forward to the create command
+            # conan_api.command.run(f"create {path} --build=missing:{ref} {args}")
 
 
 @conan_command(group="Consumer")
