@@ -1,11 +1,9 @@
-import inspect
 import os
 
 import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.client.loader import load_python_file
 from conans.util.files import load, save
 
 
@@ -18,6 +16,7 @@ class Workspace:
         self.folder = folder
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
+        self.output = ConanOutput(scope=self.name())
 
     def name(self):
         return os.path.basename(self.folder)
@@ -90,40 +89,3 @@ class Workspace:
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
-
-
-def load_workspace(ws_folder, conan_api):
-    """ loads a conanfile basic object without evaluating anything, returns the module too
-    """
-    wspy = os.path.join(ws_folder, "conanws.py")
-    if not os.path.isfile(wspy):
-        ConanOutput().info(f"conanws.py doesn't exist in {ws_folder}, using default behavior")
-        assert os.path.exists(os.path.join(ws_folder, "conanws.yml"))
-        ws = Workspace(ws_folder, conan_api)
-    else:
-        try:
-            module, module_id = load_python_file(wspy)
-            ws = _parse_module(module, module_id)
-            ws = ws(ws_folder, conan_api)
-        except ConanException as e:
-            raise ConanException(f"Error loading conanws.py at '{wspy}': {e}")
-    return ws
-
-
-def _parse_module(conanfile_module, module_id):
-    result = None
-    for name, attr in conanfile_module.__dict__.items():
-        if (name.startswith("_") or not inspect.isclass(attr) or
-                attr.__dict__.get("__module__") != module_id):
-            continue
-
-        if issubclass(attr, Workspace) and attr != Workspace:
-            if result is None:
-                result = attr
-            else:
-                raise ConanException("More than 1 Workspace in the file")
-
-    if result is None:
-        raise ConanException("No subclass of Workspace")
-
-    return result

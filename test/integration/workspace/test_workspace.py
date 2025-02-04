@@ -4,14 +4,14 @@ import textwrap
 
 import pytest
 
-from conan.internal.workspace import Workspace
+from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
-Workspace.TEST_ENABLED = "will_break_next"
+WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
 class TestHomeRoot:
@@ -253,6 +253,37 @@ class TestAddRemove:
         c.run("workspace remove mydeppkg")
         c.run("workspace info")
         assert "mydeppkg" not in c.out
+
+    def test_custom_add_remove(self):
+        c = TestClient(light=True)
+
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def name(self):
+                    return "myws"
+
+                def add(self, ref, path, *args, **kwargs):
+                    self.output.info(f"Adding {ref} at {path}")
+                    super().add(ref, path, *args, **kwargs)
+
+                def remove(self, path, *args, **kwargs):
+                    self.output.info(f"Removing {path}")
+                    return super().remove(path, *args, **kwargs)
+            """)
+
+        c.save({"conanws.py": workspace,
+                "dep/conanfile.py": GenConanfile("dep", "0.1")})
+        c.run("workspace add dep")
+        assert "myws: Adding dep/0.1" in c.out
+        c.run("workspace info")
+        assert "dep/0.1" in c.out
+        c.run("workspace remove dep")
+        assert "myws: Removing" in c.out
+        c.run("workspace info")
+        assert "dep/0.1" not in c.out
 
 
 class TestOpenAdd:
