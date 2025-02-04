@@ -158,15 +158,16 @@ jobs:
             C:\tools\cmake\3.15.7
             C:\tools\cmake\3.19.7
             C:\tools\cmake\3.23.5
+            C:\tools\cmake\3.27.9
             C:\tools\bazel\6.5.0
             C:\tools\bazel\7.4.1
             C:\tools\bazel\8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
-      - name: Build CMake old versions of CMake
+      - name: Install CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7"
+          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7", "3.23.5", "3.27.9"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\tools\cmake\$version"
@@ -174,24 +175,12 @@ jobs:
                 New-Item -Path $destination -ItemType Directory
             }
             $major_minor_version = ($version -split '\.')[0..1] -join '.'
-            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-win64-x64.zip"
-            $zipFile = "cmake-$version-windows-x86_64.zip"
-            Invoke-WebRequest -Uri $url -OutFile $zipFile
-            Expand-Archive -Path $zipFile -DestinationPath $destination -Force
-            Remove-Item $zipFile
-          }
-
-      - name: Install modern CMake versions
-        if: steps.cache-tools.outputs.cache-hit != 'true'
-        run: |
-          $CMAKE_BUILD_VERSIONS = "3.23.5"
-          foreach ($version in $CMAKE_BUILD_VERSIONS) {
-            $destination = "C:\tools\cmake\$version"
-            if (-not (Test-Path $destination)) {
-                New-Item -Path $destination -ItemType Directory
+            if ( $major_minor_version -eq "3.15" -or $major_minor_version -eq "3.19" ) {
+                $arch = "win64-x64"
+            } else {
+                $arch = "windows-x86_64"
             }
-            $major_minor_version = ($version -split '\.')[0..1] -join '.'
-            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-windows-x86_64.zip"
+            $url = "https://cmake.org/files/v$major_minor_version/cmake-$version-$arch.zip"
             $zipFile = "cmake-$version-windows-x86_64.zip"
             Invoke-WebRequest -Uri $url -OutFile $zipFile
             Expand-Archive -Path $zipFile -DestinationPath $destination -Force
