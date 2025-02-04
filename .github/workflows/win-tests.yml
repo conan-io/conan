@@ -158,6 +158,7 @@ jobs:
             C:\tools\cmake\3.15.7
             C:\tools\cmake\3.19.7
             C:\tools\cmake\3.23.5
+            C:\tools\cmake\3.27.9
             C:\tools\bazel\6.5.0
             C:\tools\bazel\7.4.1
             C:\tools\bazel\8.0.0
@@ -184,7 +185,7 @@ jobs:
       - name: Install modern CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $CMAKE_BUILD_VERSIONS = "3.23.5"
+          $CMAKE_BUILD_VERSIONS = "3.23.5", "3.27.9"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             $destination = "C:\tools\cmake\$version"
             if (-not (Test-Path $destination)) {
