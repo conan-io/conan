@@ -184,16 +184,16 @@ class SSHRunner:
         if not self.remote_conn.check_file_exists(remote_profile_path.as_posix()):
             self.remote_conn.mkdir(remote_profile_path.as_posix())
         # Iterate over all profiles and copy using sftp
-        for profile in set(self.args.profile_host + self.args.profile_build):
+        for profile in set(self.args.profile_host + (self.args.profile_build or [])):
             dest_filename = remote_profile_path / profile
             profile_path = self.conan_api.profiles.get_path(profile)
             self.logger.verbose(f"Copying profile '{profile}': {profile_path} -> {dest_filename}")
             self.remote_conn.put(profile_path, dest_filename.as_posix())
-        if not self.args.profile_host:
+        if not self.args.profile_build:
             dest_filename = remote_profile_path / "default" # in remote use "default" profile
-            default_host_profile = self.conan_api.profiles.get_default_host()
-            self.logger.verbose(f"Copying default profile: {default_host_profile} -> {dest_filename}")
-            self.remote_conn.put(default_host_profile, dest_filename.as_posix())
+            default_build_profile = self.conan_api.profiles.get_default_build()
+            self.logger.verbose(f"Copying default profile: {default_build_profile} -> {dest_filename}")
+            self.remote_conn.put(default_build_profile, dest_filename.as_posix())
 
     def _copy_working_conanfile_path(self):
         resolved_path = Path(self.args.path).resolve()

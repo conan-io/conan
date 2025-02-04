@@ -57,7 +57,7 @@ def test_create_ssh_runner_only_host():
 @pytest.mark.skipif(ssh_skip(), reason="SSH environment have to be configured")
 def test_create_ssh_runner_with_config():
     """
-    Tests the ``conan create . ``
+    Tests the ``conan create . `` with ssh config file
     """
     client = TestClient()
 
@@ -121,6 +121,38 @@ def test_create_ssh_runner_with_config():
     client.save({"host": profile_host})
     client.run("create . -pr:h host -pr:b build")
 
+    assert "[100%] Built target example" in client.out
+    assert "Restore: pkg/2.0 in pkgc6abef0178849" in client.out
+    assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
+
+@pytest.mark.ssh_runner
+@pytest.mark.skipif(ssh_skip(), reason="SSH environment have to be configured")
+def test_create_ssh_runner_default_profile():
+    """
+    Tests the ``conan create . `` without build profile
+    """
+    client = TestClient()
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=ssh
+    ssh.host=localhost
+    """)
+
+    client.save({"host": profile_host, "build": profile_host})
+    client.run("new cmake_lib -d name=pkg -d version=2.0")
+    client.run("create . -pr:h host -vverbose")
+
+    assert "Copying default profile: " in client.out
     assert "[100%] Built target example" in client.out
     assert "Restore: pkg/2.0 in pkgc6abef0178849" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
