@@ -183,6 +183,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
+    conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
     editables = conan_api.workspace.editable_packages
     requires = [ref for ref in editables]

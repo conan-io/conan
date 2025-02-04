@@ -10,7 +10,8 @@ Workspace.TEST_ENABLED = "will_break_next"
 
 
 @pytest.mark.tool("cmake")
-def test():
+def test_build():
+    # This is not using the meta-project at all
     c = TestClient()
     c.run("new cmake_lib -d name=mymath")
     c.run("create . -tf=")
@@ -18,11 +19,15 @@ def test():
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
     c.run("workspace build")
+    assert "Calling build() for the product app1/0.1" in c.out
+    assert "conanfile.py (app1/0.1): Running CMake.build()" in c.out
     # it works without failing
 
 
-@pytest.mark.tool("cmake", "3.25")
-def test_build():
+# The workspace CMake needs at least 3.25 for find_package to work
+@pytest.mark.tool("cmake", "3.27")
+def test_metabuild():
+    # This is using the meta-project
     c = TestClient()
     c.run("new cmake_lib -d name=mymath")
     c.run("create . -tf=")
@@ -30,9 +35,11 @@ def test_build():
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
     c.run("workspace install")
-    print(c.out)
     config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
     c.run_command(f"cmake --preset {config_preset}")
-    print(c.out)
+    assert "Conan: Target declared 'mymath::mymath'" in c.out
+    assert "Adding project liba" in c.out
+    assert "Adding project libb" in c.out
+    assert "Adding project app1" in c.out
     c.run_command("cmake --build --preset conan-release")
-    print(c.out)
+    # it doesn't fail
