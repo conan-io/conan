@@ -649,7 +649,7 @@ class CppInfo:
         return getattr(self._package, attr)
 
     def __setattr__(self, attr, value):
-        if attr in ("components", "default_components", "_package", "_aggregated"):
+        if attr in ("components", "default_components", "_package", "_aggregated", "required_components"):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self._package, attr, value)
