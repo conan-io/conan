@@ -1,4 +1,5 @@
 import json
+import os
 import platform
 import re
 import textwrap
@@ -9,7 +10,7 @@ import pytest
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
 from conan.test.assets.genconanfile import GenConanfile
-from conans.util.files import save
+from conans.util.files import save, load
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -717,6 +718,41 @@ class TestValidateCppstd:
         tc.run("install --requires=app/1.0 -s=compiler.cppstd=14", assert_error=True)
         assert "dep/1.0: Found compatible package" in tc.out
         assert "ERROR: Missing binary: app/1.0" in tc.out
+
+    def test_extension_properties_make_transitive(self):
+        """
+        The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
+        its dependencies will still be checked for compatibility
+        """
+        tc = TestClient()
+        tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_setting("compiler"),
+                 "dep/conanfile.py": GenConanfile("dep", "1.0")
+                    .with_setting("compiler")
+                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                    .with_requirement("lib/1.0"),
+                 "conanfile.py": GenConanfile("app", "1.0")
+                    .with_setting("compiler")
+                    .with_requirement("dep/1.0")})
+        tc.run("create lib -s=compiler.cppstd=20")
+        tc.run("create dep -s=compiler.cppstd=17")
+        tc.run("create . -s=compiler.cppstd=17")
+
+        compat_path = os.path.join(tc.cache_folder, "extensions/plugins/compatibility/compatibility.py")
+        compat_contents = load(compat_path)
+
+        transitive_expansions = textwrap.indent(textwrap.dedent("""
+        extension_properties = getattr(conanfile, "extension_properties", {}).copy()
+        for dep in conanfile.dependencies.values():
+            if not dep.extension_properties.get("compatibility_cppstd", True):
+                extension_properties["compatibility_cppstd"] = False
+        """), "    ")
+
+        compat_contents = compat_contents.replace('extension_properties = getattr(conanfile, "extension_properties", {})', transitive_expansions)
+        save(compat_path, compat_contents)
+
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=20", assert_error=True)
+
+        assert "Missing prebuilt package for 'app/1.0', 'dep/1.0'" in tc.out
 
 
 
