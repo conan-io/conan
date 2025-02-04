@@ -2,11 +2,11 @@ import platform
 
 import pytest
 
-from conan.internal.workspace import Workspace
+from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.utils.tools import TestClient
 
 
-Workspace.TEST_ENABLED = "will_break_next"
+WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
 @pytest.mark.tool("cmake")

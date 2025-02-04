@@ -40,12 +40,17 @@ add_library(libb::libb ALIAS libb)
 add_project(app1)
 """
 
-conanfile = """\
+conanfile = '''\
 from conan import ConanFile
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
 class MyWs(ConanFile):
+    """ This is a special conanfile, used only for workspace definition of layout
+    and generators. It shouldn't have requirements, tool_requirements. It shouldn't have
+    build() or package() methods
+    """
     settings = "os", "compiler", "build_type", "arch"
+
     def generate(self):
         deps = CMakeDeps(self)
         deps.generate()
@@ -54,11 +59,11 @@ class MyWs(ConanFile):
 
     def layout(self):
         cmake_layout(self)
-"""
+'''
 
 workspace_files = {"conanws.yml": conanws_yml,
                    "CMakeLists.txt": cmake,
-                   "conanfile.py": conanfile,
+                   "conanfilews.py": conanfile,
                    ".gitignore": "build"}
 # liba
 files = {f"liba/{k}": v for k, v in cmake_lib_files.items()}

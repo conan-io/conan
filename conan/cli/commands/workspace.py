@@ -13,7 +13,7 @@ from conan.errors import ConanException
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
-def workspace_root(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Return the folder containing the conanws.py/conanws.yml workspace file
     """
@@ -96,11 +96,10 @@ def _print_workspace_info(data):
 
 
 @conan_subcommand(formatters={"text": _print_workspace_info, "json": print_json})
-def workspace_info(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Display info for current workspace
     """
-    parser.parse_args(*args)
     return {"info": conan_api.workspace.info()}
 
 
@@ -134,7 +133,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         products = [args.path]
     else:  # all products
         products = conan_api.workspace.products
-        if products is None:
+        if not products:
             raise ConanException("There are no products defined in the workspace, can't build\n"
                                  "You can use 'conan build <path> --build=editable' to build")
         ConanOutput().title(f"Building workspace products {products}")
@@ -167,8 +166,14 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
 @conan_subcommand()
 def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Build the current workspace, starting from the "products"
+    Install the workspace as a monolith, installing only external dependencies to the workspace,
+    generating a single result (generators, etc) for the whole workspace.
     """
+    subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
+    subparser.add_argument("-of", "--output-folder",
+                           help='The root output folder for generated and build files')
+    subparser.add_argument("--envs-generation", default=None, choices=["false"],
+                           help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -187,6 +192,8 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     # Build a dependency graph with all editables as requirements
     editables = conan_api.workspace.editable_packages
     requires = [ref for ref in editables]
+    if not requires:
+        raise ConanException("This workspace cannot be installed, it doesn't have any editable")
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
                                                      profile_host, profile_build, lockfile,
                                                      remotes, args.build, args.update)
@@ -194,24 +201,22 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     print_graph_basic(deps_graph)
 
     # Collapsing the graph
-    path = os.path.join(ws_folder, "conanfile.py")
-    if not os.path.exists(path):
-        raise ConanException("Workspace conanfile.py not found in the workspace folder")
-    root_node = conan_api.graph._load_root_consumer_conanfile(path, profile_host, profile_build,
-                                                              lockfile=lockfile, remotes=remotes)
-    conan_api.workspace.collapse_editables(root_node, deps_graph)
+    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build,
+                                                      lockfile, remotes)
     ConanOutput().subtitle("Collapsed graph")
-    print_graph_basic(deps_graph)
+    print_graph_basic(ws_graph)
 
-    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+    conan_api.graph.analyze_binaries(ws_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
-    print_graph_packages(deps_graph)
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-    conan_api.install.install_consumer(deps_graph, None, ws_folder, None)
+    print_graph_packages(ws_graph)
+    conan_api.install.install_binaries(deps_graph=ws_graph, remotes=remotes)
+    output_folder = make_abs_path(args.output_folder) if args.output_folder else None
+    conan_api.install.install_consumer(ws_graph, args.generator, ws_folder, output_folder,
+                                       envs_generation=args.envs_generation)
 
 
 @conan_command(group="Consumer")
-def workspace(conan_api, parser, *args):
+def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
