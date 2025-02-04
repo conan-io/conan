@@ -16,9 +16,8 @@ from conans.util.files import save, load, rmdir, mkdir, remove
 
 class TestDownloadCacheBackupSources:
     def test_users_download_cache_summary(self):
-        def custom_download(this, url, filepath, *args, **kwargs):
-            if url.startswith("http://myback"):
-                raise NotFoundException()
+        def custom_download(this, url, filepath, *args, **kwargs):  # noqa
+            assert not url.startswith("http://myback")
             save(filepath, f"Hello, world!")
 
         with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
