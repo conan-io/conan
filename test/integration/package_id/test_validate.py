@@ -708,14 +708,18 @@ class TestValidateCppstd:
         """
         tc = TestClient()
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
-                 "conanfile.py": GenConanfile("app", "1.0")
+                 "lib/conanfile.py": GenConanfile("lib", "1.0")
                     .with_setting("compiler")
                     .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
-                    .with_requirement("dep/1.0")})
+                    .with_requirement("dep/1.0"),
+                 "app/conanfile.py": GenConanfile("app", "1.0")
+                    .with_setting("compiler")
+                    .with_requirement("lib/1.0")})
         tc.run("create dep -s=compiler.cppstd=20")
-        tc.run("create . -s=compiler.cppstd=17")
+        tc.run("create lib -s=compiler.cppstd=17")
+        tc.run("create app -s=compiler.cppstd=14", assert_error=True)
 
-        tc.run("install --requires=app/1.0 -s=compiler.cppstd=14", assert_error=True)
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=11", assert_error=True)
         assert "dep/1.0: Found compatible package" in tc.out
         assert "ERROR: Missing binary: app/1.0" in tc.out
 
