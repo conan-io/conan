@@ -24,9 +24,6 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          cmake --version
-          bazel --version
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -129,6 +126,12 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
           pip install meson
+
+      - name: Update PATH
+        run: |
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          cmake --version
+          bazel --version
 
       - name: Run tests
         uses: ./.github/actions/test-coverage
