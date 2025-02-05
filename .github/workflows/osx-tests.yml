@@ -141,6 +141,7 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
