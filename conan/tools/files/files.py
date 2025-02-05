@@ -377,7 +377,7 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         if member.isdir() or len(splits) > 1:
                             common_folder = splits[0]  # Find the root folder
                         else:
-                            raise ConanException("The tgz file does not have any folder in the root and strip_root is enabled")
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
                     if not name.startswith(common_folder):
                         raise ConanException("The tgz file contains more than 1 folder in the root")
 

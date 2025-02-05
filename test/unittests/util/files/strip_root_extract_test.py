@@ -255,7 +255,7 @@ class TarExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "The tgz file does not have any folder in the root and strip_root is enabled"):
+        with self.assertRaisesRegex(ConanException, "Can't untar a tgz containing files in the root with strip_root enabled"):
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
 
     def test_invalid_flat_multiple_file(self):
@@ -270,5 +270,5 @@ class TarExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "The tgz file does not have any folder in the root and strip_root is enabled"):
+        with self.assertRaisesRegex(ConanException, "Can't untar a tgz containing files in the root with strip_root enabled"):
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
