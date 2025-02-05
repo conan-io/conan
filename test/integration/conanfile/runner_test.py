@@ -1,20 +1,9 @@
-import os
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient
 
 
-class RunnerTest(unittest.TestCase):
-
-    def _install_and_build(self, client, conanfile_text):
-        files = {"conanfile.py": conanfile_text}
-        test_folder = os.path.join(client.current_folder, "test_folder")
-        self.assertFalse(os.path.exists(test_folder))
-        client.save(files)
-        client.run("install .")
-        client.run("build .")
-        return client
+class TestRunner:
 
     def test_ignore_error(self):
         conanfile = """from conan import ConanFile
@@ -26,7 +15,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn("RETCODE True", client.out)
+        assert "RETCODE True" in client.out
 
     def test_runner_capture_output(self):
         conanfile = textwrap.dedent("""
@@ -38,7 +27,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn("hello Conan!", client.out)
+        assert "hello Conan!" in client.out
 
     def test_custom_stream_error(self):
         # https://github.com/conan-io/conan/issues/7888
@@ -54,7 +43,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
+        assert 'conanfile.py: Buffer got msgs Hello' in client.out
 
     def test_custom_stream_stderr(self):
         conanfile = textwrap.dedent("""
@@ -69,4 +58,4 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn('conanfile.py: Buffer got stderr msgs Hello', client.out)
+        assert 'conanfile.py: Buffer got stderr msgs Hello' in client.out
