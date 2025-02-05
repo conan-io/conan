@@ -67,10 +67,12 @@ class TargetConfigurationTemplate2:
                         # It must be the interface pkgname::pkgname target
                         assert required_pkg == required_comp
                         comp = None
+                        default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                     else:
                         comp = required_comp
+                        default_target = f"{required_pkg}::{required_comp}"
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
-                    dep_target = dep_target or f"{required_pkg}::{required_comp}"
+                    dep_target = dep_target or default_target
                     result.append(dep_target)
         return result
 
@@ -148,7 +150,7 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
-        requires = " ".join(self._requires(info, components))
+        requires = ";".join(self._requires(info, components))
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
         # TODO: Missing link language
@@ -207,9 +209,9 @@ class TargetConfigurationTemplate2:
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
                     all_requires.append(comp_name)
-                all_requires = " ".join(all_requires)
+                all_requires = ";".join(all_requires)
             else:
-                all_requires = " ".join(libs.keys())
+                all_requires = ";".join(libs.keys())
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -217,8 +219,6 @@ class TargetConfigurationTemplate2:
         exes = {}
 
         if cpp_info.has_components:
-            assert not cpp_info.exe, "Package has components and exe"
-            assert not cpp_info.libs, "Package has components and libs"
             for name, comp in cpp_info.components.items():
                 if comp.exe or comp.type is PackageType.APP:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
@@ -228,8 +228,6 @@ class TargetConfigurationTemplate2:
                     exes[target] = exe_location
         else:
             if cpp_info.exe:
-                assert not cpp_info.libs, "Package has exe and libs"
-                assert cpp_info.location, "Package has exe and no location"
                 target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
                 target = target_name or f"{pkg_name}::{pkg_name}"
                 exe_location = self._path(cpp_info.location, pkg_folder, pkg_folder_var)
@@ -342,7 +340,8 @@ class TargetConfigurationTemplate2:
                               "{{lib_info["link_location"]}}")
         {% endif %}
         {% if lib_info.get("requires") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["requires"]}})
+        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
+                              "{{config_wrapper(config, lib_info["requires"])}}")
         {% endif %}
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})

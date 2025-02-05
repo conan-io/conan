@@ -82,8 +82,10 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
         },
-        "3.28": {
-            "disabled": True  # TODO: Still not in CI
+        "3.27": {
+            "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-3.27.9-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
+                     'Linux': "/usr/share/cmake-3.27.9/bin"}
         }
     },
     'ninja': {

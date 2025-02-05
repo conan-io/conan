@@ -6,7 +6,7 @@ import textwrap
 import pytest
 from jinja2 import Template
 
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient
 
 """
@@ -262,7 +262,7 @@ def _get_link_order_from_xcode(content):
     libs = []
 
     # Find the right Release block in the XCode file
-    results = re.finditer('/\* Release \*/ = {', content)
+    results = re.finditer(r'/\* Release \*/ = {', content)
     for r in results:
         release_section = content[r.start():].split("name = Release;", 1)[0]
         if "-headerpad_max_install_names" in release_section:
