@@ -11,26 +11,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.8
-
-      - name: Cache pip packages
-        id: cache-pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
-
-      - name: Install Python requirements
-        run: |
-          pip install --upgrade pip
-          pip install -r conans/requirements.txt
-          pip install -r conans/requirements_server.txt
-          pip install -r conans/requirements_dev.txt
-          pip install meson
-
       - name: Uninstall default CMake
         run: brew uninstall cmake || true
 
@@ -44,6 +24,9 @@ jobs:
       - name: Install homebrew dependencies
         run: |
           brew install xcodegen make libtool zlib autoconf automake ninja
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          cmake --version
+          bazel --version
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -134,18 +117,6 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('conans/requirements*.txt') }}
 
-      - name: Restore tools cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Applications/CMake/3.15.7
-            ~/Applications/CMake/3.19.7
-            ~/Applications/CMake/3.23.5
-            ~/Applications/bazel/6.5.0
-            ~/Applications/bazel/7.4.1
-            ~/Applications/bazel/8.0.0
-          key: ${{ runner.os }}-conan-tools-cache
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -158,13 +129,6 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
           pip install meson
-
-      - name: Install homebrew dependencies
-        run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          cmake --version
-          bazel --version
 
       - name: Run tests
         uses: ./.github/actions/test-coverage
