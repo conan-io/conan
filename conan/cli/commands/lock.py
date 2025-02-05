@@ -7,10 +7,7 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conan.internal.model.recipe_ref import RecipeReference
 from conan.errors import ConanException
-from conan.internal.model.version import Version
-from conan.internal.model.version_range import VersionRange
 from conan.api.model import RecipeReference
 
 
@@ -188,22 +185,12 @@ def lock_upgrade(conan_api, parser, subparser, *args):
     or a reference.
     """
 
-    """
-    TODOs:
-    - [ ] args.update should always be True?
-    - [x] manage input version ranges
-    - [ ] Consider a new option to enable transitive dependencies on different kinds
-          (eg. --transitive=all, --transitive=python-requires, ...)
-    - [ ] Improve the detection of range versions
-    """
-
     common_graph_args(subparser)
     subparser.add_argument('--update-requires', action="append", help='Update requires from lockfile')
     subparser.add_argument('--update-build-requires', action="append", help='Update build-requires from lockfile')
     subparser.add_argument('--update-python-requires', action="append", help='Update python-requires from lockfile')
     subparser.add_argument('--update-config-requires', action="append", help='Update config-requires from lockfile')
     subparser.add_argument('--build-require', action='store_true', default=False, help='Whether the provided reference is a build-require')
-    subparser.add_argument('--transitives', action='store_true', default=False, help='Upgrade also transitive dependencies')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -221,51 +208,23 @@ def lock_upgrade(conan_api, parser, subparser, *args):
                                                cwd=cwd, partial=True, overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    def expand_graph():
-        if path:
-            return conan_api.graph.load_graph_consumer(path, args.name, args.version,
-                                                        args.user, args.channel,
-                                                        profile_host, profile_build, lockfile,
-                                                        remotes, args.update,
-                                                        is_build_require=args.build_require)
-        return conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
-                                                    profile_host, profile_build, lockfile,
-                                                    remotes, args.update)
-    requested_update = {"requires": args.update_requires or [],
-                        "build_requires": args.update_build_requires or [],
-                        "python_requires": args.update_python_requires or [],
-                        "config_requires": args.update_config_requires or []}
-    if args.transitives:
-        def is_version_range(ref: str):
-            # TODO: use conan's built in
-            return ref.find('[') != -1 or ref.find('*') != -1
-
-        def match_version(ref, node):
-            if is_version_range(ref):
-                return VersionRange(str(RecipeReference.loads(ref).version)).contains(Version(node.ref), resolve_prerelease=True)
-            else:
-                return node.ref.matches(ref, is_consumer=None)
-        updatable_deps = defaultdict(list)
-        for node in expand_graph().nodes:
-            if not node.ref:
-                continue
-            for kind, deps in requested_update.items():
-                if any(match_version(ref, node) for ref in deps):
-                    updatable_deps[kind].append(node.ref.repr_notime())
-                    for dep in node.conanfile.dependencies.values():
-                        # TODO: dependencies.build.values() ->
-                        # dep.context # host or build require (?)
-                        updatable_deps[kind].append(dep.ref.repr_notime())
-    else:
-        updatable_deps = requested_update
     # Remove the lockfile entries that will be updated
     lockfile = conan_api.lockfile.remove_lockfile(lockfile,
-                                                  requires=updatable_deps["requires"],
-                                                  python_requires=updatable_deps["python_requires"],
-                                                  build_requires=updatable_deps["build_requires"],
-                                                  config_requires=updatable_deps["config_requires"])
+                                                  requires=args.update_requires,
+                                                  python_requires=args.update_python_requires,
+                                                  build_requires=args.update_build_requires,
+                                                  config_requires=args.update_config_requires)
     # Resolve new graph
-    graph = expand_graph()
+    if path:
+        graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                    args.user, args.channel,
+                                                    profile_host, profile_build, lockfile,
+                                                    remotes, args.update,
+                                                    is_build_require=args.build_require)
+    else:
+        graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                    profile_host, profile_build, lockfile,
+                                                    remotes, args.update)
     print_graph_basic(graph)
     graph.report_graph_error()
     conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
