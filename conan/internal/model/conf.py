@@ -133,16 +133,6 @@ BUILT_IN_CONFS = {
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
-    # Runners
-    "runner.type": "Type of runner to use. Possible values: 'docker'",
-    "runner.dockerfile": "Path to the Dockerfile to use in case of building a docker image",
-    "runner.image": "Image name to download from registry or the name of the built image in case of defining dockerfile path",
-    "runner.name": "Name of the container to be used (conan-runner-docker by default)",
-    "runner.cache": "Host's conan cache behavior. Possible values: 'clean' (use empty cache), 'copy' (copy whole cache) or 'shared' (mount chache as shared volume)",
-    "runner.remove": "(boolean) Remove the container after running the Conan command",
-    "runner.configfile": "Path to a configuration file with extra parameters (https://containers.dev/implementors/json_reference/#image-specific)",
-    "runner.build_context": "Docker build context",
-    "runner.platform": "Docker platform to build the image for, e.g. 'linux/amd64'",
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
