@@ -16,7 +16,7 @@ def ssh_skip():
 @pytest.mark.skipif(ssh_skip(), reason="SSH environment have to be configured")
 def test_create_ssh_runner_only_host():
     """
-    Tests the ``conan create . `` with ssh runner using only ssh.host
+    Tests the ``conan create . `` with ssh runner using only host
     """
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
@@ -41,7 +41,7 @@ def test_create_ssh_runner_only_host():
     os=Linux
     [runner]
     type=ssh
-    ssh.host=localhost
+    host=localhost
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -89,8 +89,8 @@ def test_create_ssh_runner_with_config():
     os=Linux
     [runner]
     type=ssh
-    ssh.host=local-machine
-    ssh.configfile={os.path.join(client.current_folder, 'ssh_config')}
+    host=local-machine
+    configfile={os.path.join(client.current_folder, 'ssh_config')}
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -114,9 +114,9 @@ def test_create_ssh_runner_with_config():
     os=Linux
     [runner]
     type=ssh
-    ssh.host=local-machine
+    host=local-machine
     # Let the runner find default config file
-    ssh.configfile=True
+    configfile=True
     """)
     client.save({"host": profile_host})
     client.run("create . -pr:h host -pr:b build")
@@ -145,7 +145,7 @@ def test_create_ssh_runner_default_profile():
     os=Linux
     [runner]
     type=ssh
-    ssh.host=localhost
+    host=localhost
     """)
 
     client.save({"host": profile_host, "build": profile_host})

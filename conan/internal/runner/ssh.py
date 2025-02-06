@@ -54,10 +54,10 @@ class SSHRunner:
         from paramiko.config import SSHConfig
         from paramiko.client import SSHClient, AutoAddPolicy
 
-        hostname = self.host_profile.runner.get("ssh.host")
+        hostname = self.host_profile.runner.get("host")
         if not hostname:
             raise ConanException("Host not specified in runner.ssh configuration")
-        configfile = self.host_profile.runner.get("ssh.configfile", False)
+        configfile = self.host_profile.runner.get("configfile", False)
         if configfile and configfile not in ["False", "false", "0"]:
             if configfile in ["True", "true", "1"]:
                 ssh_config_file = Path.home() / ".ssh" / "config"
