@@ -65,11 +65,11 @@ def test_create_docker_runner_cache_shared():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=shared
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=shared
+    remove=True
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -109,11 +109,11 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=shared
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=shared
+    remove=True
     """)
 
     client.save({"default_host": profile_host, "default_build": profile_build}, path=client.paths.profiles_path)
@@ -153,11 +153,11 @@ def test_create_docker_runner_cache_shared_profile_folder():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=shared
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=shared
+    remove=True
     """)
 
     client.save({"build": profile_build})
@@ -197,11 +197,11 @@ def test_create_docker_runner_dockerfile_folder_path():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=copy
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
     """)
 
     profile_host_clean = textwrap.dedent(f"""\
@@ -215,11 +215,11 @@ def test_create_docker_runner_dockerfile_folder_path():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=clean
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=clean
+    remove=True
     """)
 
     client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
@@ -267,11 +267,11 @@ def test_create_docker_runner_profile_default_folder():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path("Dockerfile_test")}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=copy
-    docker.remove=True
+    dockerfile={dockerfile_path("Dockerfile_test")}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
     """)
     client.save({"host_from_profile": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
     client.save({"build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
@@ -313,11 +313,11 @@ def test_create_docker_runner_dockerfile_file_path():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path("Dockerfile_test")}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=copy
-    docker.remove=True
+    dockerfile={dockerfile_path("Dockerfile_test")}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
     """)
     client.save({"host": profile_host, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
@@ -382,11 +382,11 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     os=Linux
     [runner]
     type=docker
-    docker.image=conan-runner-ninja-test
-    docker.dockerfile={dockerfile_path("Dockerfile_ninja")}
-    docker.build_context={conan_base_path()}
-    docker.cache=copy
-    docker.remove=True
+    image=conan-runner-ninja-test
+    dockerfile={dockerfile_path("Dockerfile_ninja")}
+    build_context={conan_base_path()}
+    cache=copy
+    remove=True
     """)
     client.save({"profile": profile})
     settings = "-s os=Linux -s build_type={} -o hello/*:shared={}".format(build_type, shared)
@@ -434,9 +434,9 @@ def test_create_docker_runner_from_configfile():
     os=Linux
     [runner]
     type=docker
-    docker.configfile={os.path.join(client.current_folder, 'configfile.yaml')}
-    docker.cache=copy
-    docker.remove=True
+    configfile={os.path.join(client.current_folder, 'configfile.yaml')}
+    cache=copy
+    remove=True
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -497,9 +497,9 @@ def test_create_docker_runner_from_configfile_with_args():
     os=Linux
     [runner]
     type=docker
-    docker.configfile={os.path.join(client.current_folder, 'configfile.yaml')}
-    docker.cache=copy
-    docker.remove=True
+    configfile={os.path.join(client.current_folder, 'configfile.yaml')}
+    cache=copy
+    remove=True
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -533,11 +533,11 @@ def test_create_docker_runner_default_build_profile():
     os=Linux
     [runner]
     type=docker
-    docker.dockerfile={dockerfile_path()}
-    docker.build_context={conan_base_path()}
-    docker.image=conan-runner-default-test
-    docker.cache=clean
-    docker.remove=True
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=clean
+    remove=True
     """)
 
     client.save({"host_clean": profile_host})

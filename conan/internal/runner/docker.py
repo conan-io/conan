@@ -52,17 +52,17 @@ class DockerRunner:
         if args.format:
             raise ConanException("format argument is forbidden if running in a docker runner")
 
-        self.configfile = self._load_config(host_profile.runner.get('docker.configfile'))
-        self.dockerfile = host_profile.runner.get('docker.dockerfile') or self.configfile.build.dockerfile
-        self.docker_build_context = host_profile.runner.get('docker.build_context') or self.configfile.build.build_context
-        self.platform = host_profile.runner.get('docker.platform') or self.configfile.build.platform
-        self.image = host_profile.runner.get('docker.image') or self.configfile.image
+        self.configfile = self._load_config(host_profile.runner.get('configfile'))
+        self.dockerfile = host_profile.runner.get('dockerfile') or self.configfile.build.dockerfile
+        self.docker_build_context = host_profile.runner.get('build_context') or self.configfile.build.build_context
+        self.platform = host_profile.runner.get('platform') or self.configfile.build.platform
+        self.image = host_profile.runner.get('image') or self.configfile.image
         if not (self.dockerfile or self.image):
             raise ConanException("'dockerfile' or docker image name is needed")
         self.image = self.image or 'conan-runner-default'
-        self.name = self.configfile.run.name or host_profile.runner.get("docker.name", "conan-runner-docker")
-        self.remove = str(host_profile.runner.get('docker.remove', 'false')).lower() == 'true'
-        self.cache = str(host_profile.runner.get('docker.cache', 'clean'))
+        self.name = self.configfile.run.name or host_profile.runner.get("name", "conan-runner-docker")
+        self.remove = str(host_profile.runner.get('remove', 'false')).lower() == 'true'
+        self.cache = str(host_profile.runner.get('cache', 'clean'))
         if self.cache not in ['clean', 'copy', 'shared']:
             raise ConanException(f'Invalid cache value: "{self.cache}". Valid values are: clean, copy, shared')
         self.container = None
