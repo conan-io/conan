@@ -51,8 +51,11 @@ class SSHRunner:
         self._remote_create()
 
     def _create_ssh_connection(self) -> str:
-        from paramiko.config import SSHConfig
-        from paramiko.client import SSHClient, AutoAddPolicy
+        try:
+            from paramiko.config import SSHConfig
+            from paramiko.client import SSHClient, AutoAddPolicy
+        except ImportError:
+            raise ConanException("Paramiko is required for SSH runner, try installing it with 'pip install paramiko'")
 
         hostname = self.host_profile.runner.get("host")
         if not hostname:
