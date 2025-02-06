@@ -188,6 +188,51 @@ def test_require_different_options():
     assert "gcc/1.0#616ce3babcecef39a27806c1a5f4b4ff" in lock
 
 
+def test_require_different_versions_transitive_noconflict():
+    """ Similar as above, but with transitive, without a conflict
+    """
+    c = TestClient()
+    gcc = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "gcc"
+            package_type = "application"
+            def package(self):
+                echo = f"@echo off\necho MYGCC={self.version}!!"
+                save(self, os.path.join(self.package_folder, "bin", "mygcc.bat"), echo)
+                save(self, os.path.join(self.package_folder, "bin", "mygcc.sh"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", "mygcc.sh"), 0o777)
+            """)
+
+    project = textwrap.dedent(r"""
+       import os, platform
+       from conan import ConanFile
+       from conan.tools.files import save, chdir
+       class Pkg(ConanFile):
+           name = "project"
+           version = "1.0"
+           def build_requirements(self):
+               self.tool_requires("wrappera/1.0")
+               self.tool_requires("wrapperb/1.0")
+           def build(self):
+               ext = "bat" if platform.system() == "Windows" else "sh"
+               self.run(f'mygcc.{ext}')
+       """)
+    c.save({"gcc/conanfile.py": gcc,
+            "wrappera/conanfile.py": GenConanfile("wrappera", "1.0").with_requires("gcc/1.0"),
+            "wrapperb/conanfile.py": GenConanfile("wrapperb", "1.0").with_requires("gcc/1.0"),
+            "project/conanfile.py": project})
+
+    c.run("create gcc --version=1.0")
+    c.run("create wrappera")
+    c.run("create wrapperb")
+
+    c.run("build project")
+    assert "MYGCC=1.0!!" in c.out
+
+
 def test_require_different_versions_transitive():
     """ Similar as above, but with transitive
     """
