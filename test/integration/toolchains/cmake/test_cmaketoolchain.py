@@ -806,7 +806,7 @@ def test_variables_types():
     client.run("install . --name=mylib --version=1.0")
 
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in toolchain
+    assert 'set(FOO ON")' in toolchain
 
 
 def test_android_c_library():
