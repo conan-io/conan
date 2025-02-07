@@ -638,7 +638,7 @@ class TestWinSDKVersion:
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
 
-    @pytest.mark.tool("cmake", "3.28")
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version2(self):
         # https://github.com/conan-io/conan/issues/15372

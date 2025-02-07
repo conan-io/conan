@@ -32,20 +32,8 @@ class RestRoutes(object):
         return '%s/files/{path}' % self.recipe_revision
 
     @property
-    def packages(self):
-        return '%s/packages' % self.recipe
-
-    @property
     def packages_revision(self):
         return '%s/packages' % self.recipe_revision
-
-    @property
-    def package(self):
-        return '%s/{package_id}' % self.packages
-
-    @property
-    def package_files(self):
-        return '%s/files' % self.package
 
     @property
     def package_recipe_revision(self):

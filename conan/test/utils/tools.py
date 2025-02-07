@@ -41,7 +41,6 @@ from conan.api.model import PkgReference
 from conan.internal.model.profile import Profile
 from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
-from conan.test.assets import copy_assets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.artifactory import ArtifactoryServer
 from conan.test.utils.mocks import RedirectedInputStream
@@ -660,9 +659,6 @@ class TestClient:
 
     def save_home(self, files):
         self.save(files, path=self.cache_folder)
-
-    def copy_assets(self, origin_folder, assets=None):
-        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
