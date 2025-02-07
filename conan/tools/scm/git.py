@@ -271,7 +271,7 @@ class Git:
         :param repository: By default gets the commit of the defined folder, use repository=True to get
                      the commit of the repository instead.
         """
-        scm_url, scm_commit = self.get_url_and_commit(repository)
+        scm_url, scm_commit = self.get_url_and_commit(repository=repository)
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):
