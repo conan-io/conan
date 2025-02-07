@@ -1,7 +1,4 @@
-import os
-
 from conan.tools.apple import to_apple_arch
-from conans.errors import ConanException
 
 
 class XcodeBuild(object):
@@ -14,12 +11,10 @@ class XcodeBuild(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.apple.xcodebuild:verbosity", default="", check_type=str)
-        if verbosity == "quiet" or verbosity == "verbose":
-            return "-{}".format(verbosity)
-        elif verbosity:
-            raise ConanException("Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(verbosity))
-        return ""
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose")) \
+                    or self._conanfile.conf.get("tools.compilation:verbosity",
+                                                choices=("quiet", "verbose"))
+        return "-" + verbosity if verbosity is not None else ""
 
     @property
     def _sdkroot(self):
@@ -32,6 +27,15 @@ class XcodeBuild(object):
         return "SDKROOT={}".format(sdk) if sdk else ""
 
     def build(self, xcodeproj, target=None):
+        """
+        Call to ``xcodebuild`` to build a Xcode project.
+
+        :param xcodeproj: the *xcodeproj* file to build.
+        :param target: the target to build, in case this argument is passed to the ``build()``
+                       method it will add the ``-target`` argument to the build system call. If not passed, it
+                       will build all the targets passing the ``-alltargets`` argument instead.
+        :return: the return code for the launched ``xcodebuild`` command.
+        """
         target = "-target {}".format(target) if target else "-alltargets"
         cmd = "xcodebuild -project {} -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,

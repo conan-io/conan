@@ -1,0 +1,103 @@
+name: Main Workflow
+on:
+  push:
+    branches:
+      - develop2
+      - release/*
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+      - 'release/*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux_suite:
+    uses: ./.github/workflows/linux-tests.yml
+    name: Linux test suite
+
+  osx_suite:
+    uses: ./.github/workflows/osx-tests.yml
+    name: OSX test suite
+
+  windows_suite:
+    uses: ./.github/workflows/win-tests.yml
+    name: Windows test suite
+
+  code_coverage:
+    runs-on: ubuntu-latest
+    name: Code coverage
+    if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
+    needs: [linux_suite, osx_suite, windows_suite]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Merge coverage reports
+        run: |
+          pip install coverage
+          coverage combine
+          coverage report
+          coverage xml
+
+      - name: Code coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            .coverage.*
+
+  deploy_to_pypi_test:
+    runs-on: ubuntu-latest
+    name: Deploy to TestPyPI
+    if: github.ref == 'refs/heads/develop2'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install twine
+
+      - name: Bump Dev Version
+        run: |
+          python .ci/bump_dev_version.py
+
+      - name: Build Package
+        run: |
+          python setup.py sdist
+
+      - name: Upload to TestPyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+        run: |
+          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+
+      - name: Deploy conan-server to TestPyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_SERVER_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_SERVER_PASSWORD }}
+        run: |
+          rm -rf dist/
+          mv setup_server.py setup.py
+          python setup.py sdist
+          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
