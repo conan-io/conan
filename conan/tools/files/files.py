@@ -360,33 +360,37 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
+            # Simple case: extract everything
             tarredgzippedFile.extractall(destination)
         else:
-            members = tarredgzippedFile.getmembers()
+            # Read members one by one and process them
+            common_folder = None
+            for member in tarredgzippedFile:
+                if pattern and not fnmatch(member.name, pattern):
+                    continue  # Skip files that don’t match the pattern
 
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
-            if strip_root:
-                names = [member.name.replace("\\", "/") for member in members]
-                common_folder = os.path.commonprefix(names).split("/", 1)[0]
-                if not common_folder and len(names) > 1:
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
-                    raise ConanException("The tgz file contains a file in the root")
-                # Remove the directory entry if present
-                members = [m for m in members if m.name != common_folder]
-                for member in members:
+                if strip_root:
                     name = member.name.replace("\\", "/")
-                    member.name = name.split("/", 1)[1]
-                    member.path = member.name
-                    if member.linkpath.startswith(common_folder):
-                        # https://github.com/conan-io/conan/issues/11065
-                        linkpath = member.linkpath.replace("\\", "/")
-                        member.linkpath = linkpath.split("/", 1)[1]
-                        member.linkname = member.linkpath
-            tarredgzippedFile.extractall(destination, members=members)
+                    if not common_folder:
+                        splits = name.split("/", 1)
+                        # First case for a plain folder in the root
+                        if member.isdir() or len(splits) > 1:
+                            common_folder = splits[0]  # Find the root folder
+                        else:
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
+                    if not name.startswith(common_folder):
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
 
+                    # Adjust the member's name for extraction
+                    member.name = name[len(common_folder) + 1:]
+                    member.path = member.name
+                    if member.linkpath and member.linkpath.startswith(common_folder):
+                        # https://github.com/conan-io/conan/issues/11065
+                        member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
+                        member.linkname = member.linkpath
+                # Extract file one by one, avoiding `extractall()` with members parameter:
+                # This will avoid a first whole file read resulting in a performant improvement around 25%
+                tarredgzippedFile.extract(member, path=destination)
 
 def check_sha1(conanfile, file_path, signature):
     """

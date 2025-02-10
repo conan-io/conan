@@ -35,8 +35,7 @@ def test_graph_build_order_override_error():
     for level in to_build["order"]:
         for package in level:
             binary = package["binary"]
-            if binary != "Build":
-                continue
+            assert binary == "Build"  # All nodes in this case have to be built
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock")
             ref = RecipeReference.loads(package["ref"])
@@ -83,8 +82,7 @@ def test_graph_build_order_override_replace_requires(replace_pattern):
     for level in to_build["order"]:
         for package in level:
             binary = package["binary"]
-            if binary != "Build":
-                continue
+            assert binary == "Build"  # All nodes in this case have to be built
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock -pr=profile")
             ref = RecipeReference.loads(package["ref"])
@@ -152,8 +150,7 @@ def test_single_config_decentralized_overrides():
         for elem in level:
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
 
@@ -207,8 +204,7 @@ def test_single_config_decentralized_overrides_nested():
                 pass
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkga/conan.lock")
 
@@ -291,8 +287,7 @@ def test_single_config_decentralized_overrides_multi(forced):
                 pass
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
 
@@ -374,8 +369,7 @@ def test_single_config_decentralized_overrides_multi_replace_requires(replace_pa
                 pass
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock -pr:b=profile")
 

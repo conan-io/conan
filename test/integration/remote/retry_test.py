@@ -19,12 +19,8 @@ class _ResponseMock:
 
     def raise_for_status(self):
         """Raises stored :class:`HTTPError`, if one occurred."""
-
         http_error_msg = ''
-        if 400 <= self.status_code < 500:
-            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
-
-        elif 500 <= self.status_code < 600:
+        if 500 <= self.status_code < 600:
             http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
 
         if http_error_msg:
@@ -42,8 +38,6 @@ class _RequesterMock:
 
 
 class _ConfigMock:
-    def __getitem__(self, item):
-        return 0
 
     def get(self, conf_name, default=None, check_type=None):
         return 0

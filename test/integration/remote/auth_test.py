@@ -7,7 +7,6 @@ import pytest
 from requests.models import Response
 
 from conan.internal.api.remotes.localdb import LocalDB
-from conan.internal.errors import AuthenticationException
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
@@ -143,19 +142,17 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
 
-class AuthenticationTest(unittest.TestCase):
+class TestAuthenticationTest:
 
     def test_unauthorized_during_capabilities(self):
 
         class RequesterMock(TestRequester):
-
             @staticmethod
             def get(url, **kwargs):
                 resp_basic_auth = Response()
                 resp_basic_auth.status_code = 200
                 if "authenticate" in url:
-                    if kwargs["auth"].password != "PASSWORD!":
-                        raise Exception("Bad password")
+                    assert kwargs["auth"].password == "PASSWORD!"
                     resp_basic_auth._content = b"TOKEN"
                     resp_basic_auth.headers = {"Content-Type": "text/plain"}
                 elif "ping" in url:
@@ -163,28 +160,19 @@ class AuthenticationTest(unittest.TestCase):
                                                "X-Conan-Server-Capabilities": "revisions"}
                     bearer = getattr(kwargs["auth"], "bearer", None)
                     password = getattr(kwargs["auth"], "password", None)
-                    if bearer and bearer != "Bearer TOKEN":
-                        raise Exception("Bad JWT Token")
-                    if not bearer and not password:
-                        raise AuthenticationException(
-                            "I'm an Artifactory without anonymous access that "
-                            "requires authentication for the ping endpoint and "
-                            "I don't return the capabilities")
-                elif "search" in url:
-                    if kwargs["auth"].bearer != "Bearer TOKEN":
-                        raise Exception("Bad JWT Token")
+                    assert bearer == "Bearer TOKEN" or password
+                else:
+                    assert "search" in url
+                    assert kwargs["auth"].bearer == "Bearer TOKEN"
                     resp_basic_auth._content = b'{"results": []}'
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
-                else:
-                    raise Exception("Shouldn't be more remote calls")
                 return resp_basic_auth
 
         client = TestClient(requester_class=RequesterMock, default_server_user=True)
         client.run("remote login default user -p PASSWORD!")
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
-                      client.out)
+        assert "Changed user of remote 'default' from 'None' (anonymous) to 'user'" in client.out
         client.run("search pkg -r=default")
-        self.assertIn("ERROR: Recipe 'pkg' not found", client.out)
+        assert "ERROR: Recipe 'pkg' not found" in client.out
 
 
 @pytest.mark.xfail(reason="This test is randomly failing")

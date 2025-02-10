@@ -137,7 +137,7 @@ def test_untargz_with_strip_root_fails():
     dest_dir = temp_folder()
     with pytest.raises(ConanException) as error:
         unzip(conanfile, archive, dest_dir, strip_root=True)
-    assert "The tgz file contains more than 1 folder in the root" in str(error.value)
+    assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(error.value)
 
 
 def test_untargz_with_strip_root_and_pattern():
