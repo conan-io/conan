@@ -505,8 +505,7 @@ def test_single_config_decentralized_overrides():
         for elem in level:
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
 

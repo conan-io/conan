@@ -106,7 +106,6 @@ def test_vcvars_2015_error():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.xfail(reason="we dont have vs2015 installed in gh actions")
 def test_vcvars_platform_x86():
     # https://github.com/conan-io/conan/issues/11144
     client = TestClient(path_with_spaces=False)
@@ -118,7 +117,7 @@ def test_vcvars_platform_x86():
             settings = "os", "compiler", "arch", "build_type"
     """)
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=190 '
+    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=193 '
                '-s compiler.cppstd=14 -s compiler.runtime=static -s:b arch=x86')
 
     vcvars = client.load("conanvcvars.bat")
@@ -127,7 +126,6 @@ def test_vcvars_platform_x86():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.xfail(reason="we dont have vs2015 installed in gh actions")
 def test_vcvars_winsdk_version():
     client = TestClient(path_with_spaces=False)
 
