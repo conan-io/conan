@@ -172,4 +172,3 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
           tests: test/${{ matrix.test-type }}
-          duration: 20

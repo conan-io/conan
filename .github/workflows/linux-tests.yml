@@ -88,7 +88,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
           tests: test/${{ matrix.test-type }}
-          duration: 20
 
   linux_docker_tests:
     needs: build_container
@@ -120,5 +119,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: docker
           tests: '-m docker_runner -rs'
-          duration: 20
           workers: 1

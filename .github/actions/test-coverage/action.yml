@@ -11,7 +11,7 @@ inputs:
     required: true
 
   duration:
-    description: 'Tests maximum duration'
+    description: 'Show N slowest test durations (N=0 for all)'
     required: true
     default: '10'
 

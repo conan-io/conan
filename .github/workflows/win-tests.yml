@@ -54,7 +54,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: unit-integration
           tests: test/unittests test/integration
-          duration: 100
 
   functional_tests:
     runs-on: windows-2022
@@ -249,4 +248,3 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: functional
           tests: test/functional
-          duration: 100
