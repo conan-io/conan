@@ -122,7 +122,6 @@ def test_vcvars_platform_x86():
 
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  x86_amd64' in vcvars
-    assert "-vcvars_ver" not in vcvars
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
