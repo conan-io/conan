@@ -40,6 +40,39 @@ class _ContainerConfig(NamedTuple):
     build: Build = Build()
     run: Run = Run()
 
+    @staticmethod
+    def load(file_path: Optional[str]) -> '_ContainerConfig':
+        # Container config
+        # https://containers.dev/implementors/json_reference/
+        if not file_path:
+            return _ContainerConfig()
+
+        def _instans_or_error(value, obj):
+            if value and (not isinstance(value, obj)):
+                raise ConanException(f"docker runner configfile syntax error: {value} must be a {obj.__name__}")
+            return value
+        with open(file_path, 'r') as f:
+            runnerfile = yaml.safe_load(f)
+        return _ContainerConfig(
+            image=_instans_or_error(runnerfile.get('image'), str),
+            build=_ContainerConfig.Build(
+                dockerfile=_instans_or_error(runnerfile.get('build', {}).get('dockerfile'), str),
+                build_context=_instans_or_error(runnerfile.get('build', {}).get('build_context'), str),
+                build_args=_instans_or_error(runnerfile.get('build', {}).get('build_args'), dict),
+                cache_from=_instans_or_error(runnerfile.get('build', {}).get('cacheFrom'), list),
+                platform=_instans_or_error(runnerfile.get('build', {}).get('platform'), str),
+            ),
+            run=_ContainerConfig.Run(
+                name=_instans_or_error(runnerfile.get('run', {}).get('name'), str),
+                environment=_instans_or_error(runnerfile.get('run', {}).get('containerEnv'), dict),
+                user=_instans_or_error(runnerfile.get('run', {}).get('containerUser'), str),
+                privileged=_instans_or_error(runnerfile.get('run', {}).get('privileged'), bool),
+                cap_add=_instans_or_error(runnerfile.get('run', {}).get('capAdd'), list),
+                security_opt=_instans_or_error(runnerfile.get('run', {}).get('securityOpt'), list),
+                volumes=_instans_or_error(runnerfile.get('run', {}).get('mounts'), dict),
+                network=_instans_or_error(runnerfile.get('run', {}).get('network'), str),
+            )
+        )
 
 class DockerRunner:
     def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
@@ -53,7 +86,7 @@ class DockerRunner:
         if args.format:
             raise ConanException("format argument is forbidden if running in a docker runner")
 
-        self.configfile = self._load_config(host_profile.runner.get('configfile'))
+        self.configfile = _ContainerConfig.load(host_profile.runner.get('configfile'))
         self.dockerfile = host_profile.runner.get('dockerfile') or self.configfile.build.dockerfile
         self.docker_build_context = host_profile.runner.get('build_context') or self.configfile.build.build_context
         self.platform = host_profile.runner.get('platform') or self.configfile.build.platform
@@ -123,40 +156,6 @@ class DockerRunner:
         if abs_path is None:
             raise ConanException("Could not determine the absolute path.")
         return Path(abs_path)
-
-    @staticmethod
-    def _load_config(file_path: Optional[str]) -> _ContainerConfig:
-        # Container config
-        # https://containers.dev/implementors/json_reference/
-        if file_path:
-            def _instans_or_error(value, obj):
-                if value and (not isinstance(value, obj)):
-                    raise ConanException(f"docker runner configfile syntax error: {value} must be a {obj.__name__}")
-                return value
-            with open(file_path, 'r') as f:
-                runnerfile = yaml.safe_load(f)
-            return _ContainerConfig(
-                image=_instans_or_error(runnerfile.get('image'), str),
-                build=_ContainerConfig.Build(
-                    dockerfile=_instans_or_error(runnerfile.get('build', {}).get('dockerfile'), str),
-                    build_context=_instans_or_error(runnerfile.get('build', {}).get('build_context'), str),
-                    build_args=_instans_or_error(runnerfile.get('build', {}).get('build_args'), dict),
-                    cache_from=_instans_or_error(runnerfile.get('build', {}).get('cacheFrom'), list),
-                    platform=_instans_or_error(runnerfile.get('build', {}).get('platform'), str),
-                ),
-                run=_ContainerConfig.Run(
-                    name=_instans_or_error(runnerfile.get('run', {}).get('name'), str),
-                    environment=_instans_or_error(runnerfile.get('run', {}).get('containerEnv'), dict),
-                    user=_instans_or_error(runnerfile.get('run', {}).get('containerUser'), str),
-                    privileged=_instans_or_error(runnerfile.get('run', {}).get('privileged'), bool),
-                    cap_add=_instans_or_error(runnerfile.get('run', {}).get('capAdd'), list),
-                    security_opt=_instans_or_error(runnerfile.get('run', {}).get('securityOpt'), list),
-                    volumes=_instans_or_error(runnerfile.get('run', {}).get('mounts'), dict),
-                    network=_instans_or_error(runnerfile.get('run', {}).get('network'), str),
-                )
-            )
-        else:
-            return _ContainerConfig()
 
     def _build_image(self) -> None:
         if not self.dockerfile:
@@ -248,7 +247,7 @@ class DockerRunner:
         app = ConanApp(self.conan_api)
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
         conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
-        abs_docker_base_path = self.abs_docker_path = Path('/') / self.docker_user_name / 'conanrunner'
+        abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'
         # Check if recipe has defined a root folder
         # In this case, mount the root folder as the base path and update the abs_docker_path to the
         # new relative path

@@ -10,9 +10,3 @@ class RunnerOutput(ConanOutput):
         for line in msg.splitlines():
             super()._write_message(self._prefix, Color.BLACK, Color.BRIGHT_YELLOW, newline=False)
             super()._write_message(line, fg, bg, newline)
-
-    @property
-    def padding(self):
-        return len(self._prefix) + 1
-
-
