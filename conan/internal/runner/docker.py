@@ -16,6 +16,7 @@ from pathlib import Path
 from conan.internal.model.profile import Profile
 from conan.internal.model.version import Version
 from conan.internal.runner.output import RunnerOutput
+from conan.internal.conan_app import ConanApp
 
 class _ContainerConfig(NamedTuple):
     class Build(NamedTuple):
@@ -66,15 +67,8 @@ class DockerRunner:
         if self.cache not in ['clean', 'copy', 'shared']:
             raise ConanException(f'Invalid cache value: "{self.cache}". Valid values are: clean, copy, shared')
         self.container = None
-
-        # Runner config
-        self.abs_runner_home_path = self.abs_host_path / '.conanrunner'
-        self.docker_user_name = self.configfile.run.user or 'root'
-        self.abs_docker_path = os.path.join(f'/{self.docker_user_name}/conanrunner', os.path.basename(self.abs_host_path)).replace("\\","/")
-
-        # Update conan command and some paths to run inside the container
-        raw_args[raw_args.index(args.path)] = self.abs_docker_path
-        self.command = ' '.join([f'conan {command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in raw_args] + ['-f json > create.json'])
+        self.raw_args = raw_args
+        self.command = command
         self.runner_logger = RunnerOutput(self.name)
 
     def run(self) -> None:
@@ -250,10 +244,41 @@ class DockerRunner:
             raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
         return stdout_log, stderr_log
 
+    def _get_volumes_and_docker_path(self) -> tuple[dict,str]:
+        app = ConanApp(self.conan_api)
+        remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
+        conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
+        abs_docker_base_path = self.abs_docker_path = Path('/') / self.docker_user_name / 'conanrunner'
+        # Check if recipe has defined a root folder
+        # In this case, mount the root folder as the base path and update the abs_docker_path to the
+        # new relative path
+        if hasattr(conanfile, "layout"):
+            try:
+                conanfile.layout()
+                if conanfile.folders.root:
+                    abs_path = self._get_abs_host_path(conanfile.folders.root)
+                    if self.abs_host_path.is_relative_to(abs_path):
+                        abs_docker_base_path /= abs_path.name
+                        volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
+                        abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
+                        return volumes, abs_docker_path.as_posix()
+            except:
+                pass
+        abs_docker_path = (abs_docker_base_path / self.abs_host_path.name).as_posix()
+        volumes = {self.abs_host_path: {'bind': abs_docker_path, 'mode': 'rw'}}
+        return volumes, abs_docker_path
+
     def _create_runner_environment(self) -> tuple[dict, dict]:
+        # Runner configuration
+        self.abs_runner_home_path = self.abs_host_path / '.conanrunner'
+        self.docker_user_name = self.configfile.run.user or 'root'
+        volumes, self.abs_docker_path = self._get_volumes_and_docker_path()
         shutil.rmtree(self.abs_runner_home_path, ignore_errors=True)
-        volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
         environment = {'CONAN_RUNNER_ENVIRONMENT': '1'}
+
+        # Update conan command and some paths to run inside the container
+        self.raw_args[self.raw_args.index(self.args.path)] = self.abs_docker_path
+        self.command = ' '.join([f'conan {self.command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in self.raw_args] + ['-f json > create.json'])
 
         if self.cache == 'shared':
             volumes[self.conan_api.home_folder] = {'bind': f'/{self.docker_user_name}/.conan2', 'mode': 'rw'}
