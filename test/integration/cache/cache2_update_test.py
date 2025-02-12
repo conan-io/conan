@@ -4,7 +4,7 @@ from collections import OrderedDict
 import pytest
 from mock import patch
 
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.server.revision_list import RevisionList
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID

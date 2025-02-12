@@ -438,7 +438,8 @@ class EnvVars:
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
-        open(file_location, "w", encoding="utf-8").write(content)
+        with open(file_location, "w", encoding="utf-8") as f:
+            f.write(content)
 
     def save_ps1(self, file_location, generate_deactivate=True,):
         _, filename = os.path.split(file_location)

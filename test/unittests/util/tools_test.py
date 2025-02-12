@@ -16,13 +16,7 @@ from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
 
-class ConfigMock:
-    def __init__(self):
-        self.retry = 0
-        self.retry_wait = 0
-
-
-class RunnerMock(object):
+class RunnerMock:
     def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
@@ -81,8 +75,6 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual(os.getenv("Z", None), None)
 
     def test_check_output_runner(self):
-        original_temp = temp_folder()
-        patched_temp = os.path.join(original_temp, "dir with spaces")
         payload = "hello world"
         output = check_output_runner("echo {}".format(payload), stderr=subprocess.STDOUT)
         self.assertIn(payload, str(output))

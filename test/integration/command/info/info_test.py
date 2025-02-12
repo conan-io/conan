@@ -176,6 +176,15 @@ class TestJsonOutput:
         graph = json.loads(client.stdout)
         assert graph["graph"]["nodes"]["0"]["settings"]["build_type"] == "Debug"
 
+    def test_json_info_requirements(self):
+        c = TestClient()
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+                "app/conanfile.py": GenConanfile().with_require("pkg/[>=0.0 <1.0]")})
+        c.run("create pkg")
+        c.run("graph info app --format=json")
+        graph = json.loads(c.stdout)
+        assert graph["graph"]["nodes"]["0"]["dependencies"]["1"]["require"] == "pkg/[>=0.0 <1.0]"
+
 
 class TestAdvancedCliOutput:
     """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES

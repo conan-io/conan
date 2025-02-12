@@ -52,15 +52,15 @@ def test_make_dirs_with_abs_path():
 
     lines = makefile_content.splitlines()
     for line_no, line in enumerate(lines):
-        includedir_pattern = "CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIRS_FLAG)"
+        includedir_pattern = "CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIR_FLAG)"
         if line.startswith(includedir_pattern):
             assert os.path.isabs(line[len(includedir_pattern):])
             assert line.endswith("include")
-        elif line.startswith("\t$(CONAN_LIB_DIRS_FLAG)") and 'my_absoulte_path' in line:
-            assert os.path.isabs(line[len("\t$(CONAN_LIB_DIRS_FLAG)"):-2])
+        elif line.startswith("\t$(CONAN_LIB_DIR_FLAG)") and 'my_absoulte_path' in line:
+            assert os.path.isabs(line[len("\t$(CONAN_LIB_DIR_FLAG)"):-2])
             assert line.endswith("lib \\")
-        elif line.startswith("\t$(CONAN_LIB_DIRS_FLAG)") and line.endswith('lib2'):
-            assert "\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/lib2" in line
+        elif line.startswith("\t$(CONAN_LIB_DIR_FLAG)") and line.endswith('lib2'):
+            assert "\t$(CONAN_LIB_DIR_FLAG)$(CONAN_ROOT_MYLIB)/lib2" in line
 
 
 def test_make_empty_dirs():
@@ -237,7 +237,7 @@ def test_make_with_public_deps_and_component_requires():
            '\t$(CONAN_REQUIRES_SECOND_MYFIRSTCOMP)\n' in makefile_content
     assert 'SYSROOT' not in makefile_content
     assert 'CONAN_REQUIRES_SECOND_MYFIRSTCOMP = mycomponent\n' in makefile_content
-    assert 'CONAN_LIBS_LIB = $(CONAN_LIBS_LIB_CMP1)\n'in makefile_content
+    assert 'CONAN_LIBS_LIB = $(CONAN_LIBS_LIB_CMP1)\n' in makefile_content
 
     assert 'CONAN_COMPONENTS_LIB = cmp1\n' in makefile_content
     assert 'CONAN_LIBS_LIB_CMP1 = $(CONAN_LIB_FLAG)libcmp1\n' in makefile_content

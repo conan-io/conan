@@ -190,6 +190,10 @@ class ConanFile:
         return self._conan_node.context
 
     @property
+    def subgraph(self):
+        return self._conan_node.subgraph()
+
+    @property
     def dependencies(self):
         # Caching it, this object is requested many times
         if self._conan_dependencies is None:

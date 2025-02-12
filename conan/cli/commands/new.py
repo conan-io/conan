@@ -16,7 +16,7 @@ def new(conan_api, parser, *args):
                         "either a predefined built-in or a user-provided one. "
                         "Available built-in templates: basic, cmake_lib, cmake_exe, "
                         "meson_lib, meson_exe, msbuild_lib, msbuild_exe, bazel_lib, bazel_exe, "
-                        "autotools_lib, autotools_exe, local_recipes_index. "
+                        "autotools_lib, autotools_exe, local_recipes_index, workspace. "
                         "E.g. 'conan new cmake_lib -d name=hello -d version=0.1'. "
                         "You can define your own templates too by inputting an absolute path "
                         "as your template, or a path relative to your conan home folder."

@@ -13,8 +13,8 @@ from conans.client.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import rmdir, human_size
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
@@ -187,7 +187,7 @@ class RemoteManager:
             raise
 
     def search_recipes(self, remote, pattern):
-        cached_method = remote.caching.setdefault("search_recipes", {})
+        cached_method = remote._caching.setdefault("search_recipes", {})
         try:
             return cached_method[pattern]
         except KeyError:
@@ -241,7 +241,7 @@ class RemoteManager:
             if options:
                 headers['Conan-PkgID-Options'] = ';'.join(options)
 
-        cached_method = remote.caching.setdefault("get_latest_package_reference", {})
+        cached_method = remote._caching.setdefault("get_latest_package_reference", {})
         try:
             return cached_method[pref]
         except KeyError:

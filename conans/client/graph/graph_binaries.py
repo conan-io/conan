@@ -17,8 +17,8 @@ from conan.internal.errors import conanfile_exception_formatter, ConanConnection
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 

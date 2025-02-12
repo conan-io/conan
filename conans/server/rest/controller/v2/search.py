@@ -1,6 +1,6 @@
 from bottle import request
 
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.v2.search import SearchService
 
