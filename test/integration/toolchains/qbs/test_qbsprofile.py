@@ -17,7 +17,6 @@ COMPILER_MAP = {
 }
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('compiler, version, system', [
     ('gcc', '13', 'Linux'),
     ('clang', '15', 'Linux'),
@@ -64,7 +63,6 @@ def test_toolchain_from_path(compiler, version, system):
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('compiler, version, system, cc, cxx', [
     ('gcc', '13', 'Linux', 'gcc', 'g++'),
     ('clang', '15', 'Linux', 'clang', 'clang++'),
@@ -104,7 +102,6 @@ def test_toolchain_from_conf(compiler, version, system, cc, cxx):
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('compiler, version, system, cc, cxx', [
     ('gcc', '13', 'Linux', 'gcc', 'g++'),
     ('clang', '15', 'Linux', 'clang', 'clang++'),
@@ -145,7 +142,6 @@ def test_toolchain_from_env(compiler, version, system, cc, cxx):
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('system, compiler, version, build_type, arch, cppstd', [
     ('Linux', 'gcc', '13', 'Release', 'x86_64', '17'),
     ('Linux', 'gcc', '13', 'Debug', 'x86_64', '14'),
@@ -195,7 +191,6 @@ def test_options_from_settings(system, compiler, version, build_type, arch, cpps
     # TODO: cpp.runtimeLibrary (MSVC only)
 
 
-@pytest.mark.tool("qbs")
 def test_options_from_conf():
     client = TestClient()
 
@@ -238,7 +233,6 @@ def test_options_from_conf():
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
 
 
-@pytest.mark.tool("qbs")
 def test_options_extra():
     client = TestClient()
 
@@ -288,7 +282,6 @@ def test_options_extra():
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
 
 
-@pytest.mark.tool("qbs")
 def test_sysroot():
     client = TestClient()
 

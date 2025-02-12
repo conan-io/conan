@@ -250,10 +250,6 @@ class WinTest(Base):
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
-        if runtime == "MTd":
-            settings["compiler.runtime"] = "MT"
-        if runtime == "MD":
-            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
