@@ -443,27 +443,22 @@ def test_new():
     assert "app1/0.1" in c.out
 
 
-
 class TestClean:
     def test_clean(self):
         # Using cmake_layout, we can clean the build folders
         c = TestClient()
-        c.save({"conanws.yml": ""})
+        c.save({"conanws.yml": "name: my_workspace"})
         pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
         pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
-        layout = textwrap.dedent("""
-            def layout(self):
-                from conan.tools.cmake import cmake_layout
-                cmake_layout(self)
-            """)
-        c.save({"pkga/conanfile.py": str(pkga) + textwrap.indent(layout, "    "),
-                "pkgb/conanfile.py": str(pkgb) + textwrap.indent(layout, "    ")})
-        c.run("workspace add pkga")
-        c.run("workspace add pkgb --product")
+        c.save({"pkga/conanfile.py": pkga ,
+                "pkgb/conanfile.py": pkgb})
+        c.run("workspace add pkga -of=build/pkga")
+        c.run("workspace add pkgb -of=build/pkgb --product")
         c.run("workspace build")
-        assert os.path.exists(os.path.join(c.current_folder, "pkga", "build"))
-        assert os.path.exists(os.path.join(c.current_folder, "pkgb", "build"))
+        assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
+        assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
         c.run("workspace clean")
-        print(c.out)
-        assert not os.path.exists(os.path.join(c.current_folder, "pkga", "build"))
-        assert not os.path.exists(os.path.join(c.current_folder, "pkgb", "build"))
+        assert "my_workspace: Removing pkga/0.1 output folder" in c.out
+        assert "my_workspace: Removing pkgb/0.1 output folder" in c.out
+        assert not os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
+        assert not os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
