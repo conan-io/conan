@@ -149,6 +149,9 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
     chmod +x bazel-${BAZEL_8}-linux-x86_64 && \
     mv bazel-${BAZEL_8}-linux-x86_64 /usr/share/bazel-$BAZEL_8/bin/bazel
 
+RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-linux.tar.gz && \
+    tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
+    mv premake5 /usr/share/premake
 
 USER conan
 WORKDIR $HOME
