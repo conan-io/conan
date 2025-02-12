@@ -359,7 +359,7 @@ class TargetConfigurationTemplate2:
                      "{{config_wrapper(config, require_target)}}")
         {% else %}
         if(${CMAKE_VERSION} VERSION_LESS "3.27")
-            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
+            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.27")
         endif()
         # If the headers trait is not there, this will do nothing
         target_link_libraries({{lib}} INTERFACE
