@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
 from conan.test.utils.tools import TestClient
@@ -35,7 +36,7 @@ def _check_install_run(client):
                "-g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", client.current_folder, "app")
+    command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out
@@ -124,7 +125,7 @@ def test_shared_cmake_toolchain_components():
     client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", client.current_folder, "app")
+    command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out
@@ -143,7 +144,7 @@ def test_shared_cmake_toolchain_components():
     client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", client.current_folder, "app")
+    command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out

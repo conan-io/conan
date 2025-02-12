@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph_error import GraphError
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -70,6 +70,23 @@ class Node(object):
         self.replaced_requires = {}  # To track the replaced requires for self.dependencies[old-ref]
         self.skipped_build_requires = False
 
+    def subgraph(self):
+        nodes = [self]
+        opened = [self]
+        while opened:
+            new_opened = []
+            for o in opened:
+                for n in o.neighbors():
+                    if n not in nodes:
+                        nodes.append(n)
+                    if n not in opened:
+                        new_opened.append(n)
+            opened = new_opened
+
+        graph = DepsGraph()
+        graph.nodes = nodes
+        return graph
+
     def __lt__(self, other):
         """
         @type other: Node
@@ -116,7 +133,7 @@ class Node(object):
             return
 
         if src_node is not None:  # This happens when closing a loop, and we need to know the edge
-            d = [d for d in self.dependants if d.src is src_node][0]  # TODO: improve ugly
+            d = next(d for d in self.dependants if d.src is src_node)
         else:
             assert len(self.dependants) == 1
             d = self.dependants[0]
@@ -131,7 +148,7 @@ class Node(object):
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
             down_require.required_nodes = require.required_nodes.copy()
-        down_require.required_nodes.append(self)
+        down_require.required_nodes.add(self)
         return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
@@ -142,7 +159,7 @@ class Node(object):
             if require.build and (self.context == CONTEXT_HOST or  # switch context
                                   require.ref.version != self.ref.version):  # or different version
                 pass
-            elif require.visible is False: #  and require.ref.version != self.ref.version:
+            elif require.visible is False:  # and require.ref.version != self.ref.version:
                 # Experimental, to support repackaging of openssl previous versions FIPS plugins
                 pass  # An invisible require doesn't conflict with itself
             else:
@@ -216,7 +233,6 @@ class Node(object):
 
     def add_edge(self, edge):
         if edge.src == self:
-            assert edge not in self.dependencies
             self.dependencies.append(edge)
         else:
             self.dependants.append(edge)
@@ -347,6 +363,10 @@ class DepsGraph(object):
         self.options_conflicts = {}
         self.error = False
 
+    def lockfile(self):
+        from conan.internal.model.lockfile import Lockfile
+        return Lockfile(self)
+
     def overrides(self):
         return Overrides.create(self.nodes)
 
@@ -360,8 +380,8 @@ class DepsGraph(object):
     def add_node(self, node):
         self.nodes.append(node)
 
-    def add_edge(self, src, dst, require):
-        assert src in self.nodes and dst in self.nodes
+    @staticmethod
+    def add_edge(src, dst, require):
         edge = Edge(src, dst, require)
         src.add_edge(edge)
         dst.add_edge(edge)

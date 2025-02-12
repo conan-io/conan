@@ -2,7 +2,7 @@ import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
 from conan.internal.api.detect.detect_api import default_cppstd as default_cppstd_
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):

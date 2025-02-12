@@ -3,6 +3,7 @@ import platform
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conan.test.assets.sources import gen_function_cpp
@@ -84,14 +85,14 @@ def test_editable_cmake_windows_folders():
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool("cmake", "3.17")
+@pytest.mark.tool("cmake", "3.19")
 def test_editable_cmake_linux(generator):
     editable_cmake(generator)
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
 
@@ -115,11 +116,11 @@ def editable_cmake_exe(generator):
     def run_pkg(msg):
         host_arch = c.get_default_host_profile().settings['arch']
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(f"conanrunenv-release-{host_arch}", c.current_folder,
+        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-release-{host_arch}", c.current_folder,
                                                "dep_app",)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(f"conanrunenv-debug-{host_arch}", c.current_folder,
+        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-debug-{host_arch}", c.current_folder,
                                                "dep_app", )
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out
@@ -147,13 +148,13 @@ def test_editable_cmake_windows_exe(generator):
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool("cmake", "3.17")
+@pytest.mark.tool("cmake", "3.19")
 def test_editable_cmake_linux_exe(generator):
     editable_cmake_exe(generator)
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_osx_exe(generator):
     editable_cmake_exe(generator)

@@ -55,6 +55,24 @@ def test_profile_template_import():
     assert "os=FreeBSD" in client.out
 
 
+def test_profile_template_import_sibling():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% import "sub2/profile_vars" as vars %}
+        [settings]
+        os = {{ vars.a }}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        """)
+    client.save_home({"profiles/sub1/profile1": tpl1,
+                      "profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -pr=sub1/profile1")
+    assert "os=FreeBSD" in client.out
+
+
 def test_profile_template_include():
     client = TestClient()
     tpl1 = textwrap.dedent("""
@@ -69,6 +87,42 @@ def test_profile_template_include():
                  "profile1": tpl1,
                  "profile_vars": tpl2})
     client.run("install . -pr=profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include_sibling():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% include "sub2/profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
+        """)
+    client.save_home({"profiles/sub1/profile1": tpl1,
+                      "profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -pr=sub1/profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include_from_cache():
+    # https://github.com/conan-io/conan/issues/17431
+    client = TestClient()
+    tpl1 = textwrap.dedent(r"""
+        {% include "sub2/profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
+        """)
+    client.save_home({"profiles/sub2/profile_vars": tpl2})
+    client.save({"conanfile.py": GenConanfile(),
+                 "sub1/profile1": tpl1})
+    client.run("install . -pr=sub1/profile1")
     assert "os=FreeBSD" in client.out
 
 
@@ -151,8 +205,8 @@ def test_profile_template_profile_name():
                  "profile_folder/foobar": tpl1,
                  "another_folder/foo.profile": tpl1,
                  "include_folder/include_default": tpl2,
-                 os.path.join(client.cache.profiles_path, "baz"): tpl1,
-                 os.path.join(client.cache.profiles_path, "default"): default})
+                 os.path.join(client.paths.profiles_path, "baz"): tpl1,
+                 os.path.join(client.paths.profiles_path, "default"): default})
 
     # show only file name as profile name
     client.run("install . -pr=profile_folder/foobar")
@@ -187,12 +241,11 @@ class TestProfileDetectAPI:
             """)
 
         client.save({"profile1": tpl1})
-        client.run("profile show -pr=profile1")
+        client.run("profile show -pr=profile1 --context=host")
         pr = client.get_default_host_profile()
         the_os = pr.settings['os']
         arch = pr.settings['arch']
         expected = textwrap.dedent(f"""\
-            Host profile:
             [settings]
             arch={arch}
             os={the_os}
@@ -216,3 +269,41 @@ def test_profile_jinja_error():
     c.save({"profile1": "{% set kk = other() %}"})
     c.run("profile show -pr=profile1", assert_error=True)
     assert "ERROR: Error while rendering the profile template file" in c.out
+
+
+def test_profile_macro_per_package():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        {% macro set_windows_settings(lib) %}
+        {{lib}}/*:os=Windows
+        {{lib}}/*:arch=x86
+        {% endmacro %}
+        {% macro set_windows_conf(lib) %}
+        {{lib}}/*:user.conf:key = 2
+        {% endmacro %}
+
+        [settings]
+        os = Linux
+        {{set_windows_settings("mypkg")}}
+        [conf]
+        user.conf:key = 1
+        {{set_windows_conf("mypkg")}}
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+            settings = "os", "arch"
+            def generate(self):
+                value = self.conf.get("user.conf:key")
+                self.output.info(f"os={self.settings.os}!!")
+                self.output.info(f"arch={self.settings.arch}!!")
+                self.output.info(f"user.conf:key={value}!!!!")
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile1": tpl1})
+    client.run("install . -pr=profile1")
+    assert "conanfile.py (mypkg/0.1): user.conf:key=2!!!!" in client.out
+    assert "conanfile.py (mypkg/0.1): os=Windows!!" in client.out
+    assert "conanfile.py (mypkg/0.1): arch=x86!!" in client.out

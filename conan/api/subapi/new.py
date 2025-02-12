@@ -32,6 +32,7 @@ class NewAPI:
         from conan.internal.api.new.autoools_exe import autotools_exe_files
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
+        from conan.internal.api.new.workspace import workspace_files
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
@@ -48,7 +49,8 @@ class NewAPI:
                          "autotools_exe": autotools_exe_files,
                          "alias": alias_file,
                          "local_recipes_index": local_recipes_index_files,
-                         "qbs_lib": qbs_lib_files}
+                         "qbs_lib": qbs_lib_files,
+                         "workspace": workspace_files}
         template_files = new_templates.get(template_name)
         return template_files
 

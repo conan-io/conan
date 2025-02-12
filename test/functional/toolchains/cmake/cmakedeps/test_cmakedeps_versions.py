@@ -3,14 +3,15 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
 @pytest.fixture(scope="module")
 def hello_client():
     client = TestClient()
-    client.run("new cmake_lib -d name=hello -d version=1.1")
-    client.run("create . -tf=\"\"")
+    client.save({"conanfile.py": GenConanfile("hello", "1.1")})
+    client.run("create .")
     return client
 
 
@@ -38,7 +39,7 @@ def hello_client():
 def test_version(hello_client, name, version, params, cmake_fails, package_found):
     client = hello_client
     cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.1)
+        cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
         find_package({name} {version} {params})
         message(STATUS "hello found: ${{{name}_FOUND}}")
@@ -59,7 +60,6 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
         """)
 
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
-    client.run("install .")
     exit_code = client.run("build .", assert_error=cmake_fails)
     if cmake_fails:
         assert exit_code != 0

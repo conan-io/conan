@@ -12,7 +12,7 @@ from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class GnuToolchain:
@@ -186,7 +186,7 @@ class GnuToolchain:
                     compiler = unix_path(self._conanfile, compiler)
                     ret[env_var] = compiler  # User/tools ones have precedence
         # Issue related: https://github.com/conan-io/conan/issues/15486
-        if self._is_cross_building and self._conanfile.conf_build:
+        if self._is_cross_building and getattr(self._conanfile, 'conf_build', False):
             compilers_build_mapping = (
                 self._conanfile.conf_build.get("tools.build:compiler_executables", default={},
                                                check_type=dict)
@@ -237,7 +237,7 @@ class GnuToolchain:
 
     @staticmethod
     def _dict_to_list(flags):
-        return [f"{k}={v}" if v else k for k, v in flags.items()]
+        return [f"{k}={v}" if v is not None else k for k, v in flags.items()]
 
     @property
     def cxxflags(self):

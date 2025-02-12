@@ -437,3 +437,13 @@ def test_bad_options_syntax(version_range, should_warn):
         assert "its presence unconditionally enables prereleases" in tc.out
     else:
         assert "its presence unconditionally enables prereleases" not in tc.out
+
+
+def test_empty_version_ranger():
+    tc = TestClient(light=True)
+    tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_requires("lib/[]")})
+    tc.run("export lib")
+    tc.run("graph info app")
+    assert "lib/[]: lib/1.0" in tc.out
+    assert "Empty version range usage is discouraged" in tc.out

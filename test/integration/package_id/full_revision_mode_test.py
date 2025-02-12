@@ -2,7 +2,7 @@ import unittest
 from textwrap import dedent
 
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
@@ -14,7 +14,7 @@ class FullRevisionModeTest(unittest.TestCase):
         libb_ref = RecipeReference.loads("libb/0.1@user/testing")
 
         clienta = TestClient()
-        save(clienta.cache.new_config_path,
+        save(clienta.paths.new_config_path,
              "core.package_id:default_unknown_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conan import ConanFile

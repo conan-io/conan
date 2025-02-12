@@ -14,6 +14,8 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Docs: https://docs.conan.io
 - Slack: https://cpplang.slack.com (#conan channel. Please, click [here](https://join.slack.com/t/cpplang/shared_invite/zt-1snzdn6rp-rOUxF3166oz1_11Tr5H~xg) to get an invitation)
 - Twitter: https://twitter.com/conan_io
+- Blog: https://blog.conan.io
+- Security reports: https://jfrog.com/trust/report-vulnerability
 
 
 Conan is a package manager for C and C++ developers:

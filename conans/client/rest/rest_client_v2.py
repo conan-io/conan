@@ -16,9 +16,9 @@ from conans.client.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException, \
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
+from conan.api.model import PkgReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.thread import ExceptionThread
 
@@ -276,27 +276,6 @@ class RestV2Methods:
                                           metadata=True)
             result.update({fn: os.path.join(dest_folder, fn) for fn in files})
         return result
-
-    @staticmethod
-    def _is_dir(path, files):
-        if path == ".":
-            return True
-        for the_file in files["files"]:
-            if path == the_file:
-                return False
-            elif the_file.startswith(path):
-                return True
-        raise NotFoundException("The specified path doesn't exist")
-
-    @staticmethod
-    def _list_dir_contents(path, files):
-        ret = []
-        for the_file in files["files"]:
-            if path == "." or the_file.startswith(path):
-                tmp = the_file[len(path) - 1:].split("/", 1)[0]
-                if tmp not in ret:
-                    ret.append(tmp)
-        return sorted(ret)
 
     def _upload_files(self, files, urls, ref):
         failed = []

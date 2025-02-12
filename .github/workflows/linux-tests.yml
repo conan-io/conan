@@ -1,0 +1,122 @@
+name: Linux tests
+
+on:
+  workflow_call:
+
+jobs:
+  build_container:
+    runs-on: ubuntu-latest
+    name: Build Linux container
+    outputs:
+      image_tag: ${{ steps.dockerfile_hash.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate Dockerfile checksum
+        id: dockerfile_hash
+        run: |
+          DOCKERFILE_HASH=$(find ./.ci/docker/conan-tests -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          echo "tag=$DOCKERFILE_HASH" >> $GITHUB_OUTPUT
+
+      - name: Check if image exists
+        id: check_image
+        run: |
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} > /dev/null 2>&1; then
+            echo "status=exists" >> $GITHUB_OUTPUT
+          else
+            echo "status=no-image" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push image if not exists
+        if: steps.check_image.outputs.status == 'no-image'
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }} -f ./.ci/docker/conan-tests .
+          docker push ghcr.io/${{ github.repository_owner }}/conan-tests:${{ steps.dockerfile_hash.outputs.tag }}
+
+  linux_tests:
+    needs: build_container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/conan-tests:${{ needs.build_container.outputs.image_tag }}
+      options: --user conan
+    strategy:
+      matrix:
+        python-version: [3.12.3, 3.9.2, 3.8.6, 3.6.15]
+        test-type: [unittests, integration, functional]
+        include:
+        - test-type: unittests
+          test-name: Unit
+        - test-type: integration
+          test-name: Integration
+        - test-type: functional
+          test-name: Functional
+    name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: |
+          pyenv global ${{ matrix.python-version }}
+          python --version
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+          pip install meson
+
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}
+
+  linux_docker_tests:
+    needs: build_container
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12, 3.9]
+    name: Docker Runner Tests (${{ matrix.python-version }})
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_runner.txt
+
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: docker
+          tests: '-m docker_runner -rs'
+          workers: 1

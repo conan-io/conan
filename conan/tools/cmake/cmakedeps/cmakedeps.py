@@ -15,7 +15,7 @@ from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 
 
 class CMakeDeps(object):

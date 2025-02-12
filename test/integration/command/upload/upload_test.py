@@ -7,13 +7,12 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-import requests
 from mock import patch
 from requests import Response
 
 from conan.errors import ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
@@ -440,12 +439,6 @@ class UploadTest(unittest.TestCase):
                 self.status_code = 401
                 self.content = b''
 
-        class ErrorApiResponse(object):
-            def __init__(self):
-                self.ok = False
-                self.status_code = 400
-                self.content = "Unsupported Conan v1 repository request for 'conan'"
-
         class ServerCapabilitiesRequester(TestRequester):
             def __init__(self, *args, **kwargs):
                 self._first_ping = True
@@ -453,17 +446,14 @@ class UploadTest(unittest.TestCase):
 
             def get(self, url, **kwargs):
                 app, url = self._prepare_call(url, kwargs)
-                if app:
-                    if url.endswith("ping") and self._first_ping:
-                        self._first_ping = False
-                        return EmptyCapabilitiesResponse()
-                    elif "hello0" in url and "1.2.1" in url and "v1" in url:
-                        return ErrorApiResponse()
-                    else:
-                        response = app.get(url, **kwargs)
-                        return TestingResponse(response)
+                assert app
+                assert ("/v1/" in url and url.endswith("ping")) or "/v2" in url
+                if url.endswith("ping") and self._first_ping:
+                    self._first_ping = False
+                    return EmptyCapabilitiesResponse()
                 else:
-                    return requests.get(url, **kwargs)
+                    response = app.get(url, **kwargs)
+                    return TestingResponse(response)
 
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}

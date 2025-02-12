@@ -3,8 +3,8 @@ import pytest
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conans.model.conf import Conf
-from conans.model.settings import Settings
+from conan.internal.model.conf import Conf
+from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 

@@ -1,7 +1,6 @@
 import pytest
 from parameterized import parameterized
 
-from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -11,24 +10,17 @@ from conan.test.utils.tools import GenConanfile
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    if len(values) != len(transitive_deps):
-        values = [r.require.ref for r in values]
-        raise Exception("{}: Number of deps don't match \n{}!=\n{}".format(node, values,
-                                                                           transitive_deps))
+    assert len(values) == len(transitive_deps), f"{node}: Number of deps don't match " \
+                                                f"\n{[r.require.ref for r in values]}" \
+                                                f"!=\n{transitive_deps}"
 
     for v1, v2 in zip(values, transitive_deps):
-        if v1.node is not v2[0]:
-            raise Exception(f"{v1.node}!={v2[0]}")
-        if v1.require.headers is not v2[1]:
-            raise Exception(f"{v1.node}!={v2[0]} headers")
-        if v1.require.libs is not v2[2]:
-            raise Exception(f"{v1.node}!={v2[0]} libs")
-        if v1.require.build is not v2[3]:
-            raise Exception(f"{v1.node}!={v2[0]} build")
-        if v1.require.run is not v2[4]:
-            raise Exception(f"{v1.node}!={v2[0]} run")
-        if len(v2) > 5:
-            assert v1.require.package_id_mode is v2[5]
+        assert v1.node is v2[0], f"{v1.node}!={v2[0]}"
+        assert v1.require.headers is v2[1], f"{v1.node}!={v2[0]} headers"
+        assert v1.require.libs is v2[2], f"{v1.node}!={v2[0]} libs"
+        assert v1.require.build is v2[3], f"{v1.node}!={v2[0]} build"
+        assert v1.require.run is  v2[4], f"{v1.node}!={v2[0]} run"
+        assert len(v2) <= 5
 
 
 class TestLinear(GraphManagerTest):

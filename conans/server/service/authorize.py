@@ -16,7 +16,7 @@ from conan.internal.errors import InternalErrorException, AuthenticationExceptio
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
 #  ############################################
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 class Authorizer(object, metaclass=ABCMeta):

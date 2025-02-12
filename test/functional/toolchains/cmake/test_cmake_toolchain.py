@@ -50,7 +50,7 @@ def test_cmake_toolchain_user_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake")
+    save(client.paths.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake")
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -62,7 +62,7 @@ def test_cmake_toolchain_custom_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake")
+    save(client.paths.new_config_path, "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake")
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -620,6 +620,9 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class TestWinSDKVersion:
+
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version(self):
         # This test passes also with CMake 3.28, as long as cmake_minimum_required(VERSION 3.27)
         # is not defined
@@ -629,13 +632,13 @@ class TestWinSDKVersion:
         cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1")
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+        client.run("create . -s arch=x86_64 -s compiler.version=194 "
+                   "-c tools.microsoft:winsdk_version=10.0")
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 10.0" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
 
-    @pytest.mark.tool("cmake", "3.28")
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version2(self):
         # https://github.com/conan-io/conan/issues/15372
@@ -647,11 +650,11 @@ class TestWinSDKVersion:
         cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1 "
+        client.run("create . -s arch=x86_64 -s compiler.version=194 "
+                   "-c tools.microsoft:winsdk_version=10.0 "
                    '-c tools.cmake.cmaketoolchain:generator="Visual Studio 17"')
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
-        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=8.1" in client.out
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 10.0" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=10.0" in client.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -1506,8 +1509,8 @@ def test_inject_user_toolchain():
         include(default)
         [conf]
         tools.cmake.cmaketoolchain:user_toolchain+={{profile_dir}}/myvars.cmake""")
-    save(os.path.join(client.cache.profiles_path, "myprofile"), profile)
-    save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
+    save(os.path.join(client.paths.profiles_path, "myprofile"), profile)
+    save(os.path.join(client.paths.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
     client.run("build . -pr=myprofile")
@@ -1516,7 +1519,7 @@ def test_inject_user_toolchain():
     # Now test with the global.conf
     global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
                   '["{{conan_home_folder}}/my.cmake"]'
-    save(client.cache.new_config_path, global_conf)
+    save(client.paths.new_config_path, global_conf)
     save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
     client.run("build .")
     # The toolchain is found and can be used

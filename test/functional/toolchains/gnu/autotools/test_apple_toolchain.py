@@ -92,12 +92,12 @@ def test_catalyst(arch):
         include(default)
         [settings]
         os = Macos
-        os.version = 14.0
+        os.version = 14.6
         os.subsystem = catalyst
         os.subsystem.ios_version = 16.1
         arch = {arch}
         [buildenv]
-        DEVELOPER_DIR=/Applications/conan/xcode/15.1
+        DEVELOPER_DIR=/Applications/Xcode_15.4.app/Contents/Developer
         """).format(arch=arch)
 
     t = TestClient()

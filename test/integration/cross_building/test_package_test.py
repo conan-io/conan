@@ -52,7 +52,7 @@ class TestPackageTestCase(unittest.TestCase):
 
     def test_command(self):
         t = TestClient()
-        save(t.cache.settings_path, self.settings_yml)
+        save(t.paths.settings_path, self.settings_yml)
         t.save({'br.py': self.conanfile_br,
                 'conanfile.py': self.conanfile,
                 'test_package/conanfile.py': self.conanfile_test,
