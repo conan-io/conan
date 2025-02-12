@@ -151,7 +151,8 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
 
 
 RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-linux.tar.gz && \
-    tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mv premake5 /usr/share/bin/
+    tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
+    mv premake5 /usr/share/premake
 
 USER conan
 WORKDIR $HOME
