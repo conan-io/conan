@@ -13,6 +13,7 @@ from io import BytesIO
 import sys
 
 from conan import conan_version
+from conan.internal.conan_app import ConanApp
 from conan.internal.model.version import Version
 from conan.internal.model.profile import Profile
 from conan.internal.runner.output import RunnerOutput
@@ -212,17 +213,36 @@ class SSHRunner:
         if not result.success or not result.stdout:
             self.logger.error(f"Unable to create remote temporary directory: {result.stderr}")
         self.remote_create_dir = result.stdout.replace("\\", '/')
-
-        # Copy current folder to destination using sftp
         _Path = pathlib.PureWindowsPath if self.is_remote_windows else pathlib.PurePath
+
+        # Base case: Conanfile located at the root of the project
+        remote_tmp_dir = _Path(self.remote_create_dir)
+
+        # Check if recipe defines a root folder
+        app = ConanApp(self.conan_api)
+        remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
+        conanfile = app.loader.load_consumer(resolved_path / "conanfile.py", remotes=remotes)
+        if hasattr(conanfile, "layout"):
+            try:
+                conanfile.layout()
+                if conanfile.folders.root:
+                    root_relative_path = Path(conanfile.folders.root)
+                    tmp = (resolved_path / root_relative_path).resolve()
+                    extra_path = resolved_path.relative_to(tmp)
+                    self.remote_create_dir = (remote_tmp_dir / extra_path).as_posix()
+                    resolved_path = tmp
+            except:
+                pass
+        # Copy current folder to destination using sftp
         for root, dirs, files in os.walk(resolved_path.as_posix()):
             relative_root = Path(root).relative_to(resolved_path)
+            dirs[:] = [d for d in dirs if d not in {'venv', '.venv'}] # Filter out virtualenv folders
             for dir in dirs:
-                dst = _Path(self.remote_create_dir).joinpath(relative_root).joinpath(dir).as_posix()
+                dst = remote_tmp_dir.joinpath(relative_root).joinpath(dir).as_posix()
                 self.remote_conn.mkdir(dst)
             for file in files:
                 orig = os.path.join(root, file)
-                dst = _Path(self.remote_create_dir).joinpath(relative_root).joinpath(file).as_posix()
+                dst = remote_tmp_dir.joinpath(relative_root).joinpath(file).as_posix()
                 self.remote_conn.put(orig, dst)
 
     def _remote_create(self):

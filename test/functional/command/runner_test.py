@@ -744,6 +744,95 @@ def test_create_ssh_runner_default_profile():
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
 
+@pytest.mark.ssh_runner
+@pytest.mark.skipif(ssh_skip(), reason="SSH environment have to be configured")
+def test_create_ssh_runner_in_subfolder():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import load, copy
+        from conan.tools.cmake import CMake
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.root = ".."
+                self.folders.source = "."
+                self.folders.build = "build"
+
+            def export_sources(self):
+                folder = os.path.join(self.recipe_folder, "..")
+                copy(self, "*.txt", folder, self.export_sources_folder)
+                copy(self, "src/*.cpp", folder, self.export_sources_folder)
+                copy(self, "include/*.h", folder, self.export_sources_folder)
+
+            def source(self):
+                cmake_file = load(self, "CMakeLists.txt")
+
+            def build(self):
+                path = os.path.join(self.source_folder, "CMakeLists.txt")
+                cmake_file = load(self, path)
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+            """)
+
+    header = textwrap.dedent("""
+        #pragma once
+        void hello();
+        """)
+    source = textwrap.dedent("""
+        #include <iostream>
+        void hello() {
+            std::cout << "Hello!" << std::endl;
+        }
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg CXX)
+        add_library(pkg src/hello.cpp)
+        target_include_directories(pkg PUBLIC include)
+        set_target_properties(pkg PROPERTIES PUBLIC_HEADER "include/hello.h")
+        install(TARGETS pkg)
+
+        """)
+
+    profile_host = textwrap.dedent(f"""\
+        [settings]
+        arch={{{{ detect_api.detect_arch() }}}}
+        build_type=Release
+        compiler=gcc
+        compiler.cppstd=gnu17
+        compiler.libcxx=libstdc++11
+        compiler.version=11
+        os=Linux
+        [runner]
+        type=ssh
+        host=localhost
+        """)
+
+    client.save({"conan/conanfile.py": conanfile,
+                "conan/host": profile_host,
+                "include/hello.h": header,
+                "src/hello.cpp": source,
+                "CMakeLists.txt": cmakelist})
+
+    with client.chdir("conan"):
+        client.run("create . -pr:h host -vverbose")
+
+    assert "Restore: pkg/1.0" in client.out
+
+
 def test_create_multiple_runner_types():
     """
     Tests the ``conan create . `` without multiple host profiles defining different runner types
