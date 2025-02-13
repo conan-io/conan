@@ -115,8 +115,7 @@ class DockerRunner:
             self._run_command(self.command)
             self._update_local_cache()
         except RunnerException as e:
-            raise ConanException(f'"{e.command}" inside docker fail'
-                                 f'\n\nLast command output: {str(e.stdout_log)}')
+            raise ConanException(f'"{e.command}" inside docker fail')
         finally:
             if self.container:
                 error = sys.exc_info()[0] is not None # Check if error has been raised
