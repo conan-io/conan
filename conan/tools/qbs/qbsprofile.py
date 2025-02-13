@@ -1,5 +1,4 @@
 import os
-import shlex
 import shutil
 import platform
 import textwrap
