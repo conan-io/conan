@@ -104,6 +104,7 @@ def pyinstall(source_folder, onefile=False):
               "--hidden-import=pathlib "
               # Modules that can be imported in ConanFile conan.tools and errors
               "--collect-submodules=conan.cli.commands "
+              "--collect-submodules=conans.model "
               "--hidden-import=conan.errors "
               "--hidden-import=conan.tools.microsoft "
               "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
