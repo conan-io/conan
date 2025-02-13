@@ -137,3 +137,33 @@ def test_missing_internal(component):
     t.run('create . --name=wrong --version=version', assert_error=True)
     assert "ERROR: wrong/version: package_info(): There are '(cpp_info/components).requires' " \
            "to other internal components that are not defined: ['other', 'another']" in t.out
+
+
+def test_unused_tool_requirement():
+    """ Requires should include all listed requirements
+        This error is known when creating the package if the requirement is consumed.
+    """
+    top_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.components["cmp1"].libs = ["top_cmp1"]
+                self.cpp_info.components["cmp2"].libs = ["top_cmp2"]
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            requires = "top/version"
+            tool_requires = "top2/version"
+            def package_info(self):
+                self.cpp_info.requires = ["top::other"]
+    """)
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py --name=top --version=version')
+    t.run('create top.py --name=top2 --version=version')
+    t.run('create consumer.py --name=wrong --version=version')
+    # This runs without crashing, because it is not chcking that top::other doesn't exist
