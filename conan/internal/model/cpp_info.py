@@ -770,7 +770,9 @@ class CppInfo:
         comps = self.required_components
         missing_internal = [c[1] for c in comps if c[0] is None and c[1] not in self.components]
         if missing_internal:
-            raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
+            msg = f"{conanfile}: package_info(): There are '(cpp_info/components).requires' to " \
+                  f"other internal components that are not defined: {missing_internal}"
+            raise ConanException(msg)
         external = [c[0] for c in comps if c[0] is not None]
         if not external:
             return
@@ -782,13 +784,16 @@ class CppInfo:
 
         for e in external:
             if e not in direct_dependencies:
-                raise ConanException(
-                    f"{conanfile}: required component package '{e}::' not in dependencies")
+                msg = f"{conanfile}: package_info(): There are '(cpp_info/components).requires' " \
+                      f"that includes package '{e}::', but such package is not a a direct " \
+                      f"requirement of the recipe"
+                raise ConanException(msg)
         # TODO: discuss if there are cases that something is required but not transitive
         for e in direct_dependencies:
             if e not in external:
-                raise ConanException(
-                    f"{conanfile}: Required package '{e}' not in component 'requires'")
+                msg = f"{conanfile}: package_info(): The direct dependency '{e}' is not used by " \
+                      f"any '(cpp_info/components).requires'."
+                raise ConanException(msg)
 
     @property
     def required_components(self):
