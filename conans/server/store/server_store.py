@@ -165,7 +165,7 @@ class ServerStore(object):
             rev_list = RevisionList.loads(rev_file)
         else:
             rev_list = RevisionList()
-        assert ref.revision is None, "Invalid revision for: %s" % repr(ref)
+        assert ref.revision is not None, "Invalid revision for: %s" % repr(ref)
         rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
