@@ -65,6 +65,7 @@ def create(conan_api, parser, *args):
     print_profiles(profile_host, profile_build)
     if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
         from conan.internal.runner.docker import DockerRunner
+        from conan.internal.runner.podman import PodmanRunner
         from conan.internal.runner.ssh import SSHRunner
         from conan.internal.runner.wsl import WSLRunner
         try:
@@ -73,6 +74,7 @@ def create(conan_api, parser, *args):
             raise ConanException(f"Invalid runner configuration. 'type' must be defined")
         runner_instances_map = {
             'docker': DockerRunner,
+            'podman': PodmanRunner,
             # 'ssh': SSHRunner,
             # 'wsl': WSLRunner,
         }
