@@ -6,6 +6,7 @@ import textwrap
 
 from conan.test.assets.autotools import gen_makefile
 from conan.test.assets.sources import gen_function_cpp
+from conan.test.utils.test_files import temp_folder
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
 from conan.test.utils.env import environment_update
@@ -512,3 +513,30 @@ class TestSubsystemsCMakeBuild:
         self._build(client, generator="Visual Studio 17 2022", toolset="ClangCL")
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None, subsystem=None)
         check_vs_runtime("Debug/app.exe", client, "15", "Debug", subsystem=None)
+
+
+@pytest.mark.tool("msys2")
+def test_msys2_env_vars_paths():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            win_bash = True
+
+            def build(self):
+                self.run('echo "INCLUDE=$INCLUDE"')
+        """)
+    profile = textwrap.dedent("""
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+
+        [buildenv]
+        INCLUDE=+(path)C:/some/path
+        """)
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    with environment_update({"INCLUDE": "C:/my/abs path/folder;C:/other path/subfolder"}):
+        c.run("build . -pr=profile")
+    assert "INCLUDE=/c/some/path:/c/my/abs path/folder:/c/other path/subfolder" in c.out

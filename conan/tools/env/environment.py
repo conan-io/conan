@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
-from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
+from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path, MSYS2
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
 from conans.util.files import save
@@ -105,6 +105,10 @@ class _EnvValue:
     @property
     def is_path(self):
         return self._path
+
+    @property
+    def is_inheriting_path(self):
+        return self._path and _EnvVarPlaceHolder in self._values
 
     def remove(self, value):
         self._values.remove(value)
@@ -511,6 +515,8 @@ class EnvVars:
         result = [capture]
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         for varname, varvalues in self._values.items():
+            if self._subsystem == MSYS2 and varvalues.is_inheriting_path and varname != "PATH":
+                result.append(f'export {varname}=$(cygpath --unix -p "${varname}")')
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
