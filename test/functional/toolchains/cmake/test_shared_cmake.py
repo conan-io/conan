@@ -6,20 +6,23 @@ import pytest
 
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
-from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
 from conan.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 
 @pytest.fixture(scope="module")
 def transitive_shared_client():
+    # TODO: Reuse fixtures
     client = TestClient(default_server_user=True)
-    client.save(pkg_cmake("hello", "0.1"))
-    client.run("create . -o hello/*:shared=True")
-    client.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
-    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
-    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
-    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
+    client.run("create . -o hello/*:shared=True -tf=")
+    client.save({}, clean_first=True)
+    client.run("new cmake_lib -d name=chat -d version=0.1 -d requires=hello/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
+
+    client.save({}, clean_first=True)
+    client.run("new cmake_exe -d name=app -d version=0.1 -d requires=chat/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
     client.run("upload * -c -r default")
     client.run("remove * -c")
     return client
@@ -50,8 +53,8 @@ def test_other_client_can_link_cmake(transitive_shared_client):
     # https://github.com/conan-io/conan/issues/13000
     # This failed, because of rpath link in Linux
     client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]))
-    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("new cmake_exe -d name=app -d version=0.1 -d requires=chat/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
 
     # check exe also keep running
     client.run("upload * -c -r default")
@@ -93,31 +96,33 @@ def test_shared_cmake_toolchain_components():
     """
     client = TestClient(default_server_user=True)
 
-    client.save(pkg_cmake("hello", "0.1"))
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     conanfile = client.load("conanfile.py")
     conanfile2 = conanfile.replace('self.cpp_info.libs = ["hello"]',
                                    'self.cpp_info.components["hi"].libs = ["hello"]')
     assert conanfile != conanfile2
     client.save({"conanfile.py": conanfile2})
-    client.run("create . -o hello/*:shared=True")
+    client.run("create . -o hello/*:shared=True -tf=")
     # Chat
-    client.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
+    client.save({}, clean_first=True)
+    client.run("new cmake_lib -d name=chat -d version=0.1 --requires=hello/0.1")
     conanfile = client.load("conanfile.py")
     conanfile2 = conanfile.replace('self.cpp_info.libs = ["chat"]',
                                    'self.cpp_info.components["talk"].libs = ["chat"]\n'
                                    '        self.cpp_info.components["talk"].requires=["hello::hi"]')
     assert conanfile != conanfile2
     client.save({"conanfile.py": conanfile2})
-    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
 
     # App
-    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.save({}, clean_first=True)
+    client.run("new cmake_exe -d name=app -d version=0.1 --requires=chat/0.1")
     cmakelist = client.load("CMakeLists.txt")
     cmakelist2 = cmakelist.replace('target_link_libraries(app  chat::chat )',
                                    'target_link_libraries(app  chat::talk )')
     assert cmakelist != cmakelist2
     client.save({"CMakeLists.txt": cmakelist2})
-    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
     client.run("upload * -c -r default")
     client.run("remove * -c")
 
@@ -135,7 +140,7 @@ def test_shared_cmake_toolchain_components():
     # https://github.com/conan-io/conan/issues/13000
     # This failed, because of rpath link in Linux
     client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.run("new cmake_exe -d name=app -d version=0.1 --requires=chat/0.1")
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
     client.run("upload * -c -r default")
     client.run("remove * -c")
@@ -154,10 +159,9 @@ def test_shared_cmake_toolchain_components():
 
 @pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
+    # TODO: This is already tested in other places
     client = TestClient()
-    files = pkg_cmake("hello", "0.1")
-    files.update(pkg_cmake_test("hello"))
-    client.save(files)
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
     assert "hello: Release!" in client.out
 
