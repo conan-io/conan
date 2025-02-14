@@ -5,8 +5,6 @@ import pytest
 
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
-from conan.test.assets.pkg_cmake import pkg_cmake
-from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
@@ -103,16 +101,15 @@ def test_editable_cmake_osx(generator):
 
 
 def editable_cmake_exe(generator):
-    # This test works because it is not multi-config or single config, but explicit in
-    # --install folder
     c = TestClient()
     if generator is not None:
         c.save_home({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)})
-    c.save(pkg_cmake("dep", "0.1", exe=True), path=os.path.join(c.current_folder, "dep"))
+
+    c.run("new cmake_exe -d name=dep -d version=0.1 -o=dep")
 
     def build_dep():
-        c.run("build . -o dep/*:shared=True")
-        c.run("build . -s build_type=Debug -o dep/*:shared=True")
+        c.run("build .")
+        c.run("build . -s build_type=Debug")
 
     with c.chdir("dep"):
         c.run("editable add .")
@@ -120,28 +117,29 @@ def editable_cmake_exe(generator):
 
     def run_pkg(msg):
         host_arch = c.get_default_host_profile().settings['arch']
-        # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-release-{host_arch}", c.current_folder,
-                                               "dep_app",)
+        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-release-{host_arch}",
+                                               c.current_folder, "dep")
         c.run_command(cmd_release)
-        assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-debug-{host_arch}", c.current_folder,
-                                               "dep_app", )
+        assert "{}: Hello World Release!".format(msg) in c.out
+        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-debug-{host_arch}",
+                                               c.current_folder, "dep")
         c.run_command(cmd_release)
-        assert "{}: Debug!".format(msg) in c.out
+        assert "{}: Hello World Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install --requires=dep/0.1@ -o dep/*:shared=True -g VirtualRunEnv")
-        c.run("install --requires=dep/0.1@ -o dep/*:shared=True -s build_type=Debug -g VirtualRunEnv")
-        run_pkg("dep")
+        c.run("install --requires=dep/0.1")
+        c.run("install --requires=dep/0.1 -s build_type=Debug")
+        run_pkg("dep/0.1")
 
     # Do a source change in the editable!
     with c.chdir("dep"):
-        c.save({"src/dep.cpp": gen_function_cpp(name="dep", msg="SUPERDEP")})
+        dep = c.load("src/dep.cpp")
+        dep = dep.replace("dep/0.1", "SUPERDEP/0.1")
+        c.save({"src/dep.cpp": dep})
         build_dep()
 
     with c.chdir("pkg"):
-        run_pkg("SUPERDEP")
+        run_pkg("SUPERDEP/0.1")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
