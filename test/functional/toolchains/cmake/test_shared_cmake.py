@@ -42,9 +42,9 @@ def _check_install_run(client):
     command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
-    assert "main: Release!" in client.out
-    assert "chat: Release!" in client.out
-    assert "hello: Release!" in client.out
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")
