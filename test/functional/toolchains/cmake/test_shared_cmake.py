@@ -105,7 +105,7 @@ def test_shared_cmake_toolchain_components():
     client.run("create . -o hello/*:shared=True -tf=")
     # Chat
     client.save({}, clean_first=True)
-    client.run("new cmake_lib -d name=chat -d version=0.1 --requires=hello/0.1")
+    client.run("new cmake_lib -d name=chat -d version=0.1 -d requires=hello/0.1")
     conanfile = client.load("conanfile.py")
     conanfile2 = conanfile.replace('self.cpp_info.libs = ["chat"]',
                                    'self.cpp_info.components["talk"].libs = ["chat"]\n'
@@ -116,10 +116,10 @@ def test_shared_cmake_toolchain_components():
 
     # App
     client.save({}, clean_first=True)
-    client.run("new cmake_exe -d name=app -d version=0.1 --requires=chat/0.1")
+    client.run("new cmake_exe -d name=app -d version=0.1 -d requires=chat/0.1")
     cmakelist = client.load("CMakeLists.txt")
-    cmakelist2 = cmakelist.replace('target_link_libraries(app  chat::chat )',
-                                   'target_link_libraries(app  chat::talk )')
+    cmakelist2 = cmakelist.replace('target_link_libraries(app PRIVATE chat::chat)',
+                                   'target_link_libraries(app PRIVATE chat::talk)')
     assert cmakelist != cmakelist2
     client.save({"CMakeLists.txt": cmakelist2})
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True -tf=")
@@ -127,34 +127,35 @@ def test_shared_cmake_toolchain_components():
     client.run("remove * -c")
 
     client = TestClient(servers=client.servers)
-    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
-    assert "main: Release!" in client.out
-    assert "chat: Release!" in client.out
-    assert "hello: Release!" in client.out
+    assert "app/0.1 test_package" in client.out
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
     # https://github.com/conan-io/conan/issues/13000
     # This failed, because of rpath link in Linux
     client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    client.run("new cmake_exe -d name=app -d version=0.1 --requires=chat/0.1")
+    client.run("new cmake_exe -d name=app -d version=0.1 -d requires=chat/0.1")
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
     client.run("upload * -c -r default")
     client.run("remove * -c")
 
     client = TestClient(servers=client.servers)
-    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
     client.run_command(command)
-    assert "main: Release!" in client.out
-    assert "chat: Release!" in client.out
-    assert "hello: Release!" in client.out
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -163,7 +164,8 @@ def test_shared_cmake_toolchain_test_package():
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
-    assert "hello: Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
+    assert "hello/0.1 test_package" in client.out
 
 
 @pytest.fixture()

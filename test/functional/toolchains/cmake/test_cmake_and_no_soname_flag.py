@@ -40,8 +40,8 @@ def test_no_soname_flag(nosoname_property):
                     'self.cpp_info.libs = ["nosoname"]',
                     f'self.cpp_info.libs = ["nosoname"]\n        self.cpp_info.set_property("nosoname", {nosoname_property})')
     replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakeLists.txt"),
-                    'target_include_directories(nosoname PUBLIC "include")',
-                    'target_include_directories(nosoname PUBLIC "include")\nset_target_properties(nosoname PROPERTIES NO_SONAME 1)')
+                    'target_include_directories(nosoname PUBLIC include)',
+                    'target_include_directories(nosoname PUBLIC include)\nset_target_properties(nosoname PROPERTIES NO_SONAME 1)')
     client.run("create . -o nosoname/*:shared=True -tf=")
     # Creating lib_b/0.1 library (depends on nosoname/0.1)
     client.save({}, clean_first=True)
@@ -56,7 +56,7 @@ def test_no_soname_flag(nosoname_property):
     shutil.rmtree(client.cache.store)
 
     client = TestClient(servers=client.servers)
-    client.run("install --requires=app/0.1@ -o nosoname*:shared=True -o lib_b/*:shared=True -g VirtualRunEnv")
+    client.run("install --requires=app/0.1@ -o nosoname*:shared=True -o lib_b/*:shared=True")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
@@ -69,6 +69,6 @@ def test_no_soname_flag(nosoname_property):
             client.run_command(command)
     else:
         client.run_command(command)
-        assert "main: Release!" in client.out
-        assert "lib_b: Release!" in client.out
-        assert "nosoname: Release!" in client.out
+        assert "nosoname/0.1: Hello World Release!" in client.out
+        assert "lib_b/0.1: Hello World Release!" in client.out
+        assert "app/0.1: Hello World Release!" in client.out
