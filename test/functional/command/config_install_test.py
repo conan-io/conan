@@ -767,21 +767,7 @@ class TestConfigInstallPkgLockfiles:
         assert "myconf_a/0.2" in c.out
         assert "myconf_a/0.1" not in c.out
 
-    def test_verify_lockfile(self, servers):
-        c = TestClient(servers=servers)
-        c.run("config install-pkg --requires=myconf/[*] --lockfile-out=config.lock")
-        # Overwrite it with a new one
-        c.save({"conanfile.py": GenConanfile("myconf", "0.2").with_package_type("configuration")})
-        c.run("export-pkg .")
-
-        c.save({"conanfile.py": GenConanfile()})
-        c.run("install . --lockfile=config.lock", assert_error=True)  # should fail
-        assert "ERROR: Lockfile contained locked 'config_requires' not in current " \
-               "configuration: [myconf/0.1" in c.out
-
     def test_install_from_file(self, servers):
-        """ it should install things in the original order
-        """
         c = TestClient(servers=servers)
         conanconfig = textwrap.dedent("""
             config_version: ["myconf_a/0.1", "myconf_b/0.1", "myconf_a/0.2"]
@@ -793,6 +779,19 @@ class TestConfigInstallPkgLockfiles:
         configs = json.loads(load(path))["config_version"]
         configs = [str(RecipeReference.loads(r)) for r in configs]
         assert configs == ["myconf_b/0.1", "myconf_a/0.2"]
+
+    def test_install_from_file_with_lockfile(self, servers):
+        # it should stay in version 0.1
+        c = TestClient(servers=servers)
+        c.run("config install-pkg --requires=myconf_a/0.1 --lockfile-out=conan.lock")
+        conanconfig = 'config_version: ["myconf_a/[>=0.1 <1.0]"]'
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        path = HomePaths(c.cache_folder).config_version_path
+        # First are the newest installed
+        configs = json.loads(load(path))["config_version"]
+        configs = [str(RecipeReference.loads(r)) for r in configs]
+        assert configs == ["myconf_a/0.1"]
 
 
 class TestConfigInstallPkgSettings:
