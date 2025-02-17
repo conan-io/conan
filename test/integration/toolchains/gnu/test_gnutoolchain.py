@@ -451,6 +451,6 @@ def test_conf_build_does_not_exist():
             "build": build})
     c.run("export .")
     c.run("install --requires=pkg/0.1 --build=pkg/0.1 -g GnuToolchain -pr:h host -pr:b build")
-    tc = c.load("conanautotoolstoolchain.sh")
+    tc = c.load("conangnutoolchain.sh")
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
