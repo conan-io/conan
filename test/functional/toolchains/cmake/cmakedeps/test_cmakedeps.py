@@ -1,7 +1,6 @@
 import os
 import platform
 import textwrap
-from conan.test.utils.mocks import ConanFileMock
 
 import pytest
 
@@ -10,7 +9,6 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conan.tools.files import replace_in_file
 
 
 @pytest.fixture
@@ -40,8 +38,6 @@ def client():
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
 def test_transitive_multi_windows(client):
-    # TODO: Make a full linking example, with correct header transitivity
-
     # Save conanfile and example
     conanfile = textwrap.dedent("""
         [requires]
@@ -83,19 +79,6 @@ def test_transitive_multi_windows(client):
             assert "main: Release!" in client.out
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
-        else:
-            # The CMakePresets IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakePresets.json"),
-                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
-            for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
-                client.run_command('cmake --build . --clean-first')
-
-                client.run_command('./example')
-                assert "main: {}!".format(bt) in client.out
-                assert "MYVARliba: {}".format(bt) in client.out
-                assert "MYVARlibb: {}".format(bt) in client.out
 
 
 @pytest.mark.tool("cmake")

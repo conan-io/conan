@@ -90,7 +90,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             class PatchConan(ConanFile):
                 def source(self):
                     patch(self, self.source_folder, "example.patch", strip=1)""")
-        patch = dedent("""
+        patch = dedent(r"""
             --- a\src\oldfile
             +++ b/dev/null
             @@ -0,1 +0,0 @@

@@ -18,7 +18,7 @@ def test_copy_conaninfo_conf():
     assert "tools.deployer:symlinks" in result
     assert "user.myconf:cmake-test" in result
 
-    pattern = ["tools\..*"]
+    pattern = [r"tools\..*"]
     conf.define("tools.info.package_id:confs", pattern)
     result = conf.copy_conaninfo_conf().dumps()
     assert "tools.info.package_id:confs=%s" % pattern in result

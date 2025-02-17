@@ -260,15 +260,18 @@ class Git:
         files = files.splitlines()
         return files
 
-    def coordinates_to_conandata(self):
+    def coordinates_to_conandata(self, repository=False):
         """
         Capture the "url" and "commit" from the Git repo, calling ``get_url_and_commit()``, and then
         store those in the ``conandata.yml`` under the "scm" key. This information can be
         used later to clone and checkout the exact source point that was used to create this
         package, and can be useful even if the recipe uses ``exports_sources`` as mechanism to
         embed the sources.
+
+        :param repository: By default gets the commit of the defined folder, use repository=True to get
+                     the commit of the repository instead.
         """
-        scm_url, scm_commit = self.get_url_and_commit()
+        scm_url, scm_commit = self.get_url_and_commit(repository=repository)
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):

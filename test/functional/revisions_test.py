@@ -740,15 +740,12 @@ def test_reupload_older_revision_new_binaries():
     rrev2 = c.exported_recipe_revision()
     c.run("upload * -r=default -c")
 
-    def check_order(inverse=False):
+    def check_order():
         c.run("list pkg/0.1#* -r=default")
         out = str(c.out)
         assert rrev1 in out
         assert rrev2 in out
-        if inverse:
-            assert out.find(rrev1) > out.find(rrev2)
-        else:
-            assert out.find(rrev1) < out.find(rrev2)
+        assert out.find(rrev1) < out.find(rrev2)
 
     check_order()
 

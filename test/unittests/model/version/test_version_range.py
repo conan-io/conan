@@ -103,6 +103,10 @@ def test_range(version_range, conditions, versions_in, versions_out):
     ['>1 <2.0, include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     ['>1 <2.0, include_prerelease', None, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
 
+    # Limits
+    ['>=2.1.0-beta', False, ["2.1.0"], ["2.1.0-beta", "2.1.0-alpha"]],
+    ['>=2.1.0-beta', True, ["2.1.0-beta", "2.1.0-gamma"], ["2.1.0-alpha"]],
+
     # Summary of new behaviors
     ['>=1 <2.0', False, ["1.0", "1.1", "1.9"], ["0.9", "1.0-pre.1", "1.1-pre.1", "2.0-pre", "2.0"]],
     # OLD

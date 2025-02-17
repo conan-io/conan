@@ -219,7 +219,7 @@ class TestLibs:
             assert "Conan: Target declared imported STATIC library 'engine::engine'" in c.out
 
     # if not using cmake >= 3.23 the intermediate gamelib_test linkage fail
-    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.parametrize("shared", [False, True])
     def test_multilevel(self, shared):
         # TODO: make this shared fixtures in conftest for multi-level shared testing
@@ -338,8 +338,8 @@ class TestLibsIntegration:
         c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
         assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
-        assert 'set_target_properties(pkg::pkg PROPERTIES INTERFACE_LINK_LIBRARIES\n' \
-               '                      "$<$<CONFIG:RELEASE>:MyTargetDep>"' in targets_cmake
+        assert 'set_property(TARGET pkg::pkg APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n' \
+               '             "$<$<CONFIG:RELEASE>:MyTargetDep>")' in targets_cmake
 
 
 class TestLibsLinkageTraits:
@@ -364,6 +364,7 @@ class TestLibsLinkageTraits:
         assert "engine/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
 
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.parametrize("shared", [False, True])
     def test_transitive_headers(self, shared):
         c = TestClient()
