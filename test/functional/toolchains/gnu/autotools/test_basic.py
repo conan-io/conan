@@ -17,12 +17,10 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 @pytest.mark.tool("autotools")
-def test_autotools():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create .")
+def test_autotools(matrix_client_nospace):
+    client = matrix_client_nospace
 
-    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    main = gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])
     makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
     configure_ac = gen_configure_ac()
 
@@ -31,7 +29,7 @@ def test_autotools():
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
-            requires = "hello/0.1"
+            requires = "matrix/1.0"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsDeps", "AutotoolsToolchain"
@@ -49,14 +47,14 @@ def test_autotools():
                  "configure.ac": configure_ac,
                  "Makefile.am": makefile_am,
                  "main.cpp": main}, clean_first=True)
-    client.run("install .")
+
     client.run("build .")
     client.run_command("./main")
     cxx11_abi = 1 if platform.system() == "Linux" else None
     compiler = "gcc" if platform.system() == "Linux" else "apple-clang"
     host_arch = client.get_default_host_profile().settings['arch']
     check_exe_run(client.out, "main", compiler, None, "Release", host_arch, None, cxx11_abi=cxx11_abi)
-    assert "hello/0.1: Hello World Release!" in client.out
+    assert "matrix/1.0: Hello World Release!" in client.out
 
 
 def build_windows_subsystem(profile, make_program, subsystem):
@@ -176,20 +174,18 @@ def test_autotoolsdeps_msys():
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 @pytest.mark.tool("autotools")
-def test_install_output_directories():
+def test_install_output_directories(matrix_client_nospace):
     """
     If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
     for the libraries is changed
     """
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create .")
+    client = matrix_client_nospace
     consumer_conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
-            requires = "hello/1.0"
+            requires = "matrix/1.0"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp", "consumer.h"
             generators = "AutotoolsDeps", "AutotoolsToolchain"
@@ -208,7 +204,7 @@ def test_install_output_directories():
                 autotools.install()
     """)
 
-    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    main = gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])
     makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
     configure_ac = gen_configure_ac()
     client.save({"conanfile.py": consumer_conanfile,

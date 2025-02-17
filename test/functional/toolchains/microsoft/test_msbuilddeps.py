@@ -7,7 +7,6 @@ import pytest
 from parameterized import parameterized_class
 
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.assets.visual_project_files import get_vs_project_files
 from test.conftest import tools_locations
@@ -412,12 +411,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool("cmake")
     def test_msbuild_generator(self):
         client = TestClient()
-        client.save(pkg_cmake("hello0", "1.0"))
-        client.run("create . ")
-        client.save(pkg_cmake("hello3", "1.0"), clean_first=True)
-        client.run("create . ")
-        client.save(pkg_cmake("hello1", "1.0", ["hello0/1.0"]), clean_first=True)
-        client.run("create . ")
+        client.run("new cmake_lib -d name=hello0 -d version=1.0")
+        client.run("create . -tf=")
+        client.save({}, clean_first=True)
+        client.run("new cmake_lib -d name=hello3 -d version=1.0")
+        client.run("create . -tf=")
+        client.save({}, clean_first=True)
+        client.run("new cmake_lib -d name=hello1 -d version=1.0 -d requires=hello0/1.0")
+        client.run("create . -tf=")
+        client.save({}, clean_first=True)
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -447,11 +449,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
-        self.assertIn("hello3: Release!", client.out)
+        self.assertIn("hello3/1.0: Hello World Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("hello0: Release!", client.out)
-        self.assertIn("hello1: Release!", client.out)
+        self.assertIn("hello0/1.0: Hello World Release!", client.out)
+        self.assertIn("hello1/1.0: Hello World Release", client.out)
 
     def test_install_reference(self):
         client = TestClient()
@@ -816,12 +818,12 @@ def test_build_vs_project_with_test_requires_vs2022():
 
 def check_build_vs_project_with_test_requires(vs_version):
     client = TestClient()
-    client.save(pkg_cmake("updep.pkg.team", "0.1"))
-    client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
+    client.run("new cmake_lib -d name=updep.pkg.team -d version=0.1")
+    client.run("create .  -s compiler.version={vs_version} -tf=".format(vs_version=vs_version))
 
-    client.save(pkg_cmake("mydep.pkg.team", "0.1", requires=["updep.pkg.team/0.1"]),
-                clean_first=True)
-    client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
+    client.save({}, clean_first=True)
+    client.run("new cmake_lib -d name=mydep.pkg.team -d version=0.1 -d requires=updep.pkg.team/0.1")
+    client.run("create .  -s compiler.version={vs_version} -tf=".format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
         from conan import ConanFile
@@ -839,7 +841,7 @@ def check_build_vs_project_with_test_requires(vs_version):
                 msbuild.build("MyProject.sln")
         """)
     files = get_vs_project_files()
-    main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
+    main_cpp = gen_function_cpp(name="main", includes=["mydep.pkg.team"], calls=["mydep_pkg_team"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
 
@@ -856,8 +858,8 @@ def check_build_vs_project_with_test_requires(vs_version):
     client.save(files, clean_first=True)
     client.run('build .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
-    assert "mydep_pkg_team: Release!" in client.out
-    assert "updep_pkg_team: Release!" in client.out
+    assert "mydep.pkg.team/0.1: Hello World Release!" in client.out
+    assert "updep.pkg.team/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")

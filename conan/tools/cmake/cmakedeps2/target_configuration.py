@@ -34,17 +34,21 @@ class TargetConfigurationTemplate2:
         return f"{f}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
-        result = []
+        result = {}
         requires = info.parsed_requires()
         pkg_name = self._conanfile.ref.name
+        pkg_type = info.type
+        assert isinstance(pkg_type, PackageType), f"Pkg type {pkg_type} {type(pkg_type)}"
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
+
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            targets = []
             for d in transitive_reqs.values():
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
-                targets.append(dep_target or f"{d.ref.name}::{d.ref.name}")
-            return targets
+                dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
+                link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
+                result[dep_target] = link
+            return result
 
         for required_pkg, required_comp in requires:
             if required_pkg is None:  # Points to a component of same package
@@ -53,7 +57,9 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                result.append(dep_target)
+                link = not (pkg_type is PackageType.SHARED and
+                            dep_comp.package_type is PackageType.SHARED)
+                result[dep_target] = link
             else:  # Different package
                 try:
                     dep = transitive_reqs[required_pkg]
@@ -73,12 +79,15 @@ class TargetConfigurationTemplate2:
                         default_target = f"{required_pkg}::{required_comp}"
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
-                    result.append(dep_target)
+                    link = not (pkg_type is PackageType.SHARED and
+                                dep_comp.package_type is PackageType.SHARED)
+                    result[dep_target] = link
         return result
 
     @property
     def _context(self):
         cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
+        assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
@@ -150,10 +159,10 @@ class TargetConfigurationTemplate2:
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
-        requires = ";".join(self._requires(info, components))
+        requires = self._requires(info, components)
+        assert isinstance(requires, dict)
         defines = " ".join(info.defines)
         # TODO: Missing escaping?
-        # TODO: Missing link language
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
@@ -171,7 +180,7 @@ class TargetConfigurationTemplate2:
         if info.frameworks:
             ConanOutput(scope=str(self._conanfile)).warning("frameworks not supported yet in new CMakeDeps generator")
 
-        if info.libs:
+        if info.libs:  # TODO: to change to location
             if len(info.libs) != 1:
                 raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                      f"{self._conanfile}: {info.libs}")
@@ -203,15 +212,14 @@ class TargetConfigurationTemplate2:
         if libs and root_target_name not in libs:
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
-                all_requires = []
+                all_requires = {}
                 for defaultc in cpp_info.default_components:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
-                    all_requires.append(comp_name)
-                all_requires = ";".join(all_requires)
+                    all_requires[comp_name] = True  # It is an interface, full link
             else:
-                all_requires = ";".join(libs.keys())
+                all_requires = {k: True for k in libs.keys()}
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires}
 
@@ -339,10 +347,29 @@ class TargetConfigurationTemplate2:
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}
                               "{{lib_info["link_location"]}}")
         {% endif %}
+
         {% if lib_info.get("requires") %}
-        set_target_properties({{lib}} PROPERTIES INTERFACE_LINK_LIBRARIES
-                              "{{config_wrapper(config, lib_info["requires"])}}")
+        # Information of transitive dependencies
+        {% for require_target, link in lib_info["requires"].items() %}
+        # Requirement {{require_target}} => Full link: {{link}}
+
+        {% if link %}
+        # set property allows to append, and lib_info[requires] will iterate
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, require_target)}}")
+        {% else %}
+        if(${CMAKE_VERSION} VERSION_LESS "3.27")
+            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.27")
+        endif()
+        # If the headers trait is not there, this will do nothing
+        target_link_libraries({{lib}} INTERFACE
+                              $<COMPILE_ONLY:{{config_wrapper(config, require_target)}}> )
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_LINK_DEPENDENT_LIBRARIES_{{config}}
+                     {{require_target}})
         {% endif %}
+        {% endfor %}
+        {% endif %}
+
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}

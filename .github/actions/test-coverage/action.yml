@@ -11,7 +11,7 @@ inputs:
     required: true
 
   duration:
-    description: 'Tests maximum duration'
+    description: 'Show N slowest test durations (N=0 for all)'
     required: true
     default: '10'
 
@@ -30,7 +30,7 @@ runs:
         if: ${{ inputs.tests }}
         shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=term-missing:skip-covered' || '' }}
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov=conan --cov=conans --cov=test --cov-report=' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
