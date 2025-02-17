@@ -21,9 +21,6 @@ class Workspace:
     def name(self):
         return os.path.basename(self.folder)
 
-    def conanfilews(self):
-        return self.conan_data.get("conanfilews")
-
     def _conan_load_data(self):
         data_path = os.path.join(self.folder, "conanws.yml")
         if not os.path.exists(data_path):
@@ -92,3 +89,6 @@ class Workspace:
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
+
+    def root_conanfile(self):  # noqa
+        return None

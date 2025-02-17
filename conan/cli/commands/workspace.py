@@ -3,6 +3,7 @@ import os
 
 from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, cli_out_write
+from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args, add_common_install_arguments, add_lockfile_args
 from conan.cli.command import conan_command, conan_subcommand
@@ -201,8 +202,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     print_graph_basic(deps_graph)
 
     # Collapsing the graph
-    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build,
-                                                      lockfile, remotes)
+    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
 
@@ -220,3 +220,6 @@ def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
+    if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
+        raise ConanException("Workspace command disabled without CONAN_WORKSPACE_ENABLE env var,"
+                             "please read the docs about this 'incubating' feature")

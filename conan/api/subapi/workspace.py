@@ -11,7 +11,8 @@ from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
 from conan.internal.model.workspace import Workspace
 from conan.tools.scm import Git
-from conans.client.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conans.client.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
+    RECIPE_CONSUMER
 from conans.client.graph.graph import TransitiveRequirement
 from conans.client.graph.profile_node_definer import consumer_definer
 from conans.client.loader import load_python_file
@@ -207,19 +208,19 @@ class WorkspaceAPI:
             if info["path"].replace("\\", "/") == path:
                 return RecipeReference.loads(ref)
 
-    def collapse_editables(self, deps_graph, profile_host, profile_build, lockfile, remotes):
+    def collapse_editables(self, deps_graph, profile_host, profile_build):
         ConanOutput().title(f"Collapsing workspace editables")
-        path = os.path.join(self._folder, self._ws.conanfilews() or "conanfilews.py")
-        if os.path.exists(path):
-            load_consumer = self._conan_api.graph._load_root_consumer_conanfile
-            root = load_consumer(path, profile_host, profile_build, lockfile=lockfile,
-                                 remotes=remotes)
-            # Protect against misuses
-            conanfile = root.conanfile
+
+        root_class = self._ws.root_conanfile()
+        if root_class is not None:
+            conanfile = root_class("conanws.py base project Conanfile")
+            consumer_definer(conanfile, profile_host, profile_build)
+            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER)
+            root.should_build = True  # It is a consumer, this is something we are building
             for field in ("requires", "build_requires", "test_requires", "requirements", "build",
                           "source", "package"):
                 if getattr(conanfile, field, None):
-                    raise ConanException(f"Workspace conanfile shouldn't have {field}: {path}")
+                    raise ConanException(f"Conanfile in conanws.py shouldn't have '{field}'")
         else:
             ConanOutput().info("Workspace conanfilews.py not found in the workspace folder, "
                                "using default behavior")

@@ -484,16 +484,22 @@ class TestMeta:
         c = TestClient()
         conanfilews = textwrap.dedent("""
             from conan import ConanFile
+            from conan import Workspace
+
             class MyWs(ConanFile):
                 settings = "arch", "build_type"
                 generators = "MSBuildDeps"
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
             """)
 
-        c.save({"conanws.yml": "conanfilews: myconanfilews.py",
-                "dep/conanfile.py": GenConanfile("dep", "0.1"),
-                "myconanfilews.py": conanfilews})
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
         c.run("workspace add dep")
         c.run("workspace install -of=build")
+        print(c.out)
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conandeps.props" in files
 
@@ -501,15 +507,20 @@ class TestMeta:
         c = TestClient()
         conanfilews = textwrap.dedent("""
             from conan import ConanFile
+            from conan import Workspace
             class MyWs(ConanFile):
                 requires = "dep/0.1"
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
             """)
 
         c.save({"conanws.yml": "conanfilews: myconanfilews.py",
                 "dep/conanfile.py": GenConanfile("dep", "0.1"),
-                "myconanfilews.py": conanfilews})
+                "conanws.py": conanfilews})
         c.run("workspace install", assert_error=True)
         assert "ERROR: This workspace cannot be installed, it doesn't have any editable" in c.out
         c.run("workspace add dep")
         c.run("workspace install", assert_error=True)
-        assert "ERROR: Workspace conanfile shouldn't have requires" in c.out
+        assert "ERROR: Workspace conanfile in conanws.py shouldn't have 'requires'" in c.out

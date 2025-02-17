@@ -41,8 +41,10 @@ add_project(app1)
 """
 
 conanfile = '''\
+from conan import Workspace
 from conan import ConanFile
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+
 
 class MyWs(ConanFile):
     """ This is a special conanfile, used only for workspace definition of layout
@@ -59,11 +61,16 @@ class MyWs(ConanFile):
 
     def layout(self):
         cmake_layout(self)
+
+
+class Ws(Workspace):
+    def root_conanfile(self):
+        return MyWs
 '''
 
 workspace_files = {"conanws.yml": conanws_yml,
                    "CMakeLists.txt": cmake,
-                   "conanfilews.py": conanfile,
+                   "conanws.py": conanfile,
                    ".gitignore": "build"}
 # liba
 files = {f"liba/{k}": v for k, v in cmake_lib_files.items()}
