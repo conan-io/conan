@@ -523,4 +523,4 @@ class TestMeta:
         assert "ERROR: This workspace cannot be installed, it doesn't have any editable" in c.out
         c.run("workspace add dep")
         c.run("workspace install", assert_error=True)
-        assert "ERROR: Workspace conanfile in conanws.py shouldn't have 'requires'" in c.out
+        assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out
