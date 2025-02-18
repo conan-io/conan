@@ -28,11 +28,6 @@ class TestFileServer:
             mimetype = "application/octet-stream" if file.endswith("tgz") else None
             return bottle.static_file(file, store, mimetype=mimetype)
 
-        @app.route("/notfound", method=["GET"])
-        def notfound(file):
-            kk
-            return bottle.HTTPError(404, "Not found")
-
         @app.route("/<folder>/<file>", method=["PUT"])
         def put(folder, file):
             content = bottle.request.body.read()
