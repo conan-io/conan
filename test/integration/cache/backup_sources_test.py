@@ -306,11 +306,10 @@ class TestDownloadCacheBackupSources:
         self.client.save_home(
             {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
                             f"core.download:retry=0\n"
-                            f"core.sources:download_urls=['{self.file_server.fake_url}/notfound', 'origin']\n"})
+                            f"core.sources:download_urls=['error_server', 'origin']\n"})
 
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create .", assert_error=True)
-        print(self.client.out)
         assert "ConanException: Error downloading file" in self.client.out
 
     def test_upload_sources_backup_creds_needed(self):
@@ -778,13 +777,13 @@ class TestDownloadCacheBackupSources:
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
 
         conanfile = textwrap.dedent(f"""
-                               from conan import ConanFile
-                               from conan.tools.files import download
-                               class Pkg2(ConanFile):
-                                   def source(self):
-                                       download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
-                                                sha256="{sha256}")
-                               """)
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
 
         self.client.save_home(
             {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
@@ -820,13 +819,13 @@ class TestDownloadCacheBackupSources:
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
 
         conanfile = textwrap.dedent(f"""
-                   from conan import ConanFile
-                   from conan.tools.files import download
-                   class Pkg2(ConanFile):
-                       def source(self):
-                           download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
-                                    sha256="{sha256}")
-                   """)
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
 
         self.client.save_home(
             {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
