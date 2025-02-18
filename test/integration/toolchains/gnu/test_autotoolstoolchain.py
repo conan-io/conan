@@ -348,6 +348,8 @@ def test_conf_build_does_not_exist():
     [settings]
     arch=x86_64
     os=Linux
+    [conf]
+    tools.build:compiler_executables={'c': '/usr/bin/gcc', 'cpp': '/usr/bin/g++'}
     """)
     build = textwrap.dedent("""
     [settings]
