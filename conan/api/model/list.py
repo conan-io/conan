@@ -16,9 +16,6 @@ class MultiPackagesList:
     def __init__(self):
         self.lists = {}
 
-    def setdefault(self, key, default):
-        return self.lists.setdefault(key, default)
-
     def __getitem__(self, name):
         try:
             return self.lists[name]
@@ -56,11 +53,6 @@ class MultiPackagesList:
         pkglist = MultiPackagesList()
         pkglist.lists = result
         return pkglist
-
-    @staticmethod
-    def from_graph(graph, graph_recipes=None, graph_binaries=None):
-        graph = {"graph": graph.serialize()}
-        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
 
     @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):

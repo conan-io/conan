@@ -356,7 +356,7 @@ class TestOpenAdd:
                 "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
                                                                 .with_requires("pkga/0.1")})
         c.run("workspace add pkga")
-        c.run("workspace add pkgb")
+        c.run("workspace add pkgb3")
 
         c.run("install --requires=pkgb/0.1 --build=editable")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
