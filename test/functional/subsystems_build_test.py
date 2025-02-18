@@ -518,6 +518,8 @@ class TestSubsystemsCMakeBuild:
 @pytest.mark.tool("msys2")
 def test_msys2_env_vars_paths():
     c = TestClient()
+    # A tool-requires injecting PATHs for native, should not use "_path" calls, and use
+    # 'separator=;' explicitly
     tool = textwrap.dedent("""
         from conan import ConanFile
         class HelloConan(ConanFile):
