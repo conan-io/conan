@@ -1,6 +1,5 @@
 import os
 import textwrap
-import time
 from time import sleep
 
 from conan.api.model import RecipeReference
@@ -168,73 +167,68 @@ def test_install_update_repeated_tool_requires():
     assert 1 == str(c.out).count("tool/0.1: Checking remote")
 
 
-def test_multi_remote_update_resolution():
-    c = TestClient(servers={"r1": TestServer(), "r2": TestServer(), "r3": TestServer()},
-                   inputs=["admin", "password"] * 3, light=True)
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("export .")
-    rev1 = c.exported_recipe_revision()
-    c.run("upload * -r=r1 -c")
-    # second revision
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
-    c.run("export .")
-    rev2 = c.exported_recipe_revision()
-    assert rev1 != rev2
-    c.run("upload * -r=r2 -c")  # By default uploads latest revisions only
-    assert rev1 not in c.out
-    assert rev2 in c.out
-    # going back to the previous revision
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("export .")  # Makes it the latest
-    rev3 = c.exported_recipe_revision()
-    assert rev1 == rev3
-    c.run("upload * -r=r3 -c")  # By default uploads latest revisions only
-    assert rev3 in c.out
-    assert rev2 not in c.out
+class TestUpdateOldPolicy:
+    def test_multi_remote_update_resolution(self):
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer(), "r3": TestServer()},
+                       inputs=["admin", "password"] * 3, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        rev1 = c.exported_recipe_revision()
+        c.run("upload * -r=r1 -c")
+        # second revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
+        c.run("export .")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+        c.run("upload * -r=r2 -c")  # By default uploads latest revisions only
+        assert rev1 not in c.out
+        assert rev2 in c.out
+        # going back to the previous revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")  # Makes it the latest
+        rev3 = c.exported_recipe_revision()
+        assert rev1 == rev3
+        c.run("upload * -r=r3 -c")  # By default uploads latest revisions only
+        assert rev3 in c.out
+        assert rev2 not in c.out
 
-    # now test the --update, it will pick up the latest revision, which is r3
-    c.run("remove * -c")
-    c.run("graph info --requires=pkg/0.1 --update")
-    assert f"pkg/0.1#{rev3} - Downloaded (r3)" in c.out
+        # now test the --update, it will pick up the latest revision, which is r3
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update")
+        assert f"pkg/0.1#{rev3} - Downloaded (r3)" in c.out
 
-    # But if we enable order-based first found timestamp, it will pick up r2
-    c.run("remove * -c")
-    c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy_old=True")
-    assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out
+        # But if we enable order-based first found timestamp, it will pick up r2
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
+        assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out
 
+    def test_multi_remote_update_resolution_2_remotes(self):
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
+                       inputs=["admin", "password"] * 2, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        rev1 = c.exported_recipe_revision()
+        c.run("upload * -r=r1 -c")
+        # second revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
+        c.run("export .")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+        c.run("upload * -r=r1 -c")
+        c.run("list *#* -r=r1")
 
-def test_multi_remote_update_resolution_2_remotes():
-    c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
-                   inputs=["admin", "password"] * 2, light=True)
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("export .")
-    rev1 = c.exported_recipe_revision()
-    c.run("upload * -r=r1 -c")
-    # second revision
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
-    time.sleep(1)
-    c.run("export .")
-    rev2 = c.exported_recipe_revision()
-    assert rev1 != rev2
-    c.run("upload * -r=r1 -c")
-    c.run("list *#* -r=r1")
-    print(c.out)
+        # Upload the first, old revision to the other remote
+        c.run(f"upload pkg/0.1#{rev1} -r=r2 -c")
+        assert rev1 in c.out
+        assert rev2 not in c.out
+        c.run("list *#* -r=r2")
 
-    time.sleep(1)
-    # Upload the first, old revision to the other remote
-    c.run(f"upload pkg/0.1#{rev1} -r=r2 -c")
-    assert rev1 in c.out
-    assert rev2 not in c.out
-    c.run("list *#* -r=r2")
-    print(c.out)
+        # now test the --update, it will pick up the latest revision, which is r3
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update")
+        assert f"pkg/0.1#{rev1} - Downloaded (r2)" in c.out
 
-    # now test the --update, it will pick up the latest revision, which is r3
-    c.run("remove * -c")
-    c.run("graph info --requires=pkg/0.1 --update")
-    assert f"pkg/0.1#{rev1} - Downloaded (r2)" in c.out
-
-    # But if we enable order-based first found timestamp, it will pick up r2
-    c.run("remove * -c")
-    c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy_old=True")
-    print(c.out)
-    assert f"pkg/0.1#{rev2} - Downloaded (r1)" in c.out
+        # But if we enable order-based first found timestamp, it will pick up r2
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
+        assert f"pkg/0.1#{rev2} - Downloaded (r1)" in c.out

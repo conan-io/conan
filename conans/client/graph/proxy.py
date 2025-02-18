@@ -14,8 +14,7 @@ class ConanProxy:
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
-        self._update_policy_old = conan_app.global_conf.get("core:update_policy_old",
-                                                            check_type=bool)
+        self._legacy_update = conan_app.global_conf.get("core:update_policy", choices=["legacy"])
 
     def get_recipe(self, ref, remotes, update, check_update):
         """
@@ -99,6 +98,7 @@ class ConanProxy:
         output = ConanOutput(scope=str(reference))
 
         results = []
+        need_update = should_update_reference(reference, update) or check_update
         for remote in remotes:
             if remote.allowed_packages and not any(reference.matches(f, is_consumer=False)
                                                    for f in remote.allowed_packages):
@@ -106,11 +106,15 @@ class ConanProxy:
                 continue
             output.info(f"Checking remote: {remote.name}")
             try:
+                if self._legacy_update and need_update:
+                    refs = self._remote_manager.get_recipe_revisions_references(reference, remote)
+                    results.extend([{'remote': remote, 'ref': ref} for ref in refs])
+                    continue
                 if not reference.revision:
                     ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
                 else:
                     ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
-                if not should_update_reference(reference, update) and not check_update:
+                if not need_update:
                     return remote, ref
                 results.append({'remote': remote, 'ref': ref})
             except NotFoundException:
@@ -119,7 +123,8 @@ class ConanProxy:
         if len(results) == 0:
             return None, None
 
-        if self._update_policy_old:  # Use only the first occurence of each revision in the remotes
+        if self._legacy_update and need_update:
+            # Use only the first occurence of each revision in the remotes
             filtered_results = []
             revisions = set()
             for r in results:
