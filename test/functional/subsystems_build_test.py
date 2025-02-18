@@ -533,10 +533,11 @@ def test_msys2_env_vars_paths():
         tools.microsoft.bash:path=bash
 
         [buildenv]
-        INCLUDE=+(path)C:/some/path
+        INCLUDE=+(sep=;)C:/some/path
         """)
     c.save({"conanfile.py": conanfile,
             "profile": profile})
     with environment_update({"INCLUDE": "C:/my/abs path/folder;C:/other path/subfolder"}):
         c.run("build . -pr=profile")
+        print(c.out)
     assert "INCLUDE=/c/some/path:/c/my/abs path/folder:/c/other path/subfolder" in c.out
