@@ -1,3 +1,4 @@
+import os
 import platform
 
 import pytest
@@ -35,6 +36,8 @@ def test_metabuild():
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
     c.run("workspace install")
+    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
+    assert os.path.exists(os.path.join(c.current_folder, "build", "generators"))
     config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
     c.run_command(f"cmake --preset {config_preset}")
     assert "Conan: Target declared 'mymath::mymath'" in c.out

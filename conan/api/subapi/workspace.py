@@ -215,7 +215,8 @@ class WorkspaceAPI:
         if root_class is not None:
             conanfile = root_class("conanws.py base project Conanfile")
             consumer_definer(conanfile, profile_host, profile_build)
-            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER)
+            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                        path=self._folder)  # path lets use the conanws.py folder
             root.should_build = True  # It is a consumer, this is something we are building
             for field in ("requires", "build_requires", "test_requires", "requirements", "build",
                           "source", "package"):
