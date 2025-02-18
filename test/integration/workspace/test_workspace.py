@@ -4,23 +4,21 @@ import textwrap
 
 import pytest
 
-from conan.internal.workspace import Workspace
+from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conans.util.files import save
 
-Workspace.TEST_ENABLED = "will_break_next"
+WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
 class TestHomeRoot:
-    @pytest.mark.parametrize("ext, content", [("py", "home_folder = 'myhome'"),
-                                              ("yml", "home_folder: myhome")])
-    def test_workspace_home(self, ext, content):
+    def test_workspace_home_yml(self):
         folder = temp_folder()
         cwd = os.path.join(folder, "sub1", "sub2")
-        save(os.path.join(folder, f"conanws.{ext}"), content)
+        save(os.path.join(folder, f"conanws.yml"), "home_folder: myhome")
         c = TestClient(current_folder=cwd, light=True)
         c.run("config home")
         assert os.path.join(folder, "myhome") in c.stdout
@@ -29,8 +27,11 @@ class TestHomeRoot:
         folder = temp_folder()
         cwd = os.path.join(folder, "sub1", "sub2")
         conanwspy = textwrap.dedent("""
-            def home_folder():
-                return "new" + conanws_data["home_folder"]
+            from conan import Workspace
+
+            class MyWs(Workspace):
+                def home_folder(self):
+                    return "new" + self.conan_data["home_folder"]
             """)
         save(os.path.join(folder, f"conanws.py"), conanwspy)
         save(os.path.join(folder, "conanws.yml"), "home_folder: myhome")
@@ -43,9 +44,12 @@ class TestHomeRoot:
         # Just check the root command works
         c.run("workspace root", assert_error=True)
         assert "ERROR: No workspace defined, conanws.py file not found" in c.out
+
+        # error, empty .py
         c.save({"conanws.py": ""})
-        c.run("workspace root")
-        assert c.current_folder in c.stdout
+        c.run("workspace root", assert_error=True)
+        assert "Error loading conanws.py" in c.out
+        assert "No subclass of Workspace" in c.out
 
         c.save({"conanws.yml": ""}, clean_first=True)
         c.run("workspace root")
@@ -56,7 +60,7 @@ class TestAddRemove:
 
     def test_add(self):
         c = TestClient(light=True)
-        c.save({"conanws.py": "name='myws'",
+        c.save({"conanws.yml": "",
                 "dep1/conanfile.py": GenConanfile("dep1", "0.1"),
                 "dep2/conanfile.py": GenConanfile("dep2", "0.1"),
                 "dep3/conanfile.py": GenConanfile("dep3", "0.1")})
@@ -95,7 +99,7 @@ class TestAddRemove:
 
     def test_add_from_outside(self):
         c = TestClient(light=True)
-        c.save({"sub/conanws.py": "name='myws'",
+        c.save({"sub/conanws.yml": "",
                 "sub/dep1/conanfile.py": GenConanfile("dep1", "0.1"),
                 "sub/dep2/conanfile.py": GenConanfile("dep2", "0.1")})
         with c.chdir("sub"):
@@ -142,32 +146,33 @@ class TestAddRemove:
         if not api:
             workspace = textwrap.dedent("""\
                 import os
-                name = "myws"
+                from conan import Workspace
 
-                workspace_folder = os.path.dirname(os.path.abspath(__file__))
-
-                def editables():
-                    result = {}
-                    for f in os.listdir(workspace_folder):
-                        if os.path.isdir(os.path.join(workspace_folder, f)):
-                            name = open(os.path.join(workspace_folder, f, "name.txt")).read().strip()
-                            version = open(os.path.join(workspace_folder, f,
-                                                        "version.txt")).read().strip()
-                            result[f"{name}/{version}"] = {"path": f}
-                    return result
+                class MyWorkspace(Workspace):
+                    def editables(self):
+                        result = {}
+                        for f in os.listdir(self.folder):
+                            if os.path.isdir(os.path.join(self.folder, f)):
+                                full_path = os.path.join(self.folder, f, "name.txt")
+                                name = open(full_path).read().strip()
+                                version = open(os.path.join(self.folder, f,
+                                                            "version.txt")).read().strip()
+                                result[f"{name}/{version}"] = {"path": f}
+                        return result
                 """)
         else:
             workspace = textwrap.dedent("""\
-               import os
-               name = "myws"
+                import os
+                from conan import Workspace
 
-               def editables(*args, **kwargs):
-                   result = {}
-                   for f in os.listdir(workspace_api.folder):
-                       if os.path.isdir(os.path.join(workspace_api.folder, f)):
-                           conanfile = workspace_api.load(os.path.join(f, "conanfile.py"))
-                           result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
-                   return result
+                class MyWorkspace(Workspace):
+                    def editables(self):
+                        result = {}
+                        for f in os.listdir(self.folder):
+                            if os.path.isdir(os.path.join(self.folder, f)):
+                                conanfile = self.load_conanfile(f)
+                                result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
+                        return result
                """)
 
         c.save({"conanws.py": workspace,
@@ -205,23 +210,26 @@ class TestAddRemove:
             """)
 
         workspace = textwrap.dedent("""\
-           import os
-           name = "myws"
+            import os
+            from conan import Workspace
 
-           def editables(*args, **kwargs):
-               conanfile = workspace_api.load("dep1/conanfile.py")
-               return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1/conanfile.py"}}
+            class MyWorkspace(Workspace):
+                def editables(self):
+                    conanfile = self.load_conanfile("dep1")
+                    return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1"}}
             """)
 
         c.save({"conanws.py": workspace,
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1/conanfile.py"}}
+        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        c.run("install --requires=pkg/2.1")
+        # it will not fail
 
     def test_error_uppercase(self):
         c = TestClient(light=True)
-        c.save({"conanws.py": "name='myws'",
+        c.save({"conanws.yml": "",
                 "conanfile.py": GenConanfile("Pkg", "0.1")})
         c.run("workspace add .", assert_error=True)
         assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
@@ -231,7 +239,7 @@ class TestAddRemove:
 
     def test_add_open_error(self):
         c = TestClient(light=True)
-        c.save({"conanws.py": "name='myws'",
+        c.save({"conanws.yml": "",
                 "dep/conanfile.py": GenConanfile("dep", "0.1")})
         c.run("workspace add dep")
         c.run("workspace open dep/0.1", assert_error=True)
@@ -239,12 +247,43 @@ class TestAddRemove:
 
     def test_remove_product(self):
         c = TestClient(light=True)
-        c.save({"conanws.py": "name='myws'",
+        c.save({"conanws.yml": "",
                 "mydeppkg/conanfile.py": GenConanfile("mydeppkg", "0.1")})
         c.run("workspace add mydeppkg --product")
         c.run("workspace remove mydeppkg")
         c.run("workspace info")
         assert "mydeppkg" not in c.out
+
+    def test_custom_add_remove(self):
+        c = TestClient(light=True)
+
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def name(self):
+                    return "myws"
+
+                def add(self, ref, path, *args, **kwargs):
+                    self.output.info(f"Adding {ref} at {path}")
+                    super().add(ref, path, *args, **kwargs)
+
+                def remove(self, path, *args, **kwargs):
+                    self.output.info(f"Removing {path}")
+                    return super().remove(path, *args, **kwargs)
+            """)
+
+        c.save({"conanws.py": workspace,
+                "dep/conanfile.py": GenConanfile("dep", "0.1")})
+        c.run("workspace add dep")
+        assert "myws: Adding dep/0.1" in c.out
+        c.run("workspace info")
+        assert "dep/0.1" in c.out
+        c.run("workspace remove dep")
+        assert "myws: Removing" in c.out
+        c.run("workspace info")
+        assert "dep/0.1" not in c.out
 
 
 class TestOpenAdd:
@@ -260,7 +299,7 @@ class TestOpenAdd:
 
         # The add should work the same
         c2 = TestClient(servers=t.servers, light=True)
-        c2.save({"conanws.py": ""})
+        c2.save({"conanws.yml": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert "name = 'pkg'" in c2.load("pkg/conanfile.py")
         c2.run("workspace info")
@@ -303,7 +342,7 @@ class TestOpenAdd:
         assert c.load("pkg/conanfile.py") == conanfile
 
         c2 = TestClient(servers=t1.servers, light=True)
-        c2.save({"conanws.py": ""})
+        c2.save({"conanws.yml": ""})
         c2.run(f"workspace add --ref=pkg/0.1")
         assert 'name = "pkg"' in c2.load("pkg/conanfile.py")
         c2.run("workspace info")
@@ -334,18 +373,17 @@ class TestWorkspaceBuild:
 
         workspace = textwrap.dedent("""\
             import os
-            name = "myws"
+            from conan import Workspace
 
-            workspace_folder = os.path.dirname(os.path.abspath(__file__))
-
-            def products():
-                result = []
-                for f in os.listdir(workspace_folder):
-                    if os.path.isdir(os.path.join(workspace_folder, f)):
-                        if f.startswith("product"):
-                            result.append(f)
-                return result
-                    """)
+            class MyWorkspace(Workspace):
+                def products(self):
+                    result = []
+                    for f in os.listdir(self.folder):
+                        if os.path.isdir(os.path.join(self.folder, f)):
+                            if f.startswith("product"):
+                                result.append(f)
+                    return result
+            """)
 
         c.save({"conanws.py": workspace,
                 "lib1/conanfile.py": GenConanfile("lib1", "0.1"),

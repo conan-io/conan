@@ -44,12 +44,6 @@ class RecipeReference:
             result += "#{}".format(self.revision)
         return result
 
-    def repr_reduced(self):
-        result = self.__str__()
-        if self.revision is not None:
-            result += "#{}".format(self.revision[0:4])
-        return result
-
     def repr_humantime(self):
         result = self.repr_notime()
         assert self.timestamp
@@ -234,16 +228,6 @@ class PkgReference:
             result += ":{}".format(self.package_id)
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        return result
-
-    def repr_reduced(self):
-        if self.ref is None:
-            return ""
-        result = self.ref.repr_reduced()
-        if self.package_id:
-            result += ":{}".format(self.package_id[0:4])
-        if self.revision is not None:
-            result += "#{}".format(self.revision[0:4])
         return result
 
     def repr_humantime(self):

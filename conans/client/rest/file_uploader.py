@@ -97,7 +97,7 @@ class FileUploader(object):
 
 
 class FileProgress(io.FileIO):
-    def __init__(self, path: str, msg: str = "Uploading", interval: float = 1, *args, **kwargs):
+    def __init__(self, path: str, msg: str = "Uploading", interval: float = 10, *args, **kwargs):
         super().__init__(path, *args, **kwargs)
         self._size = os.path.getsize(path)
         self._filename = os.path.basename(path)

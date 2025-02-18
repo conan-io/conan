@@ -488,12 +488,12 @@ class TestWin:
         check_vs_runtime("Release/MyApp.exe", client, ide_version, build_type="Release",
                          static_runtime=static_runtime)
 
-    @pytest.mark.tool("cmake")
-    @pytest.mark.tool("visual_studio", "16")
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler",  "msvc"),
-                    ("compiler.version",  "192"),
+                    ("compiler.version",  "193"),
                     ("compiler.runtime",  "dynamic"),
                     ("build_type",  "Debug"),
                     ("arch",  "x86_64")]
@@ -514,27 +514,27 @@ class TestWin:
         # Run the configure corresponding to this test case
         client.run("build . %s" % (settings, ))
         assert "conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props" in client.out
-        assert f"conanvcvars.bat: Activating environment Visual Studio 16" in client.out
+        assert f"conanvcvars.bat: Activating environment Visual Studio 17" in client.out
         assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
         self._run_app(client, "x64", "Debug")
         assert "Hello World Debug" in client.out
-        check_exe_run(client.out, "main", "msvc", "192", "Debug", "x86_64", "14",
+        check_exe_run(client.out, "main", "msvc", "19", "Debug", "x86_64", "14",
                       {"DEFINITIONS_BOTH": 'True',
                        "DEFINITIONS_BOTH2": "True",
                        "DEFINITIONS_BOTH_INT": "123",
                        "DEFINITIONS_CONFIG": 'Debug',
                        "DEFINITIONS_CONFIG2": 'Debug',
                        "DEFINITIONS_CONFIG_INT": "234"})
-        check_vs_runtime("x64/Debug/MyApp.exe", client, "16", build_type="Debug")
+        check_vs_runtime("x64/Debug/MyApp.exe", client, "17", build_type="Debug")
 
-    @pytest.mark.tool("cmake")
-    @pytest.mark.tool("visual_studio", "16")
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_toolchain_win_multi(self):
-        ide_version = "16"
+        ide_version = "17"
         client = TestClient(path_with_spaces=False)
 
         settings = [("compiler", "msvc"),
-                    ("compiler.version", "192"),
+                    ("compiler.version", "193"),
                     ("compiler.cppstd", "17"),
                     ("compiler.runtime", "static")]
 
@@ -582,7 +582,7 @@ class TestWin:
             assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
 
             self._run_app(client, arch, build_type, shared)
-            check_exe_run(client.out, "main", "msvc", "192", build_type, arch, "17",
+            check_exe_run(client.out, "main", "msvc", "19", build_type, arch, "17",
                           {"DEFINITIONS_BOTH": "True",
                            "DEFINITIONS_CONFIG": build_type})
 

@@ -138,3 +138,7 @@ class ConanFileInterface:
     @property
     def url(self):
         return self._conanfile.url
+
+    @property
+    def extension_properties(self):
+        return getattr(self._conanfile, "extension_properties", {})

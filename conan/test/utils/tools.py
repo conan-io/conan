@@ -25,7 +25,7 @@ from webtest.app import TestApp
 
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
-from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
+from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -34,13 +34,11 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
-from conan.errors import ConanException
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
 from conan.internal.model.profile import Profile
 from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
-from conan.test.assets import copy_assets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.artifactory import ArtifactoryServer
 from conan.test.utils.mocks import RedirectedInputStream
@@ -287,7 +285,9 @@ class TestRequester:
         return requests.codes
 
 
-class TestServer(object):
+class TestServer:
+    __test__ = False
+
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):
@@ -532,23 +532,17 @@ class TestClient:
                     yield
 
     def _run_cli(self, command_line, assert_error=False):
+        args = shlex.split(command_line)
+        error = SUCCESS
+        trace = None
+        # save state
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
         old_modules = list(sys.modules.keys())
-
-        args = shlex.split(command_line)
-
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
-        except ConanException as e:
-            sys.stderr.write("Error in Conan initialization: {}".format(e))
-            return ERROR_GENERAL
-
-        error = SUCCESS
-        trace = None
-        try:
             if self._custom_commands_folder:
                 with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
                                          self._custom_commands_folder}):
@@ -557,7 +551,7 @@ class TestClient:
                 command.run(args)
         except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
-            error = command.exception_exit_error(e)
+            error = Cli.exception_exit_error(e)
         finally:
             sys.path = old_path
             os.chdir(current_dir)
@@ -588,6 +582,7 @@ class TestClient:
                         http_requester = self.requester_class(self.servers)
                     else:
                         http_requester = TestRequester(self.servers)
+
                 try:
                     if http_requester:
                         with self.mocked_servers(http_requester):
@@ -648,9 +643,6 @@ class TestClient:
 
     def save_home(self, files):
         self.save(files, path=self.cache_folder)
-
-    def copy_assets(self, origin_folder, assets=None):
-        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):

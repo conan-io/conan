@@ -277,27 +277,6 @@ class RestV2Methods:
             result.update({fn: os.path.join(dest_folder, fn) for fn in files})
         return result
 
-    @staticmethod
-    def _is_dir(path, files):
-        if path == ".":
-            return True
-        for the_file in files["files"]:
-            if path == the_file:
-                return False
-            elif the_file.startswith(path):
-                return True
-        raise NotFoundException("The specified path doesn't exist")
-
-    @staticmethod
-    def _list_dir_contents(path, files):
-        ret = []
-        for the_file in files["files"]:
-            if path == "." or the_file.startswith(path):
-                tmp = the_file[len(path) - 1:].split("/", 1)[0]
-                if tmp not in ret:
-                    ret.append(tmp)
-        return sorted(ret)
-
     def _upload_files(self, files, urls, ref):
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)

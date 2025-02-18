@@ -138,7 +138,7 @@ def config_show(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def config_clean(conan_api, parser, subparser, *args):
     """
-    Clean the configuration files in the Conan home folder. (Keeping installed packages)
+    (Experimental) Clean the configuration files in the Conan home folder, while keeping installed packages
     """
     parser.parse_args(*args)
     conan_api.config.clean()
