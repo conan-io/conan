@@ -111,7 +111,7 @@ class NewAPI:
         ensure_list("tool_requires")
 
         def as_package_name(n):
-            return n.replace("-", "_").replace("+", "_").replace(".", "_")
+            return n.replace("-", "_").replace("+", "_")
 
         def as_name(ref):
             ref = as_package_name(ref)
@@ -119,7 +119,7 @@ class NewAPI:
                 ref = ref[0:ref.index('/')]
             return ref
 
-        definitions["package_name"] = as_package_name(name)
+        definitions["package_name"] = as_package_name(name).replace(".", "_")
         definitions["as_name"] = as_name
         definitions["names"] = lambda x: ", ".join(r.split("/", 1)[0] for r in x)
         if "name" not in definitions:

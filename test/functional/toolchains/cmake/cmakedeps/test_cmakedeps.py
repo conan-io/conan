@@ -6,7 +6,6 @@ import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -515,25 +514,28 @@ def test_system_dep():
     - The toolchain set the CMAKE_LIBRARY_PATH to the "lib" of the package, so the library file is found
     """
     client = TestClient()
-    files = pkg_cmake("zlib", "0.1")
-    files["conanfile.py"] += """
-    def package_info(self):
+
+    client.run("new cmake_lib -d name=zlib -d version=0.1 -o zlib")
+    conanfile = client.load("zlib/conanfile.py")
+    conanfile += textwrap.indent(textwrap.dedent("""
         # This will use the FindZLIB from CMake but will find this library package
         self.cpp_info.set_property("cmake_file_name", "ZLIB")
         self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
         self.cpp_info.set_property("cmake_find_mode", "none")
-    """
-    client.save({os.path.join("zlib", name): content for name, content in files.items()})
-    files = pkg_cmake("mylib", "0.1", requires=["zlib/0.1"])
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("find_package(zlib)",
-                                                              "find_package(ZLIB)")
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib", "ZLIB::ZLIB")
-    client.save({os.path.join("mylib", name): content for name, content in files.items()})
-    files = pkg_cmake("consumer", "0.1", requires=["mylib/0.1"])
-    client.save({os.path.join("consumer", name): content for name, content in files.items()})
-    client.run("create zlib")
-    client.run("create mylib")
-    client.run("create consumer")
+    """), "        ")
+    client.save({"zlib/conanfile.py": conanfile})
+
+    client.run("new cmake_lib -d name=mylib -d version=0.1 -d requires=zlib/0.1 -o mylib")
+    cmake = client.load("mylib/CMakeLists.txt")
+    cmake = cmake.replace("find_package(zlib CONFIG", "find_package(ZLIB")
+    cmake = cmake.replace("zlib::zlib", "ZLIB::ZLIB")
+    client.save({"mylib/CMakeLists.txt": cmake})
+
+    client.run("new cmake_lib -d name=consumer -d version=0.1 -d requires=mylib/0.1 -o=consumer")
+
+    client.run("create zlib -tf=")
+    client.run("create mylib -tf=")
+    client.run("create consumer -tf=")
     assert "Found ZLIB:" in client.out
 
     client.run("install consumer")
