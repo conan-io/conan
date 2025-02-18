@@ -83,28 +83,6 @@ default_profiles = {
         """)
 }
 
-def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = RecipeReference.loads(reference)
-    path = cache.get_latest_recipe_reference(ref).export()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    path = cache.get_latest_package_reference(package_reference).package()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def create_profile(profile=None, settings=None):
-    if profile is None:
-        profile = Profile()
-    if profile.processed_settings is None:
-        profile.processed_settings = settings or Settings()
-    return profile
-
 
 class TestingResponse(object):
     """Wraps a response from TestApp external tool
@@ -851,28 +829,6 @@ def get_free_port():
     ret = sock.getsockname()[1]
     sock.close()
     return ret
-
-
-class StoppableThreadBottle(threading.Thread):
-    """
-    Real server to test download endpoints
-    """
-
-    def __init__(self, host=None, port=None):
-        self.host = host or "127.0.0.1"
-        self.server = bottle.Bottle()
-        self.port = port or get_free_port()
-        super(StoppableThreadBottle, self).__init__(target=self.server.run,
-                                                    kwargs={"host": self.host, "port": self.port})
-        self.daemon = True
-        self._stop = threading.Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def run_server(self):
-        self.start()
-        time.sleep(1)
 
 
 def zipdir(path, zipfilename):
