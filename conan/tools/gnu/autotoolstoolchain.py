@@ -257,7 +257,7 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Issue related: https://github.com/conan-io/conan/issues/15486
-        if self._is_cross_building and getattr(self._conanfile, 'conf_build', False):
+        if self._is_cross_building and self._conanfile.conf_build:
             compilers_build_mapping = (
                 self._conanfile.conf_build.get("tools.build:compiler_executables", default={},
                                                check_type=dict)

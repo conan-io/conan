@@ -110,3 +110,4 @@ def consumer_definer(conanfile, profile_host, profile_build):
     conanfile._conan_buildenv = profile_host.buildenv
     conanfile._conan_runenv = profile_host.runenv
     conanfile.conf = profile_host.conf.get_conanfile_conf(None, is_consumer=True)
+    conanfile.conf_build = profile_build.conf.get_conanfile_conf(None, is_consumer=True)
