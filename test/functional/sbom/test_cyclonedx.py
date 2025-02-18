@@ -1,4 +1,5 @@
 import textwrap
+import json
 
 import pytest
 
@@ -83,6 +84,22 @@ def test_sbom_generation_skipped_dependencies(hook_setup_post_package):
     # A skipped dependency also shows up in the sbom
     assert "pkg:conan/dep@1.0?rref=6a99f55e933fb6feeb96df134c33af44" in content
 
+@pytest.mark.parametrize("l, n", [('"simple"', 1), ('"multi1", "multi2"', 2), ('("tuple1", "tuple2")', 2)])
+def test_multi_license(hook_setup_post_package, l, n):
+    tc = hook_setup_post_package
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            name = 'foo'
+            version = '1.0'
+            license = %s
+    """)
+    tc.save({"conanfile.py": conanfile % l})
+    tc.run("create .")
+    create_layout = tc.created_layout()
+    cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+    content = json.loads(tc.load(cyclone_path))
+    assert len(content["components"][0]["licenses"]) == n
 
 def test_sbom_generation_no_tool_requires(hook_setup_post_package_no_tool_requires):
     tc = hook_setup_post_package_no_tool_requires

@@ -59,7 +59,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
                     }}]
         return [{"license": {
                     "id": l
-                }} for l in c.conanfile.license]
+                }} for l in component.conanfile.license]
 
     sbom_cyclonedx_1_4 = {
         **({"components": [{
