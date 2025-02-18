@@ -6,7 +6,6 @@ import textwrap
 
 from conan.test.assets.autotools import gen_makefile
 from conan.test.assets.sources import gen_function_cpp
-from conan.test.utils.test_files import temp_folder
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
 from conan.test.utils.env import environment_update
@@ -83,6 +82,7 @@ class TestSubsystems:
         client = TestClient()
         client.run_command('uname', assert_error=True)
         assert "'uname' is not recognized as an internal or external command" in client.out
+
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:
@@ -518,11 +518,19 @@ class TestSubsystemsCMakeBuild:
 @pytest.mark.tool("msys2")
 def test_msys2_env_vars_paths():
     c = TestClient()
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                self.buildenv_info.append("INCLUDE", "C:/mytool/path", separator=";")
+        """)
     conanfile = textwrap.dedent("""
-        import os
         from conan import ConanFile
         class HelloConan(ConanFile):
             win_bash = True
+            tool_requires = "tool/0.1"
 
             def build(self):
                 self.run('echo "INCLUDE=$INCLUDE"')
@@ -533,11 +541,19 @@ def test_msys2_env_vars_paths():
         tools.microsoft.bash:path=bash
 
         [buildenv]
-        INCLUDE=+(sep=;)C:/some/path
+        INCLUDE=+(sep=;)C:/prepended/path
+        INCLUDE+=(sep=;)C:/appended/path
         """)
-    c.save({"conanfile.py": conanfile,
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": conanfile,
             "profile": profile})
+    c.run("create tool")
     with environment_update({"INCLUDE": "C:/my/abs path/folder;C:/other path/subfolder"}):
-        c.run("build . -pr=profile")
-        print(c.out)
-    assert "INCLUDE=/c/some/path:/c/my/abs path/folder:/c/other path/subfolder" in c.out
+        c.run("build consumer -pr=profile")
+
+    # Check the profile is outputed correctly
+    assert "INCLUDE=+(sep=;)C:/prepended/path" in c.out
+    assert "INCLUDE+=(sep=;)C:/appended/path" in c.out
+    # check the composition is correct
+    assert "INCLUDE=C:/prepended/path;C:/my/abs path/folder;C:/other path/subfolder;" \
+           "C:/mytool/path;C:/appended/path" in c.out

@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.errors import ConanException
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.subsystems import WINDOWS
@@ -426,3 +427,26 @@ def test_custom_placeholder():
            f"$penv{{MyVar}}:MyValue"
     items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
     assert items == {"MyVar": f"$penv{{MyVar}}:MyValue"}
+
+
+class TestProfileSeparators:
+
+    def test_define(self):
+        myprofile = "MyPath1 = (sep=@)/my/path1"
+        env = ProfileEnvironment.loads(myprofile).get_profile_env(ref="")
+        assert env.dumps() == "MyPath1=(sep=@)/my/path1"
+        env.append("MyPath1", "/other/value")
+        assert env.vars(ConanFileMock()).get("MyPath1") == "/my/path1@/other/value"
+
+    def test_append(self):
+        myprofile = "MyPath1 +=(sep=@)/my/path1"
+        env = ProfileEnvironment.loads(myprofile).get_profile_env(ref="")
+        assert env.dumps() == "MyPath1+=(sep=@)/my/path1"
+        env.append("MyPath1", "/other/value")
+        assert env.vars(ConanFileMock()).get("MyPath1") == "/my/path1@/other/value"
+
+    def test_error(self):
+        myprofile = "MyPath1 = (sep=@) (path)/my/path1"
+        with pytest.raises(ConanException) as e:
+            ProfileEnvironment.loads(myprofile)
+        assert "Cannot use (sep) and (path) qualifiers simultaneously" in str(e.value)
