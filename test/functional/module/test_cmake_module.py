@@ -32,9 +32,17 @@ def test_module_project():
 
                 class pkgRecipe(ConanFile):
                     name = "mylib"
-                    package_type = "static-library"
+                    package_type = "library"
 
                     settings = "os", "compiler", "build_type", "arch"
+                    options = {
+                        "shared": [True, False],
+                        "fPIC": [True, False],
+                    }
+                    default_options = {
+                        "shared": True,
+                        "fPIC": True,
+                    }
                     implements = ["auto_shared_fpic"]
 
                     exports_sources = "CMakeLists.txt", "mylib.h", "mylib.cpp"
@@ -63,7 +71,7 @@ def test_module_project():
                  "mylib/mylib.h": gen_function_h(name="mylib"),
                  "mylib/mylib.cpp": gen_function_cpp(name="mylib"),
                  "mylib/CMakeLists.txt": cmakelists}, clean_first=True)
-    client.run("create mylib --version=0.1")
+    client.run("create mylib --version=0.1 -o='*/*:shared=True'")
 
     # -- Generate MyModule
     cmakelists = textwrap.dedent("""
@@ -92,6 +100,14 @@ def test_module_project():
                 package_type = "module"
 
                 settings = "os", "compiler", "build_type", "arch"
+                options = {
+                    "shared": [True, False],
+                    "fPIC": [True, False],
+                }
+                default_options = {
+                    "shared": False,
+                    "fPIC": True,
+                }
                 implements = ["auto_shared_fpic"]
 
                 exports_sources = "CMakeLists.txt", "main.cpp"
@@ -185,7 +201,7 @@ def test_module_project():
                     FreeLibrary(hinstLib);
 
                     #else
-                    void* handle = dlopen("./libMyModule.so", RTLD_LAZY);
+                    void* handle = dlopen("libMyModule.so", RTLD_LAZY);
                     if (!handle) {
                         std::cerr << "Error loading plugin: " << dlerror() << std::endl;
                         return 1;
@@ -219,7 +235,6 @@ def test_module_project():
             package_type = "application"
 
             settings = "os", "compiler", "build_type", "arch"
-            implements = ["auto_shared_fpic"]
 
             exports_sources = "CMakeLists.txt", "main.cpp"
 
