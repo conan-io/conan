@@ -200,6 +200,7 @@ class TestUpdateOldPolicy:
         # But if we enable order-based first found timestamp, it will pick up r2
         c.run("remove * -c")
         c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
+        assert "The 'core:update_policy' conf is deprecated and will be removed" in c.out
         assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out
 
     def test_multi_remote_update_resolution_2_remotes(self):

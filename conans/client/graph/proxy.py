@@ -107,6 +107,10 @@ class ConanProxy:
             output.info(f"Checking remote: {remote.name}")
             try:
                 if self._legacy_update and need_update:
+                    if not getattr(ConanProxy, "update_policy_legacy_warning", None):
+                        ConanProxy.update_policy_legacy_warning = True
+                        ConanOutput().warning("The 'core:update_policy' conf is deprecated and will "
+                                              "be removed in future versions", warn_tag="deprecated")
                     refs = self._remote_manager.get_recipe_revisions_references(reference, remote)
                     results.extend([{'remote': remote, 'ref': ref} for ref in refs])
                     continue
