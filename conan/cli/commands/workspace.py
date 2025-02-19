@@ -3,6 +3,7 @@ import os
 
 from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, cli_out_write
+from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args, add_common_install_arguments, add_lockfile_args
 from conan.cli.command import conan_command, conan_subcommand
@@ -163,8 +164,62 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.local.build(conanfile)
 
 
+@conan_subcommand()
+def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Install the workspace as a monolith, installing only external dependencies to the workspace,
+    generating a single result (generators, etc) for the whole workspace.
+    """
+    subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
+    subparser.add_argument("-of", "--output-folder",
+                           help='The root output folder for generated and build files')
+    subparser.add_argument("--envs-generation", default=None, choices=["false"],
+                           help="Generation strategy for virtual environment files for the root")
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    # Basic collaborators: remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None,
+                                               partial=args.lockfile_partial, overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
+    # Build a dependency graph with all editables as requirements
+    editables = conan_api.workspace.editable_packages
+    requires = [ref for ref in editables]
+    if not requires:
+        raise ConanException("This workspace cannot be installed, it doesn't have any editable")
+    deps_graph = conan_api.graph.load_graph_requires(requires, [],
+                                                     profile_host, profile_build, lockfile,
+                                                     remotes, args.build, args.update)
+    deps_graph.report_graph_error()
+    print_graph_basic(deps_graph)
+
+    # Collapsing the graph
+    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
+    ConanOutput().subtitle("Collapsed graph")
+    print_graph_basic(ws_graph)
+
+    conan_api.graph.analyze_binaries(ws_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(ws_graph)
+    conan_api.install.install_binaries(deps_graph=ws_graph, remotes=remotes)
+    output_folder = make_abs_path(args.output_folder) if args.output_folder else None
+    conan_api.install.install_consumer(ws_graph, args.generator, ws_folder, output_folder,
+                                       envs_generation=args.envs_generation)
+
+
 @conan_command(group="Consumer")
 def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
+    if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
+        raise ConanException("Workspace command disabled without CONAN_WORKSPACE_ENABLE env var,"
+                             "please read the docs about this 'incubating' feature")

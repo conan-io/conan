@@ -433,11 +433,94 @@ class TestWorkspaceBuild:
         assert "There are no products defined in the workspace, can't build" in c.out
 
 
-def test_new():
-    # Very basic workspace for testing
-    c = TestClient()
-    c.run("new workspace")
-    c.run("workspace info")
-    assert "liba/0.1" in c.out
-    assert "libb/0.1" in c.out
-    assert "app1/0.1" in c.out
+class TestNew:
+    def test_new(self):
+        # Very basic workspace for testing
+        c = TestClient(light=True)
+        c.run("new workspace")
+        assert 'name = "liba"' in c.load("liba/conanfile.py")
+        c.run("workspace info")
+        assert "liba/0.1" in c.out
+        assert "libb/0.1" in c.out
+        assert "app1/0.1" in c.out
+
+    def test_new_dep(self):
+        c = TestClient(light=True)
+        c.run("new workspace -d requires=dep/0.1")
+        assert 'self.requires("dep/0.1")' in c.load("liba/conanfile.py")
+        assert 'name = "liba"' in c.load("liba/conanfile.py")
+        c.run("workspace info")
+        assert "liba/0.1" in c.out
+        assert "libb/0.1" in c.out
+        assert "app1/0.1" in c.out
+
+
+class TestMeta:
+    def test_install(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile()})
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        c.save({"conanws.yml": "",
+                "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("dep1/0.1",
+                                                                               "dep2/0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1",
+                                                                               "dep1/0.1")},
+               clean_first=True)
+        c.run("workspace add liba")
+        c.run("workspace add libb")
+        c.run("workspace install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
+        assert "Workspace conanfilews.py not found in the workspace folder, using default" in c.out
+        files = os.listdir(os.path.join(c.current_folder, "build"))
+        assert "conan_toolchain.cmake" in files
+        assert "dep1-config.cmake" in files
+        assert "dep2-config.cmake" in files
+        assert "liba-config.cmake" not in files
+        assert "libb-config.cmake" not in files
+        assert "conanbuild.bat" not in files
+        assert "conanbuild.sh" not in files
+
+    def test_conanfilews_custom(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+
+            class MyWs(ConanFile):
+                settings = "arch", "build_type"
+                generators = "MSBuildDeps"
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace install -of=build")
+        print(c.out)
+        files = os.listdir(os.path.join(c.current_folder, "build"))
+        assert "conandeps.props" in files
+
+    def test_conanfilews_errors(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+            class MyWs(ConanFile):
+                requires = "dep/0.1"
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"conanws.yml": "conanfilews: myconanfilews.py",
+                "dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace install", assert_error=True)
+        assert "ERROR: This workspace cannot be installed, it doesn't have any editable" in c.out
+        c.run("workspace add dep")
+        c.run("workspace install", assert_error=True)
+        assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out

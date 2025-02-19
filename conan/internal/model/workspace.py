@@ -89,3 +89,6 @@ class Workspace:
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
+
+    def root_conanfile(self):  # noqa
+        return None
