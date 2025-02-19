@@ -35,6 +35,7 @@ def test_module_project():
                     package_type = "static-library"
 
                     settings = "os", "compiler", "build_type", "arch"
+                    implements = ["auto_shared_fpic"]
 
                     exports_sources = "CMakeLists.txt", "mylib.h", "mylib.cpp"
 
@@ -91,6 +92,7 @@ def test_module_project():
                 package_type = "module"
 
                 settings = "os", "compiler", "build_type", "arch"
+                implements = ["auto_shared_fpic"]
 
                 exports_sources = "CMakeLists.txt", "main.cpp"
 
@@ -217,6 +219,7 @@ def test_module_project():
             package_type = "application"
 
             settings = "os", "compiler", "build_type", "arch"
+            implements = ["auto_shared_fpic"]
 
             exports_sources = "CMakeLists.txt", "main.cpp"
 
