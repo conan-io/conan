@@ -258,7 +258,7 @@ def test_module_project():
                     my_path = os.path.join(self.build_folder, "Release", "MainApp.exe").replace(\"\\\\\", "/")
                     self.run(f'"{my_path}"', env="conanrun")
                 else:
-                    self.run(f"'{os.path.join(self.build_folder, "MainApp")}'", env="conanrun")
+                    self.run(f"'{os.path.join(self.build_folder, 'MainApp')}'", env="conanrun")
     """)
     client.save(
         {"mainapp/conanfile.py": conanfile,
