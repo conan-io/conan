@@ -120,6 +120,9 @@ class DownloadCache:
 
         try:
             summary_key = str(conanfile.ref)
+            if set(summary["references"].keys()).difference({"unknown", summary_key}):
+                warn = "A different reference has already downloaded the sources associated with the current package"
+                conanfile.output.warning(warn, warn_tag="risk")
         except AttributeError:
             # The recipe path would be different between machines
             # So best we can do is to set this as unknown

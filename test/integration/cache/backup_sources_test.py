@@ -407,6 +407,7 @@ class TestDownloadCacheBackupSources:
         client.run("source .")
         assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
         assert "CONTENT: Hello, world!" in client.out
+        assert "A different reference has already downloaded" not in self.client.out
 
     def test_download_sources_multiurl(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -458,6 +459,7 @@ class TestDownloadCacheBackupSources:
         rmdir(self.download_cache_folder)
         self.client.run("source .")
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/downloader/" in self.client.out
+        assert "A different reference has already downloaded" not in self.client.out
 
     def test_list_urls_miss(self):
         def custom_download(this, url, *args, **kwargs):
@@ -517,6 +519,7 @@ class TestDownloadCacheBackupSources:
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create .")
         assert f"Sources for {self.file_server.fake_url}/internal_error/myfile.txt found in remote backup {self.file_server.fake_url}/backup2/" in self.client.out
+        assert "A different reference has already downloaded" not in self.client.out
 
     def test_ok_when_origin_authorization_error(self):
         client = TestClient(default_server_user=True, light=True)
@@ -584,6 +587,7 @@ class TestDownloadCacheBackupSources:
 
         client.run("upload * -c -r=default")
         assert f"Could not update summary '{sha256}.json' in backup sources server" in client.out
+        assert "A different reference has already downloaded" not in self.client.out
 
     def test_ok_when_origin_bad_sha256(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -615,6 +619,36 @@ class TestDownloadCacheBackupSources:
         self.client.run("create .")
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/backup2/" in self.client.out
         assert "sha256 signature failed for" in self.client.out
+        assert "A different reference has already downloaded" not in self.client.out
+
+    def test_warn_when_duplicated_sha256(self):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "%s"
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}/backup', 'origin']\n"})
+
+        self.client.save({"conanfile.py": conanfile % "1.0"})
+        self.client.run("create .")
+
+        self.client.save({"conanfile.py": conanfile % "2.0"})
+        self.client.run("create .")
+        assert "A different reference has already downloaded" in self.client.out
 
     def test_export_then_upload_workflow(self):
         mkdir(os.path.join(self.download_cache_folder, "s"))
@@ -709,6 +743,7 @@ class TestDownloadCacheBackupSources:
 
         self.client.save({"conanfile.py": conanfile})
         self.client.run("source .")
+        assert "A different reference has already downloaded" not in self.client.out
         self.client.run("cache backup-upload")
         # This used to crash because we were trying to list a missing dir if only exports were made
         assert "[Errno 2] No such file or directory" not in self.client.out
@@ -781,6 +816,7 @@ class TestDownloadCacheBackupSources:
         else:
             self.client.run("source .")
         assert f"{sha256} is dirty, removing it" in self.client.out
+        assert "A different reference has already downloaded" not in self.client.out
 
     @pytest.mark.skip("Recover when .dirty files are properly handled")
     @pytest.mark.parametrize("exception", [Exception, ConanException])
