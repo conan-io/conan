@@ -64,9 +64,9 @@ def test_no_soname_flag(nosoname_property):
     # If `nosoname_property` is False, and we have a library without the SONAME flag,
     # then it should fail
     if nosoname_property is False:
-        with pytest.raises(Exception, match=r"libnosoname.so: cannot open shared object "
-                                            r"file: No such file or directory"):
-            client.run_command(command)
+        client.run_command(command, assert_error=True)
+        assert "libnosoname.so: cannot open shared object file: " \
+               "No such file or directory" in client.out
     else:
         client.run_command(command)
         assert "nosoname/0.1: Hello World Release!" in client.out
