@@ -139,7 +139,6 @@ def pyinstall(source_folder, onefile=False):
             file.write(content)
         win_ver = ["--version-file", win_ver_file]
 
-
     if onefile:
         distpath = os.path.join(pyinstaller_path, "dist", "conan")
     else:
