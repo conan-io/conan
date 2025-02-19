@@ -493,6 +493,12 @@ def collect_libs(conanfile, folder=None):
                 real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
                 if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
                     ref_libs[real_lib] = f
+            else: # file containing multiple file extensions, such as `libnode.so.108`.
+                split_file = f.split(".")
+                if len(split_file) >= 2 AND split_file[1] == "so":
+                    real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
+                    if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
+                        ref_libs[real_lib] = f
 
     result = []
     for f in ref_libs.values():
