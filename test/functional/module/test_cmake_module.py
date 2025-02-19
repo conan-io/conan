@@ -8,7 +8,6 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 
 def test_module_project():
     # app ---> module1 ---> mylib
-    #     \--> module2 --/
 
     client = TestClient()
 
