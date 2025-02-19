@@ -598,6 +598,80 @@ def test_components_and_package_pc_creation_order():
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
 
 
+class TestPkgConfigNamePropertyComponents:
+    def test_same_package_name(self):
+        """
+        Same as above but with the default package name
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PkgConfigConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.components["comp1"].set_property("pkg_config_name", "opencl")
+                    self.cpp_info.components["comp1"].includedirs = ["compincludes"]
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=opencl --version=1.0")
+
+        c.run("install --requires=opencl/1.0 -g PkgConfigDeps")
+        pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(c.current_folder, '*.pc'))]
+        pc_files.sort()
+        # Let's check all the PC file names created just in case
+        assert pc_files == ['opencl.pc']
+        pc = c.load("opencl.pc")
+        assert "includedir=${prefix}/compincludes" in pc
+        assert "Description: Conan component: opencl-opencl" in pc
+
+    def test_different_package_name(self):
+        # THIS FAILS!!!
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PkgConfigConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.components["comp1"].set_property("pkg_config_name", "OpenCL")
+                    self.cpp_info.components["comp1"].includedirs = ["compincludes"]
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=opencl --version=1.0")
+
+        c.run("install --requires=opencl/1.0 -g PkgConfigDeps")
+        pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(c.current_folder, '*.pc'))]
+        pc_files.sort()
+        # Let's check all the PC file names created just in case
+        assert pc_files == ['OpenCL.pc', ]
+        pc = c.load("OpenCL.pc")
+        assert "includedir=${prefix}/compincludes" in pc
+        assert "Description: Conan component: opencl-opencl" in pc
+
+    def test_not_use_idiom(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+
+           class PkgConfigConan(ConanFile):
+               def package_info(self):
+                   self.cpp_info.set_property("pkg_config_name", "opencl_notuse")
+                   self.cpp_info.components["comp1"].set_property("pkg_config_name", "OpenCL")
+                   self.cpp_info.components["comp1"].includedirs = ["compincludes"]
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=opencl --version=1.0")
+
+        c.run("install --requires=opencl/1.0 -g PkgConfigDeps")
+        pc_files = [os.path.basename(i) for i in
+                    glob.glob(os.path.join(c.current_folder, '*.pc'))]
+        pc_files.sort()
+        # Let's check all the PC file names created just in case
+        assert pc_files == ['OpenCL.pc', 'opencl_notuse.pc']
+        pc = c.load("OpenCL.pc")
+        assert "includedir=${prefix}/compincludes" in pc
+        assert "Description: Conan component: opencl_notuse-OpenCL" in pc
+
+
 def test_pkgconfigdeps_with_test_requires():
     """
     PkgConfigDeps has to create any test requires declared on the recipe.
@@ -1201,4 +1275,3 @@ def test_pkg_config_deps_set_property():
     other_mycomp1 = c.load("app/new_other_comp.pc")
     assert 'Name: new_other_comp' in other_mycomp1
     assert other.split("\n")[0] == other_mycomp1.split("\n")[0]
-
