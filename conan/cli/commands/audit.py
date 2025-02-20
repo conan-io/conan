@@ -1,120 +1,26 @@
 import json
 import os
-from collections import OrderedDict
 
 from conan.api.conan_api import ConanAPI
 from conan.api.input import UserInput
-from conan.api.model import Remote, LOCAL_RECIPES_INDEX
-from conan.api.output import cli_out_write, Color, ConanOutput
+from conan.api.output import cli_out_write, ConanOutput
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
-from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
-from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conan.cli.commands.list import remote_color, error_color, recipe_color, \
-    reference_color
+from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.formatters.audit.vulnerabilities import text_vuln_formatter, json_vuln_formatter, \
+    html_vuln_formatter
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic
 from conan.errors import ConanException
-from conans.client.rest.remote_credentials import RemoteCredentials
 
 
 def _add_provider_arg(subparser):
     subparser.add_argument("-p", "--provider", help="Provider to use for scanning")
 
 
-def text_vuln_formatter(data_json):
-    from conan.api.output import cli_out_write, Color
-
-    severity_colors = {
-        "Critical": Color.BRIGHT_RED,
-        "High": Color.RED,
-        "Medium": Color.BRIGHT_YELLOW,
-        "Low": Color.BRIGHT_CYAN
-    }
-    severity_order = {
-        "Critical": 4,
-        "High": 3,
-        "Medium": 2,
-        "Low": 1
-    }
-
-    def wrap_and_indent(txt, limit=80, indent=2):
-        txt = txt.replace("\n", " ").strip()
-        if len(txt) <= limit:
-            return " " * indent + txt
-        lines = []
-        while len(txt) > limit:
-            split_index = txt.rfind(" ", 0, limit)
-            if split_index == -1:
-                split_index = limit
-            lines.append(" " * indent + txt[:split_index].strip())
-            txt = txt[split_index:].strip()
-        lines.append(" " * indent + txt)
-        return "\n".join(lines)
-
-    if not data_json or "data" not in data_json or not data_json["data"]:
-        cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-        return
-
-    total_vulns = 0
-    summary_lines = []
-
-    for pkg_name, pkg_info in data_json["data"].items():
-        ref = f"{pkg_name}/{pkg_info['version']}"
-        edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
-        count = len(edges)
-
-        border_line = "*" * (len(ref) + 4)
-        cli_out_write("\n" + border_line, fg=Color.BRIGHT_WHITE)
-        cli_out_write(f"* {ref} *", fg=Color.BRIGHT_WHITE)
-        cli_out_write(border_line, fg=Color.BRIGHT_WHITE)
-
-        if not count:
-            cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-            continue
-
-        total_vulns += count
-        summary_lines.append(f"{ref} {count} {'vulnerability' if count == 1 else 'vulnerabilities'} found")
-        cli_out_write(f"\n{count} {'vulnerability' if count == 1 else 'vulnerabilities'} found:\n", fg=Color.BRIGHT_YELLOW)
-
-        sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
-
-        for vuln in sorted_vulns:
-            node = vuln["node"]
-            name = node["name"]
-            sev = node.get("severity", "Medium")
-            sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
-            score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else ""
-            desc = node.get("description", "")
-            desc = (desc[:240] + "...") if len(desc) > 240 else desc
-            desc_wrapped = wrap_and_indent(desc)
-
-            cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
-            cli_out_write(f" (Severity: {sev}{score_txt})", fg=sev_color)
-            cli_out_write("\n" + desc_wrapped)
-
-            references = node.get("references")
-            if references:
-                cli_out_write(f"  url: {references[0]}", fg=Color.BRIGHT_BLUE)
-            cli_out_write("")
-
-    color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
-    cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
-
-    cli_out_write("\nSummary:\n", fg=Color.BRIGHT_WHITE)
-    for line in summary_lines:
-        cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
-
-    cli_out_write("\nVulnerability information provided by JFrog. Please check "
-                  "https://jfrog.com/advanced-security/ for more information.\n", fg=Color.BRIGHT_GREEN)
-    cli_out_write("You can send questions and report issues about "
-                  "the returned vulnerabilities to conan-research@jfrog.com.\n", fg=Color.BRIGHT_GREEN)
-
-def json_vuln_formatter(data):
-    cli_out_write(json.dumps(data, indent=4))
-
-@conan_subcommand(formatters={"text": text_vuln_formatter, "json": json_vuln_formatter})
+@conan_subcommand(formatters={"text": text_vuln_formatter,
+                              "json": json_vuln_formatter,
+                              "html": html_vuln_formatter})
 def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     """
     Scan a given recipe for vulnerabilities in its dependencies.
@@ -162,7 +68,9 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     return vulnerabilities
 
 
-@conan_subcommand(formatters={"text": text_vuln_formatter, "json": json_vuln_formatter})
+@conan_subcommand(formatters={"text": text_vuln_formatter,
+                              "json": json_vuln_formatter,
+                              "html": html_vuln_formatter})
 def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List the vulnerabilities of the given reference.
@@ -171,7 +79,7 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
-    provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_CATALOG_NAME)
+    provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
     vulnerabilities = conan_api.audit.list(args.reference, provider)
 
     return vulnerabilities
@@ -199,7 +107,7 @@ def audit_provider(conan_api, parser, subparser, *args):
 
     subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
-    subparser.add_argument("--type", help="Provider type", choices=["catalog", "private"])
+    subparser.add_argument("--type", help="Provider type", choices=["conancenter", "private"])
     subparser.add_argument("--token", help="Provider token")
     args = parser.parse_args(*args)
 

@@ -1,9 +1,7 @@
 import json
 import os
 
-import jinja2
-
-from conan.internal.api.audit.providers import ConanProxyProvider, PrivateProvider, OSVProvider
+from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save, load
@@ -21,10 +19,8 @@ class AuditAPI:
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
         self._provider_cls = {
-            # TODO: Temp names, find better ones (specially, no mention of catalog)
-            "conan-center-proxy": ConanProxyProvider,
+            "conan-center-proxy": ConanCenterProvider,
             "private": PrivateProvider,
-            # "osv": OSVProvider,
         }
 
     def scan(self, deps_graph, provider):
@@ -55,7 +51,7 @@ class AuditAPI:
         provider_data = providers[provider_name]
         provider_cls = self._provider_cls.get(provider_data["type"])
 
-        return provider_cls(provider_name, provider_data)
+        return provider_cls(self.conan_api, provider_name, provider_data)
 
     def list_providers(self):
         """
@@ -65,7 +61,7 @@ class AuditAPI:
         result = []
         for name, provider_data in providers.items():
             provider_cls = self._provider_cls.get(provider_data["type"])
-            result.append(provider_cls(name, provider_data))
+            result.append(provider_cls(self.conan_api, name, provider_data))
         return result
 
     def add_provider(self, name, url, provider_type):

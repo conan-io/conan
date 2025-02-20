@@ -1,19 +1,15 @@
 import textwrap
 
-import requests
-
 from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
 
-# TODO: Think if providers are classes that implement get_cves,
-#  or just a function and the discrimination is done in the AuditAPI
-class ConanProxyProvider:
-    def __init__(self, name, provider_data):
+class ConanCenterProvider:
+    def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
         self.token = provider_data.get("token")
-        self._session = requests.Session()
+        self._session = conan_api.remotes.requester
 
     def get_cves(self, refs):
         if not self.token:
@@ -95,11 +91,11 @@ class ConanProxyProvider:
         return result
 
 class PrivateProvider:
-    def __init__(self, name, provider_data):
+    def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
         self.data = provider_data
-        self._session = requests.Session()
+        self._session = conan_api.remotes.requester
 
     def get_cves(self, refs):
         result = {"data": {}}
@@ -187,51 +183,4 @@ class PrivateProvider:
 
         if "errors" in response_json:
             return {"error": self._parse_error(response_json["errors"], ref)}
-        return response_json
-
-# This is unused for now
-class OSVProvider:
-    def __init__(self, name, provider_data):
-        self.name = name
-        self.url = provider_data["url"]
-        self.data = provider_data
-        self._session = requests.Session()
-
-    def get_cves(self, refs):
-        result = {"data": {}}
-        for ref in refs:
-            response = self._get(ref)
-            if "error" in response or "vulns" not in response:
-                result["error"] = response.get("error", {"details": "Something went wrong"})
-                break
-            for vuln in response["vulns"]:
-                ref_vulns = result["data"].setdefault(str(ref.name), {})
-                edges = ref_vulns.setdefault('vulnerabilities', {}).setdefault('edges', [])
-                ref_vulns['version'] = str(ref.version)
-                edges.append({"node": {
-                    "name": vuln["id"],
-                    "description": vuln.get("summary") or vuln.get("details"),
-                    "references": [
-                        [reference["url"]] for reference in vuln["references"]
-                    ]
-                }})
-        return result
-
-    def _get(self, ref):
-        try:
-            data = {
-                "version": str(ref.version),
-                "package": {
-                    "name": ref.name,
-                }
-            }
-            response = self._session.post(self.url, json=data)
-            response.raise_for_status()
-        except Exception as e:
-            return {"error": {"details": "Something went wrong"}}
-
-        response_json = response.json()
-        if "error" in response_json:
-            return {"error": response_json["error"]}
-
         return response_json
