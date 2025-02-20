@@ -189,6 +189,7 @@ class PrivateProvider:
             return {"error": self._parse_error(response_json["errors"], ref)}
         return response_json
 
+# This is unused for now
 class OSVProvider:
     def __init__(self, name, provider_data):
         self.name = name
