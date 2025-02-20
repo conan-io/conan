@@ -868,6 +868,9 @@ class TestToolRequires:
                                                               .with_tool_requires("tool/0.1")})
         c.run("create tool")
         c.run(f"install pkg -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        assert "find_package(tool) # Optional. This is a tool-require, " \
+               "can't link its targets" in c.out
+        assert "target_link_libraries" not in c.out
         tool_config = c.load("pkg/tool-config.cmake")
         assert 'set(tool_INCLUDE_DIRS' not in tool_config
         assert 'set(tool_INCLUDE_DIR' not in tool_config
