@@ -317,9 +317,7 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
 
     assert "link.txt" in " ".join(lines)
     for line in lines:
-        if ".txt" not in line:
-            continue
-
+        assert ".txt" in line
         size = int([i for i in line.split(" ") if i][2])
         if "link.txt" in line:
             assert int(size) == 0

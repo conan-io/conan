@@ -17,16 +17,6 @@ from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, save_files
 
 
-class MockFileSaver(object):
-
-    def __init__(self, filename, content):
-        self.filename = filename
-        self.content = content
-
-    def save(self, abspath):
-        save(os.path.join(abspath, self.filename), self.content)
-
-
 DEFAULT_REVISION = "1234"
 
 

@@ -8,17 +8,16 @@ import shutil
 import socket
 import sys
 import textwrap
-import threading
-import time
 import traceback
 import uuid
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
+from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import bottle
 import mock
+import pytest
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
@@ -26,7 +25,7 @@ from webtest.app import TestApp
 
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
-from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
+from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -35,13 +34,8 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
-from conan.errors import ConanException
-from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
-from conan.internal.model.profile import Profile
 from conan.api.model import RecipeReference
-from conan.internal.model.settings import Settings
-from conan.test.assets import copy_assets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.artifactory import ArtifactoryServer
 from conan.test.utils.mocks import RedirectedInputStream
@@ -84,28 +78,6 @@ default_profiles = {
         build_type=Release
         """)
 }
-
-def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = RecipeReference.loads(reference)
-    path = cache.get_latest_recipe_reference(ref).export()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    path = cache.get_latest_package_reference(package_reference).package()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def create_profile(profile=None, settings=None):
-    if profile is None:
-        profile = Profile()
-    if profile.processed_settings is None:
-        profile.processed_settings = settings or Settings()
-    return profile
 
 
 class TestingResponse(object):
@@ -288,7 +260,9 @@ class TestRequester:
         return requests.codes
 
 
-class TestServer(object):
+class TestServer:
+    __test__ = False
+
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):
@@ -542,23 +516,17 @@ class TestClient:
                     yield
 
     def _run_cli(self, command_line, assert_error=False):
+        args = shlex.split(command_line)
+        error = SUCCESS
+        trace = None
+        # save state
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
         old_modules = list(sys.modules.keys())
-
-        args = shlex.split(command_line)
-
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
-        except ConanException as e:
-            sys.stderr.write("Error in Conan initialization: {}".format(e))
-            return ERROR_GENERAL
-
-        error = SUCCESS
-        trace = None
-        try:
             if self._custom_commands_folder:
                 with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
                                          self._custom_commands_folder}):
@@ -567,7 +535,7 @@ class TestClient:
                 command.run(args)
         except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
-            error = command.exception_exit_error(e)
+            error = Cli.exception_exit_error(e)
         finally:
             sys.path = old_path
             os.chdir(current_dir)
@@ -598,6 +566,7 @@ class TestClient:
                         http_requester = self.requester_class(self.servers)
                     else:
                         http_requester = TestRequester(self.servers)
+
                 try:
                     if http_requester:
                         with self.mocked_servers(http_requester):
@@ -634,15 +603,15 @@ class TestClient:
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
-            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n".format(
-                header='{:=^80}'.format(msg),
-                output_header='{:=^80}'.format(" Output: "),
-                cmd=command,
-                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
-            )
+
+            output = str(self.stderr) + str(self.stdout) + "\n"
+            exc_message = f"\n{msg:=^80}\n{command}\n{' Output: ':=^80}\n{output}\n"
             if trace:
-                exc_message += '{:=^80}'.format(" Traceback: ") + f"\n{trace}"
-            raise Exception(exc_message)
+                exc_message += f'{" Traceback: ":=^80}\n{trace}'
+
+            caller = getframeinfo(stack()[3][0])
+            exc_message = f"{caller.filename}:{caller.lineno}" + exc_message
+            pytest.fail(exc_message, pytrace=False)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -658,9 +627,6 @@ class TestClient:
 
     def save_home(self, files):
         self.save(files, path=self.cache_folder)
-
-    def copy_assets(self, origin_folder, assets=None):
-        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
@@ -859,28 +825,6 @@ def get_free_port():
     ret = sock.getsockname()[1]
     sock.close()
     return ret
-
-
-class StoppableThreadBottle(threading.Thread):
-    """
-    Real server to test download endpoints
-    """
-
-    def __init__(self, host=None, port=None):
-        self.host = host or "127.0.0.1"
-        self.server = bottle.Bottle()
-        self.port = port or get_free_port()
-        super(StoppableThreadBottle, self).__init__(target=self.server.run,
-                                                    kwargs={"host": self.host, "port": self.port})
-        self.daemon = True
-        self._stop = threading.Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def run_server(self):
-        self.start()
-        time.sleep(1)
 
 
 def zipdir(path, zipfilename):

@@ -49,7 +49,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.12.3, 3.9.2, 3.8.6, 3.6.15]
+        python-version: [3.13, 3.9, 3.8, 3.6]
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
@@ -88,14 +88,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
           tests: test/${{ matrix.test-type }}
-          duration: 20
 
   linux_docker_tests:
     needs: build_container
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.12, 3.9]
+        python-version: [3.13, 3.9]
     name: Docker Runner Tests (${{ matrix.python-version }})
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -120,5 +119,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: docker
           tests: '-m docker_runner -rs'
-          duration: 20
           workers: 1

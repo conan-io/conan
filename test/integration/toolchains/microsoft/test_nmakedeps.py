@@ -41,11 +41,11 @@ def test_nmakedeps():
     bat_file = client.load("conannmakedeps.bat")
     # Checking that defines are added to CL
     for flag in (
-        '/D"TEST_DEFINITION1"', '/D"TEST_DEFINITION2#0"',
-        '/D"TEST_DEFINITION3#"', '/D"TEST_DEFINITION4#"foo""',
-        '/D"TEST_DEFINITION5#"__declspec\(dllexport\)""',
-        '/D"TEST_DEFINITION6#"foo bar""',
-        '/D"TEST_DEFINITION7#7"'
+        r'/D"TEST_DEFINITION1"', '/D"TEST_DEFINITION2#0"',
+        r'/D"TEST_DEFINITION3#"', '/D"TEST_DEFINITION4#"foo""',
+        r'/D"TEST_DEFINITION5#"__declspec\(dllexport\)""',
+        r'/D"TEST_DEFINITION6#"foo bar""',
+        r'/D"TEST_DEFINITION7#7"'
     ):
         assert re.search(fr'set "CL=%CL%.*\s{flag}(?:\s|")', bat_file)
     # Checking that libs and system libs are added to _LINK_
