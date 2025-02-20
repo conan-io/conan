@@ -175,7 +175,7 @@ class ConanOutput:
 
         return self
 
-    def _write_message(self, msg, fg=None, bg=None):
+    def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
@@ -194,6 +194,13 @@ class ConanOutput:
             ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         else:
             ret += "{}".format(msg)
+
+        if newline:
+            ret = "%s\n" % ret
+
+        with self.lock:
+            self.stream.write(ret)
+            self.stream.flush()
 
     def trace(self, msg):
         if self._conan_output_level <= LEVEL_TRACE:
