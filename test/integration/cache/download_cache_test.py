@@ -66,12 +66,14 @@ class TestDownloadCache:
         client.run("install --requires=pkg/0.1@")
 
         # Make the cache dirty
-        for f in os.listdir(tmp_folder):
+        # The "c" internal folder must exist, it is the actual storage of blobs
+        cache_folder = os.path.join(tmp_folder, "c")
+        for f in os.listdir(cache_folder):
             # damage the file
-            path = os.path.join(tmp_folder, f)
-            if os.path.isfile(path):
-                save(path, "broken!")
-                set_dirty(path)
+            path = os.path.join(cache_folder, f)
+            assert os.path.isfile(path)
+            save(path, "broken!")
+            set_dirty(path)
 
         client.run("remove * -c")
         client.run("install --requires=pkg/0.1@")

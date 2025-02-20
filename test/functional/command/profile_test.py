@@ -102,10 +102,9 @@ class DetectCompilersTest(unittest.TestCase):
         # See: https://github.com/conan-io/conan/issues/2231
         _, output = detect_runner("gcc --version")
 
-        if "clang" not in output:
-            # Not test scenario gcc should display clang in output
-            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
-            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
+        assert "clang" in output, "Apple gcc doesn't point to clang with gcc frontend anymore!"
+        # Not test scenario gcc should display clang in output
+        # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
 
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):

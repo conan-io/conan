@@ -8,3 +8,4 @@ PyJWT
 pluginbase
 docker
 setuptools
+pytest-cov

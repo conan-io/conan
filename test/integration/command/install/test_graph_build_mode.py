@@ -49,7 +49,6 @@ def test_install_build_single(build_all):
     assert "foo/1.0@user/testing: Forced build from source" in build_all.out
     assert "bar/1.0@user/testing: Forced build from source" not in build_all.out
     assert "foobar/1.0@user/testing: Forced build from source" not in build_all.out
-    assert "No package matching" not in build_all.out
 
 
 def test_install_build_double(build_all):
@@ -63,15 +62,13 @@ def test_install_build_double(build_all):
     assert "foo/1.0@user/testing: Forced build from source" in build_all.out
     assert "bar/1.0@user/testing: Forced build from source" in build_all.out
     assert "foobar/1.0@user/testing: Forced build from source" not in build_all.out
-    assert "No package matching" not in build_all.out
 
 
-@pytest.mark.parametrize("build_arg,mode", [
-                                            ("--build=", "Cache"),
+@pytest.mark.parametrize("build_arg,mode", [("--build=", "Cache"),
                                             ("--build=*", "Build")])
 def test_install_build_only(build_arg, mode, build_all):
-    """ When only --build is passed, all packages must be built from sources
-        When only --build= is passed, it's considered an error
+    """ When only --build is passed wo args, that is a command arg error
+        When only --build= is passed, it's a no-op, same as not passing any value
         When only --build=* is passed, all packages must be built from sources
     """
     build_all.run("install --requires=foobar/1.0@user/testing {}".format(build_arg))
@@ -85,12 +82,10 @@ def test_install_build_only(build_arg, mode, build_all):
         assert "foo/1.0@user/testing: Forced build from source" in build_all.out
         assert "bar/1.0@user/testing: Forced build from source" in build_all.out
         assert "foobar/1.0@user/testing: Forced build from source" in build_all.out
-        # FIXME assert "No package matching" not in build_all.out
     else:
         assert "foo/1.0@user/testing: Forced build from source" not in build_all.out
         assert "bar/1.0@user/testing: Forced build from source" not in build_all.out
         assert "foobar/1.0@user/testing: Forced build from source" not in build_all.out
-        # FIXME assert "No package matching" in build_all.out
 
 
 @pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build=", "Cache", "Build", "Cache"),

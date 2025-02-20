@@ -269,3 +269,41 @@ def test_profile_jinja_error():
     c.save({"profile1": "{% set kk = other() %}"})
     c.run("profile show -pr=profile1", assert_error=True)
     assert "ERROR: Error while rendering the profile template file" in c.out
+
+
+def test_profile_macro_per_package():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        {% macro set_windows_settings(lib) %}
+        {{lib}}/*:os=Windows
+        {{lib}}/*:arch=x86
+        {% endmacro %}
+        {% macro set_windows_conf(lib) %}
+        {{lib}}/*:user.conf:key = 2
+        {% endmacro %}
+
+        [settings]
+        os = Linux
+        {{set_windows_settings("mypkg")}}
+        [conf]
+        user.conf:key = 1
+        {{set_windows_conf("mypkg")}}
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+            settings = "os", "arch"
+            def generate(self):
+                value = self.conf.get("user.conf:key")
+                self.output.info(f"os={self.settings.os}!!")
+                self.output.info(f"arch={self.settings.arch}!!")
+                self.output.info(f"user.conf:key={value}!!!!")
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile1": tpl1})
+    client.run("install . -pr=profile1")
+    assert "conanfile.py (mypkg/0.1): user.conf:key=2!!!!" in client.out
+    assert "conanfile.py (mypkg/0.1): os=Windows!!" in client.out
+    assert "conanfile.py (mypkg/0.1): arch=x86!!" in client.out

@@ -3,9 +3,11 @@ import os
 import shutil
 
 import patch_ng
+import yaml
 
 from conan.errors import ConanException
-from conans.util.files import mkdir
+from conan.internal.paths import DATA_YML
+from conans.util.files import mkdir, load, save
 
 
 class PatchLogHandler(logging.Handler):
@@ -122,27 +124,60 @@ def export_conandata_patches(conanfile):
     if conanfile.conan_data is None:
         raise ConanException("conandata.yml not defined")
 
-    patches = conanfile.conan_data.get('patches')
-    if patches is None:
-        conanfile.output.info("export_conandata_patches(): No patches defined in conandata")
-        return
+    conanfile_patches = conanfile.conan_data.get('patches')
 
-    if isinstance(patches, dict):
-        assert conanfile.version, "Can only be exported if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
-        if entries is None:
-            conanfile.output.warning(f"export_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
+    def _handle_patches(patches, patches_folder):
+        if patches is None:
+            conanfile.output.info("export_conandata_patches(): No patches defined in conandata")
             return
-    elif isinstance(patches, list):
-        entries = patches
-    else:
-        raise ConanException("conandata.yml 'patches' should be a list or a dict {version: list}")
-    for it in entries:
-        patch_file = it.get("patch_file")
-        if patch_file:
-            src = os.path.join(conanfile.recipe_folder, patch_file)
-            dst = os.path.join(conanfile.export_sources_folder, patch_file)
-            if not os.path.exists(src):
-                raise ConanException(f"Patch file does not exist: '{src}'")
-            mkdir(os.path.dirname(dst))
-            shutil.copy2(src, dst)
+
+        if isinstance(patches, dict):
+            assert conanfile.version, "Can only be exported if conanfile.version is already defined"
+            entries = patches.get(conanfile.version, [])
+            if entries is None:
+                conanfile.output.warning("export_conandata_patches(): No patches defined for "
+                                         f"version {conanfile.version} in conandata.yml")
+                return
+        elif isinstance(patches, list):
+            entries = patches
+        else:
+            raise ConanException("conandata.yml 'patches' should be a list or a dict "
+                                 "{version: list}")
+        for it in entries:
+            patch_file = it.get("patch_file")
+            if patch_file:
+                src = os.path.join(patches_folder, patch_file)
+                dst = os.path.join(conanfile.export_sources_folder, patch_file)
+                if not os.path.exists(src):
+                    raise ConanException(f"Patch file does not exist: '{src}'")
+                mkdir(os.path.dirname(dst))
+                shutil.copy2(src, dst)
+        return entries
+
+    _handle_patches(conanfile_patches, conanfile.recipe_folder)
+
+    extra_path = conanfile.conf.get("core.sources.patch:extra_path")
+    if extra_path:
+        if not os.path.isdir(extra_path):
+            raise ConanException(f"Patches extra path '{extra_path}' does not exist")
+        pkg_path = os.path.join(extra_path, conanfile.name)
+        if not os.path.isdir(pkg_path):
+            return
+        data_path = os.path.join(pkg_path, DATA_YML)
+        try:
+            data = yaml.safe_load(load(data_path))
+        except Exception as e:
+            raise ConanException("Invalid yml format at {}: {}".format(data_path, e))
+        data = data or {}
+        conanfile.output.info(f"Applying extra patches 'core.sources.patch:extra_path': {data_path}")
+        new_patches = _handle_patches(data.get('patches'), pkg_path)
+
+        # Update the CONANDATA.YML
+        conanfile_patches = conanfile_patches or {}
+        conanfile_patches.setdefault(conanfile.version, []).extend(new_patches)
+
+        conanfile.conan_data['patches'] = conanfile_patches
+        # Saving in the EXPORT folder
+        conanfile_data_path = os.path.join(conanfile.export_folder, DATA_YML)
+        new_conandata_yml = yaml.safe_dump(conanfile.conan_data, default_flow_style=False)
+        save(conanfile_data_path, new_conandata_yml)

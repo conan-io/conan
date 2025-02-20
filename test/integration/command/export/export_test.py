@@ -9,7 +9,7 @@ import pytest
 from parameterized import parameterized
 
 from conan.internal.model.manifest import FileTreeManifest
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE, CONAN_MANIFEST
 from conan.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save

@@ -80,5 +80,8 @@ class GraphRuntimeError(GraphError):
         self.conflicting_node = conflicting_node
 
     def __str__(self):
-        return f"Runtime Error: Could not process '{self.node.ref}' with " \
-               f"'{self.conflicting_node.ref}'."
+        return f"Runtime Conflict Error: There is a conflict between packages that will happen " \
+               f"at runtime (but not at compile time), like different versions of the same shared " \
+               f"library that would end in the path. Please check the 'application' and " \
+               f"'shared-library' package types and requirements with 'run=True' trait in your " \
+               f"graph: '{self.node.ref}' with '{self.conflicting_node.ref}'."

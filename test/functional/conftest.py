@@ -41,6 +41,14 @@ def matrix_client(_matrix_client):
 
 
 @pytest.fixture()
+def matrix_client_nospace(_matrix_client):
+    c = TestClient(path_with_spaces=False)
+    c.cache_folder = os.path.join(temp_folder(path_with_spaces=False), ".conan2")
+    shutil.copytree(_matrix_client.cache_folder, c.cache_folder)
+    return c
+
+
+@pytest.fixture()
 def matrix_client_shared(_matrix_client_shared):
     c = TestClient()
     c.cache_folder = os.path.join(temp_folder(), ".conan2")
