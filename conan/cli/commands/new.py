@@ -46,6 +46,7 @@ def new(conan_api, parser, *args):
             definitions[k] = v
 
     files = conan_api.new.get_template(args.template)  # First priority: user folder
+    is_builtin = False
     if not files:  # then, try the templates in the Conan home
         files = conan_api.new.get_home_template(args.template)
     if files:
@@ -53,10 +54,13 @@ def new(conan_api, parser, *args):
     else:
         template_files = conan_api.new.get_builtin_template(args.template)
         non_template_files = {}
+        is_builtin = True
 
     if not template_files and not non_template_files:
         raise ConanException("Template doesn't exist or not a folder: {}".format(args.template))
 
+    if is_builtin and args.template == "workspace":  # hardcoded for the workspace special case
+        definitions["name"] = "liba"
     template_files = conan_api.new.render(template_files, definitions)
 
     # Saving the resulting files

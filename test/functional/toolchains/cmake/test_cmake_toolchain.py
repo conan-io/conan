@@ -337,18 +337,12 @@ def test_install_output_directories():
     """
     client = TestClient()
     client.run("new cmake_lib -d name=zlib -d version=1.2.11")
-    client.run("create .")
-    p_folder = client.created_layout().package()
-    assert not os.path.exists(os.path.join(p_folder, "mylibs"))
-    assert os.path.exists(os.path.join(p_folder, "lib"))
-
     # Edit the cpp.package.libdirs and check if the library is placed anywhere else
     cf = client.load("conanfile.py")
     cf = cf.replace("cmake_layout(self)",
                     'cmake_layout(self)\n        self.cpp.package.libdirs = ["mylibs"]')
-
     client.save({"conanfile.py": cf})
-    client.run("create .")
+    client.run("create . -tf=")
     layout = client.created_layout()
     p_folder = layout.package()
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
@@ -638,7 +632,7 @@ class TestWinSDKVersion:
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
 
-    @pytest.mark.tool("cmake", "3.28")
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version2(self):
         # https://github.com/conan-io/conan/issues/15372

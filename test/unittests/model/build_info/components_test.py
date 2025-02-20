@@ -15,6 +15,9 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(cpp_info.components["libb"].includedirs, ["include", "includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
 
+        with self.assertRaises(AttributeError):
+            cpp_info.required_components = ["liba::liba"]
+
     def test_no_components_inside_components(self):
         cpp_info = CppInfo()
         with self.assertRaises(AttributeError):

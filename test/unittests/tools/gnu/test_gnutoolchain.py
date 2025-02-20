@@ -124,9 +124,8 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
     with pytest.raises(ConanException) as conan_error:
         GnuToolchain(conanfile)
-        msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and " \
-              "needed for os=Windows"
-        assert msg == str(conan_error.value)
+    msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and needed for os=Windows"
+    assert msg == str(conan_error.value)
 
 
 def test_compilers_mapping():
