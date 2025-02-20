@@ -106,8 +106,10 @@ def text_vuln_formatter(data_json):
     for line in summary_lines:
         cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
-    cli_out_write("\nVulnerability information provided by JFrog. Please check ", fg=Color.BRIGHT_GREEN)
-    cli_out_write("https://jfrog.com/advanced-security/ for more information.\n", fg=Color.BRIGHT_GREEN)
+    cli_out_write("\nVulnerability information provided by JFrog. Please check "
+                  "https://jfrog.com/advanced-security/ for more information.\n", fg=Color.BRIGHT_GREEN)
+    cli_out_write("You can send questions and report issues about "
+                  "the returned vulnerabilities to conan-research@jfrog.com.\n", fg=Color.BRIGHT_GREEN)
 
 def json_vuln_formatter(data):
     cli_out_write(json.dumps(data, indent=4))
