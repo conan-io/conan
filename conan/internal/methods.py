@@ -5,7 +5,7 @@ from conan.errors import ConanException
 from conan.internal.errors import conanfile_exception_formatter, conanfile_remove_attr
 from conan.internal.paths import CONANINFO
 from conan.internal.model.manifest import FileTreeManifest
-from conan.internal.model.package_ref import PkgReference
+from conan.api.model import PkgReference
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.requires import BuildRequirements, TestRequirements, ToolRequirements
 from conans.util.files import mkdir, chdir, save

@@ -182,7 +182,7 @@ class _PCGenerator:
                     continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
-            comp_name = self._get_component_name(req_conanfile, comp_ref_name)
+            comp_name = self._get_component_name(req_conanfile, pkg_ref_name, comp_ref_name)
             if not comp_name:
                 pkg_name = self._get_package_name(req_conanfile)
                 # Creating a component name with namespace, e.g., dep-comp1
@@ -203,13 +203,13 @@ class _PCGenerator:
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = self._get_component_name(self._dep, comp_ref_name)
+            comp_name = self._get_component_name(self._dep, pkg_name, comp_ref_name)
             if not comp_name:
                 comp_name = self._get_name_with_namespace(pkg_name, comp_ref_name)
                 comp_description = f"Conan component: {comp_name}"
             else:
                 comp_description = f"Conan component: {pkg_name}-{comp_name}"
-            comp_aliases = self._get_component_aliases(self._dep, comp_ref_name)
+            comp_aliases = self._get_component_aliases(self._dep, pkg_name, comp_ref_name)
             comp_version = (self.get_property("component_version", self._dep, comp_ref_name) or
                             self.get_property("system_package_version", self._dep, comp_ref_name) or
                             self._dep.ref.version)
@@ -314,10 +314,14 @@ class _PCGenerator:
         pkg_aliases = self.get_property("pkg_config_aliases", dep, check_type=list)
         return pkg_aliases or []
 
-    def _get_component_aliases(self, dep, comp_name):
+    def _get_component_aliases(self, dep, pkg_name, comp_name):
+        # TODO: LET'S DEPRECATE ALL THE ALIASES MECHANISM!!
         if comp_name not in dep.cpp_info.components:
-            # foo::foo might be referencing the root cppinfo
-            if dep.ref.name == comp_name:
+            # Either foo::foo might be referencing the root cpp_info
+            if (dep.ref.name == comp_name or
+                # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
+                # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
+                (dep.ref.name != pkg_name and pkg_name == comp_name)):
                 return self._get_package_aliases(dep)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -329,10 +333,13 @@ class _PCGenerator:
         pkg_name = self.get_property("pkg_config_name", dep) or dep.ref.name
         return f"{pkg_name}{self._suffix}"
 
-    def _get_component_name(self, dep, comp_name):
+    def _get_component_name(self, dep, pkg_name, comp_name):
         if comp_name not in dep.cpp_info.components:
-            # foo::foo might be referencing the root cppinfo
-            if dep.ref.name == comp_name:
+            # Either foo::foo might be referencing the root cpp_info
+            if (dep.ref.name == comp_name or
+                # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
+                # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
+                (dep.ref.name != pkg_name and pkg_name == comp_name)):
                 return self._get_package_name(dep)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,

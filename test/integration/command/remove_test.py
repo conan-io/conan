@@ -7,8 +7,8 @@ import pytest
 
 from conan.api.conan_api import ConanAPI
 from conan.internal.errors import NotFoundException
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conan.test.utils.env import environment_update
 
@@ -248,14 +248,11 @@ def populated_client(_populated_client_base):
 ])
 def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     r = "-r default" if with_remote else ""
-    error = data.get("error", False)
-    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-    if not error:
-        populated_client.run(f"list {r} --format=json")
-        origin = "default" if with_remote else "Local Cache"
-        assert set(json.loads(populated_client.stdout)[origin]) == set(data["recipes"])
-    elif data.get("error_msg"):
-        assert data.get("error_msg") in populated_client.out
+    assert "error" not in data
+    populated_client.run("remove {} -c {}".format(data["remove"], r))
+    populated_client.run(f"list {r} --format=json")
+    origin = "default" if with_remote else "Local Cache"
+    assert set(json.loads(populated_client.stdout)[origin]) == set(data["recipes"])
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -340,13 +337,10 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
     prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
-    error = data.get("error", False)
-    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-    if not error:
-        prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
-        assert set(prefs) == set(data["prevs"])
-    elif data.get("error_msg"):
-        assert data.get("error_msg") in populated_client.out
+    assert "error" not in data
+    populated_client.run("remove {} -c {}".format(data["remove"], r))
+    prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+    assert set(prefs) == set(data["prevs"])
 
 
 def test_package_query_no_package_ref(populated_client):

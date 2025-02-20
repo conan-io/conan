@@ -1,5 +1,4 @@
 import os
-import shlex
 import shutil
 import platform
 import textwrap
@@ -214,7 +213,6 @@ class QbsProfile:
         toolchain = self._get_qbs_toolchain()
         the_os = self._conanfile.settings.get_safe('os')
         vcvars_path = None
-        compiler = None
         if the_os == 'Windows' and toolchain == 'msvc':
             compiler = _find_msvc(self._conanfile)
         elif the_os == 'Windows' and toolchain == 'clang-cl':

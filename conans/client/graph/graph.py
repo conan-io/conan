@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph_error import GraphError
-from conan.internal.model.package_ref import PkgReference
-from conan.internal.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -69,6 +69,23 @@ class Node(object):
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.dependencies[old-ref]
         self.skipped_build_requires = False
+
+    def subgraph(self):
+        nodes = [self]
+        opened = [self]
+        while opened:
+            new_opened = []
+            for o in opened:
+                for n in o.neighbors():
+                    if n not in nodes:
+                        nodes.append(n)
+                    if n not in opened:
+                        new_opened.append(n)
+            opened = new_opened
+
+        graph = DepsGraph()
+        graph.nodes = nodes
+        return graph
 
     def __lt__(self, other):
         """
@@ -142,7 +159,7 @@ class Node(object):
             if require.build and (self.context == CONTEXT_HOST or  # switch context
                                   require.ref.version != self.ref.version):  # or different version
                 pass
-            elif require.visible is False: #  and require.ref.version != self.ref.version:
+            elif require.visible is False:  # and require.ref.version != self.ref.version:
                 # Experimental, to support repackaging of openssl previous versions FIPS plugins
                 pass  # An invisible require doesn't conflict with itself
             else:
@@ -345,6 +362,10 @@ class DepsGraph(object):
         self.replaced_requires = {}
         self.options_conflicts = {}
         self.error = False
+
+    def lockfile(self):
+        from conan.internal.model.lockfile import Lockfile
+        return Lockfile(self)
 
     def overrides(self):
         return Overrides.create(self.nodes)

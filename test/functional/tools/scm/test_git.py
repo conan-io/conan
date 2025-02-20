@@ -596,9 +596,8 @@ class TestGitCloneWithArgs:
         c = TestClient()
         git_args = ['--branch', 'foobar']
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
-        with pytest.raises(Exception):
-            c.run("create .")
-            assert "Remote branch foobar not found" in c.out
+        c.run("create .", assert_error=True)
+        assert "Remote branch foobar not found" in c.out
 
 
 @pytest.mark.tool("git")

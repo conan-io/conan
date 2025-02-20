@@ -9,6 +9,8 @@ from conans.util.files import mkdir
 
 
 class TestFileServer:
+    __test__ = False
+
     def __init__(self, store=None):
         self.store = store or temp_folder(path_with_spaces=False)
         mkdir(self.store)

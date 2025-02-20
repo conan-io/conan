@@ -4,7 +4,6 @@ import time
 from collections import OrderedDict
 from datetime import timedelta
 
-import pytest
 from mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
@@ -18,12 +17,10 @@ class TestUser:
         """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
         client = TestClient()
-        with pytest.raises(Exception):
-            client.run("remote list-users")
+        client.run("remote list-users", assert_error=True)
         assert "ERROR: No remotes defined" in client.out
 
-        with pytest.raises(Exception):
-            client.run("remote login wrong_remote foo -p bar")
+        client.run("remote login wrong_remote foo -p bar", assert_error=True)
         assert "ERROR: Remote 'wrong_remote' can't be found or is disabled" in client.out
 
     def test_command_user_list(self):
@@ -35,8 +32,7 @@ class TestUser:
         client = TestClient(servers=servers)
 
         # Test with wrong remote right error is reported
-        with pytest.raises(Exception):
-            client.run("remote login Test_Wrong_Remote foo")
+        client.run("remote login Test_Wrong_Remote foo", assert_error=True)
         assert "ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled" in client.out
 
         # Test user list for all remotes is reported

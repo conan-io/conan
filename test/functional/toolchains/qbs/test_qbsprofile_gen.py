@@ -16,8 +16,9 @@ COMPILER_MAP = {
     'clang': ('clang', 'clang++')
 }
 
+compiler_path = "C:/opt/bin" if platform.system() == 'Windows' else "/opt/bin"
 
-@pytest.mark.tool("qbs")
+
 @pytest.mark.parametrize('compiler, version, system', [
     ('gcc', '13', 'Linux'),
     ('clang', '15', 'Linux'),
@@ -64,7 +65,6 @@ def test_toolchain_from_path(compiler, version, system):
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('compiler, version, system, cc, cxx', [
     ('gcc', '13', 'Linux', 'gcc', 'g++'),
     ('clang', '15', 'Linux', 'clang', 'clang++'),
@@ -77,7 +77,7 @@ def test_toolchain_from_conf(compiler, version, system, cc, cxx):
     compiler.libcxx=libstdc++
     os={system}
     [conf]
-    tools.build:compiler_executables ={{"c": "/opt/bin/{cc}", "cpp": "/opt/bin/{cxx}"}}
+    tools.build:compiler_executables ={{"c": "{compiler_path}/{cc}", "cpp": "{compiler_path}/{cxx}"}}
     ''')
 
     conanfile = textwrap.dedent('''
@@ -98,13 +98,12 @@ def test_toolchain_from_conf(compiler, version, system, cc, cxx):
 
     settings_content = load(settings_path)
     assert f'qbs.toolchainType:{compiler}' in settings_content
-    assert 'cpp.toolchainInstallPath:/opt/bin' in settings_content
+    assert f'cpp.toolchainInstallPath:{compiler_path}' in settings_content
     assert f'cpp.compilerName:{cxx}' in settings_content
     assert f'cpp.cCompilerName:{cc}' in settings_content
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('compiler, version, system, cc, cxx', [
     ('gcc', '13', 'Linux', 'gcc', 'g++'),
     ('clang', '15', 'Linux', 'clang', 'clang++'),
@@ -117,8 +116,8 @@ def test_toolchain_from_env(compiler, version, system, cc, cxx):
     compiler.libcxx=libstdc++
     os={system}
     [buildenv]
-    CC=/opt/bin/{cc}
-    CXX=/opt/bin/{cxx}
+    CC={compiler_path}/{cc}
+    CXX={compiler_path}/{cxx}
     ''')
 
     conanfile = textwrap.dedent('''
@@ -139,13 +138,12 @@ def test_toolchain_from_env(compiler, version, system, cc, cxx):
 
     settings_content = load(settings_path)
     assert f'qbs.toolchainType:{compiler}' in settings_content
-    assert 'cpp.toolchainInstallPath:/opt/bin' in settings_content
+    assert f'cpp.toolchainInstallPath:{compiler_path}' in settings_content
     assert f'cpp.compilerName:{cxx}' in settings_content
     assert f'cpp.cCompilerName:{cc}' in settings_content
     assert f'cpp.cxxCompilerName:{cxx}' in settings_content
 
 
-@pytest.mark.tool("qbs")
 @pytest.mark.parametrize('system, compiler, version, build_type, arch, cppstd', [
     ('Linux', 'gcc', '13', 'Release', 'x86_64', '17'),
     ('Linux', 'gcc', '13', 'Debug', 'x86_64', '14'),
@@ -167,7 +165,7 @@ def test_options_from_settings(system, compiler, version, build_type, arch, cpps
     compiler.cppstd={cppstd}
     os={system}
     [conf]
-    tools.build:compiler_executables ={{"c": "/opt/bin/{cc}", "cpp": "/opt/bin/{cxx}"}}
+    tools.build:compiler_executables ={{"c": "{compiler_path}/{cc}", "cpp": "{compiler_path}/{cxx}"}}
     ''')
 
     conanfile = textwrap.dedent('''
@@ -195,11 +193,10 @@ def test_options_from_settings(system, compiler, version, build_type, arch, cpps
     # TODO: cpp.runtimeLibrary (MSVC only)
 
 
-@pytest.mark.tool("qbs")
 def test_options_from_conf():
     client = TestClient()
 
-    profile = textwrap.dedent('''
+    profile = textwrap.dedent(f'''
     [settings]
     arch=x86_64
     build_type=Release
@@ -209,7 +206,7 @@ def test_options_from_conf():
     compiler.cppstd=17
     os=Linux
     [conf]
-    tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
+    tools.build:compiler_executables ={{"c": "{compiler_path}/gcc", "cpp": "{compiler_path}/g++"}}
     tools.build:cflags=['-Dfoo', '-Dbar']
     tools.build:cxxflags=['-Dfoo', '-Dbaz']
     tools.build:sharedlinkflags=['-s']
@@ -238,11 +235,10 @@ def test_options_from_conf():
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
 
 
-@pytest.mark.tool("qbs")
 def test_options_extra():
     client = TestClient()
 
-    profile = textwrap.dedent('''
+    profile = textwrap.dedent(f'''
     [settings]
     arch=x86_64
     build_type=Release
@@ -252,7 +248,7 @@ def test_options_extra():
     compiler.cppstd=17
     os=Linux
     [conf]
-    tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
+    tools.build:compiler_executables ={{"c": "{compiler_path}/gcc", "cpp": "{compiler_path}/g++"}}
     ''')
 
     conanfile = textwrap.dedent('''
@@ -288,11 +284,10 @@ def test_options_extra():
     assert "cpp.driverLinkerFlags:['-s']" in settings_content
 
 
-@pytest.mark.tool("qbs")
 def test_sysroot():
     client = TestClient()
 
-    profile = textwrap.dedent('''
+    profile = textwrap.dedent(f'''
     [settings]
     arch=x86_64
     build_type=Release
@@ -302,7 +297,7 @@ def test_sysroot():
     compiler.cppstd=17
     os=Linux
     [conf]
-    tools.build:compiler_executables ={"c": "/opt/bin/gcc", "cpp": "/opt/bin/g++"}
+    tools.build:compiler_executables ={{"c": "{compiler_path}/gcc", "cpp": "{compiler_path}/g++"}}
     tools.build:sysroot=\\opt\\usr\\local
     ''')
 
