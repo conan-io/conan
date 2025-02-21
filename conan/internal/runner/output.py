@@ -15,4 +15,3 @@ class RunnerOutput(ConanOutput):
     def padding(self):
         return len(self._prefix) + 1
 
-
