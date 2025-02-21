@@ -108,9 +108,25 @@ vuln_html = """
 <html lang="en">
 <head>
     <title>Audited Vulnerabilities</title>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+    integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
+    crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css" />
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            const table = new DataTable('#vuln_table', {
+                // Order by severity descending, then by package name ascending
+                order: [[2, 'desc'], [0, 'asc']],
+            });
+        });
+    </script>
 </head>
 <body>
-    <table>
+    <table id="vuln_table" class="stripe" style="width:100%">
         <thead>
             <tr>
             <th>Package</th>
@@ -132,6 +148,7 @@ vuln_html = """
         {% endfor %}
         </tbody>
     </table>
+    <a href="https://jfrog.com/advanced-security/">Vulnerability information provided by JFrog</a>
 </body>
 </html>
 """
@@ -142,9 +159,7 @@ def html_vuln_formatter(data_json):
         ref = f"{pkg_name}/{pkg_info['version']}"
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
-
         if not count:
-            ConanOutput().info("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
             continue
 
         sorted_vulns = sorted(edges,
@@ -155,8 +170,9 @@ def html_vuln_formatter(data_json):
             node = vuln["node"]
             name = node["name"]
             sev = node.get("severity", "Medium")
+            sev = f"{severity_order.get(sev, 2)} - {sev}"
             score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else ""
+            score_txt = f", CVSS: {score}" if score else "-"
             desc = node.get("description", "")
 
             # TODO: Show these?
