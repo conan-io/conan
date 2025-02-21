@@ -163,6 +163,8 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
 
             try:
                 file_count += 1
+                # INFO: When follow_symlinks is false, and src is a symbolic link, it tries to
+                # copy all metadata from the src symbolic link to the newly created dst link
                 shutil.copy2(src_filepath, dest_filepath, follow_symlinks=not symlinks)
                 output.verbose(f"Copied {src_filepath} into {output_dir}")
             except Exception as e:
