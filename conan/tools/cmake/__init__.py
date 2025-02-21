@@ -6,7 +6,7 @@ from conan.tools.cmake.layout import cmake_layout
 
 def CMakeDeps(conanfile):  # noqa
     if conanfile.conf.get("tools.cmake.cmakedeps:new",
-                          choices=["will_break_next", "recipe_will_break"]) == "auto_will_break":
+                          choices=["will_break_next", "recipe_will_break"]) == "will_break_next":
         from conan.tools.cmake.cmakedeps2.cmakedeps import CMakeDeps2
         conanfile.output.warning("Using the new CMakeConfigDeps generator, behind the "
                                  "'tools.cmake.cmakedeps:new' gate conf. This conf will change "
