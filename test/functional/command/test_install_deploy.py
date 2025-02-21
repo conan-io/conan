@@ -511,8 +511,10 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
-
-def test_runtime_deploy_symlinks():
+@pytest.mark.parametrize("symlink, expected",
+                         [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
+                          (False, ["libfoo.so.0.1.0",])])
+def test_runtime_deploy_symlinks(symlink, expected):
     """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
     """
     c = TestClient()
@@ -531,15 +533,16 @@ def test_runtime_deploy_symlinks():
     c.save({"foo/conanfile.py": conanfile,
             "foo/lib/libfoo.so.0.1.0": "",})
     c.run("export-pkg foo/ --name=foo --version=0.1.0")
-    c.run("install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks={symlink}")
 
-    expected = sorted(["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"])
-    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == expected
-    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0"))
-    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so"))
-    assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so")))
-    assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so.0")))
-    assert not os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0.1.0"))
+    sorted_expected = sorted(expected)
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
+    if symlink:
+        assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0"))
+        assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so"))
+        assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so")))
+        assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so.0")))
+        assert not os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0.1.0"))
 
 
 def test_deployer_errors():

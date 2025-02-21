@@ -150,6 +150,10 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
 
             src_filepath = os.path.join(src_dirpath, src_filename)
             dest_filepath = os.path.join(output_dir, src_filename)
+
+            if not symlinks and os.path.islink(src_filepath):
+                continue
+
             if os.path.exists(dest_filepath):
                 if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
                     output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
