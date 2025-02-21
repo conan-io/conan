@@ -518,16 +518,15 @@ def test_runtime_deploy_symlinks():
     c = TestClient()
     conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conan.tools.files import copy
+           from conan.tools.files import copy, chdir
            import os
            class Pkg(ConanFile):
                package_type = "shared-library"
                def package(self):
-                   copy(self, "libfoo.so.0.1.0", src=self.build_folder, dst=self.package_folder)
-                   os.symlink(src=os.path.join(self.package_folder, "libfoo.so.0.1.0"),
-                                dst=os.path.join(self.package_folder, "libfoo.so.0"))
-                   os.symlink(src=os.path.join(self.package_folder, "libfoo.so.0"),
-                               dst=os.path.join(self.package_folder, "libfoo.so"))
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   with chdir(self, os.path.join(self.package_folder, "lib")):
+                       os.symlink(src="libfoo.so.0.1.0", dst="libfoo.so.0")
+                       os.symlink(src="libfoo.so.0", dst="libfoo.so")
            """)
     c.save({"foo/conanfile.py": conanfile,
             "foo/lib/libfoo.so.0.1.0": "",})
@@ -536,6 +535,11 @@ def test_runtime_deploy_symlinks():
 
     expected = sorted(["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"])
     assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == expected
+    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0"))
+    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so"))
+    assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so")))
+    assert not os.path.isabs(os.readlink(os.path.join(c.current_folder, "output", "libfoo.so.0")))
+    assert not os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.0.1.0"))
 
 
 def test_deployer_errors():
