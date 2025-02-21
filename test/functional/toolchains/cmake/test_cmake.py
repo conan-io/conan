@@ -250,10 +250,6 @@ class WinTest(Base):
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
-        if runtime == "MTd":
-            settings["compiler.runtime"] = "MT"
-        if runtime == "MD":
-            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
@@ -488,7 +484,7 @@ def test_msvc_vs_versiontoolset():
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run("Release\\myapp.exe")
+                    self.run(r"Release\\myapp.exe")
             """)
     cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
     main = gen_function_cpp(name="main")

@@ -394,10 +394,12 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
-                                 f"without conaninfo.txt in: {info_path}")
-        conan_info_content = load(info_path)
-        info = load_binary_info(conan_info_content)
+            ConanOutput().error(f"Corrupted package '{pkg_layout.reference}' "
+                                f"without conaninfo.txt in: {info_path}")
+            info = {}
+        else:
+            conan_info_content = load(info_path)
+            info = load_binary_info(conan_info_content)
         pref = pkg_layout.reference
         # The key shoudln't have the latest package revision, we are asking for package configs
         pref.revision = None

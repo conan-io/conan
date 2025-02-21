@@ -175,18 +175,7 @@ class ConanOutput:
 
         return self
 
-    def rewrite_line(self, line):
-        tmp_color = self._color
-        self._color = False
-        total_size = 70
-        limit_size = total_size // 2 - 3
-        if len(line) > total_size:
-            line = line[0:limit_size] + " ... " + line[-limit_size:]
-        self.write("\r%s%s" % (line, " " * (total_size - len(line))))
-        self.stream.flush()
-        self._color = tmp_color
-
-    def _write_message(self, msg, fg=None, bg=None):
+    def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
@@ -206,8 +195,11 @@ class ConanOutput:
         else:
             ret += "{}".format(msg)
 
+        if newline:
+            ret = "%s\n" % ret
+
         with self.lock:
-            self.stream.write("{}\n".format(ret))
+            self.stream.write(ret)
             self.stream.flush()
 
     def trace(self, msg):

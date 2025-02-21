@@ -477,6 +477,47 @@ class TestLockTestPackage:
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
 
+    def test_test_package_lockfile(self):
+        c = TestClient(light=True)
+        test = textwrap.dedent("""
+            from conan import ConanFile
+            class TestBasicConanfile(ConanFile):
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
+                    self.requires("pkga/1.0")
+                def test(self):
+                    pass
+            """)
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "1.0"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "1.0"),
+                "pkgb/test_package/conanfile.py": test})
+        c.run("create pkga")
+        c.run("lock create pkgb")
+
+        # alternative 1, relax lockfile
+        c.run("create pkgb --lockfile-partial")
+
+        # alternative 2, do not run test_package with same lockfile
+        c.run("create pkgb --test-folder=")
+        # the test_package can be tested later, so the lockfile-partial only affects the test_package
+        c.run("test pkgb/test_package pkgb/1.0 --lockfile=pkgb/conan.lock --lockfile-partial")
+        assert "Using lockfile:" in c.out
+
+        # alternative 3, create the lockfile in the test_package
+        c.run("lock create pkgb/test_package --lockfile=pkgb/conan.lock "
+              "--lockfile-out=pkgb/test_package/conan.lock")
+        lockfile = c.load("pkgb/test_package/conan.lock")
+        assert "pkga/1.0" in lockfile
+        c.run("test pkgb/test_package pkgb/1.0 --lockfile=pkgb/test_package/conan.lock "
+              "--lockfile-partial")
+
+        # alternative 4, add the test_package dependencies to the main lockfile
+        c.run("lock create pkgb/test_package --lockfile=pkgb/conan.lock "
+              "--lockfile-out=pkgb/conan.lock")
+        lockfile = c.load("pkgb/conan.lock")
+        assert "pkga/1.0" in lockfile
+        c.run("create pkgb --lockfile=pkgb/conan.lock")
+
 
 class TestErrorDuplicates:
     def test_error_duplicates(self):
