@@ -11,6 +11,7 @@ from conans.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
+               "CMakeConfigDeps": "conan.tools.cmake",
                "MesonToolchain": "conan.tools.meson",
                "MSBuildDeps": "conan.tools.microsoft",
                "MSBuildToolchain": "conan.tools.microsoft",
