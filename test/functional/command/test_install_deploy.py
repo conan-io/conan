@@ -511,7 +511,6 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
-# This test requires in Windows to have symlinks enabled, otherwise it will fail
 @pytest.mark.parametrize("symlink, expected",
                          [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
                           (False, ["libfoo.so.0.1.0",])])
@@ -538,7 +537,8 @@ def test_runtime_deploy_symlinks(symlink, expected):
 
     sorted_expected = sorted(expected)
     assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
-    if symlink:
+    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+    if symlink and platform.system() != "Windows":
         link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.0")
         link_so = os.path.join(c.current_folder, "output", "libfoo.so")
         lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
