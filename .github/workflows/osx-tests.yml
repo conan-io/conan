@@ -114,7 +114,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ${{ github.ref == 'refs/heads/develop2' && fromJson('["3.13", "3.8"]') || fromJson('["3.10"]') }}
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests

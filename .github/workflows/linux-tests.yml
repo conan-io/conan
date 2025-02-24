@@ -2,7 +2,10 @@ name: Linux tests
 
 on:
   workflow_call:
-
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   build_container:
@@ -50,7 +53,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: ${{ github.ref == 'refs/heads/develop2' && fromJson('["3.13", "3.6"]') || fromJson('["3.10"]') }}
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests

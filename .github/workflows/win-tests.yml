@@ -8,7 +8,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ${{ github.ref == 'refs/heads/develop2' && fromJson('["3.13", "3.6"]') || fromJson('["3.10"]') }}
+        python-version: ${{ fromJson(inputs.python-versions) }}
     name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -59,7 +59,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: ${{ github.ref == 'refs/heads/develop2' && fromJson('["3.13", "3.6"]') || fromJson('["3.10"]') }}
+        python-version: ${{ fromJson(inputs.python-versions) }}
     name: Functional Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
