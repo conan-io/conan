@@ -2,6 +2,10 @@ name: Windows Tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   unit_integration_tests:

@@ -2,6 +2,10 @@ name: OSX Tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   osx_setup:
