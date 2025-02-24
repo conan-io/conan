@@ -61,7 +61,7 @@ class CMakeDeps2:
                 continue
 
             if require.direct:
-                direct_deps.append(dep)
+                direct_deps.append((require, dep))
             config = ConfigTemplate2(self, dep)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
@@ -78,14 +78,16 @@ class CMakeDeps2:
     def _print_help(self, direct_deps):
         if direct_deps:
             msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
-            targets = []
-            for dep in direct_deps:
-                msg.append(f"    find_package({self.get_cmake_filename(dep)})")
-                if not dep.cpp_info.exe:
+            link_targets = []
+            for (require, dep) in direct_deps:
+                note = " # Optional. This is a tool-require, can't link its targets" \
+                    if require.build else ""
+                msg.append(f"    find_package({self.get_cmake_filename(dep)}){note}")
+                if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
-                    targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
-            if targets:
-                msg.append(f"    target_link_libraries(... {' '.join(targets)})")
+                    link_targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
+            if link_targets:
+                msg.append(f"    target_link_libraries(... {' '.join(link_targets)})")
             self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
 
     def set_property(self, dep, prop, value, build_context=False):

@@ -542,9 +542,104 @@ def test_create_docker_runner_default_build_profile():
 
     client.save({"host_clean": profile_host})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_clean")
+    client.run("create . -pr:h host_clean -vverbose")
 
+    assert "Copying default profile" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
+    assert "Removing container" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+def test_create_docker_runner_in_subfolder():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import load, copy
+        from conan.tools.cmake import CMake
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.root = ".."
+                self.folders.source = "."
+                self.folders.build = "build"
+
+            def export_sources(self):
+                folder = os.path.join(self.recipe_folder, "..")
+                copy(self, "*.txt", folder, self.export_sources_folder)
+                copy(self, "src/*.cpp", folder, self.export_sources_folder)
+                copy(self, "include/*.h", folder, self.export_sources_folder)
+
+            def source(self):
+                cmake_file = load(self, "CMakeLists.txt")
+
+            def build(self):
+                path = os.path.join(self.source_folder, "CMakeLists.txt")
+                cmake_file = load(self, path)
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+            """)
+
+    header = textwrap.dedent("""
+        #pragma once
+        void hello();
+        """)
+    source = textwrap.dedent("""
+        #include <iostream>
+        void hello() {
+            std::cout << "Hello!" << std::endl;
+        }
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg CXX)
+        add_library(pkg src/hello.cpp)
+        target_include_directories(pkg PUBLIC include)
+        set_target_properties(pkg PROPERTIES PUBLIC_HEADER "include/hello.h")
+        install(TARGETS pkg)
+
+        """)
+
+    profile_host = textwrap.dedent(f"""\
+        [settings]
+        arch={{{{ detect_api.detect_arch() }}}}
+        build_type=Release
+        compiler=gcc
+        compiler.cppstd=gnu17
+        compiler.libcxx=libstdc++11
+        compiler.version=11
+        os=Linux
+        [runner]
+        type=docker
+        dockerfile={dockerfile_path()}
+        build_context={conan_base_path()}
+        image=conan-runner-default-test
+        cache=clean
+        remove=True
+        """)
+
+    client.save({"conan/conanfile.py": conanfile,
+                "conan/host": profile_host,
+                "include/hello.h": header,
+                "src/hello.cpp": source,
+                "CMakeLists.txt": cmakelist})
+
+    with client.chdir("conan"):
+        client.run("create . -pr:h host -vverbose")
+
+    assert "Restore: pkg/1.0" in client.out
     assert "Removing container" in client.out

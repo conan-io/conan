@@ -1,6 +1,7 @@
 import re
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 new_value = "will_break_next"
@@ -90,3 +91,64 @@ def test_cmakedeps_transitive_paths():
     assert not re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH /bina\"", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/libb.*/p/libb\" \".*/liba.*/p/liba\"\)", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/libb.*/p/includeb\" \".*/liba.*/p/includea\"\)", cmake_paths)
+
+
+def test_cmakeconfigdeps_recipe():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan.tools.cmake import CMakeConfigDeps
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1"
+            def generate(self):
+                deps = CMakeConfigDeps(self)
+                deps.generate()
+    """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "app/conanfile.py": conanfile})
+    c.run("create dep")
+    c.run("install app", assert_error=True)
+    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
+           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
+    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
+    # will not fail, still warn
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    # The only-recipe also not fails
+    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
+    # will not fail
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+
+    # attribute generator
+    conanfile = textwrap.dedent("""
+        from conan.tools.cmake import CMakeConfigDeps
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1"
+            generators = "CMakeConfigDeps"
+        """)
+    c.save({"app/conanfile.py": conanfile}, clean_first=True)
+    c.run("install app", assert_error=True)
+    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
+           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
+    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+
+    # conanfile.txt
+    conanfile = textwrap.dedent("""
+        [requires]
+        dep/0.1
+        [generators]
+        CMakeConfigDeps
+        """)
+    c.save({"app/conanfile.txt": conanfile}, clean_first=True)
+    c.run("install app", assert_error=True)
+    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
+           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
+    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
+    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
