@@ -33,6 +33,13 @@ jobs:
             echo "python_versions_macos=[\"3.8\"]" >> $GITHUB_OUTPUT
           fi
 
+  linux_suite:
+    needs: set_python_versions
+    uses: ./.github/workflows/linux-tests.yml
+    name: Linux test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux }}
+
   osx_suite:
     needs: set_python_versions
     uses: ./.github/workflows/osx-tests.yml
@@ -44,14 +51,6 @@ jobs:
     needs: set_python_versions
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
-    with:
-      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux }}
-
-
-  linux_suite:
-    needs: set_python_versions
-    uses: ./.github/workflows/linux-tests.yml
-    name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux }}
 
