@@ -30,7 +30,7 @@ jobs:
             echo "python_versions_macos=[\"3.13\", \"3.8\"]" >> $GITHUB_OUTPUT
           else
             echo "python_versions_linux_windows=[\"3.10\"]" >> $GITHUB_OUTPUT
-            echo "python_versions_macos=[\"3.12\"]" >> $GITHUB_OUTPUT
+            echo "python_versions_macos=[\"3.10\"]" >> $GITHUB_OUTPUT
           fi
 
   linux_suite:
