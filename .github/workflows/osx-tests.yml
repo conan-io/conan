@@ -14,7 +14,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: '3.x'
 
       - name: Cache pip packages
         id: cache-pip
@@ -114,7 +114,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [3.13, 3.6]
+        python-version: ['3.x', '3.8']
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests

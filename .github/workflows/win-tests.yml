@@ -8,7 +8,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: [3.13, 3.6]
+        python-version: ['3.x', '3.6']
     name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -59,7 +59,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: [3.13, 3.6]
+        python-version: ['3.x', '3.6']
 
     name: Functional Tests (${{ matrix.python-version }})
     steps:
