@@ -3,6 +3,7 @@ name: Linux tests
 on:
   workflow_call:
 
+
 jobs:
   build_container:
     runs-on: ubuntu-latest
@@ -49,7 +50,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.13, 3.6]
+        python-version: ${{ github.ref == 'refs/heads/develop2' && fromJson('["3.13", "3.6"]') || fromJson('["3.10"]') }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
@@ -97,7 +98,9 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.13, 3.6]
+        # Use modern versions due to docker incompatibility with python <3.8
+        python-version: ${{ github.event_name != 'pull_request' && fromJson('["3.13", "3.9"]') || fromJson('["3.10"]') }}
+
     name: Docker Runner Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
