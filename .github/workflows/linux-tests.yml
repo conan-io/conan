@@ -49,7 +49,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.14, 3.6]
+        python-version: [3.13, 3.6]
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
@@ -97,7 +97,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.14, 3.6]
+        python-version: [3.13, 3.6]
     name: Docker Runner Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
