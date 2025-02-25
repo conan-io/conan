@@ -564,7 +564,7 @@ def test_runtime_deploy_subfolder():
            class Pkg(ConanFile):
                package_type = "shared-library"
                def package(self):
-                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder, keep_path=True)
            """)
     c.save({"foo/conanfile.py": conanfile,
             "foo/lib/libfoo.so": "",
@@ -573,9 +573,9 @@ def test_runtime_deploy_subfolder():
     c.run("export-pkg foo/ --name=foo --version=0.1.0")
     c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
 
-    assert os.listdir(os.path.join(c.current_folder, "output")) == ["libfoo.so", "subfolder"]
-    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libbar.so", "subsubfolder"]
-    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder", "subsubfolder")) == ["libqux.so"]
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "subfolder"]
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder"))) == ["libbar.so", "subsubfolder"]
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder", "subsubfolder"))) == ["libqux.so"]
 
 
 def test_runtime_deploy_subfolder_symlink():
@@ -598,12 +598,22 @@ def test_runtime_deploy_subfolder_symlink():
     c.save({"foo/conanfile.py": conanfile,
             "foo/lib/subfolder/libfoo.so.1.0": "",})
     c.run("export-pkg foo/ --name=foo --version=0.1.0")
-    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks=True")
 
-    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "libfoo.so.1" , "subfolder"]
     assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libfoo.so.1.0"]
-    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.1"))
-    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so"))
+    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+    if platform.system() != "Windows":
+        assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "libfoo.so.1" , "subfolder"]
+        link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.1")
+        link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+        lib = os.path.join(c.current_folder, "output", "subfolder", "libfoo.so.1.0")
+        assert os.path.islink(link_so_0)
+        assert os.path.islink(link_so)
+        assert not os.path.isabs(os.readlink(link_so_0))
+        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
+
 
 def test_deployer_errors():
     c = TestClient()
