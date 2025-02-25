@@ -559,7 +559,7 @@ def test_runtime_deploy_subfolder():
     c = TestClient()
     conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conan.tools.files import copy, chdir
+           from conan.tools.files import copy
            import os
            class Pkg(ConanFile):
                package_type = "shared-library"
@@ -573,10 +573,37 @@ def test_runtime_deploy_subfolder():
     c.run("export-pkg foo/ --name=foo --version=0.1.0")
     c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
 
-    assert os.listdir(os.path.join(c.current_folder, "output")) == ["libfoo.so"]
-    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libbar.so"]
+    assert os.listdir(os.path.join(c.current_folder, "output")) == ["libfoo.so", "subfolder"]
+    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libbar.so", "subsubfolder"]
     assert os.listdir(os.path.join(c.current_folder, "output", "subfolder", "subsubfolder")) == ["libqux.so"]
 
+
+def test_runtime_deploy_subfolder_symlink():
+    """ The deployer runtime_deploy should preserve subfolder structure when deploying shared
+        libraries with symlinks
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy, chdir, mkdir
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   with chdir(self, os.path.join(self.package_folder, "lib")):
+                        os.symlink(src="subfolder/libfoo.so.1.0", dst="libfoo.so.1")
+                        os.symlink(src="libfoo.so.1", dst="libfoo.so")
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/subfolder/libfoo.so.1.0": "",})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "libfoo.so.1" , "subfolder"]
+    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libfoo.so.1.0"]
+    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so.1"))
+    assert os.path.islink(os.path.join(c.current_folder, "output", "libfoo.so"))
 
 def test_deployer_errors():
     c = TestClient()
