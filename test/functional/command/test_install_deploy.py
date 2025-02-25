@@ -553,6 +553,31 @@ def test_runtime_deploy_symlinks(symlink, expected):
         assert not os.path.islink(lib)
 
 
+def test_runtime_deploy_subfolder():
+    """ The deployer runtime_deploy should preserve subfolder structure when deploying shared libraries
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy, chdir
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/libfoo.so": "",
+            "foo/lib/subfolder/libbar.so": "",
+            "foo/lib/subfolder/subsubfolder/libqux.so": "",})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+
+    assert os.listdir(os.path.join(c.current_folder, "output")) == ["libfoo.so"]
+    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libbar.so"]
+    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder", "subsubfolder")) == ["libqux.so"]
+
+
 def test_deployer_errors():
     c = TestClient()
     c.save({"conanfile.txt": "",
