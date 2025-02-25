@@ -255,8 +255,8 @@ def test_module_project():
                 cmake.configure()
                 cmake.build()
                 if self.settings.os == "Windows":
-                    my_path = os.path.join(self.build_folder, "Release", "MainApp.exe").replace(\"\\\\\", "/")
-                    self.run(f'"{my_path}"', env="conanrun")
+                    my_path = self.cpp.build.bindir
+                    self.run(os.path.join(my_path, "MainApp"), env="conanrun")
                 else:
                     self.run(f"'{os.path.join(self.build_folder, 'MainApp')}'", env="conanrun")
     """)
@@ -265,8 +265,4 @@ def test_module_project():
          "mainapp/main.cpp": app_cpp,
          "mainapp/CMakeLists.txt": cmake}, clean_first=True)
     client.run("create mainapp --version=0.1 -c tools.cmake.cmakedeps:new='will_break_next'")
-    l = client.created_layout().package()
-
-
-    print()
-    assert True
+    assert "mylib: Release!" in client.out
