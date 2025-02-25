@@ -60,9 +60,9 @@ class TestDownloadCacheBackupSources:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["unknown"]
-            assert "http://localhost:5000/myfile.txt" in content["references"]["unknown"]
-            assert len(content["references"]["unknown"]) == 2
+            # Not updated because we didn't actually fetch from the mirror
+            assert "http://localhost.mirror:5000/myfile.txt" not in content["references"]["unknown"]
+            assert len(content["references"]["unknown"]) == 1
 
             # Ensure the cache is working and we didn't break anything by modifying the summary
             client.run("source .")
