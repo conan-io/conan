@@ -120,16 +120,26 @@ class DownloadCache:
 
         try:
             summary_key = str(conanfile.ref)
-            if set(summary["references"].keys()).difference({"unknown", summary_key}):
-                warn = "A different reference has already downloaded the sources associated with the current package"
-                conanfile.output.warning(warn, warn_tag="risk")
         except AttributeError:
             # The recipe path would be different between machines
             # So best we can do is to set this as unknown
             summary_key = "unknown"
 
+        from urllib.parse import urlparse
+
         if not isinstance(urls, (list, tuple)):
             urls = [urls]
+        current_filenames = set(os.path.basename(urlparse(url).path) for url in urls)
+
+        for ref, previous_urls in summary["references"].items():
+            if ref == summary_key or "unknown" in (ref, summary_key):
+                continue
+            prev_filenames = set(os.path.basename(urlparse(url).path) for url in previous_urls)
+            if not current_filenames.difference(prev_filenames):
+                raise ConanException("This backup source has already been downloaded from different URLs. "
+                                     "There's probably an issue in your declared sources. "
+                                     "If you have a valid use-case, please report it to the Conan team.")
+
         existing_urls = summary["references"].setdefault(summary_key, [])
         existing_urls.extend(url for url in urls if url not in existing_urls)
         conanfile.output.verbose(f"Updating ${summary_path} summary file")
