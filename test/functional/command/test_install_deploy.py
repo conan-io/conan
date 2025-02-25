@@ -508,8 +508,9 @@ class TestRuntimeDeployer:
         c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
               "--deployer-folder=myruntime -vvv")
 
-        expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
-        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == sorted(["bin", "lib"])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "lib"))) == sorted(['pkga.so', 'pkgb.so'])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "bin"))) == sorted(['pkga.dll'])
 
 @pytest.mark.parametrize("symlink, expected",
                          [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
