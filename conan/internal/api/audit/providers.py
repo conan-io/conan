@@ -8,6 +8,7 @@ class ConanCenterProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
+        self.type = provider_data["type"]
         self.token = provider_data.get("token")
         self._session = conan_api.remotes.requester
 
@@ -94,6 +95,7 @@ class PrivateProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
+        self.type = provider_data["type"]
         self.data = provider_data
         self._session = conan_api.remotes.requester
 

@@ -95,7 +95,7 @@ def json_provider_formatter(providers_action):
     ret = []
     for provider in providers_action[0]:
         if provider:
-            ret.append({"name": provider.name, "url": provider.url})
+            ret.append({"name": provider.name, "url": provider.url, "type": provider.type})
     cli_out_write(json.dumps(ret, indent=4))
 
 
@@ -109,7 +109,7 @@ def audit_provider(conan_api, parser, subparser, *args):
 
     subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
-    subparser.add_argument("--type", help="Provider type", choices=["conancenter", "private"])
+    subparser.add_argument("--type", help="Provider type", choices=["conan-center-proxy", "private"])
     subparser.add_argument("--token", help="Provider token")
     args = parser.parse_args(*args)
 
