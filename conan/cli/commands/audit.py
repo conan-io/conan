@@ -84,14 +84,16 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
 
     return vulnerabilities
 
-def text_provider_formatter(providers):
+def text_provider_formatter(providers_action):
+    providers = providers_action[0]
+    action = providers_action[1]
     for provider in providers:
         if provider:
             cli_out_write(f"{provider.name} - {provider.url}")
 
-def json_provider_formatter(providers):
+def json_provider_formatter(providers_action):
     ret = []
-    for provider in providers:
+    for provider in providers_action[0]:
         if provider:
             ret.append({"name": provider.name, "url": provider.url})
     cli_out_write(json.dumps(ret, indent=4))
@@ -99,7 +101,9 @@ def json_provider_formatter(providers):
 
 @conan_subcommand(formatters={"text": text_provider_formatter, "json": json_provider_formatter})
 def audit_provider(conan_api, parser, subparser, *args):
-    """ Manage providers for the audit command """
+    """
+    Manage security providers for the 'conan audit' command.
+    """
 
     subparser.add_argument("action", choices=["add", "list", "auth"], help="Action to perform from 'add', 'list' or 'auth'")
 
@@ -125,10 +129,10 @@ def audit_provider(conan_api, parser, subparser, *args):
         if token:
             conan_api.audit.auth_provider(provider, token)
 
-        return [provider]
+        return [provider], args.action
     elif args.action == "list":
         providers = conan_api.audit.list_providers()
-        return providers
+        return providers, args.action
     elif args.action == "auth":
         if not args.name:
             raise ConanException("Name is required to authenticate on a provider")
@@ -141,7 +145,7 @@ def audit_provider(conan_api, parser, subparser, *args):
 
         provider = conan_api.audit.get_provider(args.name)
         conan_api.audit.auth_provider(provider, token)
-        return [provider]
+        return [provider], args.action
 
 @conan_command(group="Security")
 def audit(conan_api, parser, *args):
