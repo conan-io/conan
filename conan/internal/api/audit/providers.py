@@ -28,7 +28,7 @@ class ConanCenterProvider:
                 output.write("  2. Register and obtain your token.\n", fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
 
-                output.write(f"\n     conan audit provider --auth {self.name}  --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
+                output.write(f"\n     conan audit provider auth --name={self.name} --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
 
                 output.write("\nOnce authenticated, re-run the command.\n\n")
 
@@ -40,7 +40,7 @@ class ConanCenterProvider:
                    "Authorization": f"Bearer {self.token}"}
 
         result = {"data": {}}
-
+        errors_in_response = False
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
             response = self._session.post(
@@ -54,7 +54,8 @@ class ConanCenterProvider:
                 result["data"].update(response.json()["data"])
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
-                ConanOutput().error(f"Authentication error: {response.status_code}")
+                ConanOutput().error(f"Authentication error. Please set a valid token by using: 'conan audit provider auth --name={self.name} --token=<your_token>'")
+                errors_in_response = True
                 break
             elif response.status_code == 429:
                 reset_seconds = int(response.headers.get("x-ratelimit-reset", 0))
@@ -80,16 +81,19 @@ class ConanCenterProvider:
                 output.write("https://marketing-page-with-some-offering", newline=True, fg=Color.BRIGHT_BLUE)
                 output.write("\n")
                 ConanOutput().error("Rate limit exceeded.\n")
+                errors_in_response = True
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user
                 ConanOutput().error(f"Internal server error: {response.status_code}")
+                errors_in_response = True
                 break
             else:
                 ConanOutput().error(f"Failed to get vulnerabilities for {ref}: {response.status_code}")
                 ConanOutput().error(response.text)
+                errors_in_response = True
                 break
-        return result
+        return result, errors_in_response
 
 class PrivateProvider:
     def __init__(self, conan_api, name, provider_data):
@@ -106,9 +110,9 @@ class PrivateProvider:
             # TODO: Better error handling
             if "error" in response:
                 result["error"] = response["error"]
-                break
+                return result, True
             result["data"].update(response["data"])
-        return result
+        return result, False
 
     @staticmethod
     def _build_query(ref):

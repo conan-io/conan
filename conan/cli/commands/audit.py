@@ -26,9 +26,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     Scan a given recipe for vulnerabilities in its dependencies.
     """
     common_graph_args(subparser)
-    # TODO: Might not be needed?
-    parser.add_argument("--build-require", action='store_true', default=False,
-                        help='Whether the provided path is a build-require')
+
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
@@ -63,9 +61,8 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
         return {"error": deps_graph.error}
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
-    vulnerabilities = conan_api.audit.scan(deps_graph, provider)
 
-    return vulnerabilities
+    return conan_api.audit.scan(deps_graph, provider)
 
 
 @conan_subcommand(formatters={"text": text_vuln_formatter,
@@ -80,9 +77,8 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
-    vulnerabilities = conan_api.audit.list(args.reference, provider)
 
-    return vulnerabilities
+    return conan_api.audit.list(args.reference, provider)
 
 def text_provider_formatter(providers_action):
     providers = providers_action[0]

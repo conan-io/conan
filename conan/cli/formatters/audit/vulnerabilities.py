@@ -11,8 +11,10 @@ severity_order = {
     "Low": 1
 }
 
-def text_vuln_formatter(data_json):
+def text_vuln_formatter(result):
     from conan.api.output import cli_out_write, Color
+
+    data_json, errors_in_response = result
 
     severity_colors = {
         "Critical": Color.BRIGHT_RED,
@@ -36,7 +38,8 @@ def text_vuln_formatter(data_json):
         return "\n".join(lines)
 
     if not data_json or "data" not in data_json or not data_json["data"]:
-        cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
+        if not errors_in_response:
+            cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
         return
 
     total_vulns = 0
@@ -53,8 +56,9 @@ def text_vuln_formatter(data_json):
         cli_out_write(border_line, fg=Color.BRIGHT_WHITE)
 
         if not count:
-            cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-            continue
+            if not errors_in_response:
+                cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
+                continue
 
         total_vulns += count
         summary_lines.append(f"{ref} {count} {'vulnerability' if count == 1 else 'vulnerabilities'} found")
@@ -94,7 +98,8 @@ def text_vuln_formatter(data_json):
     cli_out_write("You can send questions and report issues about "
                   "the returned vulnerabilities to conan-research@jfrog.com.\n", fg=Color.BRIGHT_GREEN)
 
-def json_vuln_formatter(data):
+def json_vuln_formatter(result):
+    data, errors_in_response = result
     cli_out_write(json.dumps(data, indent=4))
 
 
@@ -153,7 +158,8 @@ vuln_html = """
 </html>
 """
 
-def html_vuln_formatter(data_json):
+def html_vuln_formatter(result):
+    data_json, errors_in_response = result
     vulns = []
     for pkg_name, pkg_info in data_json["data"].items():
         ref = f"{pkg_name}/{pkg_info['version']}"
