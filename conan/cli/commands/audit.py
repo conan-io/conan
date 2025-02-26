@@ -50,7 +50,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     if path:
         deps_graph = gapi.load_graph_consumer(path, args.name, args.version, args.user, args.channel,
                                               profile_host, profile_build, lockfile, remotes,
-                                              args.update, is_build_require=args.build_require)
+                                              args.update, is_build_require=False) # TO DISCUSS: defaulting to False the is_build_require
     else:
         deps_graph = gapi.load_graph_requires(args.requires, args.tool_requires, profile_host,
                                               profile_build, lockfile, remotes, args.update)
