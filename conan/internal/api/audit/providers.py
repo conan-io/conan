@@ -54,7 +54,7 @@ class ConanCenterProvider:
                 result["data"].update(response.json()["data"])
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
-                ConanOutput().error(f"Authentication error. \n"
+                ConanOutput().error(f"Authentication error ({response.status_code}). \n"
                                     f"Please set a valid token by using: 'conan audit provider auth --name={self.name} --token=<your_token>' \n"
                                     f"If you don't have a token, you can get one by registering at: https://audit.conan.io/register")
                 errors_in_response = True
@@ -87,11 +87,11 @@ class ConanCenterProvider:
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user
-                ConanOutput().error(f"Internal server error: {response.status_code}")
+                ConanOutput().error(f"Internal server error ({response.status_code})")
                 errors_in_response = True
                 break
             else:
-                ConanOutput().error(f"Failed to get vulnerabilities for {ref}: {response.status_code}")
+                ConanOutput().error(f"Server error ({response.status_code}). Failed to get vulnerabilities for '{ref}'")
                 ConanOutput().error(response.text)
                 errors_in_response = True
                 break
