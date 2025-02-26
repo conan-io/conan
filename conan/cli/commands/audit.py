@@ -87,9 +87,21 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
 def text_provider_formatter(providers_action):
     providers = providers_action[0]
     action = providers_action[1]
-    for provider in providers:
-        if provider:
-            cli_out_write(f"{provider.name} - {provider.url}")
+
+    if action == "remove":
+        cli_out_write("Provider removed successfully.")
+    elif action == "add":
+        cli_out_write("Provider added successfully.")
+    elif action == "auth":
+        cli_out_write("Provider authentication added.")
+    elif action == "list":
+        if not providers:
+            cli_out_write("No providers found.")
+        else:
+            for provider in providers:
+                if provider:
+                    cli_out_write(f"{provider.name} (type: {provider.type}) - {provider.url}")
+
 
 def json_provider_formatter(providers_action):
     ret = []
@@ -105,7 +117,7 @@ def audit_provider(conan_api, parser, subparser, *args):
     Manage security providers for the 'conan audit' command.
     """
 
-    subparser.add_argument("action", choices=["add", "list", "auth"], help="Action to perform from 'add', 'list' or 'auth'")
+    subparser.add_argument("action", choices=["add", "list", "auth", "remove"], help="Action to perform from 'add', 'list' , 'remove' or 'auth'")
 
     subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
@@ -130,6 +142,11 @@ def audit_provider(conan_api, parser, subparser, *args):
             conan_api.audit.auth_provider(provider, token)
 
         return [provider], args.action
+    elif args.action == "remove":
+        if not args.name:
+            raise ConanException("Name required to remove a provider")
+        conan_api.audit.remove_provider(args.name)
+        return [], args.action
     elif args.action == "list":
         providers = conan_api.audit.list_providers()
         return providers, args.action

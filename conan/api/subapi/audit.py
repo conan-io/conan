@@ -83,6 +83,18 @@ class AuditAPI:
 
         _save_providers(self._providers_path, providers)
 
+    def remove_provider(self, provider_name):
+        """
+        Remove a provider.
+        """
+        providers = _load_providers(self._providers_path)
+        if provider_name not in providers:
+            raise ConanException(f"Provider '{provider_name}' not found")
+
+        del providers[provider_name]
+
+        _save_providers(self._providers_path, providers)
+
     def auth_provider(self, provider, token):
         """
         Authenticate a provider.
