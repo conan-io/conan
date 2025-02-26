@@ -54,7 +54,9 @@ class ConanCenterProvider:
                 result["data"].update(response.json()["data"])
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
-                ConanOutput().error(f"Authentication error. Please set a valid token by using: 'conan audit provider auth --name={self.name} --token=<your_token>'")
+                ConanOutput().error(f"Authentication error. \n"
+                                    f"Please set a valid token by using: 'conan audit provider auth --name={self.name} --token=<your_token>' \n"
+                                    f"If you don't have a token, you can get one by registering at: https://audit.conan.io/register")
                 errors_in_response = True
                 break
             elif response.status_code == 429:
