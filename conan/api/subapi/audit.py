@@ -103,7 +103,7 @@ def _load_providers(providers_path):
     if not os.path.exists(providers_path):
         default_providers = {
             CONAN_CENTER_AUDIT_PROVIDER_NAME: {
-                "url": "https://conancenter-audit-stg.jfrog.team/api/v1/query",
+                "url": "https://audit.conan.io/api/v1/query",
                 "type": "conan-center-proxy"
             }
         }
