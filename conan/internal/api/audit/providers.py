@@ -52,6 +52,14 @@ class ConanCenterProvider:
             )
             if response.status_code == 200:
                 result["data"].update(response.json()["data"])
+            if response.status_code == 400:
+                ConanOutput().error(f"Package '{ref}' not found.\n"
+                                    f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
+                                    f"Please ensure the package exists in the official repository: https://conan.io/center\n"
+                                    f"If the package exists in the repository, please report it to conan@jfrog.com.\n")
+                errors_in_response = True
+                break
+
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
                 ConanOutput().error(f"Authentication error ({response.status_code}).\n"
@@ -81,8 +89,9 @@ class ConanCenterProvider:
                         fg=Color.BRIGHT_WHITE,
                     )
 
-                output.write("For more information, visit: ", fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://marketing-page-with-some-offering", newline=True, fg=Color.BRIGHT_BLUE)
+                # FIXME: add some help here
+                #output.write("For more information, visit: ", fg=Color.BRIGHT_WHITE, newline=False)
+                #output.write("https://some-url-in-the-future", newline=True, fg=Color.BRIGHT_BLUE)
                 output.write("\n")
                 ConanOutput().error("Rate limit exceeded.\n")
                 errors_in_response = True
@@ -93,8 +102,7 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
             else:
-                ConanOutput().error(f"Server error ({response.status_code}). Failed to get vulnerabilities for '{ref}'")
-                ConanOutput().error(response.text)
+                ConanOutput().error(f"Error ({response.status_code}). {response.json()['details']}")
                 errors_in_response = True
                 break
         return result, errors_in_response
