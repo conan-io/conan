@@ -14,7 +14,7 @@ severity_order = {
 def text_vuln_formatter(result):
     from conan.api.output import cli_out_write, Color
 
-    data_json, errors_in_response = result
+    response, errors_in_response = result
 
     severity_colors = {
         "Critical": Color.BRIGHT_RED,
@@ -37,7 +37,7 @@ def text_vuln_formatter(result):
         lines.append(" " * indent + txt)
         return "\n".join(lines)
 
-    if not data_json or "data" not in data_json or not data_json["data"]:
+    if not response or "data" not in response or not response["data"]:
         if not errors_in_response:
             cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
         return
@@ -45,7 +45,7 @@ def text_vuln_formatter(result):
     total_vulns = 0
     summary_lines = []
 
-    for pkg_name, pkg_info in data_json["data"].items():
+    for pkg_name, pkg_info in response["data"].items():
         ref = f"{pkg_name}/{pkg_info['version']}"
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
@@ -99,8 +99,9 @@ def text_vuln_formatter(result):
                   "the returned vulnerabilities to conan-research@jfrog.com.\n", fg=Color.BRIGHT_GREEN)
 
 def json_vuln_formatter(result):
-    data, errors_in_response = result
-    cli_out_write(json.dumps(data, indent=4))
+    response, errors_in_response = result
+    if not errors_in_response or response["data"]:
+        cli_out_write(json.dumps(response, indent=4))
 
 
 def _render_vulns(vulns, template):
@@ -159,9 +160,9 @@ vuln_html = """
 """
 
 def html_vuln_formatter(result):
-    data_json, errors_in_response = result
+    response, errors_in_response = result
     vulns = []
-    for pkg_name, pkg_info in data_json["data"].items():
+    for pkg_name, pkg_info in response["data"].items():
         ref = f"{pkg_name}/{pkg_info['version']}"
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
@@ -190,4 +191,5 @@ def html_vuln_formatter(result):
                 "score": score_txt,
                 "description": desc,
             })
-    cli_out_write(_render_vulns(vulns, vuln_html))
+    if not errors_in_response or response["data"]:
+        cli_out_write(_render_vulns(vulns, vuln_html))
