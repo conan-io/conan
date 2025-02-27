@@ -98,7 +98,7 @@ def text_vuln_formatter(result):
     for line in summary_lines:
         cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
-    cli_out_write("\nVulnerability information provided by JFrog. Please check "
+    cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
                   "https://jfrog.com/advanced-security/ for more information.\n",
                   fg=Color.BRIGHT_GREEN)
     cli_out_write("You can send questions and report issues about "
@@ -117,57 +117,106 @@ def _render_vulns(vulns, template):
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(vulns=vulns, version=__version__)
 
-
 vuln_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Audited Vulnerabilities</title>
-
-    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
-    integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
-    crossorigin="anonymous"></script>
-
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css" />
-    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            const table = new DataTable('#vuln_table', {
-                // Order by severity descending, then by package name ascending
-                order: [[2, 'desc'], [0, 'asc']],
-            });
-        });
-    </script>
+  <meta charset="UTF-8">
+  <title>Conan Audit Vulnerabilities Report</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f7f7f7; }
+    .container { width: 80%; margin: 40px auto; padding: 20px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; }
+    col.pkg-col { min-width: 100px; }
+    col.id-col { min-width: 160px; }
+    col.sev-col { min-width: 100px; }
+    col.score-col { min-width: 120px; }
+    col.desc-col { }
+    thead { background: #333; color: #fff; }
+    thead th { padding: 12px; text-align: left; }
+    tbody tr { border-bottom: 1px solid #ddd; }
+    tbody tr:hover { background: #f0f0f0; }
+    td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; }
+    .severity-badge { padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold; display: inline-block; }
+    .severity-Critical { background: #d9534f; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217,83,79,0.7); } 70% { box-shadow: 0 0 0 12px rgba(217,83,79,0); } 100% { box-shadow: 0 0 0 0 rgba(217,83,79,0); } }
+    .severity-High { background: #f0ad4e; }
+    .severity-Medium { background: #f7ecb5; color: #333; }
+    .severity-Low { background: #5cb85c; }
+    .footer { text-align: center; color: #666; margin-bottom: 10px; }
+    a { color: #007bff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    $(document).ready(function(){
+      $('#vuln_table').DataTable({
+        "columnDefs": [
+          { "orderable": true, "targets": [0, 1, 2] },
+          { "orderable": false, "targets": [3, 4] }
+        ]
+      });
+    });
+  </script>
 </head>
 <body>
-    <table id="vuln_table" class="stripe" style="width:100%">
-        <thead>
-            <tr>
-            <th>Package</th>
-            <th>Vulnerability ID</th>
-            <th>Severity</th>
-            <th>Score</th>
-            <th>Description</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for vuln in vulns %}
-            <tr>
-                <td>{{ vuln.package }}</td>
-                <td>{{ vuln.vuln_id }}</td>
-                <td>{{ vuln.severity }}</td>
-                <td>{{ vuln.score }}</td>
-                <td>{{ vuln.description }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
+  <div class="container">
+    <h1>Conan Audit Vulnerabilities Report</h1>
+    <table id="vuln_table">
+      <colgroup>
+        <col class="pkg-col">
+        <col class="id-col">
+        <col class="sev-col">
+        <col class="score-col">
+        <col class="desc-col">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Score</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for vuln in vulns %}
+        {% set parts = vuln.severity.split(' - ') %}
+        {% set severity_label = parts[1] if parts|length > 1 else parts[0] %}
+        <tr>
+          <td>{{ vuln.package }}</td>
+          <td>{{ vuln.vuln_id }}</td>
+          <td><span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span></td>
+          <td>{{ vuln.score }}</td>
+          <td>
+            {{ vuln.description }}
+            {% if vuln.references %}
+              <br><br><strong>References:</strong>
+              <ul>
+                {% for ref in vuln.references %}
+                  <li><a href="{{ ref }}" target="_blank">{{ ref }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if vuln.aliases %}
+              <br><br><strong>Aliases:</strong> {{ ', '.join(vuln.aliases) }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
     </table>
-    <a href="https://jfrog.com/advanced-security/">Vulnerability information provided by JFrog</a>
+    <div class="footer">
+      <p>Vulnerability information provided by JFrog Advanced Security. Please check <a href="https://jfrog.com/advanced-security/" target="_blank">https://jfrog.com/advanced-security/</a> for more information.</p>
+      <p>You can send questions and report issues about the returned vulnerabilities to <a href="mailto:conan-research@jfrog.com">conan-research@jfrog.com</a>.</p>
+    </div>
+  </div>
 </body>
 </html>
 """
-
 
 def html_vuln_formatter(result):
     response, errors_in_response = result
@@ -175,30 +224,27 @@ def html_vuln_formatter(result):
     for pkg_name, pkg_info in response["data"].items():
         ref = f"{pkg_name}/{pkg_info['version']}"
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
-        count = len(edges)
-        if not count:
+        if not edges:
             continue
-
         sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
-
         for vuln in sorted_vulns:
             node = vuln["node"]
-            name = node["name"]
+            name = node.get("name")
             sev = node.get("severity", "Medium")
             sev = f"{severity_order.get(sev, 2)} - {sev}"
             score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else "-"
+            score_txt = f"CVSS: {score}" if score else "-"
+            aliases = node.get("aliases", [])
+            references = node.get("references", [])
             desc = node.get("description", "")
-
-            # TODO: Show these?
-            references = node.get("references")
             vulns.append({
                 "package": ref,
                 "vuln_id": name,
+                "aliases": aliases,
                 "severity": sev,
                 "score": score_txt,
                 "description": desc,
+                "references": references,
             })
-
     if not errors_in_response or response["data"]:
         cli_out_write(_render_vulns(vulns, vuln_html))
