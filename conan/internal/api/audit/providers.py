@@ -56,7 +56,7 @@ class ConanCenterProvider:
                 ConanOutput().error(f"Package '{ref}' not found.\n"
                                     f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
                                     f"Please ensure the package exists in the official repository: https://conan.io/center\n"
-                                    f"If the package exists in the repository, please report it to conan@jfrog.com.\n")
+                                    f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
                 errors_in_response = True
                 break
 
