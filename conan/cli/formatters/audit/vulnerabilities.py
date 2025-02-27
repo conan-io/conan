@@ -11,6 +11,7 @@ severity_order = {
     "Low": 1
 }
 
+
 def text_vuln_formatter(result):
     from conan.api.output import cli_out_write, Color
 
@@ -61,10 +62,14 @@ def text_vuln_formatter(result):
                 continue
 
         total_vulns += count
-        summary_lines.append(f"{ref} {count} {'vulnerability' if count == 1 else 'vulnerabilities'} found")
-        cli_out_write(f"\n{count} {'vulnerability' if count == 1 else 'vulnerabilities'} found:\n", fg=Color.BRIGHT_YELLOW)
+        summary_lines.append(
+            f"{ref} {count} {'vulnerability' if count == 1 else 'vulnerabilities'} found")
+        cli_out_write(f"\n{count} {'vulnerability' if count == 1 else 'vulnerabilities'} found:\n",
+                      fg=Color.BRIGHT_YELLOW)
 
-        sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
+        sorted_vulns = sorted(edges,
+                              key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"),
+                                                                2))
 
         for vuln in sorted_vulns:
             node = vuln["node"]
@@ -94,9 +99,12 @@ def text_vuln_formatter(result):
         cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
     cli_out_write("\nVulnerability information provided by JFrog. Please check "
-                  "https://jfrog.com/advanced-security/ for more information.\n", fg=Color.BRIGHT_GREEN)
+                  "https://jfrog.com/advanced-security/ for more information.\n",
+                  fg=Color.BRIGHT_GREEN)
     cli_out_write("You can send questions and report issues about "
-                  "the returned vulnerabilities to conan-research@jfrog.com.\n", fg=Color.BRIGHT_GREEN)
+                  "the returned vulnerabilities to conan-research@jfrog.com.\n",
+                  fg=Color.BRIGHT_GREEN)
+
 
 def json_vuln_formatter(result):
     response, errors_in_response = result
@@ -108,6 +116,7 @@ def _render_vulns(vulns, template):
     from conan import __version__
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(vulns=vulns, version=__version__)
+
 
 vuln_html = """
 <!DOCTYPE html>
@@ -159,6 +168,7 @@ vuln_html = """
 </html>
 """
 
+
 def html_vuln_formatter(result):
     response, errors_in_response = result
     vulns = []
@@ -169,9 +179,7 @@ def html_vuln_formatter(result):
         if not count:
             continue
 
-        sorted_vulns = sorted(edges,
-                              key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"),
-                                                                2))
+        sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
 
         for vuln in sorted_vulns:
             node = vuln["node"]
@@ -191,5 +199,6 @@ def html_vuln_formatter(result):
                 "score": score_txt,
                 "description": desc,
             })
+
     if not errors_in_response or response["data"]:
         cli_out_write(_render_vulns(vulns, vuln_html))
