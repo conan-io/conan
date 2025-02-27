@@ -88,7 +88,7 @@ class _EnvValue:
             result.append("{}=!".format(self._name))
         elif _EnvVarPlaceHolder in self._values:
             index = self._values.index(_EnvVarPlaceHolder)
-            for v in self._values[:index]:
+            for v in reversed(self._values[:index]):  # Reverse to prepend
                 result.append("{}=+{}{}".format(self._name, path, v))
             for v in self._values[index+1:]:
                 result.append("{}+={}{}".format(self._name, path, v))
