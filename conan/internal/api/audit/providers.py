@@ -80,12 +80,17 @@ class ConanCenterProvider:
 
                 if reset_in_hours > 0:
                     output.write(
-                        f"You have exceeded the number of allowed requests. The limit will reset in {reset_in_hours} hour{'s' if reset_in_hours > 1 else ''} and {reset_in_minutes} minute{'s' if reset_in_minutes > 1 else ''}.\n",
+                        f"You have exceeded the number of allowed requests. "
+                        f"The limit will reset in {reset_in_hours} "
+                        f"hour{'s' if reset_in_hours > 1 else ''} and {reset_in_minutes} "
+                        f"minute{'s' if reset_in_minutes > 1 else ''}.\n",
                         fg=Color.BRIGHT_WHITE,
                     )
                 else:
                     output.write(
-                        f"You have exceeded the number of allowed requests. The limit will reset in {reset_in_minutes} minute{'s' if reset_in_minutes > 1 else ''}.\n",
+                        f"You have exceeded the number of allowed requests. "
+                        f"The limit will reset in {reset_in_minutes} "
+                        f"minute{'s'if reset_in_minutes > 1 else ''}.\n",
                         fg=Color.BRIGHT_WHITE,
                     )
 
