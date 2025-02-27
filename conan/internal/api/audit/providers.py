@@ -25,7 +25,7 @@ class ConanCenterProvider:
                 output.write("\nTo resolve, please:\n")
                 output.write("  1. Visit: ", fg=Color.BRIGHT_WHITE, newline=False)
                 output.write("https://audit.conan.io/register\n", fg=Color.BRIGHT_BLUE)
-                output.write("  2. Register and obtain your token.\n", fg=Color.BRIGHT_WHITE)
+                output.write("  2. Register to obtain the access token and activate it.\n", fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
 
                 output.write(f"\n     conan audit provider auth --name={self.name} --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
