@@ -117,7 +117,7 @@ class VCVars:
         os_ = conanfile.settings.get_safe("os")
         build_os_ = conanfile.settings_build.get_safe("os")
 
-        if os_ != "Windows" or build_os_ != "Windows":
+        if (os_ != "Windows" and os_ != "WindowsStore") or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")

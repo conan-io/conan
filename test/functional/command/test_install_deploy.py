@@ -511,6 +511,47 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
+@pytest.mark.parametrize("symlink, expected",
+                         [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
+                          (False, ["libfoo.so.0.1.0",])])
+def test_runtime_deploy_symlinks(symlink, expected):
+    """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy, chdir
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   with chdir(self, os.path.join(self.package_folder, "lib")):
+                       os.symlink(src="libfoo.so.0.1.0", dst="libfoo.so.0")
+                       os.symlink(src="libfoo.so.0", dst="libfoo.so")
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/libfoo.so.0.1.0": "",})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks={symlink}")
+
+    sorted_expected = sorted(expected)
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
+    link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.0")
+    link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+    lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
+    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+    if symlink and platform.system() != "Windows":
+        assert os.path.islink(link_so_0)
+        assert os.path.islink(link_so)
+        assert not os.path.isabs(os.readlink(link_so_0))
+        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
+        assert not os.path.islink(lib)
+    else:
+        assert not os.path.islink(lib)
+
 
 def test_deployer_errors():
     c = TestClient()
