@@ -52,7 +52,7 @@ class ConanCenterProvider:
             )
             if response.status_code == 200:
                 result["data"].update(response.json()["data"])
-            if response.status_code == 400:
+            elif response.status_code == 400:
                 ConanOutput().error(f"Package '{ref}' not found.\n"
                                     f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
                                     f"Please ensure the package exists in the official repository: https://conan.io/center\n"
