@@ -1,5 +1,5 @@
 import textwrap
-
+from urllib.parse import urljoin
 from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
@@ -7,7 +7,7 @@ from conan.errors import ConanException
 class ConanCenterProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
-        self.url = provider_data["url"]
+        self.url = urljoin(provider_data["url"], "api/v1/query")
         self.type = provider_data["type"]
         self.token = provider_data.get("token")
         self._session = conan_api.remotes.requester
@@ -106,7 +106,8 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
             else:
-                ConanOutput().error(f"Error ({response.status_code}). {response.json()['details']}")
+                print(response.text)
+                ConanOutput().error(f"Error ({response.status_code})")
                 errors_in_response = True
                 break
         return result, errors_in_response
@@ -114,7 +115,7 @@ class ConanCenterProvider:
 class PrivateProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
-        self.url = provider_data["url"]
+        self.url = urljoin(provider_data["url"], "catalog/api/v0/public/graphql")
         self.type = provider_data["type"]
         self.data = provider_data
         self._session = conan_api.remotes.requester
@@ -123,8 +124,8 @@ class PrivateProvider:
         result = {"data": {}}
         for ref in refs:
             response = self._get(ref)
-            # TODO: Better error handling
             if "error" in response:
+                ConanOutput().error(f"Error: {response['error']['details']}")
                 result["error"] = response["error"]
                 return result, True
             result["data"].update(response["data"])
@@ -196,8 +197,8 @@ class PrivateProvider:
             )
             # Raises if some HTTP error was found
             response.raise_for_status()
-        except:
-            return {"error": {"details": "Something went wrong"}}
+        except Exception as e:
+            return {"error": {"details": f"Something went wrong: {e}"}}
 
         response_json = response.json()
         # filter the extensions key with graphql data
