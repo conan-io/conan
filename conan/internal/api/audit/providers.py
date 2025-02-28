@@ -70,7 +70,7 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
             elif response.status_code == 429:
-                reset_seconds = int(response.headers.get("x-ratelimit-reset", 0))
+                reset_seconds = int(response.headers.get("retry-after", 0))
                 reset_in_hours = reset_seconds // 3600
                 reset_in_minutes = (reset_seconds % 3600) // 60
 
@@ -106,7 +106,6 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
             else:
-                print(response.text)
                 ConanOutput().error(f"Error ({response.status_code})")
                 errors_in_response = True
                 break
