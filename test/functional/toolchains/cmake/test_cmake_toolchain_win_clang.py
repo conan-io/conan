@@ -156,7 +156,8 @@ class TestVSClangCL:
         assert "MSVC-like command-line" in client.out
         assert "main __clang_major__19" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
-        assert "main _MSC_VER194" in client.out
+        # CI forced the installation of 19.38, seems to prevail there
+        assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG201703" in client.out
         assert "main _M_X64 defined" in client.out
         assert "main __x86_64__ defined" in client.out
