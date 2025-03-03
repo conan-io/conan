@@ -101,7 +101,7 @@ def text_provider_formatter(providers_action):
         else:
             for provider in providers:
                 if provider:
-                    cli_out_write(str(provider))
+                    cli_out_write(f"{provider.name} (type: {provider.type}) - {provider.url}")
 
 def json_provider_formatter(providers_action):
     ret = []
