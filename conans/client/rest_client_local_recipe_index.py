@@ -65,11 +65,9 @@ class RestApiClientLocalRecipesIndex:
         local_recipes_index_path = os.path.join(local_recipes_index_path, ".conan")
         repo_folder = self._remote.url
 
-        from conan.internal.conan_app import ConanApp
-        from conan.api.conan_api import ConanAPI
-        conan_api = ConanAPI(local_recipes_index_path)
-        self._app = ConanApp(conan_api)
-        self._hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
+        from conan.internal.conan_app import LocalRecipesIndexApp
+        self._app = LocalRecipesIndexApp(local_recipes_index_path)
+        self._hook_manager = HookManager(HomePaths(local_recipes_index_path).hooks_path)
         self._layout = _LocalRecipesIndexLayout(repo_folder)
 
     def call_method(self, method_name, *args, **kwargs):
