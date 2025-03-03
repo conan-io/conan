@@ -51,7 +51,8 @@ class AuditAPI:
             raise ConanException(f"Provider '{provider_name}' not found")
 
         provider_data = providers[provider_name]
-        env_token = os.getenv("CONAN_AUDIT_PROVIDER_TOKEN_{provider_name.upper()}")
+        env_token = os.getenv(f"CONAN_AUDIT_PROVIDER_TOKEN_{provider_name.upper()}")
+
         if env_token:
             # Always override the token with the environment variable
             provider_data["token"] = env_token
