@@ -368,6 +368,24 @@ class TestProfileEnvRoundTrip:
             MyPath1+=(path)/my/path1
             """)
 
+    def test_append_multiple(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1+=MyValue1
+            MyVar1+=MyValue2
+            MyPath1 +=(path)/my/path1
+            MyPath1 +=(path)/my/path2
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1+=MyValue1
+            MyVar1+=MyValue2
+            MyPath1+=(path)/my/path1
+            MyPath1+=(path)/my/path2
+            """)
+
     def test_prepend(self):
         myprofile = textwrap.dedent("""
             # define
@@ -381,6 +399,24 @@ class TestProfileEnvRoundTrip:
             MyVar1=+MyValue1
             MyPath1=+(path)/my/path1
             """)
+
+    def test_prepend_multiple(self):
+        myprofile = textwrap.dedent("""
+           # define
+           MyVar1=+MyValue1
+           MyVar1=+MyValue2
+           MyPath1=+(path)/my/path1
+           MyPath1=+(path)/my/path2
+           """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+           MyVar1=+MyValue1
+           MyVar1=+MyValue2
+           MyPath1=+(path)/my/path1
+           MyPath1=+(path)/my/path2
+           """)
 
     def test_combined(self):
         myprofile = textwrap.dedent("""
@@ -399,7 +435,32 @@ class TestProfileEnvRoundTrip:
             MyPath1+=(path)/my/path12
             """)
 
-    def test_combined2(self):
+    def test_combined_multiple(self):
+        myprofile = textwrap.dedent("""
+            MyVar1=+MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1+=MyValue14
+            MyPath1=+(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1+=(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1+=MyValue14
+            MyPath1=+(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1+=(path)/my/path12
+            """)
+
+    def test_combined_prepend_first(self):
         myprofile = textwrap.dedent("""
             MyVar1+=MyValue11
             MyVar1=+MyValue12
@@ -415,6 +476,32 @@ class TestProfileEnvRoundTrip:
             MyVar1+=MyValue11
             MyPath1=+(path)/my/path12
             MyPath1+=(path)/my/path11
+            """)
+
+    def test_combined_prepend_first_multiple(self):
+        myprofile = textwrap.dedent("""
+            MyVar1+=MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1=+MyValue14
+            MyPath1+=(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1=+(path)/my/path14
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        # NOTE: This is reversed order compared to origin, prepend always first
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue12
+            MyVar1=+MyValue14
+            MyVar1+=MyValue11
+            MyVar1+=MyValue13
+            MyPath1=+(path)/my/path12
+            MyPath1=+(path)/my/path14
+            MyPath1+=(path)/my/path11
+            MyPath1+=(path)/my/path13
             """)
 
 

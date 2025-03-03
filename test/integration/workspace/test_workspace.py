@@ -9,7 +9,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conans.util.files import save, save_files
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -499,7 +499,6 @@ class TestMeta:
                 "conanws.py": conanfilews})
         c.run("workspace add dep")
         c.run("workspace install -of=build")
-        print(c.out)
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conandeps.props" in files
 
@@ -524,3 +523,25 @@ class TestMeta:
         c.run("workspace add dep")
         c.run("workspace install", assert_error=True)
         assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out
+
+
+def test_workspace_with_local_recipes_index():
+    c3i_folder = temp_folder()
+    recipes_folder = os.path.join(c3i_folder, "recipes")
+    zlib_config = textwrap.dedent("""
+       versions:
+         "1.2.11":
+           folder: all
+       """)
+    save_files(recipes_folder, {"zlib/config.yml": zlib_config,
+                                "zlib/all/conanfile.py": str(GenConanfile("zlib")),
+                                "zlib/all/conandata.yml": ""})
+
+    c = TestClient(light=True)
+    c.save({"conanws.yml": 'home_folder: "deps"'})
+    c.run(f'remote add local "{c3i_folder}"')
+
+    c.run("list zlib/1.2.11#* -r=local")
+    assert "zlib/1.2.11" in c.out  # It doesn't crash
+    c.run("list zlib/1.2.11#*")
+    assert "zlib/1.2.11" not in c.out
