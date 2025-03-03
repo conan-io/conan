@@ -152,3 +152,29 @@ def test_cmakeconfigdeps_recipe():
     assert "WARN: Using the new CMakeConfigDeps generator" in c.out
     c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
     assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+
+
+def test_system_wrappers():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan.tools.files import copy
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            name = "lib"
+            version = "system"
+            package_type = "shared-library"
+
+            def package_info(self):
+                self.cpp_info.includedirs = []
+                self.cpp_info.libdirs = []
+                self.cpp_info.system_libs = ["my_system_cool_lib"]
+    """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    c.run(f"install --requires=lib/system -g CMakeConfigDeps "
+          f"-c tools.cmake.cmakedeps:new={new_value}")
+    cmake = c.load("lib-Targets-release.cmake")
+    assert "add_library(lib::lib INTERFACE IMPORTED)" in cmake
+    assert "target_link_libraries(lib::lib INTERFACE my_system_cool_lib)" in cmake
