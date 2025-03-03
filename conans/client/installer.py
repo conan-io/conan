@@ -3,13 +3,11 @@ import shutil
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
-from conans.client.hook_manager import HookManager
 from conans.client.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException
@@ -170,12 +168,12 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, global_conf, editable_packages):
+    def __init__(self, app, global_conf, editable_packages, hook_manager):
         self._app = app
         self._editable_packages = editable_packages
         self._cache = app.cache
         self._remote_manager = app.remote_manager
-        self._hook_manager = HookManager(HomePaths(app.cache_folder).hooks_path)
+        self._hook_manager = hook_manager
         self._global_conf = global_conf
         self._home_folder = app.cache_folder
 
