@@ -1,13 +1,15 @@
 import json
 import os
+import base64
 
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
+from conan.internal.api.remotes.encrypt import encode, decode
 from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save, load
 
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
-
+CYPHER_KEY = "private"
 
 class AuditAPI:
     """
@@ -53,6 +55,8 @@ class AuditAPI:
         if env_token:
             # Always override the token with the environment variable
             provider_data["token"] = env_token
+        elif "token" in provider_data:
+            provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
         provider_cls = self._provider_cls.get(provider_data["type"])
 
         return provider_cls(self.conan_api, provider_name, provider_data)
@@ -103,14 +107,13 @@ class AuditAPI:
         """
         Authenticate a provider.
         """
-        # TODO: Store the token in a different file/place
         if not provider:
             raise ConanException("Provider not found")
 
         providers = _load_providers(self._providers_path)
 
         assert provider.name in providers
-        providers[provider.name]["token"] = token
+        providers[provider.name]["token"] = base64.standard_b64encode(encode(token, CYPHER_KEY).encode()).decode()
         setattr(provider, "token", token)
         _save_providers(self._providers_path, providers)
 
