@@ -119,14 +119,14 @@ def _render_vulns(vulns, template):
 
 vuln_html = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <title>Conan Audit Vulnerabilities Report</title>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
   <style>
-    body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f7f7f7; }
-    .container { width: 80%; margin: 40px auto; padding: 20px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #333; color: #ffffff; }
+    .container { width: 80%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
     h1 { text-align: center; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; }
     col.pkg-col { min-width: 100px; }
@@ -157,7 +157,8 @@ vuln_html = """
         "columnDefs": [
           { "orderable": true, "targets": [0, 1, 2] },
           { "orderable": false, "targets": [3, 4] }
-        ]
+        ],
+        "order": [[2, "desc"]],
       });
     });
   </script>
@@ -185,11 +186,12 @@ vuln_html = """
       <tbody>
       {% for vuln in vulns %}
         {% set parts = vuln.severity.split(' - ') %}
+        {% set severity_id = parts[0] %}
         {% set severity_label = parts[1] if parts|length > 1 else parts[0] %}
         <tr>
           <td>{{ vuln.package }}</td>
           <td>{{ vuln.vuln_id }}</td>
-          <td><span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span></td>
+          <td><span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span></td>
           <td>{{ vuln.score }}</td>
           <td>
             {{ vuln.description }}

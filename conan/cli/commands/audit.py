@@ -26,6 +26,10 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     Scan a given recipe for vulnerabilities in its dependencies.
     """
     common_graph_args(subparser)
+    # Needed for the validation of args, but this should usually be left as False here
+    # TODO: Do we then want to hide it in the --help?
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
 
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
@@ -50,7 +54,8 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     if path:
         deps_graph = gapi.load_graph_consumer(path, args.name, args.version, args.user, args.channel,
                                               profile_host, profile_build, lockfile, remotes,
-                                              args.update, is_build_require=False) # TO DISCUSS: defaulting to False the is_build_require
+                                              # TO DISCUSS: defaulting to False the is_build_require
+                                              args.update, is_build_require=args.build_require)
     else:
         deps_graph = gapi.load_graph_requires(args.requires, args.tool_requires, profile_host,
                                               profile_build, lockfile, remotes, args.update)
@@ -96,8 +101,7 @@ def text_provider_formatter(providers_action):
         else:
             for provider in providers:
                 if provider:
-                    cli_out_write(f"{provider.name} (type: {provider.type}) - {provider.url}")
-
+                    cli_out_write(str(provider))
 
 def json_provider_formatter(providers_action):
     ret = []

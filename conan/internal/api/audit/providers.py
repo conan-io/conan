@@ -7,10 +7,11 @@ from conan.errors import ConanException
 class ConanCenterProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
-        self.url = urljoin(provider_data["url"], "api/v1/query")
+        self.url = provider_data["url"]
         self.type = provider_data["type"]
         self.token = provider_data.get("token")
         self._session = conan_api.remotes.requester
+        self._query_url = urljoin(self.url, "api/v1/query")
 
     def get_cves(self, refs):
         if not self.token:
@@ -44,7 +45,7 @@ class ConanCenterProvider:
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
             response = self._session.post(
-                self.url,
+                self._query_url,
                 headers=headers,
                 json={
                     "reference": str(ref),
@@ -114,10 +115,11 @@ class ConanCenterProvider:
 class PrivateProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
-        self.url = urljoin(provider_data["url"], "catalog/api/v0/public/graphql")
+        self.url = provider_data["url"]
         self.type = provider_data["type"]
         self.data = provider_data
         self._session = conan_api.remotes.requester
+        self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
     def get_cves(self, refs):
         result = {"data": {}}
@@ -188,7 +190,7 @@ class PrivateProvider:
                 headers["Authorization"] = f"Basic {self.data['user']}:{self.data['password']}"
 
             response = self._session.post(
-                self.url,
+                self._query_url,
                 headers=headers,
                 json={
                     "query": textwrap.dedent(full_query)
