@@ -172,8 +172,6 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     """
     subparser.add_argument("path", nargs="*",
                            help="Install only these editable packages, not all")
-    subparser.add_argument("--ref", action="append",
-                           help="Install only these editable packages, not all")
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -195,7 +193,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 
     conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
-    requires = conan_api.workspace.select_editables(args.path, args.ref)
+    requires = conan_api.workspace.select_editables(args.path)
     if not requires:
         raise ConanException("This workspace cannot be installed, it doesn't have any editable")
     deps_graph = conan_api.graph.load_graph_requires(requires, [],

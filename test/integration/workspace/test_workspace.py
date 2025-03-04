@@ -553,10 +553,8 @@ class TestMeta:
         c.run("workspace add liba")
         c.run("workspace add libb")
         c.run("workspace add libc")
-        for arg in ("--ref=libb/0.1", "--ref=libb/0.1 --ref=liba/0.1",
-                    "libb", "libb liba"):
+        for arg in ("libb", "libb liba"):
             c.run(f"workspace install {arg} -g CMakeDeps -of=build")
-            print(c.out)
             assert "dep1/0.1" in c.out
             assert "dep2/0.1" not in c.out
             assert "libc/0.1" not in c.out
