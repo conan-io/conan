@@ -122,6 +122,17 @@ class WorkspaceAPI:
                                                                    v["output_folder"]))
         return editables
 
+    def select_editables(self, paths, refs):
+        filtered_refs = [RecipeReference.loads(r) for r in refs or []]
+        filtered_refs.extend(self.editable_from_path(p) for p in paths or [])
+        editables = self.editable_packages
+        requires = [ref for ref in editables]
+        if filtered_refs:
+            ConanOutput().info(f"Filtering and installing only selected editable packages")
+            requires = [ref for ref in requires if ref in filtered_refs]
+            ConanOutput().info(f"Filtered references: {requires}")
+        return requires
+
     @property
     def products(self):
         self._check_ws()

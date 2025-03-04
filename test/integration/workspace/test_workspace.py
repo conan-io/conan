@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import textwrap
 
 import pytest
@@ -251,6 +252,19 @@ class TestAddRemove:
                 "mydeppkg/conanfile.py": GenConanfile("mydeppkg", "0.1")})
         c.run("workspace add mydeppkg --product")
         c.run("workspace remove mydeppkg")
+        c.run("workspace info")
+        assert "mydeppkg" not in c.out
+
+    def test_remove_removed_folder(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "mydeppkg/conanfile.py": GenConanfile("mydeppkg", "0.1")})
+        c.run("workspace add mydeppkg")
+        # If we now remove the folder
+        shutil.rmtree(os.path.join(c.current_folder, "mydeppkg"))
+        # It can still be removed by path, even if the path doesn't exist
+        c.run("workspace remove mydeppkg")
+        assert "Removed from workspace: mydeppkg/0.1" in c.out
         c.run("workspace info")
         assert "mydeppkg" not in c.out
 
@@ -523,6 +537,32 @@ class TestMeta:
         c.run("workspace add dep")
         c.run("workspace install", assert_error=True)
         assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out
+
+    def test_install_partial(self):
+        # If we want to install only some part of the workspace
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile()})
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        c.save({"conanws.yml": "",
+                "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("dep1/0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+                "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1",
+                                                                               "dep2/0.1")},
+               clean_first=True)
+        c.run("workspace add liba")
+        c.run("workspace add libb")
+        c.run("workspace add libc")
+        for arg in ("--ref=libb/0.1", "--ref=libb/0.1 --ref=liba/0.1",
+                    "libb", "libb liba"):
+            c.run(f"workspace install {arg} -g CMakeDeps -of=build")
+            print(c.out)
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" not in c.out
+            assert "libc/0.1" not in c.out
+            files = os.listdir(os.path.join(c.current_folder, "build"))
+            assert "dep1-config.cmake" in files
+            assert "dep2-config.cmake" not in files
 
 
 def test_workspace_with_local_recipes_index():
