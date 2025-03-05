@@ -93,10 +93,9 @@ class ConanCenterProvider:
                         f"minute{'s'if reset_in_minutes > 1 else ''}.\n",
                         fg=Color.BRIGHT_WHITE,
                     )
-
-                # FIXME: add some help here
-                #output.write("For more information, visit: ", fg=Color.BRIGHT_WHITE, newline=False)
-                #output.write("https://some-url-in-the-future", newline=True, fg=Color.BRIGHT_BLUE)
+                # Now link them to where we try to sell them the product
+                output.write("Visit our website to learn more about JFrog's DevSecOps solution: ", fg=Color.BRIGHT_WHITE, newline=False)
+                output.write("https://jfrog.com/devops-native-security/", newline=True, fg=Color.BRIGHT_BLUE)
                 output.write("\n")
                 ConanOutput().error("Rate limit exceeded.\n")
                 errors_in_response = True
