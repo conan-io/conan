@@ -128,6 +128,8 @@ def audit_provider(conan_api, parser, subparser, *args):
     if args.action == "add":
         if not args.name or not args.url or not args.type:
             raise ConanException("Name, URL and type are required to add a provider")
+        if " " in args.name:
+            raise ConanException("Name cannot contain spaces")
         conan_api.audit.add_provider(args.name, args.url, args.type)
 
         if not args.token:
