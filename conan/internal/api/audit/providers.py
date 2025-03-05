@@ -129,6 +129,7 @@ class PrivateProvider:
                 ConanOutput().error(f"Error: {response['error']['details']}")
                 result["error"] = response["error"]
                 return result, True
+            response["data"][str(ref)] = response["data"].pop("query", {})
             result["data"].update(response["data"])
         return result, False
 
@@ -136,7 +137,7 @@ class PrivateProvider:
     def _build_query(ref):
         name, version = ref.name, ref.version
         full_query = f"""query packageVersionDetails {{
-            {name}: packageVersion(name: "{name}", type: "conan", version: "{version}") {{
+            query: packageVersion(name: "{name}", type: "conan", version: "{version}") {{
                 version
                 vulnerabilities(first: 100) {{
                     totalCount
