@@ -54,12 +54,12 @@ class ConanCenterProvider:
             if response.status_code == 200:
                 result["data"].update(response.json()["data"])
             elif response.status_code == 400:
-                ConanOutput().error(f"Package '{ref}' not found.\n"
+                ConanOutput().warning(f"Package '{ref}' not found.\n"
                                     f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
                                     f"Please ensure the package exists in the official repository: https://conan.io/center\n"
                                     f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
-                errors_in_response = True
-                break
+                # errors_in_response = True
+                continue
 
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
