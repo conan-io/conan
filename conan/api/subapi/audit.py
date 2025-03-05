@@ -29,8 +29,8 @@ class AuditAPI:
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
-        refs = list(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                        for node in deps_graph.nodes[1:]))
+        refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
+                        for node in deps_graph.nodes[1:]), key= lambda ref: ref.name)
         return provider.get_cves(refs)
 
     def list(self, reference, provider):
