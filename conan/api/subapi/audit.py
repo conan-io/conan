@@ -33,13 +33,14 @@ class AuditAPI:
                         for node in deps_graph.nodes[1:]), key= lambda ref: ref.name)
         return provider.get_cves(refs)
 
-    def list(self, reference, provider):
+    def list(self, references, provider):
         """
         List the vulnerabilities of the given reference.
         """
-        ref = RecipeReference.loads(reference)
-        ref.validate_ref()
-        return provider.get_cves([ref])
+        refs = [RecipeReference.loads(ref) for ref in references]
+        for ref in refs:
+            ref.validate_ref()
+        return provider.get_cves(refs)
 
     def get_provider(self, provider_name):
         """
