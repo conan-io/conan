@@ -1,6 +1,9 @@
 import textwrap
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
+from conan.tools.env.environment import environment_wrap_command
+from conan.test.assets.genconanfile import GenConanfile
 
 
 def assert_vars_file(client, configuration):
@@ -62,3 +65,114 @@ def test_premakedeps():
     # Assert package per configuration files
     assert_vars_file(client, 'debug')
     assert_vars_file(client, 'release')
+
+
+def test_todo():
+    # Create package
+    client = TestClient()
+    # client.run("remote add conancenter https://center2.conan.io")
+
+    def run_pkg(msg):
+        host_arch = client.get_default_host_profile().settings['arch']
+        cmd_release = environment_wrap_command(ConanFileMock(), f"conanrunenv-release-{host_arch}",
+                                               client.current_folder, "dep")
+        client.run_command(cmd_release)
+        assert "{}: Hello World Release!".format(msg) in client.out
+
+    client.run("new cmake_lib -d name=dep -d version=1.0 -o dep")
+
+    consumer_source = textwrap.dedent("""
+        #include <iostream>
+        #include "dep.h"
+
+        int main(void) {
+           dep();
+           std::cout << "Hello World" << std::endl;
+           return 0;
+        }
+    """)
+
+    premake5 = textwrap.dedent("""
+        include("conandeps.premake5.lua")
+
+        workspace "HelloWorld"
+           configurations { "Debug", "Release" }
+
+        project "HelloWorld"
+           kind "ConsoleApp"
+           language "C++"
+           targetdir "bin/%{cfg.buildcfg}"
+
+           files { "**.h", "**.cpp" }
+           conan_setup()
+
+           filter "configurations:Debug"
+              defines { "DEBUG" }
+              symbols "On"
+
+           filter "configurations:Release"
+              defines { "NDEBUG" }
+              optimize "On"
+    """)
+
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy, get, collect_libs, chdir, save, replace_in_file
+        from conan.tools.layout import basic_layout
+        from conan.tools.microsoft import MSBuild
+        from conan.tools.premake import Premake, PremakeDeps
+        import os
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "pkg"
+            version = "1.0"
+            exports_sources = '*'
+
+            def layout(self):
+                basic_layout(self, src_folder="src")
+
+            def requirements(self):
+                self.requires("dep/1.0")
+
+            def generate(self):
+                deps = PremakeDeps(self)
+                deps.generate()
+
+            def build(self):
+                with chdir(self, self.source_folder):
+                    premake = Premake(self)
+                    premake.arguments = {"scripts": "../build-release/conan"}
+                    premake.configure()
+                    if self.settings.os == "Windows":
+                        pass
+                        # msbuild = MSBuild(self)
+                        # msbuild.build("Yojimbo.sln")
+                    else:
+                        build_type = str(self.settings.build_type)
+                        self.run(f"make config={build_type.lower()} -j")
+
+            def package(self):
+                copy(self, "*.h", os.path.join(self.source_folder, "include"), os.path.join(self.package_folder, "include", "pkg"))
+                for lib in ("*.lib", "*.a"):
+                    copy(self, lib, self.source_folder, os.path.join(self.package_folder, "lib"), keep_path=False)
+        """)
+
+    client.save({"consumer/conanfile.py": conanfile,
+                 "consumer/src/hello.cpp": consumer_source,
+                 "consumer/src/premake5.lua": premake5,
+                 })
+
+    client.run("create dep")
+    client.run("create consumer --build=missing")
+    build_folder = client.created_layout().build()
+    print(build_folder)
+
+    print(client.out)
+    client.run("install consumer")
+    run_pkg("Hello World")
+
+    print(client.out)
+

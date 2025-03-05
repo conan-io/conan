@@ -20,12 +20,15 @@ class Premake:
         self.luafile = 'premake5.lua'   # Path to the root (premake5) lua file
         # (key value pairs. Will translate to "--{key}={value}")
         self.arguments = {}             # https://premake.github.io/docs/Command-Line-Arguments/
+        self.arguments["scripts"] = self._conanfile.generators_folder
+        if self._conanfile.settings.get_safe("arch"):
+            self.arguments["arch"] = self._conanfile.settings.arch
 
         if "msvc" in self._conanfile.settings.compiler:
             msvc_version = PREMAKE_VS_VERSION.get(str(self._conanfile.settings.compiler.version))
             self.action = f'vs{msvc_version}'
         else:
-            self.action = 'gmake2'
+            self.action = 'gmake'
 
     @staticmethod
     def _expand_args(args):
