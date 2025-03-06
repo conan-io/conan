@@ -52,7 +52,7 @@ class ConanCenterProvider:
                 },
             )
             if response.status_code == 200:
-                result["data"].setdefault(ref.name, {}).update(response.json()["data"]["query"])
+                result["data"].setdefault(str(ref), {}).update(response.json()["data"]["query"])
             elif response.status_code == 400:
                 ConanOutput().warning(f"Package '{ref}' not found.\n"
                                     f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
@@ -106,7 +106,7 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
             else:
-                ConanOutput().error(f"Error ({response.status_code})")
+                ConanOutput().error(f"Error in {ref} ({response.status_code})")
                 errors_in_response = True
                 break
         return result, errors_in_response
@@ -128,7 +128,7 @@ class PrivateProvider:
                 ConanOutput().error(f"Error: {response['error']['details']}")
                 result["error"] = response["error"]
                 return result, True
-            result["data"].setdefault(ref.name, {}).update(response["data"]["query"])
+            result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
         return result, False
 
     @staticmethod

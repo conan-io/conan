@@ -46,8 +46,7 @@ def text_vuln_formatter(result):
     total_vulns = 0
     summary_lines = []
 
-    for pkg_name, pkg_info in response["data"].items():
-        ref = f"{pkg_name}/{pkg_info['version']}"
+    for ref, pkg_info in response["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
 
