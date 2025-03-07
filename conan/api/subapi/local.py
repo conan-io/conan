@@ -1,7 +1,6 @@
 import os
 
 from conan.cli import make_abs_path
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.local.editable import EditablePackages
 from conan.internal.methods import run_build_method, run_source_method
@@ -9,7 +8,6 @@ from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.client.hook_manager import HookManager
 from conan.api.model import RecipeReference
 from conans.util.files import chdir
 
@@ -93,13 +91,13 @@ class LocalAPI:
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+        hook_manager = self._conan_api.config.hook_manager
         run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile):
         """ calls the 'build()' method of the current (user folder) conanfile.py
         """
-        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+        hook_manager = self._conan_api.config.hook_manager
         conanfile.folders.set_base_package(conanfile.folders.base_build)
         conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
         run_build_method(conanfile, hook_manager)

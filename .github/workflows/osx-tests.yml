@@ -2,6 +2,10 @@ name: OSX Tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   osx_setup:
@@ -11,10 +15,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.8
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: '3.10'
 
       - name: Cache pip packages
         id: cache-pip
@@ -32,7 +36,7 @@ jobs:
           pip install meson
 
       - name: Uninstall default CMake
-        run: brew uninstall cmake || true
+        run: brew uninstall --formula cmake || true
 
       - name: Cache Homebrew packages
         id: cache-brew
@@ -114,7 +118,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [3.8, 3.12, 3.13]
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
