@@ -222,8 +222,7 @@ vuln_html = """
 def html_vuln_formatter(result):
     response, errors_in_response = result
     vulns = []
-    for pkg_name, pkg_info in response["data"].items():
-        ref = f"{pkg_name}/{pkg_info['version']}"
+    for ref, pkg_info in response["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
             continue
