@@ -18,16 +18,20 @@ class PremakeToolchain:
     #!lua
     include("conandeps.premake5.lua")
 
+
     workspace "{{workspace}}"
-        location "../../build-{{build_type}}"
+        premake.api.addAliases("architecture", {
+          ["armv8"] = "arm64"
+        })
+
         {% if cppstd %}
         cppdialect "{{cppstd}}"
         {% endif %}
         {% if cstd %}
         cdialect "{{cstd}}"
         {% endif %}
-        location "../../build-{{build_type}}"
-        targetdir  "../../build-{{build_type}}"
+        location "{{ build_folder }}"
+        targetdir "{{ build_folder }}"
         conan_setup()
 
         {% if variables %}
@@ -36,12 +40,12 @@ class PremakeToolchain:
     """
     )
 
-
-    def __init__(self, conanfile, workspace = '*'):
+    def __init__(self, conanfile, workspace="*"):
         # '*' is the global workspace
         self._conanfile = conanfile
         self.workspace = workspace
-        self.variables = {}
+        # TODO: not possible to overwrite upstream defines yet
+        self.defines = {}
 
     def generate(self):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
@@ -49,20 +53,20 @@ class PremakeToolchain:
         if cppstd.startswith("gnu"):
             cppstd = f"gnu++{cppstd[3:]}"
 
-        build_type = str(self._conanfile.settings.build_type).lower()
-
         formated_variables = ""
-        for key, value in self.variables.items():
+        for key, value in self.defines.items():
             if isinstance(value, bool):
-                # TODO: var = False not working with C++
                 value = 1 if value else 0
             formated_variables += f'"{key}={value}", '
 
         content = Template(
             self._premake_file_template, trim_blocks=True, lstrip_blocks=True
         ).render(
-            workspace=self.workspace, build_type=build_type, cppstd=cppstd, cstd=cstd,
-            variables=formated_variables
+            workspace=self.workspace,
+            build_folder=self._conanfile.build_folder,
+            cppstd=cppstd,
+            cstd=cstd,
+            variables=formated_variables,
         )
         save(
             self,
