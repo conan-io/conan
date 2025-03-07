@@ -127,7 +127,7 @@ vuln_html = """
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #333; color: #ffffff; }
     .container { width: 80%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
     h1 { text-align: center; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; padding-top: 10x;}
     col.pkg-col { min-width: 100px; }
     col.id-col { min-width: 160px; }
     col.sev-col { min-width: 100px; }
