@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PY36=3.6.15 \
     PY38=3.8.6 \
     PY39=3.9.2 \
+    PY310=3.10.16 \
     PY312=3.12.3 \
     PY313=3.13.0 \
     CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
@@ -95,6 +96,7 @@ RUN curl https://pyenv.run | bash && \
     pyenv install $PY36 && \
     pyenv install $PY38 && \
     pyenv install $PY39 && \
+    pyenv install $PY310 && \
     pyenv install $PY312 && \
     pyenv install $PY313 && \
     pyenv global $PY39 && \

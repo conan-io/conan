@@ -1,11 +1,9 @@
 from conan.api.output import ConanOutput
 from conan.internal.cache.cache import PkgCache
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.export import cmd_export
 from conan.internal.methods import run_package_method
 from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE
-from conans.client.hook_manager import HookManager
 from conan.api.model import PkgReference
 from conans.util.files import mkdir
 
@@ -18,13 +16,13 @@ class ExportAPI:
     def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
         ConanOutput().title("Exporting recipe to the cache")
         app = ConanApp(self.conan_api)
-        hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
+        hook_manager = self.conan_api.config.hook_manager
         return cmd_export(app, hook_manager, self.conan_api.config.global_conf, path, name, version,
                           user, channel, graph_lock=lockfile, remotes=remotes)
 
     def export_pkg(self, deps_graph, source_folder, output_folder):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
+        hook_manager = self.conan_api.config.hook_manager
 
         # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
         # to be downloaded from remotes

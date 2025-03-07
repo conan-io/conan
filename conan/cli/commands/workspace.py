@@ -50,8 +50,7 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument('path',  nargs="?",
                            help='Path to the package folder in the user workspace')
     add_reference_args(subparser)
-    subparser.add_argument("--ref", nargs="?",
-                           help="Open and add this reference")
+    subparser.add_argument("--ref", help="Open and add this reference")
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
     group = subparser.add_mutually_exclusive_group()
@@ -78,9 +77,10 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
 @conan_subcommand()
 def workspace_remove(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Remove packages to current workspace
+    Remove packages from the current workspace
     """
-    subparser.add_argument('path', help='Path to the package folder in the user workspace')
+    subparser.add_argument('path',
+                           help='Path to the package folder in the user workspace')
     args = parser.parse_args(*args)
     removed = conan_api.workspace.remove(make_abs_path(args.path))
     ConanOutput().info(f"Removed from workspace: {removed}")
@@ -170,6 +170,8 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     Install the workspace as a monolith, installing only external dependencies to the workspace,
     generating a single result (generators, etc) for the whole workspace.
     """
+    subparser.add_argument("path", nargs="*",
+                           help="Install only these editable packages, not all")
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -191,8 +193,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 
     conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
-    editables = conan_api.workspace.editable_packages
-    requires = [ref for ref in editables]
+    requires = conan_api.workspace.select_editables(args.path)
     if not requires:
         raise ConanException("This workspace cannot be installed, it doesn't have any editable")
     deps_graph = conan_api.graph.load_graph_requires(requires, [],

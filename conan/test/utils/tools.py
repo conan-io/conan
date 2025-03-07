@@ -11,7 +11,6 @@ import textwrap
 import traceback
 import uuid
 import zipfile
-from collections import OrderedDict
 from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
@@ -416,15 +415,6 @@ class TestClient:
         self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
-
-        if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception(textwrap.dedent("""
-                Testing framework error: Servers should be an OrderedDict. e.g:
-                    servers = OrderedDict()
-                    servers["r1"] = server
-                    servers["r2"] = TestServer()
-            """))
-
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()

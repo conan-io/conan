@@ -2,13 +2,17 @@ name: Windows Tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   unit_integration_tests:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: [3.13, 3.8, 3.6]
+        python-version: ${{ fromJson(inputs.python-versions) }}
     name: Unit & Integration Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -59,8 +63,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        python-version: [3.13, 3.8, 3.6]
-
+        python-version: ${{ fromJson(inputs.python-versions) }}
     name: Functional Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
