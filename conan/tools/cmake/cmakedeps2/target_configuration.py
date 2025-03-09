@@ -24,8 +24,9 @@ class TargetConfigurationTemplate2:
                                                  self._conanfile, check_type=bool)
         if auto_link:
             out = self._cmakedeps._conanfile.output  # noqa
-            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories not valid. "
-                        "The package 'package_info()' must correctly define the (CPS) information")
+            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
+                        "invalid. The package 'package_info()' must correctly define the (CPS) "
+                        "information", warn_tag="deprecated")
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)

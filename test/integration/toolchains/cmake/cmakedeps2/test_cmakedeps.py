@@ -196,5 +196,5 @@ def test_autolink_pragma():
     c.run("create . --name=pkg --version=0.1")
     assert "CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary" in c.out
     c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
-    assert "CMakeConfigDeps: cmake_set_interface_link_directories not valid. " \
+    assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
            "The package 'package_info()' must correctly define the (CPS) information" in c.out
