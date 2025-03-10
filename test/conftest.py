@@ -66,7 +66,7 @@ tools_locations = {
         }},
     'autotools': {"exe": "autoconf"},
     'cmake': {
-        "default": "3.15",
+        "default": "4.0-rc3",
         "3.15": {
             "path": {'Windows': 'C:/tools/cmake/3.15.7/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
@@ -86,6 +86,11 @@ tools_locations = {
             "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-3.27.9-windows-x86_64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
+        },
+        "4.0-rc3": {
+            "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-4.0.0-rc3-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.0.0-rc3/bin',
+                     'Linux': "/usr/share/cmake-4.0.0-rc3/bin"}
         }
     },
     'ninja': {
