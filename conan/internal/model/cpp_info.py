@@ -528,7 +528,7 @@ class _Component:
                     if len(lib_found) > 1:
                         lib_found.sort()
                         found, _ = os.path.splitext(os.path.basename(lib_found[0]))
-                        if found != libname:
+                        if found != libname and found != f"lib{libname}":
                             out.warning(f"There were several matches for Lib {libname}: {lib_found}")
                     return lib_found[0].replace("\\", "/")
 

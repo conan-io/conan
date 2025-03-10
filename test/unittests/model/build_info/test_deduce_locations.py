@@ -234,12 +234,14 @@ def test_warning_windows_if_more_than_one_dll(conanfile):
     assert result.type == "shared-library"
 
 
-def test_multiple_matches_exact_match(conanfile):
+@pytest.mark.parametrize("prefix", [True, False])
+def test_multiple_matches_exact_match(conanfile, prefix):
     # If the match is perfect, do not warn
     folder = temp_folder()
-    save(os.path.join(folder, "libdir", "mylib.a"), "")
-    save(os.path.join(folder, "libdir", "mylib_imp.a"), "")
-    save(os.path.join(folder, "libdir", "mylib_other.a"), "")
+    prefix = "lib" if prefix else ""
+    save(os.path.join(folder, "libdir", f"{prefix}mylib.a"), "")
+    save(os.path.join(folder, "libdir", f"{prefix}mylib_imp.a"), "")
+    save(os.path.join(folder, "libdir", f"{prefix}mylib_other.a"), "")
 
     cppinfo = CppInfo()
     cppinfo.libdirs = ["libdir"]
@@ -250,5 +252,5 @@ def test_multiple_matches_exact_match(conanfile):
     with redirect_output(output):
         result = cppinfo.deduce_full_cpp_info(conanfile)
     assert "WARN: There were several matches for Lib mylib" not in output
-    assert result.location == f"{folder}/libdir/mylib.a"
+    assert result.location == f"{folder}/libdir/{prefix}mylib.a"
     assert result.type == "static-library"
