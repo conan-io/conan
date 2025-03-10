@@ -128,7 +128,8 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_0 70
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
