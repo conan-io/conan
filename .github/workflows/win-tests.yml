@@ -161,7 +161,7 @@ jobs:
             C:\tools\cmake\3.19.7
             C:\tools\cmake\3.23.5
             C:\tools\cmake\3.27.9
-            C:\tools\cmake\4.0.0
+            C:\tools\cmake\4.0.0-rc3
             C:\tools\bazel\6.5.0
             C:\tools\bazel\7.4.1
             C:\tools\bazel\8.0.0

@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/Applications/CMake/4.0.0
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
