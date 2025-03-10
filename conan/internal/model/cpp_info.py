@@ -527,7 +527,9 @@ class _Component:
                 if lib_found:
                     if len(lib_found) > 1:
                         lib_found.sort()
-                        out.warning(f"There were several matches for Lib {libname}: {lib_found}")
+                        found, _ = os.path.splitext(os.path.basename(lib_found[0]))
+                        if found != libname:
+                            out.warning(f"There were several matches for Lib {libname}: {lib_found}")
                     return lib_found[0].replace("\\", "/")
 
         out = ConanOutput(scope=str(conanfile))
