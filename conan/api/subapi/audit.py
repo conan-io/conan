@@ -64,7 +64,7 @@ class AuditAPI:
 
             raise ConanException(
                 f"Provider '{provider_name}' not found. Please specify a valid provider name or add it using: "
-                f"'conan audit provider add --name={provider_name} {add_arguments} --token=<token>'\n"
+                f"'conan audit provider add {provider_name} {add_arguments} --token=<token>'\n"
                 f"{register_message}"
             )
 
