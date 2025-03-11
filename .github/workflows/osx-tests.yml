@@ -102,6 +102,9 @@ jobs:
             rm -rf cmake-${version}-macos-universal
             rm cmake-${version}-macos-universal.tar.gz
           done
+      - name: Check CMake 4.0-rc3
+        run: |
+          ${HOME}/Applications/Applications/CMake/4.0.0-rc3/bin --version
 
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
