@@ -1,3 +1,4 @@
+import binascii
 import json
 import os
 import base64
@@ -49,7 +50,23 @@ class AuditAPI:
         # TODO: More work remains to be done here, hardcoded for now for testing
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
-            raise ConanException(f"Provider '{provider_name}' not found")
+            add_arguments = (
+                "--url=https://audit.conan.io/ --type=conan-center-proxy"
+                if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
+                else "--url=<url> --type=<type>"
+            )
+
+            register_message = (
+                f"If you don't have a valid token, register at: https://audit.conan.io/register."
+                if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
+                else ""
+            )
+
+            raise ConanException(
+                f"Provider '{provider_name}' not found. Please specify a valid provider name or add it using: "
+                f"'conan audit provider add --name={provider_name} {add_arguments} --token=<token>'\n"
+                f"{register_message}"
+            )
 
         provider_data = providers[provider_name]
         safe_provider_name = provider_name.replace("-", "_")
@@ -59,7 +76,11 @@ class AuditAPI:
             # Always override the token with the environment variable
             provider_data["token"] = env_token
         elif "token" in provider_data:
-            provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
+            try:
+                provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
+            except binascii.Error as e:
+                raise ConanException(f"Invalid token format for provider '{provider_name}'. The token might be corrupt.")
+
         provider_cls = self._provider_cls.get(provider_data["type"])
 
         return provider_cls(self.conan_api, provider_name, provider_data)
