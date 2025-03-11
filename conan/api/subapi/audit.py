@@ -50,12 +50,22 @@ class AuditAPI:
         # TODO: More work remains to be done here, hardcoded for now for testing
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
-            add_arguments = "--url=https://audit.conan.io/ --type=conan-center-proxy" \
-                if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME else "--url=<url> --type=<type>"
+            add_arguments = (
+                "--url=https://audit.conan.io/ --type=conan-center-proxy"
+                if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
+                else "--url=<url> --type=<type>"
+            )
+
+            register_message = (
+                f"If you don't have a valid token, register at: https://audit.conan.io/register."
+                if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
+                else ""
+            )
 
             raise ConanException(
-                f"Provider '{provider_name}' not found. Please specify a valid provider name or add '{provider_name}' using: "
-                f"'conan audit provider add --name={provider_name} {add_arguments} --token=<token>'."
+                f"Provider '{provider_name}' not found. Please specify a valid provider name or add it using: "
+                f"'conan audit provider add --name={provider_name} {add_arguments} --token=<token>'\n"
+                f"{register_message}"
             )
 
         provider_data = providers[provider_name]
