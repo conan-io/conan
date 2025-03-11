@@ -393,7 +393,8 @@ class TargetConfigurationTemplate2:
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
         {% if lib_info.get("frameworks") %}
-        set_property(TARGET {{lib}} PROPERTY INTERFACE_LINK_LIBRARIES "{{config_wrapper(config, lib_info["frameworks"])}}")
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
         set_target_properties({{lib}} PROPERTIES
