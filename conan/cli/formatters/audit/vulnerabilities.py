@@ -190,7 +190,13 @@ vuln_html = """
         <tr>
           <td>{{ vuln.package }}</td>
           <td>{{ vuln.vuln_id }}</td>
-          <td><span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span></td>
+          <td>
+            {% if vuln.severity not in ['N/A', ''] %}
+              <span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span>
+            {% else %}
+              {{ vuln.severity }}
+            {% endif %}
+          </td>
           <td>{{ vuln.score }}</td>
           <td>
             {{ vuln.description }}
@@ -225,26 +231,35 @@ def html_vuln_formatter(result):
     for ref, pkg_info in response["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
-            continue
-        sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
-        for vuln in sorted_vulns:
-            node = vuln["node"]
-            name = node.get("name")
-            sev = node.get("severity", "Medium")
-            sev = f"{severity_order.get(sev, 2)} - {sev}"
-            score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f"CVSS: {score}" if score else "-"
-            aliases = node.get("aliases", [])
-            references = node.get("references", [])
-            desc = node.get("description", "")
             vulns.append({
                 "package": ref,
-                "vuln_id": name,
-                "aliases": aliases,
-                "severity": sev,
-                "score": score_txt,
-                "description": desc,
-                "references": references,
+                "vuln_id": "-",
+                "aliases": [],
+                "severity": "N/A",
+                "score": "-",
+                "description": "No vulnerabilities found.",
+                "references": []
             })
+        else:
+            sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
+            for vuln in sorted_vulns:
+                node = vuln["node"]
+                name = node.get("name")
+                sev = node.get("severity", "Medium")
+                sev = f"{severity_order.get(sev, 2)} - {sev}"
+                score = node.get("cvss", {}).get("preferredBaseScore")
+                score_txt = f"CVSS: {score}" if score else "-"
+                aliases = node.get("aliases", [])
+                references = node.get("references", [])
+                desc = node.get("description", "")
+                vulns.append({
+                    "package": ref,
+                    "vuln_id": name,
+                    "aliases": aliases,
+                    "severity": sev,
+                    "score": score_txt,
+                    "description": desc,
+                    "references": references,
+                })
     if not errors_in_response or response["data"]:
         cli_out_write(_render_vulns(vulns, vuln_html))
