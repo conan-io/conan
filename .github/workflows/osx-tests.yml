@@ -97,7 +97,7 @@ jobs:
               --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
               --exclude=CMake.app/Contents/share/vim
             mkdir -p ${HOME}/Applications/CMake/${version}
-            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
+            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version%-*}
             ${HOME}/Applications/CMake/${version}/bin/cmake --version
             rm -rf cmake-${version}-macos-universal
             rm cmake-${version}-macos-universal.tar.gz
