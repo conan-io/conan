@@ -10,7 +10,7 @@ new_value = "will_break_next"
 
 
 @pytest.mark.parametrize("shared", [True, False])
-# @pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_osx_frameworks(shared):
     """
