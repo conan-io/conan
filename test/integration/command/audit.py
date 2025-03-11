@@ -1,5 +1,7 @@
+import sys
 from contextlib import contextmanager
 
+import pytest
 from mock.mock import patch, MagicMock
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -91,3 +93,13 @@ def test_conan_audit_paths():
     tc.run("audit provider remove --name=conancenter")
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "ERROR: Provider 'conancenter' not found" in tc.out
+
+
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="Strict Base64 validation introduced in Python 3.10")
+def test_conan_audit_corrupted_token():
+    tc = TestClient(light=True)
+    tc.run('audit provider auth --name=conancenter --token="corrupted_token"')
+    tc.run("audit list zlib/1.2.11", assert_error=True)
+    assert "Invalid token format for provider 'conancenter'. The token might be corrupt." in tc.out
+
+

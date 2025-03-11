@@ -1,3 +1,4 @@
+import binascii
 import json
 import os
 import base64
@@ -59,7 +60,11 @@ class AuditAPI:
             # Always override the token with the environment variable
             provider_data["token"] = env_token
         elif "token" in provider_data:
-            provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
+            try:
+                provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
+            except binascii.Error as e:
+                raise ConanException(f"Invalid token format for provider '{provider_name}'. The token might be corrupt.")
+
         provider_cls = self._provider_cls.get(provider_data["type"])
 
         return provider_cls(self.conan_api, provider_name, provider_data)
