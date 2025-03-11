@@ -136,7 +136,6 @@ class PrivateProvider:
         name, version = ref.name, ref.version
         full_query = f"""query packageVersionDetails {{
             query: packageVersion(name: "{name}", type: "conan", version: "{version}") {{
-                version
                 vulnerabilities(first: 100) {{
                     totalCount
                     edges {{

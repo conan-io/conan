@@ -23,7 +23,6 @@ def test_conan_audit_paths():
     successful_response = {
         "data": {
             "query": {
-                "version": "1.2.11",
                 "vulnerabilities": {
                     "totalCount": 1,
                     "edges": [
