@@ -97,6 +97,10 @@ def text_vuln_formatter(result):
     for line in summary_lines:
         cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
+    cli_out_write("\nIf you are using packages from Conan Center, some vulnerabilities may have already been mitigated "
+                  "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
+                  fg=Color.BRIGHT_YELLOW)
+
     cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
                   "https://jfrog.com/advanced-security/ for more information.\n",
                   fg=Color.BRIGHT_GREEN)
