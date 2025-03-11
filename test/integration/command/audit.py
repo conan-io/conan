@@ -92,7 +92,9 @@ def test_conan_audit_paths():
 
     tc.run("audit provider remove --name=conancenter")
     tc.run("audit list zlib/1.2.11", assert_error=True)
-    assert "ERROR: Provider 'conancenter' not found" in tc.out
+    assert ("ERROR: Provider 'conancenter' not found. Please specify a valid provider name or add "
+            "'conancenter' using: 'conan audit provider add --name=conancenter "
+            "--url=https://audit.conan.io/ --type=conan-center-proxy --token=<token>'.") in tc.out
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="Strict Base64 validation introduced in Python 3.10")
