@@ -104,7 +104,7 @@ jobs:
           done
       - name: Check CMake 4.0-rc3
         run: |
-          ${HOME}/Applications/Applications/CMake/4.0.0-rc3/bin --version
+          ${HOME}/Applications/Applications/CMake/4.0.0/bin --version
 
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
