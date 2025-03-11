@@ -29,7 +29,7 @@ class ConanCenterProvider:
                 output.write("  2. Register to obtain the access token and activate it.\n", fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
 
-                output.write(f"\n     conan audit provider auth --name={self.name} --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
+                output.write(f"\n     conan audit provider auth {self.name} --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
 
                 output.write("\nOnce authenticated, re-run the command.\n\n")
 

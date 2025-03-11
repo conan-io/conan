@@ -140,8 +140,8 @@ def audit_provider(conan_api, parser, subparser, *args):
     """
 
     subparser.add_argument("action", choices=["add", "list", "auth", "remove"], help="Action to perform from 'add', 'list' , 'remove' or 'auth'")
+    subparser.add_argument("name", help="Provider name", nargs="?")
 
-    subparser.add_argument("--name", help="Provider name")
     subparser.add_argument("--url", help="Provider URL")
     subparser.add_argument("--type", help="Provider type", choices=["conan-center-proxy", "private"])
     subparser.add_argument("--token", help="Provider token")

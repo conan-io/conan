@@ -66,7 +66,7 @@ def test_conan_audit_paths():
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Authentication required for the CVE provider: 'conancenter" in tc.out
 
-    tc.run("audit provider auth --name=conancenter --token=valid_token")
+    tc.run("audit provider auth conancenter --token=valid_token")
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11")
@@ -88,6 +88,12 @@ def test_conan_audit_paths():
         tc.run("audit list zlib/1.2.11")
         assert "Package 'zlib/1.2.11' not found" in tc.out
 
-    tc.run("audit provider remove --name=conancenter")
+    tc.run("audit provider add myprivate --url=foo --type=private --token=valid_token")
+
+    tc.run("audit provider list")
+    assert "(type: conan-center-proxy)" in tc.out
+    assert "(type: private)" in tc.out
+
+    tc.run("audit provider remove conancenter")
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "ERROR: Provider 'conancenter' not found" in tc.out
