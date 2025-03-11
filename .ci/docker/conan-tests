@@ -122,7 +122,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     wget https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-Linux-x86_64.tar.gz   && \
     tar -xvzf cmake-3.27.9-Linux-x86_64.tar.gz && mv cmake-3.27.9-linux-x86_64/ /usr/share/cmake-3.27.9 && \
     wget https://cmake.org/files/v4.0/cmake-4.0.0-rc3-linux-x86_64.tar.gz   && \
-    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake--linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
+    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake-4.0.0-rc3-linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
