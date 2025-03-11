@@ -219,6 +219,7 @@ vuln_html = """
     <div class="footer">
       <p>Vulnerability information provided by JFrog Advanced Security. Please check <a href="https://jfrog.com/advanced-security/" target="_blank">https://jfrog.com/advanced-security/</a> for more information.</p>
       <p>You can send questions and report issues about the returned vulnerabilities to <a href="mailto:conan-research@jfrog.com">conan-research@jfrog.com</a>.</p>
+      <p>Conan version: {{ version }}</p>
     </div>
   </div>
 </body>
