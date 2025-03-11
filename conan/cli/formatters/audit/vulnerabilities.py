@@ -93,13 +93,14 @@ def text_vuln_formatter(result):
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
     cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
 
-    cli_out_write("\nSummary:\n", fg=Color.BRIGHT_WHITE)
-    for line in summary_lines:
-        cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
+    if total_vulns > 0:
+        cli_out_write("\nSummary:\n", fg=Color.BRIGHT_WHITE)
+        for line in summary_lines:
+            cli_out_write(f"- {line}", fg=Color.BRIGHT_WHITE)
 
-    cli_out_write("\nIf you are using packages from Conan Center, some vulnerabilities may have already been mitigated "
-                  "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
-                  fg=Color.BRIGHT_YELLOW)
+        cli_out_write("\nIf you are using packages from Conan Center, some vulnerabilities may have already been mitigated "
+                      "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
+                      fg=Color.BRIGHT_YELLOW)
 
     cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
                   "https://jfrog.com/advanced-security/ for more information.\n",
