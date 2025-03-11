@@ -511,9 +511,10 @@ class TestRuntimeDeployer:
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
 
+
 @pytest.mark.parametrize("symlink, expected",
                          [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
-                          (False, ["libfoo.so.0.1.0",])])
+                          (False, ["libfoo.so.0.1.0"])])
 def test_runtime_deploy_symlinks(symlink, expected):
     """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
     """
@@ -531,7 +532,7 @@ def test_runtime_deploy_symlinks(symlink, expected):
                        os.symlink(src="libfoo.so.0", dst="libfoo.so")
            """)
     c.save({"foo/conanfile.py": conanfile,
-            "foo/lib/libfoo.so.0.1.0": "",})
+            "foo/lib/libfoo.so.0.1.0": ""})
     c.run("export-pkg foo/ --name=foo --version=0.1.0")
     c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks={symlink}")
 
@@ -565,3 +566,38 @@ def test_deployer_errors():
     c.run("install . --deployer=mydeploy2.py", assert_error=True)
     # The error message says conanfile, not a big deal still path to file is shown
     assert "ERROR: Unable to load conanfile" in c.out
+
+
+def test_deploy_relative_paths():
+    c = TestClient()
+    consumer = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            requires = "pkg/0.1"
+            settings = "build_type"
+            os = "build_type"
+            generators = "CMakeDeps"
+            def layout(self):
+                self.folders.build = os.path.join("some/sub/folders")
+                self.folders.generators = os.path.join(self.folders.build, "generators")
+        """)
+    deploy = textwrap.dedent("""
+        import os, shutil
+        def deploy(graph, output_folder):
+            conanfile = graph.root.conanfile
+            output_folder = os.path.join(conanfile.build_folder, "installed")
+            for dep in conanfile.dependencies.values():
+                new_folder = os.path.join(output_folder, dep.ref.name)
+                shutil.copytree(dep.package_folder, new_folder, symlinks=True)
+                dep.set_deploy_folder(new_folder)
+        """)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": consumer,
+            "mydeploy.py": deploy})
+    c.run("create pkg")
+
+    # If we don't change to another folder, the full_deploy will be recursive and fail
+    c.run("install consumer --build=missing --deployer=mydeploy.py")
+    data = c.load("consumer/some/sub/folders/generators/pkg-release-data.cmake")
+    assert 'set(pkg_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../installed/pkg")' in data
