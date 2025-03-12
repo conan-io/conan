@@ -287,5 +287,6 @@ def test_cmakeconfigdeps_components():
         """)
     c = TestClient()
     c.save({"conanfile.py": gtest,
-            "test_package/conanfile.py": GenConanfile().with_test("pass")})
-    c.run("create .")
+            "test_package/conanfile.py": GenConanfile().with_settings("build_type").with_generator("CMakeDeps").with_test("pass")})
+    c.run("create . -c tools.cmake.cmakedeps:new=will_break_next")
+    print(c.out)
