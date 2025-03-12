@@ -76,7 +76,7 @@ def test_osx_frameworks(shared):
         version = "1.0"
         settings = "os", "arch", "compiler", "build_type"
         languages = ["C++"]
-        package_type = "{'static-library' if shared else 'shared-library'}"
+        package_type = "{'shared-library' if shared else 'static-library'}"
         exports_sources = ["frame.cpp", "frame.h", "CMakeLists.txt"]
         generators = "CMakeToolchain", "CMakeConfigDeps"
         requires = "dep/1.0"
