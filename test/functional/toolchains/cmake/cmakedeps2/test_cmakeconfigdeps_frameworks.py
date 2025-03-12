@@ -10,7 +10,7 @@ new_value = "will_break_next"
 
 
 @pytest.mark.parametrize("shared", [True, False])
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.27")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_osx_frameworks(shared):
     """
@@ -79,19 +79,10 @@ def test_osx_frameworks(shared):
         name = "frame"
         version = "1.0"
         settings = "os", "arch", "compiler", "build_type"
-        options = {{"shared": [True, False], "fPIC": [True, False]}}
-        default_options = {{"shared": False, "fPIC": True}}
+        package_type = "{'shared-library' if shared else 'static-library'}"
         exports_sources = "frame.cpp", "frame.h", "CMakeLists.txt"
         generators = "CMakeToolchain", "CMakeConfigDeps"
         requires = "dep/1.0"
-
-        def config_options(self):
-            if self.settings.os == "Windows":
-                self.options.rm_safe("fPIC")
-
-        def configure(self):
-            if self.options.shared:
-                self.options.rm_safe("fPIC")
 
         def build(self):
             cmake = CMake(self)
