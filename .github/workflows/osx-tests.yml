@@ -7,24 +7,6 @@ on:
         required: true
         type: string
 
-env:
-  CMAKE_PATHS: |
-    ~/Applications/CMake/3.15.7
-    ~/Applications/CMake/3.19.7
-    ~/Applications/CMake/3.23.5
-    ~/Applications/CMake/3.27.9
-    ~/Applications/CMake/4.0.0-rc3
-  BAZEL_PATHS: |
-    ~/Applications/bazel/6.5.0
-    ~/Applications/bazel/7.4.1
-    ~/Applications/bazel/8.0.0
-  PIP_INSTALL_COMMANDS: |
-    pip install --upgrade pip
-    pip install -r conans/requirements.txt
-    pip install -r conans/requirements_server.txt
-    pip install -r conans/requirements_dev.txt
-    pip install meson
-
 jobs:
   osx_setup:
     runs-on: macos-14
@@ -47,7 +29,11 @@ jobs:
 
       - name: Install Python requirements
         run: |
-          ${{ env.PIP_INSTALL_COMMANDS }}
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
 
       - name: Uninstall default CMake
         run: brew uninstall --formula cmake || true
@@ -68,8 +54,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.CMAKE_PATHS }}
-            ${{ env.BAZEL_PATHS }}
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
+            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/7.4.1
+            ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
@@ -151,8 +143,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.CMAKE_PATHS }}
-            ${{ env.BAZEL_PATHS }}
+            ~/Applications/CMake/3.15.7
+            ~/Applications/CMake/3.19.7
+            ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
+            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/7.4.1
+            ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -162,7 +160,11 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          ${{ env.PIP_INSTALL_COMMANDS }}
+          pip install --upgrade pip
+          pip install -r conans/requirements.txt
+          pip install -r conans/requirements_server.txt
+          pip install -r conans/requirements_dev.txt
+          pip install meson
 
       - name: Install homebrew dependencies
         run: |
