@@ -212,19 +212,39 @@ def test_consuming_cpp_info_with_components_dependency_from_same_package():
                 self.cpp_info.components["lib_extended"].type = 'shared-library'
                 self.cpp_info.components["lib_extended"].requires = ['lib']
         """)
-    test_package = textwrap.dedent("""
-        from conan import ConanFile
-        class TestPkg(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
-            generators = "VirtualRunEnv", "CMakeDeps"
-
-            def requirements(self):
-                self.requires(self.tested_reference_str)
-
-            def test(self):
-                pass
-        """)
     c.save({"conanfile.py": conanfile,
-            "test_package/conanfile.py":test_package})
-
+            "test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                       .with_test("pass")
+                                                       .with_generator("CMakeDeps")})
     c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    # it doesn't break
+    assert "find_package(pkg)" in c.out
+
+
+def test_consuming_cpp_info_with_components_dependency_from_other_package():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.components["lib"].type = 'shared-library'
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["lib"].type = 'shared-library'
+                self.cpp_info.components["lib"].requires = ['dep::lib']
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": conanfile,
+            "pkg/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                           .with_test("pass")
+                                                           .with_generator("CMakeDeps")})
+    c.run("create dep")
+    c.run("create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    # it doesn't break
+    assert "find_package(pkg)" in c.out

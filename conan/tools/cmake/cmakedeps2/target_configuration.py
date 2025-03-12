@@ -64,7 +64,7 @@ class TargetConfigurationTemplate2:
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
                 link = not (pkg_type is PackageType.SHARED and
-                            dep_comp.package_type is PackageType.SHARED)
+                            dep_comp.type is PackageType.SHARED)
                 result[dep_target] = link
             else:  # Different package
                 try:
@@ -86,7 +86,7 @@ class TargetConfigurationTemplate2:
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
                     link = not (pkg_type is PackageType.SHARED and
-                                dep_comp.package_type is PackageType.SHARED)
+                                dep_comp.type is PackageType.SHARED)
                     result[dep_target] = link
         return result
 
