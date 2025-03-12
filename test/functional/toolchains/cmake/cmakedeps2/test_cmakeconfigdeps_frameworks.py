@@ -33,7 +33,11 @@ def test_osx_frameworks(shared):
       MACOSX_FRAMEWORK_IDENTIFIER MyFramework
       PUBLIC_HEADER frame.h
     )
-    target_link_libraries(MyFramework dep::dep)
+    target_link_libraries(MyFramework PRIVATE dep::dep)
+
+    if(BUILD_SHARED_LIBS)
+        target_link_libraries(MyFramework PRIVATE "-framework CoreFoundation")
+    endif()
 
     install(TARGETS MyFramework
       FRAMEWORK DESTINATION .)
@@ -75,11 +79,19 @@ def test_osx_frameworks(shared):
         name = "frame"
         version = "1.0"
         settings = "os", "arch", "compiler", "build_type"
-        languages = ["C++"]
-        package_type = "{'shared-library' if shared else 'static-library'}"
-        exports_sources = ["frame.cpp", "frame.h", "CMakeLists.txt"]
+        options = {{"shared": [True, False], "fPIC": [True, False]}}
+        default_options = {{"shared": False, "fPIC": True}}
+        exports_sources = "frame.cpp", "frame.h", "CMakeLists.txt"
         generators = "CMakeToolchain", "CMakeConfigDeps"
         requires = "dep/1.0"
+
+        def config_options(self):
+            if self.settings.os == "Windows":
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def build(self):
             cmake = CMake(self)
