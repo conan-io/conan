@@ -4,10 +4,9 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
-from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conan.internal.model.pkg_type import PackageType
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 
 class TargetConfigurationTemplate2:
@@ -20,6 +19,13 @@ class TargetConfigurationTemplate2:
         self._require = require
 
     def content(self):
+        auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
+                                                 self._conanfile, check_type=bool)
+        if auto_link:
+            out = self._cmakedeps._conanfile.output  # noqa
+            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
+                        "invalid. The package 'package_info()' must correctly define the (CPS) "
+                        "information", warn_tag="deprecated")
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
@@ -131,7 +137,7 @@ class TargetConfigurationTemplate2:
                 "version": self._conanfile.ref.version,
                 "include_dirs": include_dirs,
                 "definitions": definitions,
-                "libraries": libraries
+                "libraries": libraries,
                 }
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
@@ -154,7 +160,7 @@ class TargetConfigurationTemplate2:
         return libs
 
     def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var):
-        if info.exe or not (info.includedirs or info.libs or info.system_libs):
+        if info.exe or not (info.package_framework or info.includedirs or info.libs or info.system_libs):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
@@ -175,12 +181,25 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(info.cflags),
                   "sharedlinkflags": " ".join(info.sharedlinkflags),
                   "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": system_libs}
-
+                  "system_libs": system_libs
+        }
+        # System frameworks (only Apple OS)
         if info.frameworks:
-            ConanOutput(scope=str(self._conanfile)).warning("frameworks not supported yet in new CMakeDeps generator")
-
-        if info.libs:  # TODO: to change to location
+            target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
+        # FIXME: We're ignoring this value at this moment. It relies on cmake_target_name or lib name
+        #        Revisit when cpp.exe value is used too.
+        if info.package_framework:
+            target["package_framework"] = {}
+            lib_type = "SHARED" if info.type is PackageType.SHARED else \
+                "STATIC" if info.type is PackageType.STATIC else "STATIC"
+            assert lib_type, f"Unknown package type {info.type}"
+            assert info.location, f"cpp_info.location missing for framework {info.package_framework}"
+            target["type"] = lib_type
+            target["package_framework"]["location"] = self._path(info.location, pkg_folder, pkg_folder_var)
+            target["includedirs"] = []  # empty array as frameworks have their own way to inject headers
+            # FIXME: This is not needed for CMake < 3.24. Remove it when Conan requires CMake >= 3.24
+            target["package_framework"]["frameworkdir"] = self._path(pkg_folder, pkg_folder, pkg_folder_var)
+        if info.libs:
             if len(info.libs) != 1:
                 raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                      f"{self._conanfile}: {info.libs}")
@@ -197,7 +216,6 @@ class TargetConfigurationTemplate2:
             link_languages = info.languages or self._conanfile.languages or []
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
-
         return target
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
@@ -272,6 +290,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _template(self):
+        # TODO: CMake 3.24: Apple Frameworks: https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_LIBRARY
         # TODO: Check why not set_property instead of target_link_libraries
         return textwrap.dedent("""\
         {%- macro config_wrapper(config, value) -%}
@@ -373,7 +392,20 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("system_libs") %}
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
-
+        {% if lib_info.get("frameworks") %}
+        set_property(TARGET {{lib}} PROPERTY INTERFACE_LINK_LIBRARIES "{{config_wrapper(config, lib_info["frameworks"])}}")
+        {% endif %}
+        {% if lib_info.get("package_framework") %}
+        set_target_properties({{lib}} PROPERTIES
+            IMPORTED_LOCATION_{{config}} "{{lib_info["package_framework"]["location"]}}"
+            FRAMEWORK TRUE)
+        if(CMAKE_VERSION VERSION_LESS "3.24")
+            set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+                         $<$<COMPILE_LANGUAGE:CXX>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
+            set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+                         $<$<COMPILE_LANGUAGE:C>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
+        endif()
+        {% endif %}
         {% endfor %}
 
         ################# Global variables for try compile and legacy ##############

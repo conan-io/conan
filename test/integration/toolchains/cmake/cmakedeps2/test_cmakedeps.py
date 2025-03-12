@@ -19,6 +19,7 @@ def test_cmakedeps_direct_deps_paths():
             def package_info(self):
                 self.cpp_info.includedirs = ["myincludes"]
                 self.cpp_info.libdirs = ["mylib"]
+                self.cpp_info.frameworkdirs = ["myframework"]
     """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
@@ -39,6 +40,7 @@ def test_cmakedeps_direct_deps_paths():
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/bin\"", cmake_paths)  # default
     assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/mylib\"", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/myincludes\"", cmake_paths)
+    assert re.search(r"list\(PREPEND CMAKE_FRAMEWORK_PATH \".*/myframework\"", cmake_paths)
 
 
 def test_cmakedeps_transitive_paths():
@@ -178,3 +180,23 @@ def test_system_wrappers():
     cmake = c.load("lib-Targets-release.cmake")
     assert "add_library(lib::lib INTERFACE IMPORTED)" in cmake
     assert "target_link_libraries(lib::lib INTERFACE my_system_cool_lib)" in cmake
+
+
+def test_autolink_pragma():
+    """https://github.com/conan-io/conan/issues/10837"""
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.cpp_info.set_property("cmake_set_interface_link_directories", True)
+        """)
+    c.save({"conanfile.py": conanfile,
+            "test_package/conanfile.py": GenConanfile().with_test("pass")
+                                                       .with_settings("build_type")
+                                                       .with_generator("CMakeDeps")})
+    c.run("create . --name=pkg --version=0.1")
+    assert "CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary" in c.out
+    c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
+           "The package 'package_info()' must correctly define the (CPS) information" in c.out

@@ -766,6 +766,22 @@ class TestBuildOrderReduce:
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
         assert "IndexError: list index out of range" not in tc.out
 
+    def test_reduce_should_remove_recipe(self):
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os")})
+        tc.run("export dep")
+        tc.run("create dep -s os=Windows")
+        tc.run("graph build-order -s os=Windows --build=missing --order=recipe --requires=dep/1.0 "
+               "--format=json", redirect_stdout="windows.json")
+        tc.run("graph build-order -s os=Linux --build=missing --order=recipe --requires=dep/1.0 "
+               "--format=json", redirect_stdout="linux.json")
+        tc.run("graph build-order-merge --file=windows.json --file=linux.json --reduce "
+               "--format=json")
+        order = json.loads(tc.stdout)
+        assert order["order"][0][0]["ref"] == "dep/1.0#1674c18bb63f0c9778d2811c21f581a0"
+        assert len(order["order"][0][0]["packages"][0]) == 1
+        assert order["order"][0][0]["packages"][0][0]["binary"] == "Build"
+
 
 def test_multi_configuration_profile_args():
     c = TestClient()
@@ -863,4 +879,3 @@ def test_build_order_build_context_compatible():
                                 "bar/1.0": ["5e4ffcc1ff33697a4ee96f66f0d2228ec458f25c", "Build"]})
         c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"]},
                                build=True)
-

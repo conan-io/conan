@@ -21,6 +21,12 @@ def post_export(conanfile):
     assert conanfile.export_sources_folder, "export_sources_folder not defined"
     assert conanfile.recipe_folder, "recipe_folder not defined"
 
+def pre_validate(conanfile):
+    conanfile.output.info("Hello")
+
+def post_validate(conanfile):
+    conanfile.output.info("Hello")
+
 def pre_source(conanfile):
     conanfile.output.info("Hello")
     assert conanfile.source_folder, "source_folder not defined"
@@ -176,3 +182,21 @@ class TestHooks:
         assert "conanfile.py: [HOOK - my_hook/hook_my_hook.py] post_build_fail(): Hello" in c.out
         assert "ERROR: conanfile.py: Error in build() method, line 5" in c.out
 
+    def test_validate_hook(self):
+        """ The validate hooks are executed only if the method is declared in the recipe.
+        """
+        c = TestClient()
+        hook_path = os.path.join(c.paths.hooks_path, "testing", "hook_complete.py")
+        save(hook_path, complete_hook)
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def validate(self):
+                    pass
+            """)
+        c.save({"conanfile.py": conanfile})
+
+        c.run("create . --name=foo --version=0.1.0")
+        assert f"foo/0.1.0: [HOOK - testing/hook_complete.py] pre_validate(): Hello" in c.out
+        assert f"foo/0.1.0: [HOOK - testing/hook_complete.py] post_validate(): Hello" in c.out

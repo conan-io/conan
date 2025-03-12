@@ -5,15 +5,15 @@ import textwrap
 from jinja2 import Template
 
 from conan.api.output import Color
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
+from conan.internal.model.dependencies import get_transitive_requires
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
-from conan.errors import ConanException
-from conan.internal.model.dependencies import get_transitive_requires
 from conans.util.files import load
 
 FIND_MODE_MODULE = "module"
@@ -173,6 +173,7 @@ class _PathGenerator:
             "bindirs": "CMAKE_PROGRAM_PATH",
             "libdirs": "CMAKE_LIBRARY_PATH",
             "includedirs": "CMAKE_INCLUDE_PATH",
+            "frameworkdirs": "CMAKE_FRAMEWORK_PATH",
         }
         for req, dep in requirements:
             cppinfo = dep.cpp_info.aggregated_components()
@@ -206,11 +207,15 @@ class _PathGenerator:
         {% if cmake_include_path %}
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
+        {% if cmake_framework_path %}
+        list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
+        {% endif %}
         """)
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
-        all_reqs = list(host_req.items()) + list(test_req.items()) + list(build_req.items())
+        host_test_reqs = list(host_req.items()) + list(test_req.items())
+        all_reqs = host_test_reqs + list(build_req.items())
         # gen_folder = self._conanfile.generators_folder.replace("\\", "/")
         # if not, test_cmake_add_subdirectory test fails
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
@@ -243,14 +248,15 @@ class _PathGenerator:
 
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")
-        cmake_library_path = self._get_cmake_paths(list(host_req.items()) + list(test_req.items()), "libdirs")
-        cmake_include_path = self._get_cmake_paths(list(host_req.items()) + list(test_req.items()), "includedirs")
-
+        cmake_library_path = self._get_cmake_paths(host_test_reqs, "libdirs")
+        cmake_include_path = self._get_cmake_paths(host_test_reqs, "includedirs")
+        cmake_framework_path = self._get_cmake_paths(host_test_reqs, "frameworkdirs")
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
                    "cmake_program_path": _join_paths(self._conanfile, cmake_program_path),
                    "cmake_library_path": _join_paths(self._conanfile, cmake_library_path),
                    "cmake_include_path": _join_paths(self._conanfile, cmake_include_path),
+                   "cmake_framework_path": _join_paths(self._conanfile, cmake_framework_path),
         }
         content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
