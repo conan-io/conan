@@ -97,14 +97,14 @@ jobs:
               --exclude=CMake.app/Contents/share/cmake-${version%.*}/Help \
               --exclude=CMake.app/Contents/share/vim
             mkdir -p ${HOME}/Applications/CMake/${version}
-            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version%-*}
+            cp -fR cmake-${version}-macos-universal/CMake.app/Contents/* ${HOME}/Applications/CMake/${version}
             ${HOME}/Applications/CMake/${version}/bin/cmake --version
             rm -rf cmake-${version}-macos-universal
             rm cmake-${version}-macos-universal.tar.gz
           done
       - name: Check CMake 4.0-rc3
         run: |
-          ${HOME}/Applications/Applications/CMake/4.0.0/bin --version
+          ${HOME}/Applications/CMake/4.0.0-rc3/bin --version
 
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
