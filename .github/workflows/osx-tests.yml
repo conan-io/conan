@@ -7,6 +7,24 @@ on:
         required: true
         type: string
 
+env:
+  CMAKE_PATHS: |
+    ~/Applications/CMake/3.15.7
+    ~/Applications/CMake/3.19.7
+    ~/Applications/CMake/3.23.5
+    ~/Applications/CMake/3.27.9
+    ~/Applications/CMake/4.0.0-rc3
+  BAZEL_PATHS: |
+    ~/Applications/bazel/6.5.0
+    ~/Applications/bazel/7.4.1
+    ~/Applications/bazel/8.0.0
+  PIP_INSTALL_COMMANDS: |
+    pip install --upgrade pip
+    pip install -r conans/requirements.txt
+    pip install -r conans/requirements_server.txt
+    pip install -r conans/requirements_dev.txt
+    pip install meson
+
 jobs:
   osx_setup:
     runs-on: macos-14
@@ -29,11 +47,7 @@ jobs:
 
       - name: Install Python requirements
         run: |
-          pip install --upgrade pip
-          pip install -r conans/requirements.txt
-          pip install -r conans/requirements_server.txt
-          pip install -r conans/requirements_dev.txt
-          pip install meson
+          ${{ env.PIP_INSTALL_COMMANDS }}
 
       - name: Uninstall default CMake
         run: brew uninstall --formula cmake || true
@@ -54,14 +68,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/Applications/CMake/4.0.0-rc3
-            ~/Applications/CMake/3.15.7
-            ~/Applications/CMake/3.19.7
-            ~/Applications/CMake/3.23.5
-            ~/Applications/CMake/3.27.9
-            ~/Applications/bazel/6.5.0
-            ~/Applications/bazel/7.4.1
-            ~/Applications/bazel/8.0.0
+            ${{ env.CMAKE_PATHS }}
+            ${{ env.BAZEL_PATHS }}
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
@@ -102,9 +110,6 @@ jobs:
             rm -rf cmake-${version}-macos-universal
             rm cmake-${version}-macos-universal.tar.gz
           done
-      - name: Check CMake 4.0-rc3
-        run: |
-          ${HOME}/Applications/CMake/4.0.0-rc3/bin/cmake --version
 
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
@@ -146,13 +151,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/Applications/CMake/3.15.7
-            ~/Applications/CMake/3.19.7
-            ~/Applications/CMake/3.23.5
-            ~/Applications/CMake/3.27.9
-            ~/Applications/bazel/6.5.0
-            ~/Applications/bazel/7.4.1
-            ~/Applications/bazel/8.0.0
+            ${{ env.CMAKE_PATHS }}
+            ${{ env.BAZEL_PATHS }}
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -162,11 +162,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r conans/requirements.txt
-          pip install -r conans/requirements_server.txt
-          pip install -r conans/requirements_dev.txt
-          pip install meson
+          ${{ env.PIP_INSTALL_COMMANDS }}
 
       - name: Install homebrew dependencies
         run: |
