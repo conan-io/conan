@@ -1,9 +1,11 @@
+from conan import ConanFile
 from conan.api.output import ConanOutput
 from conan.internal.cache.cache import PkgCache
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.export import cmd_export
 from conan.internal.methods import run_package_method
-from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE
+from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE, CONTEXT_HOST, Node, \
+    RECIPE_VIRTUAL, TransitiveRequirement
 from conan.api.model import PkgReference
 from conans.util.files import mkdir
 
@@ -61,3 +63,15 @@ class ExportAPI:
         conanfile.folders.set_base_package(final_folder)
         out.info(f"Package folder {final_folder}")
         out.success("Exported package binary")
+
+        # Create the root CLI virtual node, to align the output with the `conan create` one
+        root = ConanFile(display_name="cli")
+        req_f = root.requires if pkg_node.context == CONTEXT_HOST else root.requires.tool_require
+        req_f(repr(pkg_node.ref))
+        root._conan_is_consumer = True
+        root.generators = []  # remove the default txt generator
+        root_node = Node(ref=None, conanfile=root, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        deps_graph.nodes.insert(0, root_node)
+        for r in root.requires.values():
+            root_node.transitive_deps[r] = TransitiveRequirement(r, pkg_node)
+            deps_graph.add_edge(root_node, pkg_node, r)

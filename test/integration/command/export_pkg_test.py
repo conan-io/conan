@@ -287,7 +287,8 @@ class TestConan(ConanFile):
         # Wrong folders
         client.run("export-pkg . --format=json", redirect_stdout="exported.json")
         graph = json.loads(client.load("exported.json"))
-        node = graph["graph"]["nodes"]["0"]
+        # In the same way the "conan create" json node is the "1", not the root one, which is "cli"
+        node = graph["graph"]["nodes"]["1"]
         assert "pkg/0.1" in node["ref"]
         # https://github.com/conan-io/conan/issues/15041
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" == node["package_id"]
