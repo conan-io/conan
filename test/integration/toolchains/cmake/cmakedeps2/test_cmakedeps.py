@@ -200,3 +200,88 @@ def test_autolink_pragma():
     c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
     assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
            "The package 'package_info()' must correctly define the (CPS) information" in c.out
+
+def test_consuming_cpp_info_with_components_dependency_from_same_package():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["lib"].type = 'shared-library'
+                self.cpp_info.components["lib_extended"].type = 'shared-library'
+                self.cpp_info.components["lib_extended"].requires = ['lib']
+        """)
+    c.save({"conanfile.py": conanfile,
+            "test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                       .with_test("pass")
+                                                       .with_generator("CMakeDeps")})
+    c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    # it doesn't break
+    assert "find_package(pkg)" in c.out
+
+
+def test_consuming_cpp_info_with_components_dependency_from_other_package():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.components["lib"].type = 'shared-library'
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["lib"].type = 'shared-library'
+                self.cpp_info.components["lib"].requires = ['dep::lib']
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": conanfile,
+            "pkg/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                           .with_test("pass")
+                                                           .with_generator("CMakeDeps")})
+    c.run("create dep")
+    c.run("create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    # it doesn't break
+    assert "find_package(pkg)" in c.out
+
+
+def test_consuming_cpp_info_transitively_by_requiring_root_component_in_another_component_from_another_package():
+    c = TestClient()
+    dependent_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Dependent(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            name = 'dependent'
+        """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def requirements(self):
+                self.requires('dependent/0.1')
+            def package_info(self):
+                self.cpp_info.type = 'shared-library'
+                self.cpp_info.requires = ['dependent::dependent']
+        """)
+    test_package = textwrap.dedent("""
+        from conan import ConanFile
+        class TestPkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "VirtualRunEnv", "CMakeDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+        """)
+    c.save({"dependent/conanfile.py": dependent_conanfile,
+            "main/conanfile.py": conanfile,
+            "main/test_package/conanfile.py":test_package})
+    c.run("create ./dependent/ --name=dependent --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run("create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")

@@ -2,6 +2,7 @@ import os
 import sys
 
 from conan.api.output import init_colorama
+from conan.api.subapi.audit import AuditAPI
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
@@ -69,6 +70,7 @@ class ConanAPI:
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
+        self.audit = AuditAPI(self)
 
         _check_conan_version(self)
 

@@ -64,7 +64,7 @@ class TargetConfigurationTemplate2:
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
                 link = not (pkg_type is PackageType.SHARED and
-                            dep_comp.package_type is PackageType.SHARED)
+                            dep_comp.type is PackageType.SHARED)
                 result[dep_target] = link
             else:  # Different package
                 try:
@@ -80,13 +80,16 @@ class TargetConfigurationTemplate2:
                         assert required_pkg == required_comp
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
+                        link = pkg_type is not PackageType.SHARED 
                     else:
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
+                        link = not (pkg_type is PackageType.SHARED and
+                                dep_comp.type is PackageType.SHARED)
+
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
-                    link = not (pkg_type is PackageType.SHARED and
-                                dep_comp.package_type is PackageType.SHARED)
+
                     result[dep_target] = link
         return result
 
@@ -393,7 +396,8 @@ class TargetConfigurationTemplate2:
         target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         {% endif %}
         {% if lib_info.get("frameworks") %}
-        set_property(TARGET {{lib}} PROPERTY INTERFACE_LINK_LIBRARIES "{{config_wrapper(config, lib_info["frameworks"])}}")
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
         set_target_properties({{lib}} PROPERTIES
