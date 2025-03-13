@@ -185,7 +185,7 @@ class MSBuildDeps:
         root_folder = escape_path(root_folder)
         # Make the root_folder relative to the generated conan_vars_xxx.props file
         relative_root_folder = relativize_path(root_folder, self._conanfile,
-                                               "$(MSBuildThisFileDirectory)")
+                                               "$(MSBuildThisFileDirectory)", normalize=False)
 
         bin_dirs = join_paths(cpp_info.bindirs)
         res_dirs = join_paths(cpp_info.resdirs)
