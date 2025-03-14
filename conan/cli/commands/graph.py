@@ -1,7 +1,6 @@
 import json
 import os
 
-from conan.api.model import ListPattern
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -14,8 +13,6 @@ from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conans.client.graph.install_graph import InstallGraph, ProfileArgs
-from conan.internal.errors import NotFoundException
-from conan.api.model import RecipeReference
 
 
 def explain_formatter_text(data):
@@ -38,7 +35,7 @@ def explain_formatter_json(data):
 
 
 @conan_command(group="Consumer")
-def graph(conan_api, parser, *args):
+def graph(conan_api, parser, *args):  # noqa
     """
     Compute a dependency graph, without installing or building the binaries.
     """
@@ -135,7 +132,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
                               "html": format_build_order_html})
-def graph_build_order_merge(conan_api, parser, subparser, *args):
+def graph_build_order_merge(conan_api, parser, subparser, *args):  # noqa
     """
     Merge more than 1 build-order file.
     """
@@ -378,48 +375,6 @@ def graph_outdated(conan_api, parser, subparser, *args):
     print_graph_basic(deps_graph)
 
     # Data structure to store info per library
-    dependencies = deps_graph.nodes[1:]
-    dict_nodes = {}
-
-    # When there are no dependencies command should stop
-    if len(dependencies) == 0:
-        return dict_nodes
-
-    ConanOutput().title("Checking remotes")
-
-    for node in dependencies:
-        dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
-                                          "latest_remote": None})["cache_refs"].add(node.ref)
-
-    for version_range in deps_graph.resolved_ranges.keys():
-        dict_nodes[version_range.name]["version_ranges"].append(version_range)
-
-    # find in remotes
-    _find_in_remotes(conan_api, dict_nodes, remotes)
-
-    # Filter nodes with no outdated versions
-    filtered_nodes = {}
-    for node_name, node in dict_nodes.items():
-        if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
-            node['latest_remote']['ref']:
-            filtered_nodes[node_name] = node
-
-    return filtered_nodes
-
-
-def _find_in_remotes(conan_api, dict_nodes, remotes):
-    for node_name, node_info in dict_nodes.items():
-        ref_pattern = ListPattern(node_name, rrev=None, prev=None)
-        for remote in remotes:
-            try:
-                remote_ref_list = conan_api.list.select(ref_pattern, package_query=None,
-                                                        remote=remote)
-            except NotFoundException:
-                continue
-            if not remote_ref_list.recipes:
-                continue
-            str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
-            recipe_ref = RecipeReference.loads(str_latest_ref)
-            if (node_info["latest_remote"] is None
-                    or node_info["latest_remote"]["ref"] < recipe_ref):
-                node_info["latest_remote"] = {"ref": recipe_ref, "remote": remote.name}
+    # DO NOT USE this API call yet, it is not stable
+    outdated = conan_api.list.outdated(deps_graph, remotes)
+    return outdated
