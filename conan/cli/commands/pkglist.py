@@ -30,7 +30,7 @@ def pkglist_find_remote(conan_api, parser, subparser, *args):
     multi_pkglist = MultiPackagesList.load(listfile)
     package_list = multi_pkglist["Local Cache"]
     selected_remotes = conan_api.remotes.list(args.remote)
-    result = conan_api.list.find_remote(package_list, selected_remotes)
+    result = conan_api.list.find_remotes(package_list, selected_remotes)
     return {
         "results": result.serialize(),
         "conan_api": conan_api,
