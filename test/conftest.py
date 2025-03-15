@@ -178,7 +178,10 @@ tools_locations = {
             # 'Windows': os.getenv("ANDROID_NDK_HOME"),
         }
     },
-    "qbs": {"disabled": True},
+    "qbs": {
+        "exe": "qbs",
+        "platform": "Linux",
+    },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
