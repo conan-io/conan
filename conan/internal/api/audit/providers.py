@@ -18,23 +18,21 @@ class ConanCenterProvider:
             from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
             if self.name == CONAN_CENTER_AUDIT_PROVIDER_NAME:
                 output = ConanOutput()
-
                 output.write("\n")
-                output.write("Authentication required for the CVE provider: ", fg=Color.BRIGHT_RED, newline=False)
+                output.write("Authentication required for the CVE provider: ", fg=Color.BRIGHT_RED,
+                             newline=False)
                 output.write(f"'{self.name}'\n", fg=Color.BRIGHT_WHITE)
-
                 output.write("\nTo resolve, please:\n")
                 output.write("  1. Visit: ", fg=Color.BRIGHT_WHITE, newline=False)
                 output.write("https://audit.conan.io/register\n", fg=Color.BRIGHT_BLUE)
-                output.write("  2. Register to obtain the access token and activate it.\n", fg=Color.BRIGHT_WHITE)
+                output.write("  2. Register to obtain the access token and activate it.\n",
+                             fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
-
-                output.write(f"\n     conan audit provider auth {self.name} --token=<your_token>", fg=Color.BRIGHT_GREEN, newline=True)
-
+                output.write(f"\n     conan audit provider auth {self.name} --token=<your_token>",
+                             fg=Color.BRIGHT_GREEN, newline=True)
                 output.write("\nOnce authenticated, re-run the command.\n\n")
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
-
 
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json",
@@ -44,20 +42,15 @@ class ConanCenterProvider:
         errors_in_response = False
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
-            response = self._session.post(
-                self._query_url,
-                headers=headers,
-                json={
-                    "reference": str(ref),
-                },
-            )
+            response = self._session.post(self._query_url, headers=headers,
+                                          json={"reference": str(ref)})
             if response.status_code == 200:
                 result["data"].setdefault(str(ref), {}).update(response.json()["data"]["query"])
             elif response.status_code == 400:
                 ConanOutput().warning(f"Package '{ref}' not found.\n"
-                                    f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
-                                    f"Please ensure the package exists in the official repository: https://conan.io/center\n"
-                                    f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
+                                      f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
+                                      f"Please ensure the package exists in the official repository: https://conan.io/center\n"
+                                      f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
                 # errors_in_response = True
                 continue
 
@@ -94,8 +87,10 @@ class ConanCenterProvider:
                         fg=Color.BRIGHT_WHITE,
                     )
                 # Now link them to where we try to sell them the product
-                output.write("Visit our website to learn more about JFrog's DevSecOps solution: ", fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://jfrog.com/devops-native-security/", newline=True, fg=Color.BRIGHT_BLUE)
+                output.write("Visit our website to learn more about JFrog's DevSecOps solution: ",
+                             fg=Color.BRIGHT_WHITE, newline=False)
+                output.write("https://jfrog.com/devops-native-security/", newline=True,
+                             fg=Color.BRIGHT_BLUE)
                 output.write("\n")
                 ConanOutput().error("Rate limit exceeded.\n")
                 errors_in_response = True
@@ -110,6 +105,7 @@ class ConanCenterProvider:
                 errors_in_response = True
                 break
         return result, errors_in_response
+
 
 class PrivateProvider:
     def __init__(self, conan_api, name, provider_data):
@@ -167,8 +163,9 @@ class PrivateProvider:
 
     @staticmethod
     def _parse_error(errors, ref):
-        """This function removes the errors array that comes from the catalog and returns a more user-friendly message
-        if we know how to parse it, or a generic one if we don't find such one"""
+        """This function removes the errors array that comes from the catalog and returns a
+        more user-friendly message if we know how to parse it, or a generic one if we don't
+        find such one"""
 
         def _replace_message(message):
             if "not found" in message:
