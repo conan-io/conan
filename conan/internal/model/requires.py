@@ -174,7 +174,7 @@ class Requirement:
         or None if it is not an expression
         """
         version = repr(self.ref.version)
-        if version.startswith("[") and version.endswith("]"):
+        if version[0] == "[" and version[-1] == "]":
             return VersionRange(version[1:-1])
 
     @property

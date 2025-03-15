@@ -12,8 +12,8 @@ from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
-_FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
-                    "_sharedlinkflags", "_exelinkflags"]
+_FIELD_VAR_NAMES = ["_system_libs", "_package_framework", "_frameworks", "_libs", "_defines",
+                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
@@ -72,7 +72,8 @@ class _Component:
 
         # ##### FIELDS
         self._system_libs = None  # Ordered list of system libraries
-        self._frameworks = None  # Macos .framework
+        self._frameworks = None  # system Apple OS frameworks
+        self._package_framework = None  # any other frameworks
         self._libs = None  # The libs to link against
         self._defines = None  # preprocessor definitions
         self._cflags = None  # pure C flags
@@ -205,16 +206,6 @@ class _Component:
         self._builddirs = value
 
     @property
-    def frameworkdirs(self):
-        if self._frameworkdirs is None:
-            self._frameworkdirs = []
-        return self._frameworkdirs
-
-    @frameworkdirs.setter
-    def frameworkdirs(self, value):
-        self._frameworkdirs = value
-
-    @property
     def bindir(self):
         bindirs = self.bindirs
         if not bindirs or len(bindirs) != 1:
@@ -252,6 +243,14 @@ class _Component:
         self._system_libs = value
 
     @property
+    def package_framework(self):
+        return self._package_framework
+
+    @package_framework.setter
+    def package_framework(self, value):
+        self._package_framework = value
+
+    @property
     def frameworks(self):
         if self._frameworks is None:
             self._frameworks = []
@@ -260,6 +259,16 @@ class _Component:
     @frameworks.setter
     def frameworks(self, value):
         self._frameworks = value
+
+    @property
+    def frameworkdirs(self):
+        if self._frameworkdirs is None:
+            self._frameworkdirs = []
+        return self._frameworkdirs
+
+    @frameworkdirs.setter
+    def frameworkdirs(self, value):
+        self._frameworkdirs = value
 
     @property
     def libs(self):
@@ -612,7 +621,7 @@ class _Component:
                 raise ConanException(f"{name} has .exe and no .location")
             return
         if self._type is PackageType.APP:
-            # old school Conan application packages withoud defining an exe, not an error
+            # old school Conan application packages without defining an exe, not an error
             return
 
         # libraries
@@ -817,7 +826,6 @@ class CppInfo:
             raise ConanException(f"{conanfile}: 'cpp_info' contains components and .exe or .libs")
 
         result = CppInfo()  # clone it
-
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")
