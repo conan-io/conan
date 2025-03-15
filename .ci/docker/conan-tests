@@ -74,7 +74,7 @@ RUN apt-get update && \
         g++-9-multilib \
         gcc-11-multilib \
         g++-11-multilib \
-        scons && \
+        scons \
         qbs && \
     # fix: asm/errno.h: No such file or directory
     ln -s /usr/include/asm-generic/ /usr/include/asm && \
