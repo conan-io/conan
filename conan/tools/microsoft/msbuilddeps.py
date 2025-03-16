@@ -336,7 +336,10 @@ class MSBuildDeps:
                 public_deps = []  # To store the xml dependencies/file names
                 for required_pkg, required_comp in comp_info.parsed_requires():
                     if required_pkg is not None:  # Points to a component of a different package
-                        required = pkg_deps.get(required_pkg)  # In case of replace_requires
+                        try:
+                            required = pkg_deps[required_pkg]
+                        except KeyError:  # The transitive dep might have been skipped
+                            required = None
                         if required:  # The transitive dep might have been skipped
                             required_name = required.ref.name
                             public_deps.append(required_name if required_pkg == required_comp
