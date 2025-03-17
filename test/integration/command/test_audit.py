@@ -111,7 +111,6 @@ def test_conan_audit_paths():
                     reason="Strict Base64 validation introduced in Python 3.10")
 def test_conan_audit_corrupted_token():
     tc = TestClient(light=True)
-    tc.run('audit provider auth conancenter --token="anything"')
 
     json_path = os.path.join(tc.cache_folder, "audit_providers.json")
     with open(json_path, "r") as f:

@@ -22,6 +22,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
@@ -418,6 +419,8 @@ class TestClient:
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
+
+        self.update_providers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
         # Once the client is ready, modify the configuration
@@ -476,6 +479,16 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
+
+
+    def update_providers(self):
+        default_providers = {
+            CONAN_CENTER_AUDIT_PROVIDER_NAME: {
+                "url": "https://fakeurl/",
+                "type": "conan-center-proxy"
+            }
+        }
+        _save_providers(HomePaths(self.cache_folder).providers_path, default_providers)
 
     @contextmanager
     def chdir(self, newdir):
