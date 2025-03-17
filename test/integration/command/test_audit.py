@@ -105,12 +105,21 @@ def test_conan_audit_paths():
     assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
 
 
-@pytest.mark.xfail(reason="This test is not working")
 @pytest.mark.skipif(sys.version_info < (3, 10),
                     reason="Strict Base64 validation introduced in Python 3.10")
 def test_conan_audit_corrupted_token():
     tc = TestClient(light=True)
-    tc.run('audit provider auth conancenter --token="corrupted_token"')
+    tc.run('audit provider auth conancenter --token="anything"')
+
+    json_path = os.path.join(tc.cache_folder, "audit_providers.json")
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    # this is not a valid base64 string and will raise an exception
+    data["conancenter"]["token"] = "corrupted_token"
+
+    with open(json_path, "w") as f:
+        json.dump(data, f)
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Invalid token format for provider 'conancenter'. The token might be corrupt." in tc.out
 
