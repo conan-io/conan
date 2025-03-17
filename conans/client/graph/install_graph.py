@@ -509,8 +509,11 @@ class InstallGraph:
         result = {"order_by": self._order,
                   "reduced": self.reduced,
                   "order": [[n.serialize() for n in level] for level in install_order],
-                  "profiles": {k: v.serialize() for k, v in self._profiles.items()}
+                  "profiles": {k: v.serialize() for k, v in self._profiles.items()},
+                  "errors": self.get_errors()
                   }
+        if getattr(self, "legacy", None):
+            result["legacy"] = True
         return result
 
     def _get_missing_invalid_packages(self):
