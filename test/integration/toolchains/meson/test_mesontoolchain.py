@@ -116,6 +116,21 @@ def test_apple_meson_cross_building_subsystem():
     cpu = 'armv8'
     endian = 'little'""")
     assert machines_settings in content
+    # Let's check that it does not appear if cross-compiling to other non-Apple-OS
+    cross = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=13
+    os=Linux
+    """)
+    t.save({"host": cross})
+    t.run("install . -pr:h host -pr:b build")
+    content = t.load(MesonToolchain.cross_filename)
+    assert "subsystem =" not in content
 
 
 def test_extra_flags_via_conf():
