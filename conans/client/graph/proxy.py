@@ -38,6 +38,8 @@ class ConanProxy:
 
         # check if it there's any revision of this recipe in the local cache
         try:
+            if reference.revision is None:
+                reference = self._cache.get_latest_recipe_reference(reference)
             recipe_layout = self._cache.recipe_layout(reference)
             ref = recipe_layout.reference  # latest revision if it was not defined
         except ConanException:
