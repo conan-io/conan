@@ -1,3 +1,5 @@
+import json
+import os
 import sys
 from contextlib import contextmanager
 
@@ -109,7 +111,16 @@ def test_conan_audit_paths():
                     reason="Strict Base64 validation introduced in Python 3.10")
 def test_conan_audit_corrupted_token():
     tc = TestClient(light=True)
-    tc.run('audit provider auth --name=conancenter --token="corrupted_token"')
+
+    json_path = os.path.join(tc.cache_folder, "audit_providers.json")
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    # this is not a valid base64 string and will raise an exception
+    data["conancenter"]["token"] = "corrupted_token"
+
+    with open(json_path, "w") as f:
+        json.dump(data, f)
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Invalid token format for provider 'conancenter'. The token might be corrupt." in tc.out
 
@@ -146,7 +157,7 @@ def test_audit_provider_env_credentials_with_proxy(monkeypatch):
 
     captured_headers = {}
 
-    def fake_post(url, headers, json):
+    def fake_post(url, headers, json):  # noqa
         # Capture the headers used in the request
         captured_headers.update(headers)
         response = MagicMock()

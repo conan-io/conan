@@ -12,6 +12,7 @@ from conans.util.files import save, load
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
 CYPHER_KEY = "private"
 
+
 class AuditAPI:
     """
     This class provides the functionality to scan references for vulnerabilities.
@@ -26,15 +27,17 @@ class AuditAPI:
             "private": PrivateProvider,
         }
 
-    def scan(self, deps_graph, provider):
+    @staticmethod
+    def scan(deps_graph, provider):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                        for node in deps_graph.nodes[1:]), key= lambda ref: ref.name)
+                          for node in deps_graph.nodes[1:]), key=lambda ref: ref.name)
         return provider.get_cves(refs)
 
-    def list(self, references, provider):
+    @staticmethod
+    def list(references, provider):
         """
         List the vulnerabilities of the given reference.
         """

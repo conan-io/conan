@@ -169,21 +169,31 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
 @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply symlink on Windows")
 def test_shared_link_locations_symlinks(lib, symlinks, conanfile):
     """
-    Tests auto deduce location is able to find the real path of
-    any symlink created in the libs folder
+    Tests auto deduce location is not resolving symlinks by default. For instance:
+        .
+        ├── libpng.so -> libpng16.so  (exact match)
+        ├── libpng16.so -> libpng16.so.16
+        ├── libpng16.so.16 -> libpng16.so.16.44.0
+        └── libpng16.so.16.44.0  (real one)
+
+
+    Issues related:
+        - https://github.com/conan-io/conan/issues/17417
+        - https://github.com/conan-io/conan/issues/17721
     """
     folder = temp_folder()
     all_files = symlinks.split(" <- ")  # [real_one, sym1, sym2, ...]
-    # forcing a folder that it's not going to be analysed by the deduce_location() function
-    real_location = os.path.join(folder, "other", all_files.pop(0))
+    # Real one (first item from list)
+    real_location = os.path.join(folder, "libdir", all_files.pop(0))
     save(real_location, "")
     # Symlinks
-    os.makedirs(os.path.join(folder, "libdir"))
     prev_path = real_location
     for file in all_files:
         sym = os.path.join(folder, "libdir", file)
         os.symlink(prev_path, sym)
         prev_path = sym
+    # Exact match and symlink (latest item from list)
+    exact_match = os.path.join(folder, "libdir", all_files[-1])
 
     cppinfo = CppInfo()
     cppinfo.libdirs = ["libdir"]
@@ -191,7 +201,7 @@ def test_shared_link_locations_symlinks(lib, symlinks, conanfile):
     cppinfo.set_relative_base_folder(folder)
 
     result = cppinfo.deduce_full_cpp_info(conanfile)
-    assert result.location == real_location
+    assert result.location == exact_match
     assert result.type == "shared-library"
 
 
@@ -235,7 +245,7 @@ def test_warning_windows_if_more_than_one_dll(conanfile):
 
 
 @pytest.mark.parametrize("prefix", [True, False])
-def test_multiple_matches_exact_match(conanfile, prefix):
+def test_multiple_matches_exact_match(prefix, conanfile):
     # If the match is perfect, do not warn
     folder = temp_folder()
     prefix = "lib" if prefix else ""
@@ -253,4 +263,28 @@ def test_multiple_matches_exact_match(conanfile, prefix):
         result = cppinfo.deduce_full_cpp_info(conanfile)
     assert "WARN: There were several matches for Lib mylib" not in output
     assert result.location == f"{folder}/libdir/{prefix}mylib.a"
+    assert result.type == "static-library"
+
+
+
+@pytest.mark.parametrize("lib_name, libs", [
+    ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
+])
+def test_several_libs_and_exact_match(lib_name, libs, conanfile):
+    """
+    Testing that we're keeping the exact match at first instead the similar one
+
+    Issue related: https://github.com/conan-io/conan/issues/17974
+    """
+    folder = temp_folder()
+    for lib in libs:
+        save(os.path.join(folder, "libdir", lib), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = [lib_name]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == f"{folder}/libdir/{lib_name}.lib"
     assert result.type == "static-library"

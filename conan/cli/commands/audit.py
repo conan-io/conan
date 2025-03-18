@@ -80,8 +80,8 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     List the vulnerabilities of the given reference.
     """
     subparser.add_argument("reference", help="Reference to list vulnerabilities for", nargs="?")
-    subparser.add_argument("-l", "--list", help="pkglist file to list vulnerabilities for", default=None)
-    subparser.add_argument("-r", "--remote", help="Remote to use for listing", default=None)
+    subparser.add_argument("-l", "--list", help="pkglist file to list vulnerabilities for")
+    subparser.add_argument("-r", "--remote", help="Remote to use for listing")
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
@@ -93,7 +93,6 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
-    references = []
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
@@ -107,7 +106,8 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
         references = [args.reference]
     return conan_api.audit.list(references, provider)
 
-def text_provider_formatter(providers_action):
+
+def _text_provider_formatter(providers_action):
     providers = providers_action[0]
     action = providers_action[1]
 
@@ -125,7 +125,8 @@ def text_provider_formatter(providers_action):
                 if provider:
                     cli_out_write(f"{provider.name} (type: {provider.type}) - {provider.url}")
 
-def json_provider_formatter(providers_action):
+
+def _json_provider_formatter(providers_action):
     ret = []
     for provider in providers_action[0]:
         if provider:
@@ -133,13 +134,14 @@ def json_provider_formatter(providers_action):
     cli_out_write(json.dumps(ret, indent=4))
 
 
-@conan_subcommand(formatters={"text": text_provider_formatter, "json": json_provider_formatter})
+@conan_subcommand(formatters={"text": _text_provider_formatter, "json": _json_provider_formatter})
 def audit_provider(conan_api, parser, subparser, *args):
     """
     Manage security providers for the 'conan audit' command.
     """
 
-    subparser.add_argument("action", choices=["add", "list", "auth", "remove"], help="Action to perform from 'add', 'list' , 'remove' or 'auth'")
+    subparser.add_argument("action", choices=["add", "list", "auth", "remove"],
+                           help="Action to perform from 'add', 'list' , 'remove' or 'auth'")
     subparser.add_argument("name", help="Provider name", nargs="?")
 
     subparser.add_argument("--url", help="Provider URL")
@@ -188,8 +190,9 @@ def audit_provider(conan_api, parser, subparser, *args):
         conan_api.audit.auth_provider(provider, token)
         return [provider], args.action
 
+
 @conan_command(group="Security")
-def audit(conan_api, parser, *args):
+def audit(conan_api, parser, *args):  # noqa
     """
     Find vulnerabilities in your dependencies.
     """

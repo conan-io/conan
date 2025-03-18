@@ -68,6 +68,10 @@ class HomePaths:
         return os.path.join(self._home, "remotes.json")
 
     @property
+    def providers_path(self):
+        return os.path.join(self._home, "audit_providers.json")
+
+    @property
     def compatibility_plugin_path(self):
         return os.path.join(self._home, _EXTENSIONS_FOLDER, _PLUGINS, "compatibility")
 
