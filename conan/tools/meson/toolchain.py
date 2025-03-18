@@ -12,6 +12,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags, architecture_flag
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
+from conan.tools.meson.helpers import get_apple_subsystem
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.util.files import save
 
@@ -137,6 +138,9 @@ class MesonToolchain:
     {% for context, values in cross_build.items() %}
     [{{context}}_machine]
     system = '{{values["system"]}}'
+    {% if values.get("subsystem") %}
+    subsystem = '{{values["subsystem"]}}'
+    {% endif %}
     cpu_family = '{{values["cpu_family"]}}'
     cpu = '{{values["cpu"]}}'
     endian = '{{values["endian"]}}'
@@ -242,6 +246,15 @@ class MesonToolchain:
             arch_build = conanfile.settings_build.get_safe('arch')
             self.cross_build["build"] = to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = to_meson_machine(os_host, arch_host)
+            # Check subsystem if it's Apple cross-building only. It requires Meson >= 1.2.0,
+            # but it does not break lower versions.
+            # See https://mesonbuild.com/Reference-tables.html#subsystem-names-since-120
+            # Issue: https://github.com/conan-io/conan/issues/17873
+            if self._is_apple_system and is_apple_os(conanfile, build_context=True):
+                sdk_build = conanfile.settings_build.get_safe("os.sdk")
+                sdk_host = conanfile.settings.get_safe("os.sdk")
+                self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
+                self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
             self.properties["needs_exe_wrapper"] = True
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target

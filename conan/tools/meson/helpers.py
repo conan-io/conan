@@ -68,6 +68,17 @@ _cppstd_map = {
 }
 
 
+def get_apple_subsystem(apple_sdk):
+    return {
+        "iphoneos": "ios",
+        "iphonesimulator": "ios-simulator",
+        "appletvos": "tvos",
+        "appletvsimulator": "tvos-simulator",
+        "watchos": "watchos",
+        "watchsimulator": "watchos-simulator",
+    }.get(apple_sdk, "macos")
+
+
 def to_meson_machine(machine_os, machine_arch):
     """Gets the OS system info as the Meson machine context.
 
