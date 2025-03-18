@@ -180,7 +180,10 @@ tools_locations = {
     },
     "qbs": {
         "exe": "qbs",
-        "platform": "Linux",
+        "default": "2.6.0",
+        "2.6.0": {
+            "path": {'Linux': '/usr/share/qbs'}
+        }
     },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
