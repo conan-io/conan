@@ -362,29 +362,32 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
         if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:
-            members = tarredgzippedFile.getmembers()
+            common_folder = None
+            members = []
+            for member in tarredgzippedFile:
+                if pattern and not fnmatch(member.name, pattern):
+                    continue  # Skip files that don’t match the pattern
 
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
-            if strip_root:
-                names = [member.name.replace("\\", "/") for member in members]
-                common_folder = os.path.commonprefix(names).split("/", 1)[0]
-                if not common_folder and len(names) > 1:
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
-                    raise ConanException("The tgz file contains a file in the root")
-                # Remove the directory entry if present
-                members = [m for m in members if m.name != common_folder]
-                for member in members:
+                if strip_root:
                     name = member.name.replace("\\", "/")
-                    member.name = name.split("/", 1)[1]
+                    if not common_folder:
+                        splits = name.split("/", 1)
+                        # First case for a plain folder in the root
+                        if member.isdir() or len(splits) > 1:
+                            common_folder = splits[0]  # Find the root folder
+                        else:
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
+                    if not name.startswith(common_folder):
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
+                    # Adjust the member's name for extraction
+                    member.name = name[len(common_folder) + 1:]
                     member.path = member.name
-                    if member.linkpath.startswith(common_folder):
+                    if member.linkpath and member.linkpath.startswith(common_folder):
                         # https://github.com/conan-io/conan/issues/11065
-                        linkpath = member.linkpath.replace("\\", "/")
-                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
+                # Let's gather each member
+                members.append(member)
             tarredgzippedFile.extractall(destination, members=members)
 
 
