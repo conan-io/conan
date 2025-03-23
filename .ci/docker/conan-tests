@@ -155,6 +155,16 @@ RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/
     tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
     mv premake5 /usr/share/premake
 
+RUN cd /tmp && \
+    mkdir qbs && \
+    cd qbs && \
+    curl -L https://download.qt.io/official_releases/qbs/2.6.0/qbs-linux-x86_64-2.6.0.tar.gz > qbs-linux-x86_64-2.6.0.tar.gz && \
+    tar -xzf qbs-linux-x86_64-2.6.0.tar.gz && \
+    mv qbs-linux-x86_64-2.6.0 /usr/share/qbs && \
+    rm qbs-linux-x86_64-2.6.0.tar.gz
+
+RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
+
 USER conan
 WORKDIR $HOME
 

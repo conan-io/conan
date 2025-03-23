@@ -245,7 +245,7 @@ def test_warning_windows_if_more_than_one_dll(conanfile):
 
 
 @pytest.mark.parametrize("prefix", [True, False])
-def test_multiple_matches_exact_match(conanfile, prefix):
+def test_multiple_matches_exact_match(prefix, conanfile):
     # If the match is perfect, do not warn
     folder = temp_folder()
     prefix = "lib" if prefix else ""
@@ -263,4 +263,28 @@ def test_multiple_matches_exact_match(conanfile, prefix):
         result = cppinfo.deduce_full_cpp_info(conanfile)
     assert "WARN: There were several matches for Lib mylib" not in output
     assert result.location == f"{folder}/libdir/{prefix}mylib.a"
+    assert result.type == "static-library"
+
+
+
+@pytest.mark.parametrize("lib_name, libs", [
+    ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
+])
+def test_several_libs_and_exact_match(lib_name, libs, conanfile):
+    """
+    Testing that we're keeping the exact match at first instead the similar one
+
+    Issue related: https://github.com/conan-io/conan/issues/17974
+    """
+    folder = temp_folder()
+    for lib in libs:
+        save(os.path.join(folder, "libdir", lib), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = [lib_name]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == f"{folder}/libdir/{lib_name}.lib"
     assert result.type == "static-library"
