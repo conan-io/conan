@@ -58,7 +58,7 @@ class ConanCenterProvider:
                 # TODO: How to report auth error to the user
                 ConanOutput().error(f"Authentication error ({response.status_code}).\n"
                                     f"Your token may be invalid or not yet validated. If you recently registered, please check your email to validate your token.\n"
-                                    f" - Set a valid token using: 'conan audit provider auth --name={self.name} --token=<your_token>'\n"
+                                    f" - Set a valid token using: 'conan audit provider auth {self.name} --token=<your_token>'\n"
                                     f" - If you don’t have a token, register at: https://audit.conan.io/register")
 
                 errors_in_response = True

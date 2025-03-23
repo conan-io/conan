@@ -12,30 +12,6 @@ from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, chdir
 
 
-class ConanLoaderTest(unittest.TestCase):
-
-    def test_inherit_short_paths(self):
-        loader = ConanFileLoader(None)
-
-        tmp_dir = temp_folder()
-        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
-        conanfile = """from base_recipe import BasePackage
-class Pkg(BasePackage):
-    pass
-"""
-        base_recipe = """from conan import ConanFile
-class BasePackage(ConanFile):
-    short_paths = True
-"""
-        save(conanfile_path, conanfile)
-        save(os.path.join(tmp_dir, "base_recipe.py"), base_recipe)
-        conan_file = loader.load_basic(conanfile_path)
-        self.assertEqual(conan_file.short_paths, True)
-
-        result = loader.load_consumer(conanfile_path)
-        self.assertEqual(result.short_paths, True)
-
-
 class ConanLoaderTxtTest(unittest.TestCase):
     def test_conanfile_txt_errors(self):
         # Invalid content

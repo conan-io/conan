@@ -181,7 +181,7 @@ class PackagePreparator:
             clean_dirty(package_tgz)
 
         # Get all the files in that directory
-        # existing package, will use short paths if defined
+        # existing package
         package_folder = layout.package()
         files, symlinked_folders = gather_files(package_folder)
         files.update(symlinked_folders)
