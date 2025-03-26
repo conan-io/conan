@@ -610,18 +610,16 @@ class ConfDefinition:
         else:
             self._pattern_confs[pattern] = conf
 
-    def rebase_conf_definition(self, other):
+    def rebase_conf_definition(self, global_conf):
         """
         for taking the new global.conf and composing with the profile [conf]
-        :type other: ConfDefinition
+        :type global_conf: ConfDefinition
         """
-        for pattern, conf in other._pattern_confs.items():
-            new_conf = conf.filter_user_modules()  # Creates a copy, filtered
-            existing = self._pattern_confs.get(pattern)
-            if existing:
-                existing.compose_conf(new_conf)
-            else:
-                self._pattern_confs[pattern] = new_conf
+        result = ConfDefinition()
+        result._pattern_confs = global_conf._pattern_confs.copy()
+        result.update_conf_definition(self)
+        self._pattern_confs = result._pattern_confs
+        return
 
     def update(self, key, value, profile=False, method="define"):
         """
