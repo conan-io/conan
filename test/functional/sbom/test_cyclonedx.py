@@ -25,6 +25,12 @@ def post_package(conanfile):
     ConanOutput().success(f"CYCLONEDX CREATED - {conanfile.package_metadata_folder}")
 """
 
+@pytest.fixture()
+def hook_setup_post_package_default():
+    tc = TestClient()
+    hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+    save(hook_path, sbom_hook_post_package % ("False", "False"))
+    return tc
 
 @pytest.fixture()
 def hook_setup_post_package():
@@ -230,6 +236,26 @@ def test_sbom_generation_install_path_txt(hook_setup_post_generate):
     tc.run("install .")
     assert os.path.exists(os.path.join(tc.current_folder, "sbom", "sbom.cdx.json"))
 
+def test_sbom_with_special_root_node(hook_setup_post_generate):
+    # In this test, we have only one node in the subgraph, which has build context, so the number
+    # of components after processing it is zero.
+    tc = hook_setup_post_generate
+    package_name = "foo"
+
+    conanfile =  textwrap.dedent("""
+            from conan import ConanFile
+            class FooPackage(ConanFile):
+                name = "foo"
+                version = "1.0"
+                package_type = "build-scripts"
+    """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create .")
+    create_layout = tc.created_layout()
+    assert os.path.exists(os.path.join(create_layout.build(), "sbom", "sbom.cdx.json"))
+    with open(os.path.join(create_layout.build(), "sbom", "sbom.cdx.json"), 'r') as file:
+        sbom_json = json.load(file)
+        assert package_name in sbom_json["metadata"]["component"]["name"]
 
 @pytest.mark.parametrize("name, result", [
     ("None", "conan-sbom"),

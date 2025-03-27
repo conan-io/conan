@@ -6,10 +6,10 @@ from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 
 
-def is_apple_os(conanfile):
+def is_apple_os(conanfile, build_context=False):
     """returns True if OS is Apple one (Macos, iOS, watchOS, tvOS or visionOS)"""
-    os_ = conanfile.settings.get_safe("os")
-    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS']
+    settings = conanfile.settings_build if build_context else conanfile.settings
+    return str(settings.get_safe("os")) in ['Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS']
 
 
 def _to_apple_arch(arch, default=None):

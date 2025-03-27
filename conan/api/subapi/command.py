@@ -1,3 +1,5 @@
+import os
+
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
@@ -25,9 +27,9 @@ class CommandAPI:
         # get redefined when running a command and leak to the calling scope
         # if running from a custom command.
         # Store the old one and restore it after the command execution as a workaround.
-        _conan_output_level = ConanOutput._conan_output_level
-        _silent_warn_tags = ConanOutput._silent_warn_tags
-        _warnings_as_errors = ConanOutput._warnings_as_errors
+        _conan_output_level = ConanOutput._conan_output_level  # noqa
+        _silent_warn_tags = ConanOutput._silent_warn_tags  # noqa
+        _warnings_as_errors = ConanOutput._warnings_as_errors  # noqa
 
         try:
             result = command.run_cli(self.conan_api, args)
@@ -36,3 +38,25 @@ class CommandAPI:
             ConanOutput._silent_warn_tags = _silent_warn_tags
             ConanOutput._warnings_as_errors = _warnings_as_errors
         return result
+
+    @staticmethod
+    def get_runner(profile_host):
+        if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
+            from conan.internal.runner.docker import DockerRunner
+            from conan.internal.runner.ssh import SSHRunner
+            from conan.internal.runner.wsl import WSLRunner
+            try:
+                runner_type = profile_host.runner['type'].lower()
+            except KeyError:
+                raise ConanException(f"Invalid runner configuration. 'type' must be defined")
+            runner_instances_map = {
+                'docker': DockerRunner,
+                # 'ssh': SSHRunner,
+                # 'wsl': WSLRunner,
+            }
+            try:
+                runner_instance = runner_instances_map[runner_type]
+            except KeyError:
+                raise ConanException(f"Invalid runner type '{runner_type}'. "
+                                     f"Allowed values: {', '.join(runner_instances_map.keys())}")
+            return runner_instance(profile_host.runner)

@@ -12,8 +12,8 @@ from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
-_FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
-                    "_sharedlinkflags", "_exelinkflags"]
+_FIELD_VAR_NAMES = ["_system_libs", "_package_framework", "_frameworks", "_libs", "_defines",
+                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
@@ -72,7 +72,8 @@ class _Component:
 
         # ##### FIELDS
         self._system_libs = None  # Ordered list of system libraries
-        self._frameworks = None  # Macos .framework
+        self._frameworks = None  # system Apple OS frameworks
+        self._package_framework = None  # any other frameworks
         self._libs = None  # The libs to link against
         self._defines = None  # preprocessor definitions
         self._cflags = None  # pure C flags
@@ -205,16 +206,6 @@ class _Component:
         self._builddirs = value
 
     @property
-    def frameworkdirs(self):
-        if self._frameworkdirs is None:
-            self._frameworkdirs = []
-        return self._frameworkdirs
-
-    @frameworkdirs.setter
-    def frameworkdirs(self, value):
-        self._frameworkdirs = value
-
-    @property
     def bindir(self):
         bindirs = self.bindirs
         if not bindirs or len(bindirs) != 1:
@@ -252,6 +243,14 @@ class _Component:
         self._system_libs = value
 
     @property
+    def package_framework(self):
+        return self._package_framework
+
+    @package_framework.setter
+    def package_framework(self, value):
+        self._package_framework = value
+
+    @property
     def frameworks(self):
         if self._frameworks is None:
             self._frameworks = []
@@ -260,6 +259,16 @@ class _Component:
     @frameworks.setter
     def frameworks(self, value):
         self._frameworks = value
+
+    @property
+    def frameworkdirs(self):
+        if self._frameworkdirs is None:
+            self._frameworkdirs = []
+        return self._frameworkdirs
+
+    @frameworkdirs.setter
+    def frameworkdirs(self, value):
+        self._frameworkdirs = value
 
     @property
     def libs(self):
@@ -502,16 +511,8 @@ class _Component:
             for file_name in files:
                 full_path = os.path.join(dir_, file_name)
                 if os.path.isfile(full_path) and pattern.match(file_name):
-                    # File name could be a symlink, e.g., mylib.1.0.0.so -> mylib.so
-                    if os.path.islink(full_path):
-                        # Important! os.path.realpath returns the final path of the symlink even if it points
-                        # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
-                        # then os.path.realpath("libmylib.1.0.0.dylib") == "libmylib.dylib"
-                        # Note: os.readlink() returns the path which the symbolic link points to.
-                        real_path = os.path.realpath(full_path)
-                        ret.add(real_path)
-                    else:
-                        ret.add(full_path)
+                    # Issue: https://github.com/conan-io/conan/issues/17721 (stop resolving symlinks)
+                    ret.add(full_path)
             return list(ret)
 
         def _find_matching(dirs, pattern):
@@ -553,11 +554,18 @@ class _Component:
         else:
             lib_sanitized = re.escape(libname)
             component_sanitized = re.escape(library_name)
-            regex_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
-            regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
+            # At first, exact match
+            regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
+            regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
             regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
             static_location = _find_matching(libdirs, regex_static)
             shared_location = _find_matching(libdirs, regex_shared)
+            if not any([static_location, shared_location]):
+                # Let's extend a little bit the pattern search
+                regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+                regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
+                static_location = _find_matching(libdirs, regex_wider_static)
+                shared_location = _find_matching(libdirs, regex_wider_shared)
             if static_location or not shared_location:
                 dll_location = _find_matching(bindirs, regex_dll)
 
@@ -612,7 +620,7 @@ class _Component:
                 raise ConanException(f"{name} has .exe and no .location")
             return
         if self._type is PackageType.APP:
-            # old school Conan application packages withoud defining an exe, not an error
+            # old school Conan application packages without defining an exe, not an error
             return
 
         # libraries
@@ -817,7 +825,6 @@ class CppInfo:
             raise ConanException(f"{conanfile}: 'cpp_info' contains components and .exe or .libs")
 
         result = CppInfo()  # clone it
-
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput().warning(f"{conanfile}: The 'cpp_info.libs' contain more than 1 library. "
                                   "Define 'cpp_info.components' instead.")

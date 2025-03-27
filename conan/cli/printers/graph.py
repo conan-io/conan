@@ -18,7 +18,7 @@ def print_graph_basic(graph):
     deprecated = {}
     for node in graph.nodes:
         if hasattr(node.conanfile, "python_requires"):
-            for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
+            for _, r in node.conanfile.python_requires.items():
                 python_requires[r.ref] = r.recipe, r.remote
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
@@ -40,10 +40,10 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for ref, (recipe, remote) in sorted(reqs_to_print.items()):
+        for ref_, (recipe, remote) in sorted(reqs_to_print.items()):
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)
-            output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
+            output.info("    {} - {}".format(ref_.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
@@ -54,8 +54,8 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for k, v in sorted(reqs_to_print.items()):
-            output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
+        for k_, v_ in sorted(reqs_to_print.items()):
+            output.info("    {}: {}".format(k_, v_), Color.BRIGHT_CYAN)
 
     if graph.replaced_requires:
         output.info("Replaced requires", Color.BRIGHT_YELLOW)
@@ -70,7 +70,8 @@ def print_graph_basic(graph):
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
     for req in graph.resolved_ranges:
         if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead", warn_tag="deprecated")
+            output.warning("Empty version range usage is discouraged. Use [*] instead",
+                           warn_tag="deprecated")
             break
 
     overrides = graph.overrides()
@@ -96,6 +97,9 @@ def print_graph_basic(graph):
         output.info("    It is recommended to define options values in profiles, not in recipes",
                     Color.BRIGHT_CYAN)
         output.warning("There are options conflicts in the dependency graph", warn_tag="risk")
+
+    if deprecated:
+        output.warning("There are deprecated packages in the graph", warn_tag="risk")
 
 
 def print_graph_packages(graph):

@@ -17,6 +17,7 @@ class TestDeprecated:
         t.run("create taskflow.py")
 
         assert "Deprecated\n    cpp-taskflow/1.0" in t.out
+        assert "WARN: risk: There are deprecated packages in the graph" in t.out
 
         t.run("create taskflow.py --user=conan --channel=stable")
         assert "Deprecated\n    cpp-taskflow/1.0" in t.out
