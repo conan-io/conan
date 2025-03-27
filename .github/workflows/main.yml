@@ -16,17 +16,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  set_python_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
+      python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
+    name: Determine Python versions
+    steps:
+      - name: Determine Python versions
+        id: set_versions
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/develop2" || "${{ github.ref }}" == refs/heads/release/* ]]; then
+            echo "python_versions_linux_windows=['3.13', '3.6']" >> $GITHUB_OUTPUT
+            echo "python_versions_macos=['3.13', '3.8']" >> $GITHUB_OUTPUT
+          else
+            echo "python_versions_linux_windows=['3.10']" >> $GITHUB_OUTPUT
+            echo "python_versions_macos=['3.10']" >> $GITHUB_OUTPUT
+          fi
+
   linux_suite:
+    needs: set_python_versions
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
 
   osx_suite:
+    needs: set_python_versions
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
 
   windows_suite:
+    needs: set_python_versions
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
 
   code_coverage:
     runs-on: ubuntu-latest
@@ -63,6 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
+    needs: [linux_suite, osx_suite, windows_suite]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

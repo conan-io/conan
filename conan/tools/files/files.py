@@ -356,15 +356,14 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
-    with FileProgress(filename, msg="Uncompressing") as fileobj, tarfile.TarFile.open(fileobj=fileobj, mode='r:*') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
-            # Simple case: extract everything
             tarredgzippedFile.extractall(destination)
         else:
-            # Read members one by one and process them
             common_folder = None
+            members = []
             for member in tarredgzippedFile:
                 if pattern and not fnmatch(member.name, pattern):
                     continue  # Skip files that don’t match the pattern
@@ -380,7 +379,6 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                             raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
                     if not name.startswith(common_folder):
                         raise ConanException("The tgz file contains more than 1 folder in the root")
-
                     # Adjust the member's name for extraction
                     member.name = name[len(common_folder) + 1:]
                     member.path = member.name
@@ -388,9 +386,10 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         # https://github.com/conan-io/conan/issues/11065
                         member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
-                # Extract file one by one, avoiding `extractall()` with members parameter:
-                # This will avoid a first whole file read resulting in a performant improvement around 25%
-                tarredgzippedFile.extract(member, path=destination)
+                # Let's gather each member
+                members.append(member)
+            tarredgzippedFile.extractall(destination, members=members)
+
 
 def check_sha1(conanfile, file_path, signature):
     """

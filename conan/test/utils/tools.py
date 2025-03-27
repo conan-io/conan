@@ -11,7 +11,6 @@ import textwrap
 import traceback
 import uuid
 import zipfile
-from collections import OrderedDict
 from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
@@ -23,6 +22,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
@@ -416,18 +416,11 @@ class TestClient:
         self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
-
-        if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception(textwrap.dedent("""
-                Testing framework error: Servers should be an OrderedDict. e.g:
-                    servers = OrderedDict()
-                    servers["r1"] = server
-                    servers["r2"] = TestServer()
-            """))
-
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
+
+        self.update_providers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
         # Once the client is ready, modify the configuration
@@ -486,6 +479,16 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
+
+
+    def update_providers(self):
+        default_providers = {
+            CONAN_CENTER_AUDIT_PROVIDER_NAME: {
+                "url": "https://fakeurl/",
+                "type": "conan-center-proxy"
+            }
+        }
+        _save_providers(HomePaths(self.cache_folder).providers_path, default_providers)
 
     @contextmanager
     def chdir(self, newdir):

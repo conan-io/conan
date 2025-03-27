@@ -68,6 +68,71 @@ def test_apple_meson_keep_user_custom_flags():
     assert "cpp_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7', '-stdlib=libc++']" in content
 
 
+def test_apple_meson_cross_building_subsystem():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/17873
+    """
+    default = textwrap.dedent("""
+    [settings]
+    os=Macos
+    arch=x86_64
+    compiler=apple-clang
+    compiler.version=12.0
+    compiler.libcxx=libc++
+    build_type=Release
+    """)
+    cross = textwrap.dedent("""
+    [settings]
+    os = iOS
+    os.version = 10.0
+    os.sdk = iphoneos
+    arch = armv8
+    compiler = apple-clang
+    compiler.version = 12.0
+    compiler.libcxx = libc++
+
+    [conf]
+    tools.apple:sdk_path=/my/sdk/path
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile(name="app", version="1.0")
+                            .with_settings("os", "arch", "compiler", "build_type")
+                            .with_generator("MesonToolchain"),
+            "build": default,
+            "host": cross})
+    t.run("install . -pr:h host -pr:b build")
+    content = t.load(MesonToolchain.cross_filename)
+    machines_settings = textwrap.dedent("""\
+    [build_machine]
+    system = 'darwin'
+    subsystem = 'macos'
+    cpu_family = 'x86_64'
+    cpu = 'x86_64'
+    endian = 'little'
+    [host_machine]
+    system = 'darwin'
+    subsystem = 'ios'
+    cpu_family = 'aarch64'
+    cpu = 'armv8'
+    endian = 'little'""")
+    assert machines_settings in content
+    # Let's check that it does not appear if cross-compiling to other non-Apple-OS
+    cross = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=13
+    os=Linux
+    """)
+    t.save({"host": cross})
+    t.run("install . -pr:h host -pr:b build")
+    content = t.load(MesonToolchain.cross_filename)
+    assert "subsystem =" not in content
+
+
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]

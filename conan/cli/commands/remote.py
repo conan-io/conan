@@ -278,7 +278,7 @@ def print_auth_json(results):
 @conan_subcommand(formatters={"text": print_auth, "json": print_auth_json})
 def remote_auth(conan_api, parser, subparser, *args):
     """
-    Authenticate in the defined remotes. Use CONAN_LOGIN* and CONAN_PASSWORD* variables if available.
+    Authenticate in the defined remotes. Use CONAN_LOGIN_USERNAME* and CONAN_PASSWORD* variables if available.
     Ask for username and password interactively in case (re-)authentication is required and there are
     no CONAN_LOGIN* and CONAN_PASSWORD* variables available which could be used.
     Usually you'd use this method over conan remote login for scripting which needs to run in CI
@@ -288,7 +288,7 @@ def remote_auth(conan_api, parser, subparser, *args):
                                           " The pattern uses 'fnmatch' style wildcards.")
     subparser.add_argument("--with-user", action="store_true",
                            help="Only try to auth in those remotes that already "
-                                "have a username or a CONAN_LOGIN_ env-var defined")
+                                "have a username or a CONAN_LOGIN_USERNAME* env-var defined")
     subparser.add_argument("--force", action="store_true",
                            help="Force authentication for anonymous-enabled repositories. "
                                 "Can be used for force authentication in case your Artifactory "

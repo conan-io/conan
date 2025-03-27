@@ -1,6 +1,8 @@
+import os
 import sys
 
 from conan.api.output import init_colorama
+from conan.api.subapi.audit import AuditAPI
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
@@ -31,10 +33,16 @@ class ConanAPI:
     not be created directly.
     """
     def __init__(self, cache_folder=None):
+        """
+        :param cache_folder: Conan cache/home folder. It will have less priority than the
+                             "home_folder" defined in a Workspace.
+        """
 
         version = sys.version_info
         if version.major == 2 or version.minor < 6:
             raise ConanException("Conan needs Python >= 3.6")
+        if cache_folder is not None and not os.path.isabs(cache_folder):
+            raise ConanException("cache_folder has to be an absolute path")
 
         init_colorama(sys.stderr)
         self.workspace = WorkspaceAPI(self)
@@ -62,6 +70,7 @@ class ConanAPI:
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
+        self.audit = AuditAPI(self)
 
         _check_conan_version(self)
 

@@ -15,7 +15,6 @@ from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
-from conan.internal.cache.home_paths import HomePaths
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 
@@ -49,7 +48,8 @@ class Cli:
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 
-        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        conan_custom_commands_path = os.path.join(self._conan_api.cache_folder, "extensions",
+                                                  "commands")
         # Important! This variable should be only used for testing/debugging purpose
         developer_custom_commands_path = os.getenv(_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH)
         # Notice that in case of having same custom commands file names, the developer one has

@@ -254,3 +254,20 @@ def test_tool_requires_revision_profile():
     c.run("graph info app -pr:b=build_profile --build=*")
     assert f"tool/0.1#{rev1}" in c.out
     assert rev2 not in c.out
+
+
+def test_tool_requires_version_range_loop():
+    # https://github.com/conan-io/conan/issues/17930
+    c = TestClient(light=True)
+    build_profile = textwrap.dedent("""\
+        [settings]
+        os=Linux
+        [tool_requires]
+        tool/[>=1.0 <2]
+        """)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "1.1"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_tool_requires("tool/1.1"),
+            "build_profile": build_profile})
+    c.run("create tool")
+    c.run("install app -pr:b=build_profile")
+    assert "tool/1.1" in c.out  # It is skipped
