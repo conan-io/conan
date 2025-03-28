@@ -4,6 +4,7 @@ import stat
 import platform
 import shutil
 import subprocess
+from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
@@ -264,7 +265,7 @@ def chdir(conanfile, newdir):
         os.chdir(old_path)
 
 
-def chmod(conanfile, path:str, read:bool=None, write:bool=None, execute:bool=None, recursive:bool=False):
+def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=None, execute:Optional[bool]=None, recursive:Optional[bool]=False):
     """Change file or directory permissions cross-platform.
 
     .. versionadded:: 2.15
@@ -280,18 +281,21 @@ def chmod(conanfile, path:str, read:bool=None, write:bool=None, execute:bool=Non
         The current recipe object. Always use ``self``.
     path : str
         Path to the file or directory whose permissions will be changed.
-    read : Optional[bool], optional
+    read : bool, optional
         If ``True``, the file or directory will be given read permissions for owner user.
         If ``False``, the read permission will be removed.
         If ``None``, the read permission will be left unchanged.
-    write : Optional[bool], optional
-        If ``True``, the file or directory will have write permissions for owner user.
-        If ``False``, the file or directory will not have write permissions for owner user.
+        Defaults to None.
+    write : bool, optional
+        If ``True``, the file or directory will be given write permissions for owner user.
+        If ``False``, the write permission will be removed.
         If ``None``, the file or directory will not be changed.
-    execute : Optional[bool], optional
-        If ``True``, the file or directory will have execute permissions for owner user.
-        If ``False``, the file or directory will not have execute permissions for owner user.
+        Defaults to None.
+    execute : bool, optional
+        If ``True``, the file or directory will be given execute permissions for owner user.
+        If ``False``, the execution permission will be removed.
         If ``None``, the file or directory will not be changed.
+        Defaults to None.
     recursive : bool, optional
         If ``True``, the permissions will be applied recursively to all files and directories
         inside the specified directory. If ``False``, only the specified file or directory will
