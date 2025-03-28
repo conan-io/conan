@@ -136,7 +136,7 @@ jobs:
         run: |
           sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
           sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-          sudo systemctl restart ssh
+          sudo service ssh restart || sudo systemctl restart ssh
           mkdir -p ~/.ssh
           ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
           cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
