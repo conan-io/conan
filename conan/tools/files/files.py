@@ -279,7 +279,7 @@ def chmod(conanfile, path:str, read:bool=None, write:bool=None, execute:bool=Non
     conanfile : object
         The current recipe object. Always use ``self``.
     path : str
-        Path to the file or directory to change the permissions.
+        Path to the file or directory whose permissions will be changed.
     read : Optional[bool], optional
         If ``True``, the file or directory will have read permissions for owner user.
         If ``False``, the file or directory will not have read permissions for owner user.
