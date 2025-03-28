@@ -9,6 +9,7 @@ class AutotoolsDeps:
         self._conanfile = conanfile
         self._environment = None
         self._ordered_deps = None
+        self._required_deps = None
 
     @property
     def ordered_deps(self):
@@ -17,18 +18,33 @@ class AutotoolsDeps:
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
 
+    def _get_required_deps(self):
+        if self._required_deps is None:
+            deps = self._conanfile.dependencies.host.topological_sort
+            as_list = [(requires, dep) for requires, dep in deps.items()]
+            self._required_deps = [dep for dep in reversed(as_list)]
+        return self._required_deps
+
     def _get_cpp_info(self):
         ret = CppInfo(self._conanfile)
-        for dep in self.ordered_deps:
-            dep_cppinfo = dep.cpp_info.aggregated_components()
+        for requires, dep in self._get_required_deps():
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
+            dep_cppinfo = dep.cpp_info.aggregated_components()
+            # Now filter based on requires traits
+            if requires and not requires.headers:
+                dep_cppinfo.includedirs = []
+            if requires and not requires.libs:
+                dep_cppinfo.libs = []
+                # Linux linkers might need it for shared builds
+                # dep_cppinfo.libdirs = []
             ret.merge(dep_cppinfo)
         return ret
 
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
+            # TODO: Should this be filtered by requires.lib being True?
             flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
                           if dep.options.get_safe("shared", False)])
         return flags
