@@ -94,8 +94,7 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
     if args.list:
-        listfile = make_abs_path(args.list)
-        multi_package_list = MultiPackagesList.load(listfile)
+        multi_package_list = MultiPackagesList.load(args.list)
         cache_name = "Local Cache" if not args.remote else args.remote
         package_list = multi_package_list[cache_name]
         refs_to_list = package_list.serialize()

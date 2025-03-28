@@ -133,8 +133,7 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
 
     if args.list:
-        listfile = make_abs_path(args.list)
-        multi_package_list = MultiPackagesList.load(listfile)
+        multi_package_list = MultiPackagesList.load(args.list)
         package_list = multi_package_list["Local Cache"]
     else:
         ref_pattern = ListPattern(args.pattern)

@@ -78,8 +78,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         return args.confirm or ui.request_boolean(message)
 
     if args.list:
-        listfile = make_abs_path(args.list)
-        multi_package_list = MultiPackagesList.load(listfile)
+        multi_package_list = MultiPackagesList.load(args.list)
         package_list = multi_package_list[cache_name]
         refs_to_remove = package_list.refs()
         if not refs_to_remove:  # the package list might contain only refs, no revs

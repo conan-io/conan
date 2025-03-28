@@ -26,8 +26,7 @@ def pkglist_find_remote(conan_api, parser, subparser, *args):
                                 "('*' means all the remotes available)")
     args = parser.parse_args(*args)
 
-    listfile = make_abs_path(args.list)
-    multi_pkglist = MultiPackagesList.load(listfile)
+    multi_pkglist = MultiPackagesList.load(args.list)
     package_list = multi_pkglist["Local Cache"]
     selected_remotes = conan_api.remotes.list(args.remote)
     result = conan_api.list.find_remotes(package_list, selected_remotes)
@@ -51,8 +50,7 @@ def pkglist_merge(conan_api, parser, subparser, *args):
 
     result = MultiPackagesList()
     for pkg_list in args.list:
-        listfile = make_abs_path(pkg_list)
-        multi_pkglist = MultiPackagesList.load(listfile)
+        multi_pkglist = MultiPackagesList.load(pkg_list)
         result.merge(multi_pkglist)
 
     return {
