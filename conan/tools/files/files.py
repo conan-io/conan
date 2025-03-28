@@ -281,7 +281,7 @@ def chmod(conanfile, path:str, read:bool=None, write:bool=None, execute:bool=Non
     path : str
         Path to the file or directory whose permissions will be changed.
     read : Optional[bool], optional
-        If ``True``, the file or directory will have read permissions for owner user.
+        If ``True``, the file or directory will be given read permissions for owner user.
         If ``False``, the file or directory will not have read permissions for owner user.
         If ``None``, the file or directory will not be changed.
     write : Optional[bool], optional
