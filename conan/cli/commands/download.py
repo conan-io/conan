@@ -44,7 +44,8 @@ def download(conan_api: ConanAPI, parser, *args):
     remote = conan_api.remotes.get(args.remote)
 
     if args.list:
-        multi_package_list = MultiPackagesList.load(args.list)
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
         try:
             package_list = multi_package_list[remote.name]
         except KeyError:

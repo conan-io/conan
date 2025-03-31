@@ -87,7 +87,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define package-query and the package list file")
 
     if args.list:
-        multi_package_list = MultiPackagesList.load(args.list)
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
         if args.only_recipe:
             package_list.only_recipes()

@@ -44,15 +44,16 @@ class MultiPackagesList:
     @staticmethod
     def load(file):
         try:
-            content = json.loads(load(make_abs_path(file)))
+            content = json.loads(load(file))
         except JSONDecodeError as e:
             raise ConanException(f"Package list file invalid JSON: {file}\n{e}")
         except Exception as e:
             raise ConanException(f"Package list file missing or broken: {file}\n{e}")
         if "graph" in content and "command":
+            relative_path = os.path.relpath(file, os.getcwd())
             raise ConanException(
                 'Expected a package list file but found a graph file. You can create a "package list" JSON file by running:\n\n'
-                f"\tconan list --graph {file} --format=json > pkglist.json\n\n"
+                f"\tconan list --graph {relative_path} --format=json > pkglist.json\n\n"
                 "More Info at 'https://docs.conan.io/2/examples/commands/pkglists.html"
             )
         result = {}
