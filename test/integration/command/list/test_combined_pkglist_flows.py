@@ -276,8 +276,7 @@ class TestPkgListMerge:
             'ERROR: Expected a package list file but found a graph file. You can create a "package list" JSON file by running:'
             in c.out
         )
-        # Check correct relative path on message
-        assert "conan list --graph out/graph.json --format=json > pkglist.json" in c.out
+        assert "conan list --graph graph.json --format=json > pkglist.json" in c.out
 
 class TestDownloadUpload:
     @pytest.fixture()
