@@ -296,7 +296,7 @@ def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=No
         If ``False``, the execution permission will be removed.
         If ``None``, the file or directory will not be changed.
         Defaults to None.
-    recursive : bool, optional
+    recursive : bool
         If ``True``, the permissions will be applied recursively to all files and directories
         inside the specified directory. If ``False``, only the specified file or directory will
         be changed. Defaults to False.
