@@ -1,4 +1,4 @@
-from conan.internal import REVISIONS
+from conan.internal import REVISIONS, FIND_PACKAGEIDS
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
 
@@ -97,3 +97,11 @@ class RestApiClient:
 
     def get_package_revision_reference(self, pref):
         return self._get_api().get_package_revision_reference(pref)
+
+    def find_matching_package_ids(self, ref, collected_ids):
+        findable = self._capable(FIND_PACKAGEIDS)
+        if not findable:
+            # TODO: Fallback to old query each pref
+            pass
+        else:
+            return self._get_api().find_matching_package_ids(ref, collected_ids)

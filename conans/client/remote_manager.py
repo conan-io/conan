@@ -280,6 +280,16 @@ class RemoteManager:
         except Exception as exc:
             raise ConanException(exc, remote=remote)
 
+    def find_matching_package_ids(self, ref, remote, collected_ids) -> PkgReference:
+        assert ref.revision is not None, "find_matching_package_ids needs a reference with revision"
+        cached_method = remote._caching.setdefault("find_matching_package_ids", {})
+        try:
+            return cached_method[ref]
+        except KeyError:
+            result = self._call_remote(remote, "find_matching_package_ids", ref, collected_ids)
+            cached_method[ref] = result
+            return result
+
 
 def uncompress_file(src_path, dest_folder, scope=None):
     try:

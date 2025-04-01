@@ -97,6 +97,11 @@ class ClientV2Router:
         assert pref.ref.revision is not None, "Cannot get the latest package without RREV"
         return self.base_url + _format_pref(self.routes.package_revision_latest, pref)
 
+    def package_find(self, ref):
+        """Find matching package ids"""
+        assert ref.revision is not None, "Cannot find matching package ids without RREV"
+        return self.base_url + self._for_package_find(ref)
+
     def recipe_latest(self, ref):
         """Get the latest of a recipe"""
         assert ref.revision is None, "for_recipe_latest shouldn't receive RREV"
@@ -136,6 +141,10 @@ class ClientV2Router:
     def _for_package(self, pref):
         """url for the package with or without revisions"""
         return _format_pref(self.routes.package_revision, pref)
+
+    def _for_package_find(self, ref):
+        """url for the package id find for a given revision"""
+        return _format_ref(self.routes.package_find, ref)
 
     @staticmethod
     def _format_ref_path(url, ref, path):

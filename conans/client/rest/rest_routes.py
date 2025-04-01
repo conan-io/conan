@@ -61,6 +61,10 @@ class RestRoutes(object):
         return '%s/files/{path}' % self.package_revision
 
     @property
+    def package_find(self):
+        return '%s/find' % self.packages_revision
+
+    @property
     def common_search_packages(self):
         return "%s/search" % self.recipe
 

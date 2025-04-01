@@ -2,7 +2,7 @@ from conan.errors import ConanException
 
 
 REVISIONS = "revisions"  # capability
-
+FIND_PACKAGEIDS = "find_packageids"  # capability
 
 def check_duplicated_generator(generator, conanfile):
     if generator.__class__.__name__ in conanfile.generators:

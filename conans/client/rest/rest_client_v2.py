@@ -457,3 +457,9 @@ class RestV2Methods:
         remote_pref.revision = data.get("revision")
         remote_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
         return remote_pref
+
+    def find_matching_package_ids(self, ref: RecipeReference, collected_ids):
+        url = self.router.package_find(ref)
+        payload = {"packageIds": collected_ids}
+        data = self._get_json(url, data=payload)
+        return data
