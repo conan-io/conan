@@ -293,11 +293,15 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("msvc", "193"), "14")
 
     def test_intel_cppstd_flag(self):
-        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "gnu98"), '-std=gnu++98')
-        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "11"), '-std=c++11')
-        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "14"), '-std=c++14')
-        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "17"), '-std=c++17')
-        self.assertEqual(_make_cppstd_flag("intel-cc", "19.1", "20"), '-std=c++20')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2024.1", "gnu98"), '-std=gnu++98')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2024.1", "11"), '-std=c++11')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2024.1", "14"), '-std=c++14')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2024.1", "17"), '-std=c++17')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2024.1", "20"), '-std=c++20')
+
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2025.1", "17"), '-std=c++17')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2025.1", "20"), '-std=c++20')
+        self.assertEqual(_make_cppstd_flag("intel-cc", "2025.1", "23"), '-std=c++2b')
 
     def test_mcst_lcc_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("mcst-lcc", "1.19"), "gnu98")
