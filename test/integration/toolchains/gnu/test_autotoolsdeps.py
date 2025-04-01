@@ -125,7 +125,8 @@ def test_cpp_info_aggregation():
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 def test_transitive_non_includes(transitive_headers, transitive_libs):
     tc = TestClient(light=True)
-    tc.save({"brotli/conanfile.py": GenConanfile("brotli", "1.0"),
+    tc.save({"brotli/conanfile.py": GenConanfile("brotli", "1.0")
+                .with_package_info({"libs": ["brotlienc2"]}),
              "lib/conanfile.py": GenConanfile("lib", "1.0")
                 .with_requirement("brotli/1.0",
                                   transitive_headers=transitive_headers,
@@ -146,6 +147,6 @@ def test_transitive_non_includes(transitive_headers, transitive_libs):
         assert os.path.join(brotli_layout.package(), "include") not in autotoolsdeps
 
     if transitive_libs:
-        assert os.path.join(brotli_layout.package(), "lib") in autotoolsdeps
+        assert "brotlienc2" in autotoolsdeps
     else:
-        assert os.path.join(brotli_layout.package(), "lib") not in autotoolsdeps
+        assert "brotlienc2" not in autotoolsdeps
