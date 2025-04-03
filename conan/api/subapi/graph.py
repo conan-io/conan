@@ -222,9 +222,7 @@ class GraphAPI:
             if order_by is None:
                 raise ConanException("--reduce needs --order-by argument defined")
             install_graph.reduce()
-
-        install_order_serialized = install_graph.install_build_order()
-        return install_order_serialized
+        return install_graph
 
     @staticmethod
     def build_order_merge(files, reduce=False):
@@ -236,9 +234,6 @@ class GraphAPI:
             if install_graph.reduced:
                 raise ConanException(f"Reduced build-order file cannot be merged: {f}")
             result.merge(install_graph)
-
         if reduce:
             result.reduce()
-
-        install_order_serialized = result.install_build_order()
-        return install_order_serialized
+        return result

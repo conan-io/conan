@@ -110,19 +110,18 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-    build_order = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
-                                              profile_args=args)
+    install_graph = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
+                                                profile_args=args)
+    install_order_serialized = install_graph.install_build_order()
+    if args.order_by is None:  # legacy
+        install_order_serialized = install_order_serialized["order"]
+
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
-    if build_order.pop("legacy", None):  # legacy
-        error = build_order["errors"]
-        build_order = build_order["order"]
-    else:
-        error = build_order.pop("errors")
-    return {"build_order": build_order,
-            "conan_error": error}
+    return {"build_order": install_order_serialized,
+            "conan_error": install_graph.get_errors()}
 
 
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order,
@@ -140,15 +139,13 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):  # noqa
         raise ConanException("At least 2 files are needed to be merged")
 
     files = [make_abs_path(f) for f in args.file]
-    build_order = conan_api.graph.build_order_merge(files, args.reduce)
+    result = conan_api.graph.build_order_merge(files, args.reduce)
 
-    if build_order.pop("legacy", None):
-        error = build_order["errors"]
-        build_order = build_order["order"]
-    else:
-        error = build_order.pop("errors")
-    return {"build_order": build_order,
-            "conan_error": error}
+    install_order_serialized = result.install_build_order()
+    if getattr(result, "legacy"):
+        install_order_serialized = install_order_serialized["order"]
+    return {"build_order": install_order_serialized,
+            "conan_error": result.get_errors()}
 
 
 @conan_subcommand(formatters={"text": format_graph_info,
