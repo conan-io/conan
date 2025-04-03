@@ -33,9 +33,9 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
 
     name_default = getattr(graph.root.ref, "name", False) or "conan-sbom"
     name_default += f"/{graph.root.ref.version}" if bool(getattr(graph.root.ref, "version", False)) else ""
-    components = [node for node in graph.nodes if (node.context == "host" or add_build) and (not node.test or add_tests)]
+    nodes = [node for node in graph.nodes if (node.context == "host" or add_build) and (not node.test or add_tests)]
     if has_special_root_node:
-        components = components[1:]
+        nodes = nodes[1:]
 
     dependencies = []
     if has_special_root_node:
@@ -43,7 +43,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
                 "dependsOn": [f"pkg:conan/{d.dst.name}@{d.dst.ref.version}?rref={d.dst.ref.revision}"
                               for d in graph.root.dependencies]}
         dependencies.append(deps)
-    for c in components:
+    for c in nodes:
         deps = {"ref": f"pkg:conan/{c.name}@{c.ref.version}?rref={c.ref.revision}"}
         dep = [d for d in c.dependencies if (d.dst.context == "host" or add_build) and (not d.dst.test or add_tests)]
 
@@ -63,23 +63,23 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
 
     sbom_cyclonedx_1_4 = {
         **({"components": [{
-            "author": "Conan",
-            "bom-ref": special_id if has_special_root_node else f"pkg:conan/{c.name}@{c.ref.version}?rref={c.ref.revision}",
-            "description": c.conanfile.description,
+            "author": node.conanfile.author or "Unknown",
+            "bom-ref": special_id if has_special_root_node else f"pkg:conan/{node.name}@{node.ref.version}?rref={node.ref.revision}",
+            "description": node.conanfile.description,
             **({"externalReferences": [{
                 "type": "website",
-                "url": c.conanfile.homepage
-            }]} if c.conanfile.homepage else {}),
-            **({"licenses": _calculate_licenses(c)} if c.conanfile.license else {}),
-            "name": c.name,
-            "purl": f"pkg:conan/{c.name}@{c.ref.version}",
+                "url": node.conanfile.homepage
+            }]} if node.conanfile.homepage else {}),
+            **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
+            "name": node.name,
+            "purl": f"pkg:conan/{node.name}@{node.ref.version}",
             "type": "library",
-            "version": str(c.ref.version),
-        } for c in components]} if components else {}),
+            "version": str(node.ref.version),
+        } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
         "metadata": {
             "component": {
-                "author": "Conan",
+                "author": conanfile.author or "Unknown",
                 "bom-ref": special_id if has_special_root_node else f"pkg:conan/{conanfile.name}@{conanfile.ref.version}?rref={conanfile.ref.revision}",
                 "name": name if name else name_default,
                 "type": "library"

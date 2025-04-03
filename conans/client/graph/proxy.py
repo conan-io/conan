@@ -106,7 +106,7 @@ class ConanProxy:
                 continue
             output.info(f"Checking remote: {remote.name}")
             try:
-                if self._legacy_update and need_update:
+                if self._legacy_update and need_update and reference.revision is None:
                     if not getattr(ConanProxy, "update_policy_legacy_warning", None):
                         ConanProxy.update_policy_legacy_warning = True
                         ConanOutput().warning("The 'core:update_policy' conf is deprecated and will "
