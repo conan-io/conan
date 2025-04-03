@@ -76,6 +76,71 @@ def test_conf_rebase(conf_definition):
     assert c.dumps() == result
 
 
+def test_conf_rebase_patterns():
+    text = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=value2
+        &:user.company:conf2+=[4, 5]
+        """)
+    global_conf = ConfDefinition()
+    global_conf.loads(text)
+    text = textwrap.dedent("""\
+        user.company:conf1=newvalue1
+        user.company:conf2=[6, 7]
+        """)
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    # TODO: at the moment dumps() doesn't print += append
+    result = textwrap.dedent("""\
+        user.company:conf1=newvalue1
+        user.company:conf2=[6, 7]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[4, 5]
+    """)
+    assert profile.dumps() == result
+
+    text = textwrap.dedent("""\
+        &:user.company:conf1=newvalue1
+        &:user.company:conf2=[6, 7]
+        """)
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=newvalue1
+        &:user.company:conf2=[6, 7]
+       """)
+    assert profile.dumps() == result
+
+    text = "user.company:conf2+=[6, 7]"
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3, 6, 7]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[4, 5]
+        """)
+    assert profile.dumps() == result
+
+    text = "&:user.company:conf2=+[6, 7]"
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[6, 7, 4, 5]
+        """)
+    assert profile.dumps() == result
+
+
 def test_conf_error_per_package():
     text = "*:core:non_interactive=minimal"
     c = ConfDefinition()

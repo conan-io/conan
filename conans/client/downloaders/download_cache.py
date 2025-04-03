@@ -100,9 +100,10 @@ class DownloadCache:
                 raise ConanException(f"Missing metadata file for backup source {blob_path}")
             metadata = json.loads(load(metadata_path))
             refs = metadata["references"]
-            # unknown entries are not uploaded at this moment unless no package_list is passed
             for ref, urls in refs.items():
-                if not has_excluded_urls(urls) and (package_list is None or ref in all_refs):
+                if not has_excluded_urls(urls) and (not only_upload
+                                                    or package_list is None
+                                                    or ref in all_refs):
                     files_to_upload.append(metadata_path)
                     files_to_upload.append(blob_path)
                     break

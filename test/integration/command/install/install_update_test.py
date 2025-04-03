@@ -233,3 +233,15 @@ class TestUpdateOldPolicy:
         c.run("remove * -c")
         c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
         assert f"pkg/0.1#{rev2} - Downloaded (r1)" in c.out
+
+    def test_lockfile(self):
+        # https://github.com/conan-io/conan/issues/18006
+        c = TestClient(default_server_user=True, light=True)  # needs server to fail
+        c.save_home({"global.conf": "core:update_policy=legacy"})
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/0.1")})
+        c.run("create dep")
+        c.run("lock create pkg --lockfile-out base.lock --build=* --update")
+        c.run("lock create pkg --lockfile base.lock --lockfile-out full.lock --build=* --update")
+        # it doesn't crash
+        assert "Generated lockfile" in c.out

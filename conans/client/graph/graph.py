@@ -418,13 +418,6 @@ class DepsGraph(object):
 
         return result
 
-    def build_time_nodes(self):
-        """ return all the nodes in the graph that are build-requires (either directly or
-        transitively). Nodes that are both in requires and build_requires will not be returned.
-        This is used just for output purposes, printing deps, HTML graph, etc.
-        """
-        return [n for n in self.nodes if n.context == CONTEXT_BUILD]
-
     def report_graph_error(self):
         if self.error:
             raise self.error

@@ -3,9 +3,9 @@ import json
 import os
 from json import JSONDecodeError
 
+from conan.api.model import RecipeReference, PkgReference
 from conan.errors import ConanException
 from conan.internal.errors import NotFoundException
-from conan.api.model import RecipeReference, PkgReference
 from conan.internal.model.version_range import VersionRange
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
@@ -36,6 +36,10 @@ class MultiPackagesList:
         for k, v in other.lists.items():
             self.lists.setdefault(k, PackagesList()).merge(v)
 
+    def keep_outer(self, other):
+        for namespace, other_pkg_list in other.lists.items():
+            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
+
     @staticmethod
     def load(file):
         try:
@@ -55,19 +59,30 @@ class MultiPackagesList:
         return pkglist
 
     @staticmethod
-    def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
+    def load_graph(graphfile, graph_recipes=None, graph_binaries=None, context=None):
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
         try:
+            base_context = context.split("-")[0] if context else None
             graph = json.loads(load(graphfile))
-            return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+            mpkglist =  MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                        context=base_context)
+            if context == "build-only":
+                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                       context="host")
+                mpkglist.keep_outer(host)
+            elif context == "host-only":
+                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                        context="build")
+                mpkglist.keep_outer(build)
+            return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
         except Exception as e:
             raise ConanException(f"Graph file broken: {graphfile}\n{e}")
 
     @staticmethod
-    def _define_graph(graph, graph_recipes=None, graph_binaries=None):
+    def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -79,6 +94,9 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
+            if context and node['context'] != context:
+                continue
+
             # We need to add the python_requires too
             python_requires = node.get("python_requires")
             if python_requires is not None:
@@ -141,6 +159,14 @@ class PackagesList:
                     d[k] = v
             return d
         recursive_dict_update(self.recipes, other.recipes)
+
+    def keep_outer(self, other):
+        if not self.recipes:
+            return
+
+        for ref, info in other.recipes.items():
+            if self.recipes.get(ref, {}) == info:
+                self.recipes.pop(ref)
 
     def split(self):
         """
