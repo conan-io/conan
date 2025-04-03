@@ -270,6 +270,28 @@ class ArchitectureBlock(Block):
                 "thread_flags_list": thread_flags_list}
 
 
+class RpathLinkFlagsBlock(Block):
+    # TODO: should do this only on Linux, or toggled by an opt-in conf
+    template = textwrap.dedent("""\
+        # Pass -rpath-link pointing to all directories with runtime libraries
+        {% if rpath_link_flags %}
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ rpath_link_flags }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ rpath_link_flags }}")
+        {% endif %}
+        """)
+    
+    def context(self):
+
+        runtime_dirs = []
+        host_req = self._conanfile.dependencies.filter({"build": False}).values()
+        for req in host_req:
+            cppinfo = req.cpp_info.aggregated_components()
+            runtime_dirs.extend(cppinfo.libdirs)
+
+        rpath_link_flags = "-Wl,-rpath-link=" + ":".join(runtime_dirs) if runtime_dirs else None
+        return {"rpath_link_flags": rpath_link_flags}
+    
+
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
         # Add linker flags from tools.build:linker_scripts conf
