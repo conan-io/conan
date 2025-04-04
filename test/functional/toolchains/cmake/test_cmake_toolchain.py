@@ -1119,6 +1119,7 @@ def test_resdirs_none_cmake_install():
     assert "Cannot install stuff" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_toolchain_vars_when_option_declared():
     t = TestClient()
 

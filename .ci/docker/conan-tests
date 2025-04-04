@@ -16,6 +16,7 @@ ENV PY36=3.6.15 \
     CMAKE_3_19=/usr/share/cmake-3.19.7/bin/cmake \
     CMAKE_3_23=/usr/share/cmake-3.23.5/bin/cmake \
     CMAKE_3_27=/usr/share/cmake-3.27.9/bin/cmake \
+    CMAKE_4_0=/usr/share/cmake-4.0.0-rc3/bin/cmake \
     GCC_9=/usr/bin/gcc-9 \
     GXX_9=/usr/bin/g++-9 \
     GCC_11=/usr/bin/gcc-11 \
@@ -120,12 +121,17 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
     wget https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-Linux-x86_64.tar.gz   && \
     tar -xvzf cmake-3.27.9-Linux-x86_64.tar.gz && mv cmake-3.27.9-linux-x86_64/ /usr/share/cmake-3.27.9 && \
+    wget https://cmake.org/files/v4.0/cmake-4.0.0-rc3-linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake-4.0.0-rc3-linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_0 70 && \
+    # set CMake 3.15 as default
+    update-alternatives --set cmake $CMAKE_3_15
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \

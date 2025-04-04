@@ -59,4 +59,4 @@ class CommandAPI:
             except KeyError:
                 raise ConanException(f"Invalid runner type '{runner_type}'. "
                                      f"Allowed values: {', '.join(runner_instances_map.keys())}")
-            return runner_instance(profile_host.runner)
+            return runner_instance
