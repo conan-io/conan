@@ -7,7 +7,7 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 
-def docker_skip(test_image=None):
+def docker_skip(test_image='ubuntu:22.04'):
     try:
         try:
             docker_client = docker.from_env()
@@ -37,7 +37,7 @@ def dockerfile_path(name=None):
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_cache_shared():
     """
     Tests the ``conan create . ``
@@ -81,7 +81,7 @@ def test_create_docker_runner_cache_shared():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_from_cache():
     """
     Tests the ``conan create . ``
@@ -125,7 +125,7 @@ def test_create_docker_runner_cache_shared_profile_from_cache():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_cache_shared_profile_folder():
     """
     Tests the ``conan create . ``
@@ -169,7 +169,7 @@ def test_create_docker_runner_cache_shared_profile_folder():
     assert "Removing container" in client.out
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
@@ -240,7 +240,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_profile_default_folder():
     """
     Tests the ``conan create . ``
@@ -286,7 +286,7 @@ def test_create_docker_runner_profile_default_folder():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
@@ -331,7 +331,7 @@ def test_create_docker_runner_dockerfile_file_path():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 def test_create_docker_runner_with_ninja(build_type, shared):
     conanfile = textwrap.dedent("""
@@ -396,7 +396,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     assert "main: {}!".format(build_type) in client.out
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_from_configfile():
     """
     Tests the ``conan create . ``
@@ -451,7 +451,7 @@ def test_create_docker_runner_from_configfile():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_from_configfile_with_args():
     """
     Tests the ``conan create . ``
@@ -515,7 +515,7 @@ def test_create_docker_runner_from_configfile_with_args():
     docker_client.networks.get("my-network").remove()
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_default_build_profile():
     """
     Tests the ``conan create . ``
@@ -552,7 +552,7 @@ def test_create_docker_runner_default_build_profile():
 
 
 @pytest.mark.docker_runner
-@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_in_subfolder():
     client = TestClient()
     conanfile = textwrap.dedent("""

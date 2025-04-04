@@ -58,6 +58,7 @@ jobs:
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
@@ -86,7 +87,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9")
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.0.0-rc3")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -146,6 +147,7 @@ jobs:
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
