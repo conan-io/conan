@@ -700,7 +700,8 @@ class TestClient:
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        ref = self.cache.get_latest_recipe_reference(ref)
+        if not ref.revision:
+            ref = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
