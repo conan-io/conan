@@ -193,7 +193,7 @@ def remote_login(conan_api, parser, subparser, *args):
     remotes = conan_api.remotes.list(pattern=args.remote, only_enabled=False)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
-    return conan_api.remotes.login(remotes)
+    return conan_api.remotes.login(remotes, args.username, args.password)
 
 
 @conan_subcommand(formatters={"text": _print_remote_user_set, "json": _print_remotes_users_json})
