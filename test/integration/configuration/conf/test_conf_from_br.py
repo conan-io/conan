@@ -266,3 +266,35 @@ def test_conf_both_build_and_host():
     client.run("install app --build=missing -s:h build_type=Debug -s:b build_type=Release")
     assert "myprotobuf/0.1: MYCONF build: Release" in client.out
     assert "myprotobuf/0.1: MYCONF host: Debug" in client.out
+
+
+def test_error_bad_types():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            options = {"myopt": [True, False]}
+            default_options = {"myopt": True}
+            def package_info(self):
+                self.conf_info.define("user.myorg:myconf", self.options.myopt)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert 'self.conf_info.define("user.myorg:myconf", self.options.myopt)' in c.out
+    assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            settings = "os"
+            def package_info(self):
+                self.conf_info.define("user.myorg:myconf", self.settings.os)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert 'self.conf_info.define("user.myorg:myconf", self.settings.os)' in c.out
+    assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
