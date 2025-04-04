@@ -264,8 +264,8 @@ def test_no_cross_build_arch():
     client.run("install . --profile:build=linux64 --profile:host=linux32")
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert "CMAKE_SYSTEM_NAME" not in toolchain
-    assert "CMAKE_SYSTEM_PROCESSOR " not in toolchain
+    assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR x86)" in toolchain
 
 
 def test_cross_build_conf():

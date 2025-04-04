@@ -2060,3 +2060,41 @@ def test_cmake_toolchain_language_c():
     else:
         client.run("build . -s compiler.cppstd=11")
         # It doesn't fail
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="MSVC only")
+@pytest.mark.tool("cmake")
+def test_msvc_x86():
+    # https://github.com/conan-io/conan/issues/18074
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
+
+        class Recipe(ConanFile):
+            name = "cmake_test"
+            version = "1.0"
+            settings = "os", "build_type", "compiler", "arch"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(foo LANGUAGES NONE)
+        message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+        message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
+        """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake})
+    c.run("build . -s arch=x86")
+    assert "CMAKE_SYSTEM_NAME: Windows" in c.out
+    assert "CMAKE_SYSTEM_PROCESSOR: x86" in c.out
+    toolchain = c.load("build/generators/conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME Windows)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR x86)" in toolchain

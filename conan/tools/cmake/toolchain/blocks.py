@@ -1015,8 +1015,7 @@ class GenericSystemBlock(Block):
                 return "Generic-ELF"
             return cmake_system_name_map.get(os_host, os_host)
         elif arch_host is not None and arch_host != arch_build:
-            if not ((arch_build == "x86_64") and (arch_host == "x86") or
-                    (arch_build == "sparcv9") and (arch_host == "sparc") or
+            if not ((arch_build == "sparcv9") and (arch_host == "sparc") or
                     (arch_build == "ppc64") and (arch_host == "ppc32")):
                 return cmake_system_name_map.get(os_host, os_host)
 
