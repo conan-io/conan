@@ -2085,17 +2085,31 @@ def test_msvc_x86():
                 self.output.info(f"IS CROSS_BUILD: {cross_building(self)}")
                 cmake = CMake(self)
                 cmake.configure()
+                cmake.build()
         """)
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(foo LANGUAGES NONE)
+        project(foo LANGUAGES CXX)
+
         message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
         message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
         message(STATUS "CMAKE_CROSSCOMPILING: ${CMAKE_CROSSCOMPILING}")
+
+        add_executable(mytool main.cpp)
+        add_custom_command(TARGET mytool POST_BUILD COMMAND $<TARGET_FILE:mytool>)
+        """)
+    main = textwrap.dedent("""
+        #include<iostream>
+        int main() {
+           std::cout << \"Running tool!!!";
+           return 0;
+        }
         """)
     c.save({"conanfile.py": conanfile,
-            "CMakeLists.txt": cmake})
+            "CMakeLists.txt": cmake,
+            "main.cpp": main})
     c.run("build . -s arch=x86")
+    assert "Running tool!!!" in c.out
     assert "conanfile.py (cmake_test/1.0): IS CROSS_BUILD: True" in c.out
     assert "CMAKE_SYSTEM_NAME: Windows" in c.out
     assert "CMAKE_SYSTEM_PROCESSOR: x86" in c.out
