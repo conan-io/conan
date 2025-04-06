@@ -1237,11 +1237,11 @@ def test_find_program_for_tool_requires(single_profile):
     """)
 
     client.save({"conanfile.py": conanfile,
-                "libfoo.so": "",
-                "foobin": "",
-                "host_profile": host_profile,
-                "build_profile": build_profile
-                })
+                 "libfoo.so": "",
+                 "foobin": "",
+                 "host_profile": host_profile,
+                 "build_profile": build_profile
+                 })
 
     client.run("create . -pr:b build_profile -pr:h build_profile")
     build_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
@@ -2006,7 +2006,7 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
 
     c.save({"android": android,
             "conanfile.py": conanfile,
-            "CMakeLists.txt": cmake,})
+            "CMakeLists.txt": cmake})
     # first run works ok
     c.run('build . --profile:host=android')
     assert 'sdk: 1.0.0' in c.out
@@ -2070,6 +2070,7 @@ def test_msvc_x86():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.build import cross_building
 
         class Recipe(ConanFile):
             name = "cmake_test"
@@ -2081,6 +2082,7 @@ def test_msvc_x86():
                 cmake_layout(self)
 
             def build(self):
+                self.output.info(f"IS CROSS_BUILD: {cross_building(self)}")
                 cmake = CMake(self)
                 cmake.configure()
         """)
@@ -2089,12 +2091,15 @@ def test_msvc_x86():
         project(foo LANGUAGES NONE)
         message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
         message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
+        message(STATUS "CMAKE_CROSSCOMPILING: ${CMAKE_CROSSCOMPILING}")
         """)
     c.save({"conanfile.py": conanfile,
             "CMakeLists.txt": cmake})
     c.run("build . -s arch=x86")
+    assert "conanfile.py (cmake_test/1.0): IS CROSS_BUILD: True" in c.out
     assert "CMAKE_SYSTEM_NAME: Windows" in c.out
     assert "CMAKE_SYSTEM_PROCESSOR: x86" in c.out
+    assert "CMAKE_CROSSCOMPILING: TRUE" in c.out
     toolchain = c.load("build/generators/conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME Windows)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86)" in toolchain
