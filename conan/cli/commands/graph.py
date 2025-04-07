@@ -221,13 +221,22 @@ def graph_info(conan_api, parser, subparser, *args):
             base_folder = args.deployer_folder or os.getcwd()
             conan_api.install.deploy(deps_graph, args.deployer, None, base_folder)
 
+    warn_msg = None
+    missing = set(str(n.ref.name) for n in deps_graph.nodes if n.binary == "Missing")
+    invalid = set(str(n.ref.name) for n in deps_graph.nodes if n.binary == "Invalid")
+    if missing or invalid:
+        warn_msg = "There are some error(s) in the graph:"
+        if missing:
+            warn_msg += f"\n    - Missing packages: {', '.join(missing)}"
+        if invalid:
+            warn_msg += f"\n    - Invalid packages: {', '.join(invalid)}"
+
     return {"graph": deps_graph,
             "field_filter": args.filter,
             "package_filter": args.package_filter,
             "conan_api": conan_api,
             "conan_error": str(deps_graph.error) if deps_graph.error else None,
-            # Do not compute graph errors if there are dependency errors
-            }# "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
+            "conan_warning": warn_msg}
 
 
 @conan_subcommand(formatters={"text": explain_formatter_text,
