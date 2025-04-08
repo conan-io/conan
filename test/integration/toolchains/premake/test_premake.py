@@ -7,12 +7,15 @@ def test_premake_args():
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.premake import Premake
+        from conan.tools.premake import Premake, PremakeToolchain
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             def run(self, cmd, *args, **kwargs):
                 self.output.info(f"Running {cmd}!!")
+            def generate(self):
+                toolchain = PremakeToolchain(self)
+                toolchain.generate()
             def build(self):
                 premake = Premake(self)
                 premake.luafile = "myproject.lua"
@@ -21,26 +24,5 @@ def test_premake_args():
                 """)
     c.save({"conanfile.py": conanfile})
     c.run("build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic")
-    assert "conanfile.py: Running premake5 --file=myproject.lua vs2022 --myarg=myvalue!!" in c.out
-
-
-
-def test_premake_compile():
-    c = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.premake import Premake
-
-        class Pkg(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
-            def run(self, cmd, *args, **kwargs):
-                self.output.info(f"Running {cmd}!!")
-            def build(self):
-                premake = Premake(self)
-                premake.luafile = "myproject.lua"
-                premake.arguments = {"myarg": "myvalue"}
-                premake.configure()
-                """)
-    c.save({"conanfile.py": conanfile})
-    c.run("build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic")
-    assert "conanfile.py: Running premake5 --file=myproject.lua vs2022 --myarg=myvalue!!" in c.out
+    assert "conanfile.py: Running premake5" in c.out
+    assert "conanfile.premake5.lua vs2022 --myarg=myvalue!!" in c.out

@@ -1,7 +1,11 @@
 import os
 import textwrap
 
+from conan.tools.build.cross_building import cross_building
+from conan.tools.build.flags import cppstd_msvc_flag
+from conan.tools.microsoft.visual import VCVars
 from jinja2 import Template
+from pathlib import Path
 
 from conan.tools.files import save
 
@@ -18,20 +22,23 @@ class PremakeToolchain:
     #!lua
     include("conandeps.premake5.lua")
 
+    local locationDir = "{{ build_folder }}"
 
     workspace "{{workspace}}"
-        premake.api.addAliases("architecture", {
-          ["armv8"] = "arm64"
-        })
-
         {% if cppstd %}
         cppdialect "{{cppstd}}"
         {% endif %}
         {% if cstd %}
         cdialect "{{cstd}}"
         {% endif %}
-        location "{{ build_folder }}"
-        targetdir "{{ build_folder }}"
+        location(locationDir)
+        targetdir(path.join(locationDir, "bin"))
+        objdir(path.join(locationDir, "obj"))
+        {% if cross_build_arch %}
+        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
+        buildoptions "-arch {{cross_build_arch}}"
+        linkoptions "-arch {{cross_build_arch}}"
+        {% endif %}
         conan_setup()
 
         {% if variables %}
@@ -49,9 +56,14 @@ class PremakeToolchain:
 
     def generate(self):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
+        if cppstd:
+            # TODO
+            if cppstd.startswith("gnu"):
+                cppstd = f"gnu++{cppstd[3:]}"
+            elif self._conanfile.settings.os == "Windows":
+                cppstd = cppstd_msvc_flag(str(self._conanfile.settings.compiler.version), cppstd)
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
-        if cppstd.startswith("gnu"):
-            cppstd = f"gnu++{cppstd[3:]}"
+        cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
 
         formated_variables = ""
         for key, value in self.defines.items():
@@ -63,13 +75,17 @@ class PremakeToolchain:
             self._premake_file_template, trim_blocks=True, lstrip_blocks=True
         ).render(
             workspace=self.workspace,
-            build_folder=self._conanfile.build_folder,
+            build_folder=Path(self._conanfile.build_folder).as_posix(),
             cppstd=cppstd,
             cstd=cstd,
             variables=formated_variables,
+            cross_build_arch=cross_build_arch
         )
         save(
             self,
             os.path.join(self._conanfile.generators_folder, self.filename),
             content,
         )
+        # TODO: improve condition
+        if "msvc" in self._conanfile.settings.compiler:
+            VCVars(self._conanfile).generate()

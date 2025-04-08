@@ -69,7 +69,7 @@ def test_premakedeps():
 
 def test_todo():
     # Create package
-    client = TestClient()
+    client = TestClient(path_with_spaces=False)
     # client.run("remote add conancenter https://center2.conan.io")
 
     def run_pkg(msg):
@@ -93,8 +93,6 @@ def test_todo():
     """)
 
     premake5 = textwrap.dedent("""
-        include("conandeps.premake5.lua")
-
         workspace "HelloWorld"
            configurations { "Debug", "Release" }
 
@@ -104,7 +102,6 @@ def test_todo():
            targetdir "bin/%{cfg.buildcfg}"
 
            files { "**.h", "**.cpp" }
-           conan_setup()
 
            filter "configurations:Debug"
               defines { "DEBUG" }
@@ -122,7 +119,7 @@ def test_todo():
         from conan.tools.files import copy, get, collect_libs, chdir, save, replace_in_file
         from conan.tools.layout import basic_layout
         from conan.tools.microsoft import MSBuild
-        from conan.tools.premake import Premake, PremakeDeps
+        from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
         import os
 
         class Pkg(ConanFile):
@@ -140,24 +137,18 @@ def test_todo():
             def generate(self):
                 deps = PremakeDeps(self)
                 deps.generate()
+                tc = PremakeToolchain(self)
+                tc.generate()
 
             def build(self):
-                with chdir(self, self.source_folder):
-                    premake = Premake(self)
-                    premake.arguments = {"scripts": "../build-release/conan"}
-                    premake.configure()
-                    if self.settings.os == "Windows":
-                        pass
-                        # msbuild = MSBuild(self)
-                        # msbuild.build("Yojimbo.sln")
-                    else:
-                        build_type = str(self.settings.build_type)
-                        self.run(f"make config={build_type.lower()} -j")
+                premake = Premake(self)
+                premake.configure()
+                premake.build(workspace="HelloWorld")
 
             def package(self):
                 copy(self, "*.h", os.path.join(self.source_folder, "include"), os.path.join(self.package_folder, "include", "pkg"))
                 for lib in ("*.lib", "*.a"):
-                    copy(self, lib, self.source_folder, os.path.join(self.package_folder, "lib"), keep_path=False)
+                    copy(self, lib, es.path.join(self.build_folder, "bin"), os.path.join(self.package_folder, "lib"))
         """)
 
     client.save({"consumer/conanfile.py": conanfile,

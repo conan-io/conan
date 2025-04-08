@@ -3,9 +3,11 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from conan.errors import ConanInvalidConfiguration
 from conan.tools.files import save
 from conan.tools.microsoft.msbuild import MSBuild
 from conan.tools.premake.toolchain import PremakeToolchain
+from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
 
 # Source: https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170
 PREMAKE_VS_VERSION = {
@@ -15,7 +17,6 @@ PREMAKE_VS_VERSION = {
     "193": "2022",
     "194": "2022",  # still 2022
 }
-
 
 class Premake:
     """
@@ -29,21 +30,25 @@ class Premake:
         """\
     #!lua
     include("{{luafile}}")
-    {% if has_conan_toolchain %}
-    include("conantoolchain.premake5.lua")
-    {% endif %}
+    include("{{premake_conan_toolchain}}")
     """
     )
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
         # Path to the root (premake5) lua file
-        self.luafile = Path(self._conanfile.source_folder) / "premake5.lua"
+        self.luafile = (Path(self._conanfile.source_folder) / "premake5.lua").as_posix()
+        print("luafile", self.luafile)
         # (key value pairs. Will translate to "--{key}={value}")
         self.arguments = {}  # https://premake.github.io/docs/Command-Line-Arguments/
-        self.arguments["scripts"] = self._conanfile.generators_folder
-        if self._conanfile.settings.get_safe("arch"):
-            self.arguments["arch"] = self._conanfile.settings.arch
+        # self.arguments["scripts"] = Path(self._conanfile.generators_folder).as_posix()
+
+        arch = str(self._conanfile.settings.arch)
+        if arch not in CONAN_TO_PREMAKE_ARCH:
+            raise ConanInvalidConfiguration(
+                f"Premake does not support {arch} architecture."
+            )
+        self.arguments["arch"] = CONAN_TO_PREMAKE_ARCH[arch]
 
         if "msvc" in self._conanfile.settings.compiler:
             msvc_version = PREMAKE_VS_VERSION.get(
@@ -58,12 +63,15 @@ class Premake:
         return " ".join([f"--{key}={value}" for key, value in args.items()])
 
     def configure(self):
-        has_conan_toolchain = (
-            Path(self._conanfile.generators_folder) / PremakeToolchain.filename
-        ).exists()
+        premake_conan_toolchain = Path(self._conanfile.generators_folder) / PremakeToolchain.filename
+        if not premake_conan_toolchain.exists():
+            raise ConanInvalidConfiguration(
+                f"Premake toolchain file does not exist: {premake_conan_toolchain}\nUse PremakeToolchain to generate it."
+            )
         content = Template(self._premake_file_template).render(
-            has_conan_toolchain=has_conan_toolchain, luafile=self.luafile
+            premake_conan_toolchain=premake_conan_toolchain, luafile=self.luafile
         )
+        # TODO: consider raising if toolchain does not exist
 
         conan_luafile = Path(self._conanfile.build_folder) / self.filename
         save(self._conanfile, conan_luafile, content)
@@ -78,12 +86,11 @@ class Premake:
         self._conanfile.run(premake_command)
 
 
-    def build(self, workspace):
+    def build(self, workspace, targets=None):
         if self.action.startswith("vs"):
-            msbuild = MSBuild(self)
-            # TODO: init VCVars
-            # TODO determine the generated solution name from premake build script
-            msbuild.build(sln=f"{workspace}.sln")
+            msbuild = MSBuild(self._conanfile)
+            msbuild.build(sln=f"{workspace}.sln", targets=targets)
         else:
             build_type = str(self._conanfile.settings.build_type)
-            self._conanfile.run(f"make config={build_type.lower()} -j")
+            targets = "all" if targets is None else " ".join(targets)
+            self._conanfile.run(f"make config={build_type.lower()} {targets} -j")
