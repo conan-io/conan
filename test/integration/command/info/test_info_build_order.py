@@ -887,9 +887,16 @@ def test_info_build_order_editable():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("editable add dep")
     c.run("export pkg")
+    
     c.run("graph build-order consumer --build=missing --build=editable -f=json --order-by=recipe")
     bo_json = json.loads(c.stdout)
-
     pkg = bo_json["order"][0][0]["packages"][0][0]
+    assert pkg["binary"] == "EditableBuild"
+    assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"
+
+    c.run("graph build-order consumer --build=missing --build=editable -f=json "
+          "--order-by=configuration")
+    bo_json = json.loads(c.stdout)
+    pkg = bo_json["order"][0][0]
     assert pkg["binary"] == "EditableBuild"
     assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"

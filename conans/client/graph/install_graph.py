@@ -290,7 +290,7 @@ class _InstallConfiguration:
                     self.depends.append(dep.dst.pref)
 
     def _build_args(self):
-        if self.binary != BINARY_BUILD:
+        if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
