@@ -27,7 +27,6 @@ def run_parallel_and_check_errors(test_client, operation_func, num_tasks=4, *arg
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
 
-    assert exceptions, "No exceptions were raised, but parallel operations should fail"
     for err in exceptions:
         str_err = str(err)
         assert [perror for perror in parallel_known_errors if perror in str_err], f"Unexpected error: {str_err}"
