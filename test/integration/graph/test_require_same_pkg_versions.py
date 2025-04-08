@@ -216,14 +216,15 @@ def test_require_different_versions_transitive():
             build_policy = "missing"
             upload_policy = "skip"
             package_type = "application"
-            def build_requirements(self):
-                self.tool_requires("myqemu/1.0")
+            def requirements(self):
+                self.requires("myqemu/1.0", visible=False)
             def finalize(self):
-                pf = self.dependencies.build["myqemu"].cpp_info.bindir.replace("\\", "/")
-                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\ncall \"{pf}/myqemu.bat\""
+                pf = self.dependencies["myqemu"].cpp_info.bindir.replace("\\", "/")
+                c = f'call "{pf}/myqemu.bat"' if platform.system() == "Windows" else f'"{pf}/myqemu.sh"'
+                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\n{c}"
                 save(self, os.path.join(self.package_folder, "bin", f"{self.name}.bat"), echo)
-                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.sh"), echo)
-                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}.sh"), 0o777)
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}"), 0o777)
             """)
     valgrind = textwrap.dedent(r"""
         import os, platform
@@ -235,21 +236,20 @@ def test_require_different_versions_transitive():
             build_policy = "missing"
             upload_policy = "skip"
             package_type = "application"
-            def build_requirements(self):
-                self.tool_requires("myqemu/2.0")
+            def requirements(self):
+                self.requires("myqemu/2.0", visible=False)
             def finalize(self):
-                pf = self.dependencies.build["myqemu"].cpp_info.bindir.replace("\\", "/")
-                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\ncall \"{pf}/myqemu.bat\""
+                pf = self.dependencies["myqemu"].cpp_info.bindir.replace("\\", "/")
+                c = f'call "{pf}/myqemu.bat"' if platform.system() == "Windows" else f'"{pf}/myqemu.sh"'
+                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\n{c}"
                 save(self, os.path.join(self.package_folder, "bin", f"{self.name}.bat"), echo)
-                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.sh"), echo)
-                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}.sh"), 0o777)
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}"), 0o777)
             """)
     consumer = textwrap.dedent("""
-        import os, platform
         from conan import ConanFile
-        from conan.tools.files import save, chdir
+
         class Pkg(ConanFile):
-            package_type = "application"
             def build_requirements(self):
                 self.tool_requires("snippy/1.0")
                 self.tool_requires("valgrind/1.0")
