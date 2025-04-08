@@ -196,8 +196,8 @@ class PrivateProvider:
                 ConanOutput().write("\n")
                 ConanOutput().warning(
                     f"An error occurred while connecting to the '{self.name}' provider.\n"
-                    "This is likely because your JFrog Platform instance does not have JFrog Curation enabled.\n"
-                    "For more information, visit: https://jfrog.com/devops-native-security/\n"
+                    "This is likely because your JFrog Platform instance does not have JFrog Curation.\n"
+                    "For more information, visit: https://audit.conan.io/missing-curation\n"
                 )
 
             # Raises if some HTTP error was found
