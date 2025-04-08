@@ -14,7 +14,8 @@ def run_parallel_and_check_errors(test_client, operation_func, num_tasks=4, *arg
         "[Errno 17] File exists",
         "[Errno 2] No such file or directory"
         "assert os.path.isfile(path)",
-        "raise ConanException"
+        "raise ConanException",
+        "WinError 3",
     ]
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
         try:
