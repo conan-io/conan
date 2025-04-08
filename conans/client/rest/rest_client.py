@@ -1,4 +1,5 @@
 from conan.internal import REVISIONS, FIND_PACKAGEIDS
+from conan.internal.errors import NotCapableException
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
 
@@ -32,7 +33,7 @@ class RestApiClient:
         revisions = self._capable(REVISIONS)
 
         if not revisions:
-            raise ConanException("The remote doesn't support revisions. "
+            raise NotCapableException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
@@ -101,7 +102,6 @@ class RestApiClient:
     def find_matching_package_ids(self, ref, collected_ids):
         findable = self._capable(FIND_PACKAGEIDS)
         if not findable:
-            # TODO: Fallback to old query each pref
-            pass
+            raise NotCapableException("The remote doesn't support finding package ids.")
         else:
             return self._get_api().find_matching_package_ids(ref, collected_ids)

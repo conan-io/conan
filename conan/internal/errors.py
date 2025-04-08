@@ -141,6 +141,12 @@ class PackageNotFoundException(NotFoundException):
     def __init__(self, pref):
         super().__init__(f"Binary package not found: '{pref.repr_notime()}'")
 
+class NotCapableException(ConanException):
+    """
+        The server is not capable of the requested operation
+    """
+    def __init__(self, capability):
+        super().__init__(f"The server is not capable of the requested operation: {capability}")
 
 EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
                           RequestErrorException: 400,

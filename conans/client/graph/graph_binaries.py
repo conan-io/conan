@@ -13,8 +13,9 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
-from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
-    PackageNotFoundException
+from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, \
+    NotFoundException, \
+    PackageNotFoundException, NotCapableException
 from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import PkgReference
@@ -181,15 +182,18 @@ class GraphBinariesAnalyzer:
                 self._evaluate_download(node, [found_compatible[1]], update)
                 self._compatible_found(conanfile, found_compatible[0], compatibles[found_compatible[0]])
                 return
-            # for package_id, compatible_package in compatibles.items():
-            #     conanfile.output.info(f"'{package_id}': "
-            #                           f"{conanfile.info.dump_diff(compatible_package)}")
-            #     node._package_id = package_id  # Modifying package id under the hood, FIXME
-            #     node.binary = None  # Invalidate it
-            #     self._evaluate_download(node, remotes, update)
-            #     if node.binary == BINARY_DOWNLOAD:
-            #         self._compatible_found(conanfile, package_id, compatible_package)
-            #         return
+            # else:
+            #     # TODO: This is not good if the server is not capable of finding the ids
+            #     # find a better fallback approach to use the old ways
+            #     for package_id, compatible_package in compatibles.items():
+            #         conanfile.output.info(f"'{package_id}': "
+            #                               f"{conanfile.info.dump_diff(compatible_package)}")
+            #         node._package_id = package_id  # Modifying package id under the hood, FIXME
+            #         node.binary = None  # Invalidate it
+            #         self._evaluate_download(node, remotes, update)
+            #         if node.binary == BINARY_DOWNLOAD:
+            #             self._compatible_found(conanfile, package_id, compatible_package)
+            #             return
 
         # If no compatible is found, restore original state
         node.binary = original_binary
@@ -209,6 +213,8 @@ class GraphBinariesAnalyzer:
                                    for pkgid in matching_packageids.get("packageIds", []))
                     if len(results) > 0 and not should_update_reference(node.ref, update):
                         break
+            except NotCapableException as e:
+                return None
             except ConanConnectionError:
                 ConanOutput().error(
                     f"Failed finding for package ids '{node.ref}' in remote '{r.name}': "
