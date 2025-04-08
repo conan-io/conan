@@ -33,7 +33,8 @@ class MSBuild:
         # if platforms:
         #    msvc_arch.update(platforms)
         arch = conanfile.settings.get_safe("arch")
-        msvc_platform = msvc_platform_from_arch(arch)
+        # MSVC default platform for VS projects is "x86", not "Win32" (but CMake default is "Win32")
+        msvc_platform = msvc_platform_from_arch(arch) if arch != "x86" else "x86"
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_platform = conanfile.settings.get_safe("os.platform")
         #: Defines the platform name, e.g., ``ARM`` if ``settings.arch == "armv7"``.
