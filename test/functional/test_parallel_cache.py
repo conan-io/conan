@@ -12,7 +12,7 @@ def run_parallel_and_check_errors(test_client, operation_func, num_tasks=4, *arg
         "Folder might be busy or open",
         "conanfile.py not found",
         "[Errno 17] File exists",
-        "[Errno 2] No such file or directory"
+        "[Errno 2] No such file or directory",
         "assert os.path.isfile(path)",
         "raise ConanException",
         "WinError 3",
