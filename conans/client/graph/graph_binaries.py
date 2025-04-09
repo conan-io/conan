@@ -182,18 +182,6 @@ class GraphBinariesAnalyzer:
                 self._evaluate_download(node, [found_compatible[1]], update)
                 self._compatible_found(conanfile, found_compatible[0], compatibles[found_compatible[0]])
                 return
-            # else:
-            #     # TODO: This is not good if the server is not capable of finding the ids
-            #     # find a better fallback approach to use the old ways
-            #     for package_id, compatible_package in compatibles.items():
-            #         conanfile.output.info(f"'{package_id}': "
-            #                               f"{conanfile.info.dump_diff(compatible_package)}")
-            #         node._package_id = package_id  # Modifying package id under the hood, FIXME
-            #         node.binary = None  # Invalidate it
-            #         self._evaluate_download(node, remotes, update)
-            #         if node.binary == BINARY_DOWNLOAD:
-            #             self._compatible_found(conanfile, package_id, compatible_package)
-            #             return
 
         # If no compatible is found, restore original state
         node.binary = original_binary
@@ -207,14 +195,13 @@ class GraphBinariesAnalyzer:
         results = []
         for r in remotes:
             try:
-                matching_packageids = self._remote_manager.find_matching_package_ids(node.ref, r, collected_ids)
+                matching_packageids = self._remote_manager.search_packages(r, node.ref, list_only=True)
                 if matching_packageids:
-                    results.extend([pkgid, r]
-                                   for pkgid in matching_packageids.get("packageIds", []))
+                    results.extend([ref.package_id, r]
+                                   for ref in matching_packageids
+                                   if ref.package_id in collected_ids)
                     if len(results) > 0 and not should_update_reference(node.ref, update):
                         break
-            except NotCapableException as e:
-                return None
             except ConanConnectionError:
                 ConanOutput().error(
                     f"Failed finding for package ids '{node.ref}' in remote '{r.name}': "
@@ -225,6 +212,7 @@ class GraphBinariesAnalyzer:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         # TODO: How to order this, how to handle update. More?
+        results = sorted(results, key=lambda result: collected_ids.index(result[0]))
         return results[0] if results else None
 
     def _find_build_compatible_binary(self, node, compatibles):
