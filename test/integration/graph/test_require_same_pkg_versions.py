@@ -188,7 +188,7 @@ def test_require_different_options():
     assert "gcc/1.0#616ce3babcecef39a27806c1a5f4b4ff" in lock
 
 
-def test_require_different_versions_transitive():
+def test_require_different_versions_transitive_wrappers():
     """
     https://github.com/conan-io/conan/issues/18086
     """
@@ -277,6 +277,97 @@ def test_require_different_versions_transitive():
     c.run("remove * -c")
     # Re-downloads and it works
     c.run("build consumer")
+    assert "RUNNING valgrind/1.0!!" in c.out
+    assert "RUNNING myqemu/2.0!!" in c.out
+    assert "RUNNING snippy/1.0!!" in c.out
+    assert "RUNNING myqemu/1.0!!" in c.out
+
+
+def test_require_different_versions_transitive():
+    """
+    https://github.com/conan-io/conan/issues/18086
+    """
+    c = TestClient(default_server_user=True)
+    qemu = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "myqemu"
+            package_type = "application"
+            def package(self):
+                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!"
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.bat"), echo)
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.sh"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}.sh"), 0o777)
+            """)
+    snippy = textwrap.dedent(r"""
+        import os, platform
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            name = "snippy"
+            version = "1.0"
+            package_type = "application"
+            def build_requirements(self):
+                self.tool_requires("myqemu/1.0")
+            def finalize(self):
+                pf = self.dependencies.build["myqemu"].cpp_info.bindir.replace("\\", "/")
+                c = f'call "{pf}/myqemu.bat"' if platform.system() == "Windows" else f'"{pf}/myqemu.sh"'
+                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\n{c}"
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.bat"), echo)
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}"), 0o777)
+            """)
+    valgrind = textwrap.dedent(r"""
+        import os, platform
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            name = "valgrind"
+            version = "1.0"
+            build_policy = "missing"
+            def build_requirements(self):
+                self.tool_requires("myqemu/2.0")
+            def finalize(self):
+                pf = self.dependencies.build["myqemu"].cpp_info.bindir.replace("\\", "/")
+                c = f'call "{pf}/myqemu.bat"' if platform.system() == "Windows" else f'"{pf}/myqemu.sh"'
+                echo = f"@echo off\necho RUNNING {self.name}/{self.version}!!\n{c}"
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}.bat"), echo)
+                save(self, os.path.join(self.package_folder, "bin", f"{self.name}"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", f"{self.name}"), 0o777)
+            """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            def build_requirements(self):
+                self.tool_requires("snippy/1.0")
+                self.tool_requires("valgrind/1.0")
+            def build(self):
+                self.run("valgrind")
+                self.run("snippy")
+        """)
+
+    c.save({"qemu/conanfile.py": qemu,
+            "snippy/conanfile.py": snippy,
+            "valgrind/conanfile.py": valgrind,
+            "consumer/conanfile.py": consumer})
+
+    c.run("create qemu --version=1.0")
+    c.run("create qemu --version=2.0")
+    c.run("create snippy")
+    c.run("create valgrind")
+    c.run("build consumer")
+    assert "RUNNING valgrind/1.0!!" in c.out
+    assert "RUNNING myqemu/2.0!!" in c.out
+    assert "RUNNING snippy/1.0!!" in c.out
+    assert "RUNNING myqemu/1.0!!" in c.out
+
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    # Re-downloads and it works
+    c.run("build consumer -c:b myqemu/*:tools.graph:skip_binaries=False")
     assert "RUNNING valgrind/1.0!!" in c.out
     assert "RUNNING myqemu/2.0!!" in c.out
     assert "RUNNING snippy/1.0!!" in c.out
