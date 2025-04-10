@@ -34,16 +34,32 @@ class PremakeToolchain:
         location(locationDir)
         targetdir(path.join(locationDir, "bin"))
         objdir(path.join(locationDir, "obj"))
+
         {% if cross_build_arch %}
         -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
         buildoptions "-arch {{cross_build_arch}}"
         linkoptions "-arch {{cross_build_arch}}"
         {% endif %}
-        conan_setup()
+
+        {% if extra_cflags %}
+        filter { "language:C" }
+            buildoptions { {{extra_cflags}} }
+        filter {}
+        {% endif %}
+        {% if extra_cxxflags %}
+        filter { "language:C++" }
+            buildoptions { {{extra_cxxflags}} }
+        filter {}
+        {% endif %}
+        {% if extra_ldflags %}
+        linkoptions { {{extra_ldflags}} }
+        {% endif %}
 
         {% if variables %}
         defines { {{variables}} }
         {% endif %}
+
+        conan_setup()
     """
     )
 
@@ -51,8 +67,15 @@ class PremakeToolchain:
         # '*' is the global workspace
         self._conanfile = conanfile
         self.workspace = workspace
+        # Extra flags
+        #: List of extra ``CXX`` flags. Added to ``cpp_args``
+        self.extra_cxxflags = []
+        #: List of extra ``C`` flags. Added to ``c_args``
+        self.extra_cflags = []
+        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
+        self.extra_ldflags = []
         # TODO: not possible to overwrite upstream defines yet
-        self.defines = {}
+        self.extra_defines = {}
 
     def generate(self):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
@@ -66,10 +89,14 @@ class PremakeToolchain:
         cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
 
         formated_variables = ""
-        for key, value in self.defines.items():
+        for key, value in self.extra_defines.items():
             if isinstance(value, bool):
                 value = 1 if value else 0
             formated_variables += f'"{key}={value}", '
+
+        extra_c_flags = ",".join(f'"{flag}"' for flag in self.extra_cflags) if self.extra_cflags else None
+        extra_cxx_flags = ",".join(f'"{flag}"' for flag in self.extra_cxxflags) if self.extra_cxxflags else None
+        extra_ld_flags = ",".join(f'"{flag}"' for flag in self.extra_ldflags) if self.extra_ldflags else None
 
         content = Template(
             self._premake_file_template, trim_blocks=True, lstrip_blocks=True
@@ -79,7 +106,10 @@ class PremakeToolchain:
             cppstd=cppstd,
             cstd=cstd,
             variables=formated_variables,
-            cross_build_arch=cross_build_arch
+            cross_build_arch=cross_build_arch,
+            extra_cflags=extra_c_flags,
+            extra_cxxflags=extra_cxx_flags,
+            extra_ldflags=extra_ld_flags,
         )
         save(
             self,
