@@ -30,11 +30,11 @@ class TestProfile(unittest.TestCase):
         if platform.system() != "Windows":
             profiles.append("symlink_me" + os.path.sep + "profile7")
         for profile in profiles:
-            save(os.path.join(client.cache.profiles_path, profile), "")
+            save(os.path.join(client.paths.profiles_path, profile), "")
 
         if platform.system() != "Windows":
-            os.symlink(os.path.join(client.cache.profiles_path, 'symlink_me'),
-                       os.path.join(client.cache.profiles_path, 'link'))
+            os.symlink(os.path.join(client.paths.profiles_path, 'symlink_me'),
+                       os.path.join(client.paths.profiles_path, 'link'))
             # profile7 will be shown twice because it is symlinked.
             profiles.append("link" + os.path.sep + "profile7")
 
@@ -62,7 +62,7 @@ class TestProfile(unittest.TestCase):
             [conf]
             tools.build:jobs=20
             """)
-        save(os.path.join(client.cache.profiles_path, "profile1"), profile1)
+        save(os.path.join(client.paths.profiles_path, "profile1"), profile1)
 
         client.run("profile show -pr=profile1")
         self.assertIn("[settings]\nos=Windows", client.out)
@@ -102,10 +102,9 @@ class DetectCompilersTest(unittest.TestCase):
         # See: https://github.com/conan-io/conan/issues/2231
         _, output = detect_runner("gcc --version")
 
-        if "clang" not in output:
-            # Not test scenario gcc should display clang in output
-            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
-            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
+        assert "clang" in output, "Apple gcc doesn't point to clang with gcc frontend anymore!"
+        # Not test scenario gcc should display clang in output
+        # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
 
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):

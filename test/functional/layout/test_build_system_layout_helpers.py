@@ -105,7 +105,7 @@ def test_error_no_msvc():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    save(client.cache.settings_path, settings_yml)
+    save(client.paths.settings_path, settings_yml)
     client.run('install . -s os=Windows -s build_type=Release -s arch=x86_64 '
                '-s compiler=gcc -s compiler.version=8 '
                '-s:b os=Windows -s:b build_type=Release -s:b arch=x86_64 '

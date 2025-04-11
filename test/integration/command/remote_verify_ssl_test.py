@@ -1,5 +1,4 @@
-import unittest
-
+import requests
 from requests.models import Response
 
 from conan.test.utils.tools import TestClient
@@ -10,48 +9,54 @@ resp.status_code = 200
 resp.headers = {"Content-Type": "application/json", "X-Conan-Server-Capabilities": "revisions"}
 
 
-class RequesterMockTrue(object):
+class RequesterMockFalse:
+    expected = False
 
     def __init__(self, *args, **kwargs):
         pass
 
-    def get(self, url, *args, **kwargs):
-        assert "cacert.pem" in kwargs["verify"], "TEST FAILURE: cacert.pem not in verify kwarg"
+    def get(self, url, *args, **kwargs):  # noqa
+        assert kwargs["verify"] is self.expected
         return resp
 
+    def Session(self):  # noqa
+        return self
 
-class RequesterMockFalse(object):
+    @property
+    def codes(self):
+        return requests.codes
 
-    def __init__(self, *args, **kwargs):
+    def mount(self, *args, **kwargs):
         pass
 
-    def get(self, url, *args, **kwargs):
-        assert kwargs["verify"] is False, "TEST FAILURE: verify arg is not False"
-        return resp
+
+class RequesterMockTrue(RequesterMockFalse):
+    expected = True
 
 
-class VerifySSLTest(unittest.TestCase):
+class TestVerifySSL:
 
     def test_verify_ssl(self):
+        c = TestClient(requester_class=RequesterMockTrue)
+        c.run("remote add myremote https://localhost --insecure")
+        c.run("remote list")
+        assert "Verify SSL: False" in c.out
 
-        self.client = TestClient(requester_class=RequesterMockTrue)
-        self.client.run("remote add myremote https://localhost --insecure")
-        self.client.run("remote list")
-        self.assertIn("Verify SSL: False", self.client.out)
+        c.run("remote update myremote --url https://localhost --secure")
+        c.run("remote list")
+        assert "Verify SSL: True" in c.out
 
-        self.client.run("remote update myremote --url https://localhost --secure")
-        self.client.run("remote list")
-        self.assertIn("Verify SSL: True", self.client.out)
-
-        self.client.run("remote remove myremote")
-        self.client.run("remote add myremote https://localhost")
-        self.client.run("remote list")
-        self.assertIn("Verify SSL: True", self.client.out)
+        c.run("remote remove myremote")
+        c.run("remote add myremote https://localhost")
+        c.run("remote list")
+        assert "Verify SSL: True" in c.out
 
         # Verify that SSL is checked in requests
-        self.client.run("search op* -r myremote")
+        c.run("search op* -r myremote")
+        assert "WARN: There are no matching recipe references" in c.out
 
         # Verify that SSL is not checked in requests
-        self.client = TestClient(requester_class=RequesterMockFalse)
-        self.client.run("remote add myremote https://localhost --insecure")
-        self.client.run("search op* -r myremote")
+        c = TestClient(requester_class=RequesterMockFalse)
+        c.run("remote add myremote https://localhost --insecure")
+        c.run("search op* -r myremote")
+        assert "WARN: There are no matching recipe references" in c.out

@@ -3,9 +3,9 @@ import os
 import unittest
 
 from conan.internal.errors import NotFoundException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.manifest import FileTreeManifest
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.service.authorize import BasicAuthorizer
 from conans.server.service.v2.search import SearchService
@@ -15,16 +15,6 @@ from conans.server.store.server_store import ServerStore
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import save, save_files
-
-
-class MockFileSaver(object):
-
-    def __init__(self, filename, content):
-        self.filename = filename
-        self.content = content
-
-    def save(self, abspath):
-        save(os.path.join(abspath, self.filename), self.content)
 
 
 DEFAULT_REVISION = "1234"

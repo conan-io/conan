@@ -15,15 +15,15 @@ from conans.client.loader import ConanFileLoader
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.conf import ConfDefinition
+from conan.api.model import RecipeReference
 from conans.util.files import load, save, rmdir, copytree_compat
 
 
-def add_local_recipes_index_remote(conan_api, remote):
+def add_local_recipes_index_remote(home_folder, remote):
     if remote.remote_type != LOCAL_RECIPES_INDEX:
         return
-    local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+    local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
     repo_folder = os.path.join(local_recipes_index_path, remote.name)
 
     output = ConanOutput()
@@ -43,9 +43,9 @@ def add_local_recipes_index_remote(conan_api, remote):
     save(trim_hook, hook_content)
 
 
-def remove_local_recipes_index_remote(conan_api, remote):
+def remove_local_recipes_index_remote(home_folder, remote):
     if remote.remote_type == LOCAL_RECIPES_INDEX:
-        local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+        local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
         local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
         ConanOutput().info(f"Removing temporary files for '{remote.name}' "
                            f"local-recipes-index remote")
@@ -61,15 +61,12 @@ class RestApiClientLocalRecipesIndex:
     def __init__(self, remote, home_folder):
         self._remote = remote
         local_recipes_index_path = HomePaths(home_folder).local_recipes_index_path
-        local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
-        local_recipes_index_path = os.path.join(local_recipes_index_path, ".conan")
+        local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name, ".conan")
         repo_folder = self._remote.url
 
-        from conan.internal.conan_app import ConanApp
-        from conan.api.conan_api import ConanAPI
-        conan_api = ConanAPI(local_recipes_index_path)
-        self._app = ConanApp(conan_api)
-        self._hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
+        from conan.internal.conan_app import LocalRecipesIndexApp
+        self._app = LocalRecipesIndexApp(local_recipes_index_path)
+        self._hook_manager = HookManager(HomePaths(local_recipes_index_path).hooks_path)
         self._layout = _LocalRecipesIndexLayout(repo_folder)
 
     def call_method(self, method_name, *args, **kwargs):
@@ -102,7 +99,7 @@ class RestApiClientLocalRecipesIndex:
         raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support "
                              "authentication")
 
-    def check_credentials(self):
+    def check_credentials(self, force_auth=False):
         raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None):
@@ -138,6 +135,9 @@ class RestApiClientLocalRecipesIndex:
     def get_recipe_revision_reference(self, ref):
         new_ref = self._export_recipe(ref)
         if new_ref != ref:
+            ConanOutput().warning(f"A specific revision '{ref.repr_notime()}' was requested, but it "
+                                  "doesn't match the current available revision in source. The "
+                                  "local-recipes-index can't provide a specific revision")
             raise RecipeNotFoundException(ref)
         return new_ref
 
@@ -200,6 +200,16 @@ class _LocalRecipesIndexLayout:
         ret = []
         excluded = set()
 
+        original_pattern = pattern
+        try:
+            pattern_ref = RecipeReference.loads(pattern)
+            # We don't care about user/channel for now, we'll check for those below,
+            # just add all candidates for now
+            pattern = f"{pattern_ref.name}/{pattern_ref.version}"
+        except:
+            # pattern = pattern
+            pass
+
         loader = ConanFileLoader(None)
         for r in recipes:
             if r.startswith("."):
@@ -232,7 +242,9 @@ class _LocalRecipesIndexLayout:
                     ref.channel = recipe.channel
                 except Exception as e:
                     ConanOutput().warning(f"Couldn't load recipe {conanfile}: {e}")
-                ret.append(ref)
+                if ref.matches(original_pattern, None):
+                    # Check again the pattern with the user/channel
+                    ret.append(ref)
         if excluded:
             ConanOutput().warning(f"Excluding recipes not Conan 2.0 ready: {', '.join(excluded)}")
         return ret

@@ -1,17 +1,17 @@
 import sys
-import unittest
 from unittest import mock
 
 import pytest
-from parameterized import parameterized
 
 from conan.api.output import ConanOutput, init_colorama
+from conan.test.utils.mocks import RedirectedTestOutput
+from conan.test.utils.tools import redirect_output
 
 
-class ConanOutputTest(unittest.TestCase):
+class TestConanOutput:
 
-    @parameterized.expand([(True, {"NO_COLOR": "1"}),
-                           (True, {"NO_COLOR": "0"})])
+    @pytest.mark.parametrize("isatty, env", [(True, {"NO_COLOR": "1"}),
+                                             (True, {"NO_COLOR": "0"})])
     def test_output_color_prevent_strip(self, isatty, env):
         with mock.patch("colorama.init") as init:
             with mock.patch("sys.stderr.isatty", return_value=isatty), \
@@ -38,10 +38,13 @@ def test_output_forced(force):
 
 
 def test_output_chainable():
-    try:
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr):
         ConanOutput(scope="My package")\
             .title("My title")\
             .highlight("Worked")\
             .info("But there was more that needed to be said")
-    except Exception as e:
-        assert False, f"Chained ConanOutput write methods raised an exception {e}"
+    assert "My package" in stderr.getvalue()
+    assert "My title" in stderr.getvalue()
+    assert "Worked" in stderr.getvalue()
+    assert "But there was more that needed to be said" in stderr.getvalue()

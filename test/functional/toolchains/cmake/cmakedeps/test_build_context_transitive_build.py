@@ -5,7 +5,6 @@ import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.tools import TestClient
 
@@ -96,18 +95,19 @@ def test_error_cmakedeps_transitive_build_requires():
     working correctly
     """
     c = TestClient()
-    c.save(pkg_cmake("zlib", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("openssl", "0.1", requires=["zlib/0.1"]), clean_first=True)
-    c.run("create .")
+    c.run("new cmake_lib -d name=zlib -d version=0.1")
+    c.run("create . -tf=")
+    c.save({}, clean_first=True)
+    c.run("new cmake_lib -d name=openssl -d version=0.1 -d requires=zlib/0.1")
+    c.run("create . -tf=")
+
     # Protobuf binary is missing, to force a build below with ``--build=missing``
-    c.save(pkg_cmake_app("protobuf", "0.1", requires=["openssl/0.1"]), clean_first=True)
+    c.save({}, clean_first=True)
+    c.run("new cmake_exe -d name=protobuf -d version=0.1 -d requires=openssl/0.1")
     c.run("export .")
 
     # This conanfile used to fail, creating protobuf_mybuild*.cmake files even if for "tool" the
     # protobuf/0.1 is a regular "requires" and it is in its host context
-    # TODO: This approach still not works in 1.X when using simultaneously the same require
-    #  and tool_requires over a tool_requires that needs to be built from source
     tool = textwrap.dedent("""
         import os
         from conan import ConanFile

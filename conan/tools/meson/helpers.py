@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
-from conans.model.options import _PackageOption
+from conan.internal.model.options import _PackageOption
 
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag", "to_cstd_flag"]
 
@@ -66,6 +66,17 @@ _cppstd_map = {
     '17': "c++17", 'gnu17': "gnu++17",
     '20': "c++20", 'gnu20': "gnu++20"
 }
+
+
+def get_apple_subsystem(apple_sdk):
+    return {
+        "iphoneos": "ios",
+        "iphonesimulator": "ios-simulator",
+        "appletvos": "tvos",
+        "appletvsimulator": "tvos-simulator",
+        "watchos": "watchos",
+        "watchsimulator": "watchos-simulator",
+    }.get(apple_sdk, "macos")
 
 
 def to_meson_machine(machine_os, machine_arch):

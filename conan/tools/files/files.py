@@ -1,9 +1,10 @@
 import gzip
 import os
+import stat
 import platform
 import shutil
 import subprocess
-import sys
+from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
@@ -11,6 +12,7 @@ from shutil import which
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
+from conans.client.rest.file_uploader import FileProgress
 from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
@@ -224,7 +226,8 @@ def rename(conanfile, src, dst):
     :param dst: Path to be renamed to.
     """
 
-    # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
+    # FIXME: This function has been copied from legacy. Needs to fix: which()
+    # call and wrap subprocess call.
     if os.path.exists(dst):
         raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
 
@@ -260,6 +263,84 @@ def chdir(conanfile, newdir):
         yield
     finally:
         os.chdir(old_path)
+
+
+def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=None, execute:Optional[bool]=None, recursive:bool=False):
+    """Change file or directory permissions cross-platform.
+
+    .. versionadded:: 2.15
+
+    This function is a simple wrapper around the chmod Unix command, but it is cross-platform supported.
+    It is indicated to use it instead of os.stat + os.chmod, as it only changes the permissions of the
+    directory or file for the owner and avoids issues with the umask.
+    On Windows is limited to changing write permission only.
+
+    Parameters
+    ----------
+    conanfile : object
+        The current recipe object. Always use ``self``.
+    path : str
+        Path to the file or directory whose permissions will be changed.
+    read : bool, optional
+        If ``True``, the file or directory will be given read permissions for owner user.
+        If ``False``, the read permission will be removed.
+        If ``None``, the read permission will be left unchanged.
+        Defaults to None.
+    write : bool, optional
+        If ``True``, the file or directory will be given write permissions for owner user.
+        If ``False``, the write permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    execute : bool, optional
+        If ``True``, the file or directory will be given execute permissions for owner user.
+        If ``False``, the execution permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    recursive : bool
+        If ``True``, the permissions will be applied recursively to all files and directories
+        inside the specified directory. If ``False``, only the specified file or directory will
+        be changed. Defaults to False.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    .. code-block:: python
+        :caption: Add execution permission to a packaged bash script
+
+        from conan.tools.files import chmod
+        chmod(self, os.path.join(self.package_folder, "bin", "script.sh"), execute=True)
+    """
+    if read is None and write is None and execute is None:
+        raise ConanException("Could not change permission: At least one of the permissions should be set.")
+
+    if not os.path.exists(path):
+        raise ConanException(f"Could not change permission: Path \"{path}\" does not exist.")
+
+    def _change_permission(it_path:str):
+        mode = os.stat(it_path).st_mode
+        permissions = [
+            (read, stat.S_IRUSR),
+            (write, stat.S_IWUSR),
+            (execute, stat.S_IXUSR)
+        ]
+        for enabled, mask in permissions:
+            if enabled is None:
+                continue
+            elif enabled:
+                mode |= mask
+            else:
+                mode &= ~mask
+        os.chmod(it_path, mode)
+
+    if recursive:
+        for root, _, files in os.walk(path):
+            for file in files:
+                _change_permission(os.path.join(root, file))
+    else:
+        _change_permission(path)
 
 
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
@@ -305,25 +386,12 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
-    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
-        def print_progress(the_size, uncomp_size):
-            the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
-            txt_msg = "Unzipping %d %%"
-            if the_size > print_progress.last_size + 1:
-                output.rewrite_line(txt_msg % the_size)
-                print_progress.last_size = the_size
-                if int(the_size) == 99:
-                    output.rewrite_line(txt_msg % 100)
-    else:
-        def print_progress(_, __):
-            pass
-
-    with zipfile.ZipFile(filename, "r") as z:
+    with FileProgress(filename, msg="Unzipping", mode="r") as file, zipfile.ZipFile(file) as z:
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
         if strip_root:
-            names = [n.replace("\\", "/") for n in z.namelist()]
+            names = [zi.filename.replace("\\", "/") for zi in zip_info]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
             if not common_folder and len(names) > 1:
                 raise ConanException("The zip file contains more than 1 folder in the root")
@@ -343,11 +411,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
 
-        print_progress.last_size = -1
         if platform.system() == "Windows":
             for file_ in zip_info:
                 extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
@@ -355,7 +421,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                     if keep_permissions:
@@ -371,35 +436,38 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
-    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:
-            members = tarredgzippedFile.getmembers()
+            common_folder = None
+            members = []
+            for member in tarredgzippedFile:
+                if pattern and not fnmatch(member.name, pattern):
+                    continue  # Skip files that don’t match the pattern
 
-            if strip_root:
-                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
-                common_folder = os.path.commonprefix(names).split("/", 1)[0]
-                if not common_folder and len(names) > 1:
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
-                    raise ConanException("The tgz file contains a file in the root")
-                # Remove the directory entry if present
-                members = [m for m in members if m.name != common_folder]
-                for member in members:
+                if strip_root:
                     name = member.name.replace("\\", "/")
-                    member.name = name.split("/", 1)[1]
+                    if not common_folder:
+                        splits = name.split("/", 1)
+                        # First case for a plain folder in the root
+                        if member.isdir() or len(splits) > 1:
+                            common_folder = splits[0]  # Find the root folder
+                        else:
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
+                    if not name.startswith(common_folder):
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
+                    # Adjust the member's name for extraction
+                    member.name = name[len(common_folder) + 1:]
                     member.path = member.name
-                    if member.linkpath.startswith(common_folder):
+                    if member.linkpath and member.linkpath.startswith(common_folder):
                         # https://github.com/conan-io/conan/issues/11065
-                        linkpath = member.linkpath.replace("\\", "/")
-                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
+                # Let's gather each member
+                members.append(member)
             tarredgzippedFile.extractall(destination, members=members)
 
 
@@ -451,6 +519,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
@@ -463,6 +532,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
             return False
     content = content.replace(search, replace)
     save(conanfile, file_path, content, encoding=encoding)
+    return True
 
 
 def collect_libs(conanfile, folder=None):

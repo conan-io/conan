@@ -1,6 +1,6 @@
 from conans.client.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conan.internal.model.recipe_ref import ref_matches
 
 
 def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_context,
@@ -110,3 +110,4 @@ def consumer_definer(conanfile, profile_host, profile_build):
     conanfile._conan_buildenv = profile_host.buildenv
     conanfile._conan_runenv = profile_host.runenv
     conanfile.conf = profile_host.conf.get_conanfile_conf(None, is_consumer=True)
+    conanfile.conf_build = profile_build.conf.get_conanfile_conf(None, is_consumer=True)

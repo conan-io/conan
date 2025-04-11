@@ -1,8 +1,8 @@
 import os
 import textwrap
 
+from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 class TestErrorsProfilePlugin:
@@ -14,7 +14,7 @@ class TestErrorsProfilePlugin:
             def profile_plugin(profile):
                 settings = profile.kk
             """)
-        save(os.path.join(c.cache.plugins_path, "profile.py"), profile_plugin)
+        c.save_home({"extensions/plugins/profile.py": profile_plugin})
 
         c.run("install --requires=zlib/1.2.3", assert_error=True)
         assert "Error while processing 'profile.py' plugin, line 2" in c.out
@@ -23,7 +23,7 @@ class TestErrorsProfilePlugin:
     def test_remove_plugin_file(self):
         c = TestClient()
         c.run("version")  # to trigger the creation
-        os.remove(os.path.join(c.cache.plugins_path, "profile.py"))
+        os.remove(HomePaths(c.cache_folder).profile_plugin_path)
         c.run("profile show", assert_error=True)
         assert "ERROR: The 'profile.py' plugin file doesn't exist" in c.out
 

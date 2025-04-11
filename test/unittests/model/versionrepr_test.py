@@ -1,7 +1,7 @@
 import unittest
 
-from conans.model.info import _VersionRepr
-from conans.model.version import Version
+from conan.internal.model.info import _VersionRepr
+from conan.internal.model.version import Version
 
 
 class VersionReprTest(unittest.TestCase):

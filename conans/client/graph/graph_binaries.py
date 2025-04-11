@@ -16,9 +16,9 @@ from conans.client.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
-from conans.model.info import RequirementInfo, RequirementsInfo
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import RequirementInfo, RequirementsInfo
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 
@@ -29,6 +29,7 @@ class GraphBinariesAnalyzer:
         self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
+        self._hook_manager = conan_app.conan_api.config.hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
@@ -397,7 +398,7 @@ class GraphBinariesAnalyzer:
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._modes, config_version=config_version)
+        compute_package_id(node, self._modes, config_version, self._hook_manager)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -458,7 +459,7 @@ class GraphBinariesAnalyzer:
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._modes, config_version=config_version)
+                compute_package_id(node, self._modes, config_version, self._hook_manager)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):
@@ -490,15 +491,11 @@ class GraphBinariesAnalyzer:
                 is_consumer = not (node.recipe != RECIPE_CONSUMER and
                                    node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
                                                        BINARY_EDITABLE))
-                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
-                                    or (d.require.direct and is_consumer))
-
-                # second pass, transitive affected. Packages that have some dependency that is required
-                # cannot be skipped either. In theory the binary could be skipped, but build system
-                # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
-                indirect = (d.node for d in node.transitive_deps.values()
-                            if any(t.node in deps_required for t in d.node.transitive_deps.values()))
-                deps_required.update(indirect)
+                deps_required = set()
+                for req, t in node.transitive_deps.items():
+                    if req.files or (req.direct and is_consumer):
+                        deps_required.add(t.node)
+                        deps_required.update(req.required_nodes)
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():

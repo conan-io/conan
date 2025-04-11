@@ -15,7 +15,6 @@ from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
-from conan.internal.cache.home_paths import HomePaths
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 
@@ -46,10 +45,12 @@ class Cli:
             Cli._builtin_commands = self._commands.copy()
         else:
             self._commands = Cli._builtin_commands.copy()
+            self._groups = defaultdict(list)
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 
-        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        conan_custom_commands_path = os.path.join(self._conan_api.cache_folder, "extensions",
+                                                  "commands")
         # Important! This variable should be only used for testing/debugging purpose
         developer_custom_commands_path = os.getenv(_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH)
         # Notice that in case of having same custom commands file names, the developer one has
@@ -249,7 +250,7 @@ def _warn_python_version():
 def _warn_frozen_center(conan_api):
     remotes = conan_api.remotes.list()
     for r in remotes:
-        if r.url == "https://center.conan.io":
+        if r.url == "https://center.conan.io" and not r.disabled:
             ConanOutput().warning(
                 "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'. \n"
                 "Starting from Conan 2.9.2, the default remote is 'center2.conan.io'. \n"

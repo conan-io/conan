@@ -2,7 +2,7 @@ import os
 
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
@@ -12,7 +12,7 @@ from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class GnuToolchain:
@@ -53,11 +53,11 @@ class GnuToolchain:
             self.ndebug = "NDEBUG"
 
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
-        self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_flags = build_type_flags(self._conanfile)
         self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         self.cppstd = cppstd_flag(self._conanfile)
-        self.arch_flag = architecture_flag(self._conanfile.settings)
+        self.arch_flag = architecture_flag(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
@@ -104,6 +104,7 @@ class GnuToolchain:
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
+        self.apple_extra_flags = apple_extra_flags(conanfile)
         # Default initial environment flags
         self._initialize_default_extra_env()
 
@@ -237,7 +238,7 @@ class GnuToolchain:
 
     @staticmethod
     def _dict_to_list(flags):
-        return [f"{k}={v}" if v else k for k, v in flags.items()]
+        return [f"{k}={v}" if v is not None else k for k, v in flags.items()]
 
     @property
     def cxxflags(self):
@@ -245,6 +246,7 @@ class GnuToolchain:
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cxxflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
@@ -255,6 +257,7 @@ class GnuToolchain:
         fpic = "-fPIC" if self.fpic else None
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
@@ -264,6 +267,7 @@ class GnuToolchain:
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],

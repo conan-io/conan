@@ -23,10 +23,6 @@ class HomePaths:
     new_config_path = global_conf_path  # for not breaking tests, TODO to remove
 
     @property
-    def custom_commands_path(self):
-        return os.path.join(self._home, _EXTENSIONS_FOLDER, "commands")
-
-    @property
     def deployers_path(self):
         deploy = os.path.join(self._home, _EXTENSIONS_FOLDER, "deploy")
         if os.path.exists(deploy):
@@ -70,6 +66,10 @@ class HomePaths:
     @property
     def remotes_path(self):
         return os.path.join(self._home, "remotes.json")
+
+    @property
+    def providers_path(self):
+        return os.path.join(self._home, "audit_providers.json")
 
     @property
     def compatibility_plugin_path(self):

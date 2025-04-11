@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 
 
 @pytest.fixture()
@@ -74,6 +74,71 @@ def test_conf_rebase(conf_definition):
         user.company.toolchain:flags=someflags
     """)
     assert c.dumps() == result
+
+
+def test_conf_rebase_patterns():
+    text = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=value2
+        &:user.company:conf2+=[4, 5]
+        """)
+    global_conf = ConfDefinition()
+    global_conf.loads(text)
+    text = textwrap.dedent("""\
+        user.company:conf1=newvalue1
+        user.company:conf2=[6, 7]
+        """)
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    # TODO: at the moment dumps() doesn't print += append
+    result = textwrap.dedent("""\
+        user.company:conf1=newvalue1
+        user.company:conf2=[6, 7]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[4, 5]
+    """)
+    assert profile.dumps() == result
+
+    text = textwrap.dedent("""\
+        &:user.company:conf1=newvalue1
+        &:user.company:conf2=[6, 7]
+        """)
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=newvalue1
+        &:user.company:conf2=[6, 7]
+       """)
+    assert profile.dumps() == result
+
+    text = "user.company:conf2+=[6, 7]"
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3, 6, 7]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[4, 5]
+        """)
+    assert profile.dumps() == result
+
+    text = "&:user.company:conf2=+[6, 7]"
+    profile = ConfDefinition()
+    profile.loads(text)
+    profile.rebase_conf_definition(global_conf)
+    result = textwrap.dedent("""\
+        user.company:conf1=value1
+        user.company:conf2=[1, 2, 3]
+        &:user.company:conf1=value2
+        &:user.company:conf2=[6, 7, 4, 5]
+        """)
+    assert profile.dumps() == result
 
 
 def test_conf_error_per_package():
@@ -233,7 +298,7 @@ def test_conf_get_check_type_and_default():
     assert c.get("user.company.cpu:jobs", check_type=str) == "5"  # smart conversion
     with pytest.raises(ConanException) as exc_info:
         c.get("user.company.cpu:jobs", check_type=list)
-        assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
+    assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
     # Check type does not affect to default value
     assert c.get("user.non:existing", default=0, check_type=dict) == 0
     assert c.get("zlib:user.company.check:shared") is None  # unset value
@@ -250,16 +315,16 @@ def test_conf_get_check_type_and_default():
             "The value 'True' introduced is a bool object") in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_0", check_type=bool)
-    assert ("[conf] user:bad_value_0 must be a boolean-like object (true/false, 1/0, on/off) and value 'Fasle' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_0 must be a boolean-like object (true/false, 1/0, on/off) and value 'Fasle' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_1", check_type=bool)
-    assert ("[conf] user:bad_value_1 must be a boolean-like object (true/false, 1/0, on/off) and value 'ture' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_1 must be a boolean-like object (true/false, 1/0, on/off) and value 'ture' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_2", check_type=bool)
-    assert ("[conf] user:bad_value_2 must be a boolean-like object (true/false, 1/0, on/off) and value '10' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_2 must be a boolean-like object (true/false, 1/0, on/off) and value '10' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_3", check_type=bool)
-    assert ("[conf] user:bad_value_3 must be a boolean-like object (true/false, 1/0, on/off) and value '\'00\'' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_3 must be a boolean-like object (true/false, 1/0, on/off) and value '\'00\'' does not match it." in str(exc_info.value)
 
 
 def test_conf_pop():
@@ -326,3 +391,22 @@ def test_conf_scope_patterns_bad(scope, conf, assert_message):
         c.loads(final_conf)
         c.validate()
     assert assert_message in str(exc_info.value)
+
+
+@pytest.mark.parametrize("choices", [None, ["Foo", "Bar"]])
+def test_unset_basic_same_behaviour(choices):
+    c = ConfDefinition()
+    assert c.get("user.company.cpu:jobs", choices=choices) is None
+
+    c2 = ConfDefinition()
+    c2.loads("user.company.cpu:jobs=!")
+    assert c2.get("user.company.cpu:jobs", choices=choices) is None
+
+    c3 = ConfDefinition()
+    c3.loads("user.company.cpu:jobs=4")
+
+    c4 = ConfDefinition()
+    c4.loads("user.company.cpu:jobs=!")
+    c3.update_conf_definition(c4)
+
+    assert c3.get("user.company.cpu:jobs", choices=choices) is None

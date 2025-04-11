@@ -2,8 +2,8 @@ import os
 import textwrap
 import unittest
 
-from conans.model.info import load_binary_info
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.model.info import load_binary_info
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
 from conans.util.files import load, save
@@ -24,8 +24,8 @@ class SettingsTest(unittest.TestCase):
         subsystem: [null, msys]
 """
         client = TestClient()
-        save(client.cache.settings_path, settings)
-        save(client.cache.default_profile_path, "")
+        save(client.paths.settings_path, settings)
+        client.save_home({"profiles/default": ""})
         conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "os", "compiler"
@@ -134,11 +134,11 @@ class SayConan(ConanFile):
         assert "Possible values are ['Windows', 'WindowsStore', 'WindowsCE', 'Linux'" in client.out
 
         # Now add new settings to config and try again
-        config = load(client.cache.settings_path)
+        config = load(client.paths.settings_path)
         config = config.replace("Windows:",
                                 "Windows:\n    ChromeOS:\n")
 
-        save(client.cache.settings_path, config)
+        save(client.paths.settings_path, config)
         client.run("create . -s os=ChromeOS --build missing")
 
         # Settings is None

@@ -10,24 +10,17 @@ from conan.test.utils.tools import GenConanfile
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    if len(values) != len(transitive_deps):
-        values = [r.require.ref for r in values]
-        raise Exception("{}: Number of deps don't match \n{}!=\n{}".format(node, values,
-                                                                           transitive_deps))
+    assert len(values) == len(transitive_deps), f"{node}: Number of deps don't match " \
+                                                f"\n{[r.require.ref for r in values]}" \
+                                                f"!=\n{transitive_deps}"
 
     for v1, v2 in zip(values, transitive_deps):
-        if v1.node is not v2[0]:
-            raise Exception(f"{v1.node}!={v2[0]}")
-        if v1.require.headers is not v2[1]:
-            raise Exception(f"{v1.node}!={v2[0]} headers")
-        if v1.require.libs is not v2[2]:
-            raise Exception(f"{v1.node}!={v2[0]} libs")
-        if v1.require.build is not v2[3]:
-            raise Exception(f"{v1.node}!={v2[0]} build")
-        if v1.require.run is not v2[4]:
-            raise Exception(f"{v1.node}!={v2[0]} run")
-        if len(v2) > 5:
-            assert v1.require.package_id_mode is v2[5]
+        assert v1.node is v2[0], f"{v1.node}!={v2[0]}"
+        assert v1.require.headers is v2[1], f"{v1.node}!={v2[0]} headers"
+        assert v1.require.libs is v2[2], f"{v1.node}!={v2[0]} libs"
+        assert v1.require.build is v2[3], f"{v1.node}!={v2[0]} build"
+        assert v1.require.run is  v2[4], f"{v1.node}!={v2[0]} run"
+        assert len(v2) <= 5
 
 
 class TestLinear(GraphManagerTest):
@@ -871,6 +864,70 @@ class TestLinearFourLevels(GraphManagerTest):
         _check_transitive(app, [(libc, True, True, False, False),
                                 (libb, False, False, False, False),
                                 (liba, False, True, False, False)])
+
+    def test_static_propagation_linear(self):
+        # https://github.com/conan-io/conan/issues/16402
+        # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
+        # The propagation of traits is correct, it is only the "skip-binaries" not able to skip
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",  GenConanfile().with_package_type("static-library")
+                                                         .with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library")
+                                                        .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, True, False, False)])
+        _check_transitive(app, [(libc, True, True, False, True),
+                                (libb, False, False, False, False),
+                                (liba, False, False, False, False)])
+
+    def test_incorrect_static_propagation_diamond(self):
+        # https://github.com/conan-io/conan/issues/16402
+        # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
+        #  \------------------------------------------------/
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",  GenConanfile().with_package_type("static-library")
+                                                         .with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library")
+                                                        .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "liba/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc, liba])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, app])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, True, False, False)])
+        _check_transitive(app, [(libc, True, True, False, True),
+                                (libb, False, False, False, False),
+                                (liba, True, True, False, False)])
 
 
 class TestLinearFiveLevelsHeaders(GraphManagerTest):

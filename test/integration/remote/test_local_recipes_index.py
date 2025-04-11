@@ -332,6 +332,23 @@ class TestErrorsUx:
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
 
+    def test_require_revision(self):
+        # https://github.com/conan-io/conan/issues/17814
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+           versions:
+             "1.2.11":
+               folder: all
+           """)
+        save_files(recipes_folder,
+                   {"zlib/config.yml": zlib_config,
+                    "zlib/all/conanfile.py": str(GenConanfile("zlib"))})
+        c = TestClient(light=True)
+        c.run(f"remote add local '{folder}'")
+        c.run("install --requires=zlib/1.2.11#rev1", assert_error=True)
+        assert "A specific revision 'zlib/1.2.11#rev1' was requested" in c.out
+
 
 class TestPythonRequires:
     @pytest.fixture(scope="class")
@@ -360,3 +377,51 @@ class TestPythonRequires:
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
         assert "pkg/1.0: Created package" in c.out
+
+
+class TestUserChannel:
+    @pytest.fixture(scope="class")
+    def c3i_user_channel_folder(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        config = textwrap.dedent("""
+                versions:
+                  "1.0":
+                    folder: all
+                  "2.0":
+                    folder: other
+                """)
+        pkg = str(GenConanfile("pkg").with_class_attribute("user='myuser'")
+                                     .with_class_attribute("channel='mychannel'"))
+        save_files(recipes_folder,
+                   {"pkg/config.yml": config,
+                    "pkg/all/conanfile.py": pkg,
+                    "pkg/other/conanfile.py": str(GenConanfile("pkg"))})
+        return folder
+
+    def test_user_channel_requirement(self, c3i_user_channel_folder):
+        tc = TestClient(light=True)
+        tc.run(f"remote add local '{c3i_user_channel_folder}'")
+        tc.run("graph info --requires=pkg/[*]@myuser/mychannel")
+        assert "Version range '*' from requirement 'pkg/[*]@myuser/mychannel'" not in tc.out
+        assert "pkg/[*]@myuser/mychannel: pkg/1.0@myuser/mychannel" in tc.out
+        assert "pkg/1.0@myuser/mychannel#0b23a5938afb0457079e41aac8991595 - Downloaded (local)" in tc.out
+
+    @pytest.mark.parametrize("user_channel", ["@foo/bar", "@foo"])
+    def test_user_channel_requirement_no_match(self, c3i_user_channel_folder, user_channel):
+        tc = TestClient(light=True)
+        tc.run(f"remote add local '{c3i_user_channel_folder}'")
+        tc.run(f"graph info --requires=pkg/[*]{user_channel}", assert_error=True)
+        assert f"Version range '*' from requirement 'pkg/[*]{user_channel}' required by 'None' could not be resolved." in tc.out
+
+    def test_user_channel_requirement_only_at(self, c3i_user_channel_folder):
+        tc = TestClient(light=True)
+        tc.run(f"remote add local '{c3i_user_channel_folder}'")
+        tc.run(f"graph info --requires=pkg/[*]@")
+        assert f"pkg/[*]: pkg/2.0" in tc.out
+
+        tc.run(f"graph info --requires=pkg/[<2]@", assert_error=True)
+        assert f" Package 'pkg/[<2]' not resolved" in tc.out
+
+        tc.run(f"graph info --requires=pkg/[<2]", assert_error=True)
+        assert f" Package 'pkg/[<2]' not resolved" in tc.out

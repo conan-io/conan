@@ -4,7 +4,7 @@ import os
 from conan.api.output import Color
 from conan.tools.files import chdir, update_conandata
 from conan.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
@@ -137,7 +137,9 @@ class Git:
             return bool(status)
         # Parse the status output, line by line, and match it with "_excluded"
         lines = [line.strip() for line in status.splitlines()]
-        lines = [line.split()[1] for line in lines if line]
+        # line is of the form STATUS PATH, get the path by splitting
+        # (Taking into account that STATUS is one word, PATH might be many)
+        lines = [line.split(maxsplit=1)[1].strip('"') for line in lines if line]
         lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
         self._conanfile.output.debug(f"Filtered git status: {lines}")
         return bool(lines)
@@ -258,15 +260,18 @@ class Git:
         files = files.splitlines()
         return files
 
-    def coordinates_to_conandata(self):
+    def coordinates_to_conandata(self, repository=False):
         """
         Capture the "url" and "commit" from the Git repo, calling ``get_url_and_commit()``, and then
         store those in the ``conandata.yml`` under the "scm" key. This information can be
         used later to clone and checkout the exact source point that was used to create this
         package, and can be useful even if the recipe uses ``exports_sources`` as mechanism to
         embed the sources.
+
+        :param repository: By default gets the commit of the defined folder, use repository=True to get
+                     the commit of the repository instead.
         """
-        scm_url, scm_commit = self.get_url_and_commit()
+        scm_url, scm_commit = self.get_url_and_commit(repository=repository)
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):

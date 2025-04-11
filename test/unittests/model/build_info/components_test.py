@@ -1,6 +1,6 @@
 import unittest
 
-from conans.model.build_info import CppInfo
+from conan.internal.model.cpp_info import CppInfo
 
 
 class CppInfoComponentsTest(unittest.TestCase):
@@ -14,6 +14,9 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         self.assertListEqual(cpp_info.components["libb"].includedirs, ["include", "includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
+
+        with self.assertRaises(AttributeError):
+            cpp_info.required_components = ["liba::liba"]
 
     def test_no_components_inside_components(self):
         cpp_info = CppInfo()

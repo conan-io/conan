@@ -496,8 +496,6 @@ def test_pkg_config_name_full_aliases():
 
     pc_content = client.load("compo1_alias.pc")
     content = textwrap.dedent(f"""\
-    {prefix}
-
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
@@ -525,8 +523,6 @@ def test_pkg_config_name_full_aliases():
 
     pc_content = client.load("pkg_alias1.pc")
     content = textwrap.dedent(f"""\
-    {prefix}
-
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
@@ -536,8 +532,6 @@ def test_pkg_config_name_full_aliases():
 
     pc_content = client.load("pkg_alias2.pc")
     content = textwrap.dedent(f"""\
-    {prefix}
-
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3

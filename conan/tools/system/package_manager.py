@@ -320,8 +320,7 @@ class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
     install_command = "{tool} install --yes {packages}"
     update_command = "{tool} outdated"
-    check_command = '{tool} search --local-only --exact {package} | ' \
-                    'findstr /c:"1 packages installed."'
+    check_command = '{tool} list --exact {package} | findstr /c:"1 packages installed."'
 
 
 class PacMan(_SystemPackageManagerTool):

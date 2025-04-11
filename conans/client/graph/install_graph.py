@@ -1,14 +1,13 @@
 import json
 import os
-import shlex
 import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
 from conan.errors import ConanException, ConanInvalidConfiguration
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 
@@ -67,7 +66,7 @@ class _InstallPackageReference:
         self.nodes.append(node)
 
     def _build_args(self):
-        if self.binary != BINARY_BUILD:
+        if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
@@ -127,6 +126,15 @@ class _InstallRecipeReference:
             if package.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
                 return True
         return False
+
+    def reduce(self):
+        result = _InstallRecipeReference()
+        result.ref = self.ref
+        result._node = self._node
+        result.depends = self.depends
+        result.packages = {pid: pkg for pid, pkg in self.packages.items()
+                           if pkg.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)}
+        return result
 
     @property
     def node(self):
@@ -237,6 +245,9 @@ class _InstallConfiguration:
     def need_build(self):
         return self.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
 
+    def reduce(self):
+        return self
+
     @property
     def pref(self):
         return PkgReference(self.ref, self.package_id, self.prev)
@@ -279,7 +290,7 @@ class _InstallConfiguration:
                     self.depends.append(dep.dst.pref)
 
     def _build_args(self):
-        if self.binary != BINARY_BUILD:
+        if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
@@ -437,7 +448,7 @@ class InstallGraph:
         result = {}
         for k, node in self._nodes.items():
             if node.need_build:
-                result[k] = node
+                result[k] = node.reduce()
             else:  # Eliminate this element from the graph
                 dependencies = node.depends
                 # Find all consumers
@@ -577,8 +588,8 @@ class InstallGraph:
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
-                        "all dependencies) or --build-test (exclusive for 'test_package' " \
-                        "dependencies) to define what can be built from sources"
+                        "all dependencies) or --build-test (exclusive for 'conan create' building " \
+                        "test_package' dependencies) to define what can be built from sources"
         else:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"

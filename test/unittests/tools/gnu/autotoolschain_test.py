@@ -5,7 +5,7 @@ import pytest
 from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
 from conan.errors import ConanException
-from conans.model.conf import Conf
+from conan.internal.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
@@ -126,9 +126,8 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
     with pytest.raises(ConanException) as conan_error:
         AutotoolsToolchain(conanfile)
-        msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and " \
-              "needed for os=Windows"
-        assert msg == str(conan_error.value)
+    msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and needed for os=Windows"
+    assert msg == str(conan_error.value)
 
 
 def test_compilers_mapping():

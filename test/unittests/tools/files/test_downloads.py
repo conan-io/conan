@@ -1,5 +1,6 @@
 import os
 import shutil
+from unittest import mock
 
 import pytest
 
@@ -13,27 +14,31 @@ from conan.test.utils.tools import redirect_output, TestRequester
 from conans.util.files import save, load, chdir, mkdir
 
 
-@pytest.mark.skip(reason="This causes more troubles than benefits, external ftp download is testing "
-                         "very little conan code, mostly python")
+@mock.patch('ftplib.FTP', autospec=True)
 class TestFTP:
 
-    def test_ftp_auth(self):
-        filename = "/pub/example/readme.txt"
-        conanfile = ConanFileMock()
-        ftp_download(conanfile, "test.rebex.net", filename, "demo", "password")
-        assert os.path.exists(os.path.basename(filename))
+    def test_ftp_auth(self, ftp_mock):
+        ftp_object = ftp_mock.return_value
+        filename = "/pub/example/readme2.txt"
+        with chdir(temp_folder()):  # To not pollute the project
+            ftp_download(None, "test.rebex.net", filename, "demo", "password")
+        ftp_mock.assert_called_with('test.rebex.net')
+        assert ftp_object.login.called
+        ftp_object.cwd.assert_called_with('/pub/example')
 
-    def test_ftp_invalid_path(self):
+    def test_ftp_invalid_path(self, ftp_mock):
+        ftp_object = ftp_mock.return_value
+        ftp_object.cwd.side_effect = Exception("550 The system cannot find the file specified.")
         with pytest.raises(ConanException) as exc:
-            conanfile = ConanFileMock()
-            ftp_download(conanfile, "test.rebex.net", "invalid-file", "demo", "password")
+            ftp_download(None, "test.rebex.net", "/path/invalid-file", "demo", "password")
         assert "550 The system cannot find the file specified." in str(exc.value)
         assert not os.path.exists("invalid-file")
 
-    def test_ftp_invalid_auth(self):
+    def test_ftp_invalid_auth(self, ftp_mock):
+        ftp_object = ftp_mock.return_value
+        ftp_object.login.side_effect = Exception("530 User cannot log in.")
         with pytest.raises(ConanException) as exc:
-            conanfile = ConanFileMock()
-            ftp_download(conanfile, "test.rebex.net", "readme.txt", "demo", "invalid")
+            ftp_download(None, "test.rebex.net", "readme.txt", "demo", "invalid")
         assert "530 User cannot log in." in str(exc.value)
         assert not os.path.exists("readme.txt")
 

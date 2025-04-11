@@ -8,7 +8,7 @@ from unittest.mock import PropertyMock
 from conan.tools.system.package_manager import Apt, Apk, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, \
     Zypper, PacMan, _SystemPackageManagerTool
 from conan.errors import ConanException
-from conans.model.settings import Settings
+from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
@@ -323,7 +323,7 @@ def test_tools_install_archless(tool_class, result):
     (Brew, 'test -n "$(brew ls --versions package)"'),
     (Pkg, 'pkg info package'),
     (PkgUtil, 'test -n "`pkgutil --list package`"'),
-    (Chocolatey, 'choco search --local-only --exact package | findstr /c:"1 packages installed."'),
+    (Chocolatey, 'choco list --exact package | findstr /c:"1 packages installed."'),
     (PacMan, 'pacman -Qi package'),
     (Zypper, 'rpm -q package'),
 ])
