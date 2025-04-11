@@ -86,9 +86,10 @@ class Premake:
         self._conanfile.run(premake_command)
 
 
-    def build(self, workspace, targets=None):
+    def build(self, targets=None):
         if self.action.startswith("vs"):
             msbuild = MSBuild(self._conanfile)
+            workspace = self._conanfile.name # This in injected by toolchain
             msbuild.build(sln=f"{workspace}.sln", targets=targets)
         else:
             build_type = str(self._conanfile.settings.build_type)

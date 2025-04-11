@@ -25,6 +25,8 @@ class PremakeToolchain:
     local locationDir = "{{ build_folder }}"
 
     workspace "{{workspace}}"
+        filename("{{filename}}")
+
         {% if cppstd %}
         cppdialect "{{cppstd}}"
         {% endif %}
@@ -42,12 +44,12 @@ class PremakeToolchain:
         {% endif %}
 
         {% if extra_cflags %}
-        filter { "language:C" }
+        filter {"files:**.c"}
             buildoptions { {{extra_cflags}} }
         filter {}
         {% endif %}
         {% if extra_cxxflags %}
-        filter { "language:C++" }
+        filter {"files:**.cpp or **.cxx or *.cc"}
             buildoptions { {{extra_cxxflags}} }
         filter {}
         {% endif %}
@@ -59,11 +61,16 @@ class PremakeToolchain:
         defines { {{variables}} }
         {% endif %}
 
+        filter { "system:macosx" }
+            -- runpathdirs { "@loader_path" }
+            linkoptions { "-Wl,-rpath,@loader_path" }
+        filter {}
+
         conan_setup()
     """
     )
 
-    def __init__(self, conanfile, workspace="*"):
+    def __init__(self, conanfile, workspace):
         # '*' is the global workspace
         self._conanfile = conanfile
         self.workspace = workspace
@@ -110,6 +117,7 @@ class PremakeToolchain:
             extra_cflags=extra_c_flags,
             extra_cxxflags=extra_cxx_flags,
             extra_ldflags=extra_ld_flags,
+            filename=self._conanfile.name
         )
         save(
             self,
