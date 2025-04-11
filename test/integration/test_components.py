@@ -149,3 +149,43 @@ def test_components_overrides():
     # This used to crash, because override was not correctly excluded
     c.run("create app")
     assert "app/0.1: Created package" in c.out
+
+def test_duplication_component_properties():
+    """ Regression for PR 17503 - component lists would be incorrectly aggregated """
+    tc = TestClient(light=True)
+
+    dep = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Dep(ConanFile):
+        name = "dep"
+        version = "0.1"
+
+        def package_info(self):
+            self.cpp_info.components["acomp"].set_property("prop_list", ["value1"])
+            self.cpp_info.components["bcomp"].set_property("prop_list", ["value2"])
+            self.cpp_info.components["ccomp"].set_property("prop_list", ["value3"])
+    """)
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "0.1"
+        requires = "dep/0.1"
+
+        def generate(self):
+            # Calling this would break property lists of the last lex sorted component
+            aggregated_components = self.dependencies["dep"].cpp_info.aggregated_components()
+            ccomp = self.dependencies["dep"].cpp_info.components["ccomp"]
+            self.output.info("ccomp list: " + str(ccomp.get_property("prop_list")))
+    """)
+
+    tc.save({"dep/conanfile.py": dep,
+             "conanfile.py": conanfile})
+    tc.run("create dep")
+    tc.run("create .")
+    # The bug would give ccomp the prop_list values of the other two components
+    assert "pkg/0.1: ccomp list: ['value3', 'value2', 'value1']" not in tc.out
+    assert "pkg/0.1: ccomp list: ['value3']" in tc.out

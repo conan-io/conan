@@ -9,13 +9,13 @@ from jinja2 import Template
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
-class MSBuildDeps(object):
+class MSBuildDeps:
     """
     MSBuildDeps class generator
     conandeps.props: unconditional import of all *direct* dependencies only
@@ -94,9 +94,10 @@ class MSBuildDeps(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        #: Defines the build type. By default, ``settings.build_type``.
+        #: Defines the build type. By default, the value of ``settings.build_type``.
         self.configuration = conanfile.settings.build_type
-        #: Defines the configuration key used to conditionate on which property sheet to import.
+        #: Defines the configuration key used to conditionally select which property sheet to
+        #: import (defaults to ``"Configuration"``).
         self.configuration_key = "Configuration"
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
@@ -105,7 +106,8 @@ class MSBuildDeps(object):
                          'x86_64': 'x64',
                          'armv7': 'ARM',
                          'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
-        #: Defines the platform key used to conditionate on which property sheet to import.
+        #: Defines the platform key used to conditionally select which property sheet to
+        #: import (defaults to ``"Platform"``).
         self.platform_key = "Platform"
         ca_exclude = "tools.microsoft.msbuilddeps:exclude_code_analysis"
         #: List of packages names patterns to add Visual Studio ``CAExcludePath`` property
@@ -167,7 +169,7 @@ class MSBuildDeps(object):
             # https://docs.microsoft.com/en-us/visualstudio/msbuild/
             #                          how-to-escape-special-characters-in-msbuild
             # https://docs.microsoft.com/en-us/visualstudio/msbuild/msbuild-special-characters
-            return path.replace("\\", "/").lstrip("/")
+            return path.lstrip("/")
 
         def join_paths(paths):
             # TODO: ALmost copied from CMakeDeps TargetDataContext
@@ -185,7 +187,7 @@ class MSBuildDeps(object):
         root_folder = escape_path(root_folder)
         # Make the root_folder relative to the generated conan_vars_xxx.props file
         relative_root_folder = relativize_path(root_folder, self._conanfile,
-                                               "$(MSBuildThisFileDirectory)")
+                                               "$(MSBuildThisFileDirectory)", normalize=False)
 
         bin_dirs = join_paths(cpp_info.bindirs)
         res_dirs = join_paths(cpp_info.resdirs)
@@ -336,9 +338,14 @@ class MSBuildDeps(object):
                 public_deps = []  # To store the xml dependencies/file names
                 for required_pkg, required_comp in comp_info.parsed_requires():
                     if required_pkg is not None:  # Points to a component of a different package
-                        if required_pkg in pkg_deps:  # The transitive dep might have been skipped
-                            public_deps.append(required_pkg if required_pkg == required_comp
-                                               else "{}_{}".format(required_pkg, required_comp))
+                        try:
+                            required = pkg_deps[required_pkg]
+                        except KeyError:  # The transitive dep might have been skipped
+                            required = None
+                        if required:  # The transitive dep might have been skipped
+                            required_name = required.ref.name
+                            public_deps.append(required_name if required_pkg == required_comp
+                                               else "{}_{}".format(required_name, required_comp))
                     else:  # Points to a component of same package
                         public_deps.append("{}_{}".format(dep_name, required_comp))
                 public_deps = [self._get_valid_xml_format(d) for d in public_deps]

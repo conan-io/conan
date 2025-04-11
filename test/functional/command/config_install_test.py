@@ -79,8 +79,8 @@ myfuncpy = """def mycooladd(a, b):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
-        save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
+        save(os.path.join(self.client.paths.profiles_path, "default"), "#default profile empty")
+        save(os.path.join(self.client.paths.profiles_path, "linux"), "#empty linux profile")
 
     @staticmethod
     def _create_profile_folder(folder=None):
@@ -134,7 +134,7 @@ class ConfigInstallTest(unittest.TestCase):
         return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
-        settings_path = self.client.cache.settings_path
+        settings_path = self.client.paths.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         api = self.client.api
         cache_remotes = api.remotes.list()
@@ -142,11 +142,11 @@ class ConfigInstallTest(unittest.TestCase):
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),
         ])
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["default", "linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path,
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         self.assertEqual("#Custom pylint",
@@ -260,12 +260,12 @@ class ConfigInstallTest(unittest.TestCase):
         assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
 
     def test_without_profile_folder(self):
-        shutil.rmtree(self.client.cache.profiles_path)
+        shutil.rmtree(self.client.paths.profiles_path)
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
 
     def test_install_url(self):
@@ -496,7 +496,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run('config install "%s/.git" --args "-b other_branch"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
-        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
+        file_path = os.path.join(self.client.paths.hooks_path, "cust", "cust.py")
         assert load(file_path) == ""
 
         # Add changes to that branch and update
@@ -525,12 +525,12 @@ class ConfigInstallTest(unittest.TestCase):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
-        make_file_read_only(self.client.cache.settings_path)
-        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+        make_file_read_only(self.client.paths.settings_path)
+        self.assertFalse(os.access(self.client.paths.settings_path, os.W_OK))
 
         # config install should overwrite the existing read-only file
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
     def test_dont_copy_file_permissions(self):
         source_folder = self._create_profile_folder()
@@ -538,7 +538,7 @@ class ConfigInstallTest(unittest.TestCase):
         make_file_read_only(os.path.join(source_folder, 'remotes.json'))
 
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
 
 class ConfigInstallSchedTest(unittest.TestCase):
@@ -587,7 +587,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
-        conf = load(client.cache.new_config_path)
+        conf = load(client.paths.new_config_path)
         dirs = os.listdir(client.cache_folder)
         assert ".git" not in dirs
 

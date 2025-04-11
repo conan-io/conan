@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import re
 import textwrap
 import unittest
@@ -9,7 +10,7 @@ import pytest
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
 from conan.test.assets.genconanfile import GenConanfile
-from conans.util.files import save
+from conans.util.files import save, load
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -341,7 +342,7 @@ class TestValidate(unittest.TestCase):
 
     def test_validate_package_id_mode(self):
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
+        save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
         conanfile = textwrap.dedent("""
           from conan import ConanFile
           from conan.errors import ConanInvalidConfiguration
@@ -421,7 +422,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -529,7 +530,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -589,7 +590,7 @@ class TestValidateCppstd:
             def compatibility(conanfile):
                 return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -699,6 +700,65 @@ class TestValidateCppstd:
         assert "compiler.cppstd=14" in client.out
         assert "compiler.cppstd=17" not in client.out
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Needs at least 3 cppstd values available, msvc 191 does not")
+    def test_extension_properties_cppstd_compat_non_transitiveness(self):
+        """
+        The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
+        its dependencies will still be checked for compatibility
+        """
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
+                 "lib/conanfile.py": GenConanfile("lib", "1.0")
+                    .with_setting("compiler")
+                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                    .with_requirement("dep/1.0"),
+                 "app/conanfile.py": GenConanfile("app", "1.0")
+                    .with_setting("compiler")
+                    .with_requirement("lib/1.0")})
+        tc.run("create dep -s=compiler.cppstd=20")
+        tc.run("create lib -s=compiler.cppstd=17")
+        tc.run("create app -s=compiler.cppstd=14", assert_error=True)
+
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=11", assert_error=True)
+        assert "dep/1.0: Found compatible package" in tc.out
+        assert "ERROR: Missing binary: app/1.0" in tc.out
+
+    def test_extension_properties_make_transitive(self):
+        """
+        The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
+        its dependencies will still be checked for compatibility
+        """
+        tc = TestClient()
+        tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_setting("compiler"),
+                 "dep/conanfile.py": GenConanfile("dep", "1.0")
+                    .with_setting("compiler")
+                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                    .with_requirement("lib/1.0"),
+                 "conanfile.py": GenConanfile("app", "1.0")
+                    .with_setting("compiler")
+                    .with_requirement("dep/1.0")})
+        tc.run("create lib -s=compiler.cppstd=17")
+        tc.run("create dep -s=compiler.cppstd=14")
+        tc.run("create . -s=compiler.cppstd=14")
+
+        compat_path = os.path.join(tc.cache_folder, "extensions/plugins/compatibility/compatibility.py")
+        compat_contents = load(compat_path)
+
+        transitive_expansions = textwrap.indent(textwrap.dedent("""
+        extension_properties = getattr(conanfile, "extension_properties", {}).copy()
+        for dep in conanfile.dependencies.values():
+            if not dep.extension_properties.get("compatibility_cppstd", True):
+                extension_properties["compatibility_cppstd"] = False
+        """), "    ")
+
+        compat_contents = compat_contents.replace('extension_properties = getattr(conanfile, "extension_properties", {})', transitive_expansions)
+        save(compat_path, compat_contents)
+
+        tc.run("install --requires=app/1.0 -s=compiler.cppstd=17", assert_error=True)
+
+        assert "Missing prebuilt package for 'app/1.0', 'dep/1.0'" in tc.out
+
+
 
 class TestCompatibleSettingsTarget(unittest.TestCase):
     """ aims to be a very close to real use case of tool being used across different settings_target
@@ -752,7 +812,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -835,7 +895,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -875,7 +935,7 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 if self.settings_target.arch == "armv7":
                     return [{"settings_target": [("arch", "armv6")]}]
             """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
 
         tool_a_conanfile = textwrap.dedent("""
             from conan import ConanFile

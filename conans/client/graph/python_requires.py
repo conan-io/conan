@@ -1,8 +1,8 @@
 import os
 
 from conan.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.requires import Requirement
+from conan.api.model import RecipeReference
+from conan.internal.model.requires import Requirement
 
 
 class PyRequire(object):
@@ -20,7 +20,7 @@ class PyRequire(object):
                 "path": self.path}
 
 
-class PyRequires(object):
+class PyRequires:
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}

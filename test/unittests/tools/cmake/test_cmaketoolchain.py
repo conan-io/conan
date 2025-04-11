@@ -8,9 +8,9 @@ from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conan.errors import ConanException
-from conans.model.conf import Conf
-from conans.model.options import Options
-from conans.model.settings import Settings
+from conan.internal.model.conf import Conf
+from conan.internal.model.options import Options
+from conan.internal.model.settings import Settings
 
 
 @pytest.fixture
@@ -644,7 +644,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
 
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
-        assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
+    assert "Please, specify a suitable value for os.sdk." in str(excinfo.value)
 
 
 def test_compilers_block(conanfile):

@@ -97,6 +97,7 @@ class MesonInstall(TestMesonBase):
         """)
 
     @pytest.mark.tool("meson")
+    @pytest.mark.tool("cmake")
     def test_install(self):
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")

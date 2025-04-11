@@ -2,7 +2,7 @@ import unittest
 from collections import OrderedDict
 
 from conan.tools.env.environment import ProfileEnvironment
-from conans.model.profile import Profile
+from conan.internal.model.profile import Profile
 
 
 class ProfileTest(unittest.TestCase):

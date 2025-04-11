@@ -4,22 +4,23 @@ from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
+from conan.internal.model.recipe_ref import ref_matches
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conan.errors import ConanException
-from conans.model.conan_file import ConanFile
-from conans.model.options import Options, _PackageOptions
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference, ref_matches
-from conans.model.requires import Requirement
+from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.options import Options, _PackageOptions
+from conan.internal.model.pkg_type import PackageType
+from conan.api.model import RecipeReference
+from conan.internal.model.requires import Requirement
 
 
-class DepsGraphBuilder(object):
+class DepsGraphBuilder:
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -136,7 +137,9 @@ class DepsGraphBuilder(object):
         version_range = require.version_range
         prev_version_range = prev_require.version_range if prev_node is None else None
         if version_range:
-            # TODO: Check user/channel conflicts first
+            if require.ref.user != prev_require.ref.user or \
+                    require.ref.channel != prev_require.ref.channel:
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
             if prev_version_range is not None:
                 # It it is not conflicting, but range can be incompatible, restrict range
                 restricted_version_range = version_range.intersection(prev_version_range)
@@ -148,9 +151,10 @@ class DepsGraphBuilder(object):
                     require.ref = prev_ref
                 else:
                     raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
-
         elif prev_version_range is not None:
-            # TODO: Check user/channel conflicts first
+            if require.ref.user != prev_require.ref.user or \
+                    require.ref.channel != prev_require.ref.channel:
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
             if not prev_version_range.contains(require.ref.version, resolve_prereleases):
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         else:
@@ -193,8 +197,16 @@ class DepsGraphBuilder(object):
         for pattern, tool_requires in profile.tool_requires.items():
             if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 for tool_require in tool_requires:  # Do the override
-                    if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
-                        continue  # avoid self-loop of build-requires in build context
+                    # Check if it is a self-loop of build-requires in build context and avoid it
+                    if ref and tool_require.name == ref.name and tool_require.user == ref.user and \
+                            tool_require.channel == ref.channel:
+                        if tool_require.version == ref.version:
+                            continue
+                        # Also avoid it if the version is in the range
+                        version_range = repr(tool_require.version)
+                        if version_range[0] == "[" and version_range[-1] == "]":
+                            if ref.version.in_range(version_range[1:-1]):
+                                continue
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
@@ -317,6 +329,7 @@ class DepsGraphBuilder(object):
                 continue
             if pattern.channel != "*" and pattern.channel != require.ref.channel:
                 continue
+            require._required_ref = require.ref.copy()  # Save the original ref before replacing
             original_require = repr(require.ref)
             if alternative_ref.version != "*":
                 require.ref.version = alternative_ref.version

@@ -3,15 +3,15 @@ import os
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, libcxx_flags, cstd_flag
-from conan.tools.env import Environment
+from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conans.model.pkg_type import PackageType
+from conan.internal.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
@@ -46,12 +46,12 @@ class AutotoolsToolchain:
             self.ndebug = "NDEBUG"
 
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
-        self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_flags = build_type_flags(self._conanfile)
         self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         self.cppstd = cppstd_flag(self._conanfile)
         self.cstd = cstd_flag(self._conanfile)
-        self.arch_flag = architecture_flag(self._conanfile.settings)
+        self.arch_flag = architecture_flag(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
@@ -69,10 +69,8 @@ class AutotoolsToolchain:
             # If cross-building and tools.android:ndk_path is defined, let's try to guess the Android
             # cross-building flags
             self.android_cross_flags = self._resolve_android_cross_compilation()
-            # Host triplet
-            if self.android_cross_flags:
-                self._host = self.android_cross_flags.pop("host")
-            elif not self._host:
+            # If it's not defined the triplet
+            if not self._host:
                 os_host = conanfile.settings.get_safe("os")
                 arch_host = conanfile.settings.get_safe("arch")
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)["triplet"]
@@ -86,9 +84,9 @@ class AutotoolsToolchain:
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
-        self.configure_args = self._default_configure_shared_flags() + \
-                              self._default_configure_install_flags() + \
-                              self._get_triplets()
+        self.configure_args = (self._default_configure_shared_flags() +
+                               self._default_configure_install_flags() +
+                               self._get_triplets())
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
         # Apple stuff
@@ -103,18 +101,27 @@ class AutotoolsToolchain:
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
+        self.apple_extra_flags = apple_extra_flags(self._conanfile)
 
     def _resolve_android_cross_compilation(self):
         # Issue related: https://github.com/conan-io/conan/issues/13443
         ret = {}
         if not self._is_cross_building or not self._conanfile.settings.get_safe("os") == "Android":
             return ret
+        # Setting host if it was not already defined yet
+        arch = self._conanfile.settings.get_safe("arch")
+        android_target = {'armv7': 'armv7a-linux-androideabi',
+                          'armv8': 'aarch64-linux-android',
+                          'x86': 'i686-linux-android',
+                          'x86_64': 'x86_64-linux-android'}.get(arch)
+        self._host = self._host or android_target
+        # Automatic guessing made by Conan (need the NDK path variable defined)
+        conan_vars = {}
         ndk_path = self._conanfile.conf.get("tools.android:ndk_path", check_type=str)
         if ndk_path:
             if self._conanfile.conf.get("tools.build:compiler_executables"):
                 self._conanfile.output.warning("tools.build:compiler_executables conf has no effect"
                                                " when tools.android:ndk_path is defined too.")
-            arch = self._conanfile.settings.get_safe("arch")
             os_build = self._conanfile.settings_build.get_safe("os")
             ndk_os_folder = {
                 'Macos': 'darwin',
@@ -131,13 +138,9 @@ class AutotoolsToolchain:
             ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
                                    f"{ndk_os_folder}-x86_64", "bin")
             android_api_level = self._conanfile.settings.get_safe("os.api_level")
-            android_target = {'armv7': 'armv7a-linux-androideabi',
-                              'armv8': 'aarch64-linux-android',
-                              'x86': 'i686-linux-android',
-                              'x86_64': 'x86_64-linux-android'}.get(arch)
             os_build = self._conanfile.settings_build.get_safe('os')
             ext = ".cmd" if os_build == "Windows" else ""
-            ret = {
+            conan_vars = {
                 "CC": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
                 "CXX": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{ext}"),
                 "LD": os.path.join(ndk_bin, "ld"),
@@ -145,8 +148,19 @@ class AutotoolsToolchain:
                 "RANLIB": os.path.join(ndk_bin, "llvm-ranlib"),
                 "AS": os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{ext}"),
                 "AR": os.path.join(ndk_bin, "llvm-ar"),
-                "host": android_target
+                "ADDR2LINE": os.path.join(ndk_bin, "llvm-addr2line"),
+                "NM": os.path.join(ndk_bin, "llvm-nm"),
+                "OBJCOPY": os.path.join(ndk_bin, "llvm-objcopy"),
+                "OBJDUMP": os.path.join(ndk_bin, "llvm-objdump"),
+                "READELF": os.path.join(ndk_bin, "llvm-readelf"),
+                "ELFEDIT": os.path.join(ndk_bin, "llvm-elfedit")
             }
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        for var_name, var_path in conan_vars.items():
+            # User variables have more priority than Conan ones, so if it was defined within
+            # the build env then do nothing
+            if build_env.get(var_name) is None:
+                ret[var_name] = var_path
         return ret
 
     def _get_msvc_runtime_flag(self):
@@ -162,7 +176,7 @@ class AutotoolsToolchain:
         return []
 
     def _add_msvc_flags(self, flags):
-        # This is to avoid potential duplicate with users recipes -FS (alreday some in ConanCenter)
+        # This is to avoid potential duplicate with users recipes -FS (already some in ConanCenter)
         return [f for f in self.msvc_extra_flags if f not in flags]
 
     @staticmethod
@@ -175,6 +189,7 @@ class AutotoolsToolchain:
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cxxflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
@@ -185,6 +200,7 @@ class AutotoolsToolchain:
         fpic = "-fPIC" if self.fpic else None
         ret = [self.cstd, self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
@@ -194,6 +210,7 @@ class AutotoolsToolchain:
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],

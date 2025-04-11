@@ -26,7 +26,7 @@ class TestGitBasicCapture:
             version = "0.1"
 
             def export(self):
-                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt"])
+                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt", "file with spaces.txt"])
                 commit = git.get_commit()
                 repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()
@@ -127,7 +127,8 @@ class TestGitBasicCapture:
         c.run("export . -vvv")
         assert "pkg/0.1: DIRTY: False" in c.out
         c.save({"myfile.txt": "changed",
-                "mynew.txt": "new"})
+                "mynew.txt": "new",
+                "file with spaces.txt": "hello"})
         c.run("export .")
         assert "pkg/0.1: DIRTY: False" in c.out
         c.save({"other.txt": "new"})
@@ -135,7 +136,7 @@ class TestGitBasicCapture:
         assert "pkg/0.1: DIRTY: True" in c.out
 
         conf_excluded = f'core.scm:excluded+=["other.txt"]'
-        save(c.cache.global_conf_path, conf_excluded)
+        save(c.paths.global_conf_path, conf_excluded)
         c.run("export .")
         assert "pkg/0.1: DIRTY: False" in c.out
 
@@ -595,9 +596,8 @@ class TestGitCloneWithArgs:
         c = TestClient()
         git_args = ['--branch', 'foobar']
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
-        with pytest.raises(Exception):
-            c.run("create .")
-            assert "Remote branch foobar not found" in c.out
+        c.run("create .", assert_error=True)
+        assert "Remote branch foobar not found" in c.out
 
 
 @pytest.mark.tool("git")

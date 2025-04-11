@@ -42,7 +42,7 @@ class TestAuthSourcePlugin:
             def auth_source_plugin(url):
                 raise Exception("Test Error")
             """)
-        save(os.path.join(c.cache.plugins_path, "auth_source.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_source.py": auth_plugin})
         c.run("source conanfile.py", assert_error=True)
         assert "Test Error" in c.out
 
@@ -57,7 +57,7 @@ class TestAuthSourcePlugin:
             def auth_source_plugin(url):
                 return { json.dumps({'user': 'user', 'password': password}) }
             """)
-        save(os.path.join(c.cache.plugins_path, "auth_source.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_source.py": auth_plugin})
         c.run("source conanfile.py", assert_error=should_fail)
         if should_fail:
             assert "AuthenticationException" in c.out
@@ -73,7 +73,7 @@ class TestAuthSourcePlugin:
                 def auth_source_plugin(url):
                     return None
                 """)
-        save(os.path.join(c.cache.plugins_path, "auth_source.py"), auth_plugin)
+        c.save_home({"extensions/plugins/auth_source.py": auth_plugin})
         source_credentials = json.dumps({"credentials": [{"url": url, "token": "password"}]})
         save(os.path.join(c.cache_folder, "source_credentials.json"), source_credentials)
         c.run("source conanfile.py")

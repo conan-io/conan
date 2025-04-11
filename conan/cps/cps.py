@@ -2,7 +2,7 @@ import json
 import os
 from enum import Enum
 
-from conans.model.build_info import CppInfo
+from conan.internal.model.cpp_info import CppInfo
 from conans.util.files import save, load
 
 
@@ -115,11 +115,15 @@ class CPS:
         self.description = None
         self.license = None
         self.website = None
+        self.prefix = None
 
     def serialize(self):
-        cps = {"cps_version": "0.12.0",
+        cps = {"cps_version": "0.13.0",
                "name": self.name,
                "version": self.version}
+
+        if self.prefix is not None:
+            cps["prefix"] = self.prefix
 
         # Supplemental
         for data in "license", "description", "website":
@@ -143,6 +147,7 @@ class CPS:
     def deserialize(data):
         cps = CPS()
         cps.name = data.get("name")
+        cps.prefix = data.get("prefix")
         cps.version = data.get("version")
         cps.license = data.get("license")
         cps.description = data.get("description")
@@ -157,6 +162,7 @@ class CPS:
     @staticmethod
     def from_conan(dep):
         cps = CPS(dep.ref.name, str(dep.ref.version))
+        cps.prefix = dep.package_folder.replace("\\", "/")
         # supplemental
         cps.license = dep.license
         cps.description = dep.description

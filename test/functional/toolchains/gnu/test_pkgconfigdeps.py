@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -37,12 +38,10 @@ def test_pkgconfigdeps_with_test_requires():
     Related issue: https://github.com/conan-io/conan/issues/11376
     """
     client = TestClient()
-    with client.chdir("app"):
-        client.run("new cmake_lib -d name=app -d version=1.0")
-        client.run("create . -tf=\"\"")
-    with client.chdir("test"):
-        client.run("new cmake_lib -d name=test -d version=1.0")
-        client.run("create . -tf=\"\"")
+    client.save({"app/conanfile.py": GenConanfile("app", "1.0"),
+                 "test/conanfile.py": GenConanfile("test", "1.0")})
+    client.run("create app")
+    client.run("create test")
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''
         from conan import ConanFile

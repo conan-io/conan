@@ -1,8 +1,11 @@
 import unittest
+
+import pytest
 from mock import mock
 from parameterized import parameterized
 
-from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd
+from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd, \
+    valid_min_cstd, valid_max_cstd
 from conan.test.utils.mocks import MockSettings, ConanFileMock
 from conan.errors import ConanException, ConanInvalidConfiguration
 
@@ -235,3 +238,46 @@ class ValidMaxCppstdTests(unittest.TestCase):
 
             conanfile.settings.values["compiler.cppstd"] = "98"
             self.assertFalse(valid_max_cppstd(conanfile, cppstd, True))
+
+
+class TestCstd:
+
+    @pytest.mark.parametrize("compiler, cstd, mincstd, valid",
+                             [["gcc",  "99", "99", True],
+                              ["gcc",  "gnu99", "99", True],
+                              ["gcc", "99", "11", False]
+                              ])
+    def test_valid_min(self, compiler, cstd, mincstd, valid):
+        settings = MockSettings({"arch": "x86_64",
+                                 "build_type": "Debug",
+                                 "os": "Linux",
+                                 "compiler": compiler,
+                                 "compiler.cstd": cstd})
+        conanfile = ConanFileMock(settings)
+        if valid:
+            assert valid_min_cstd(conanfile, mincstd, False)
+        else:
+            assert not valid_min_cstd(conanfile, mincstd, False)
+
+    @pytest.mark.parametrize("compiler, cstd, maxcstd, valid",
+                             [["gcc", "99", "11", True],
+                              ["gcc", "gnu99", "11", True],
+                              ["gcc", "17", "11", False]
+                              ])
+    def test_valid_max(self, compiler, cstd, maxcstd, valid):
+        settings = MockSettings({"arch": "x86_64",
+                                 "build_type": "Debug",
+                                 "os": "Linux",
+                                 "compiler": compiler,
+                                 "compiler.cstd": cstd})
+        conanfile = ConanFileMock(settings)
+        if valid:
+            assert valid_max_cstd(conanfile, maxcstd, False)
+        else:
+            assert not valid_max_cstd(conanfile, maxcstd, False)
+
+    def test_error(self):
+        conanfile = ConanFileMock()
+        with pytest.raises(ConanException) as e:
+            valid_min_cstd(conanfile, "potato")
+        assert "cstd parameter must be a number" in str(e.value)

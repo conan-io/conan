@@ -2,7 +2,11 @@ import json
 import os
 import textwrap
 
+import pytest
+
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 def test_profile_path():
@@ -22,10 +26,10 @@ def test_ignore_paths_when_listing_profiles():
     ignore_path = '.DS_Store'
 
     # just in case
-    os.makedirs(c.cache.profiles_path, exist_ok=True)
+    os.makedirs(c.paths.profiles_path, exist_ok=True)
     # This a "touch" equivalent
-    open(os.path.join(c.cache.profiles_path, '.DS_Store'), 'w').close()
-    os.utime(os.path.join(c.cache.profiles_path, ".DS_Store"))
+    open(os.path.join(c.paths.profiles_path, '.DS_Store'), 'w').close()
+    os.utime(os.path.join(c.paths.profiles_path, ".DS_Store"))
 
     c.run("profile list")
 
@@ -151,3 +155,18 @@ def test_profile_show_json():
     # Check that tool_requires are properly serialized in json format
     # https://github.com/conan-io/conan/issues/15183
     assert profile["build"]["tool_requires"] == {'mytool/*': ["mytool/1.0"]}
+
+
+@pytest.mark.parametrize("new_global", [None, 0, 1, True, False, ""])
+def test_settings_serialize(new_global):
+    tc = TestClient(light=True)
+    settings_user = "new_global: [null, 0, 1, True, False, '']"
+    tc.save_home({"settings_user.yml": settings_user})
+    tc.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("new_global")})
+
+    s = f"-s new_global={new_global}" if new_global is not None else ""
+    tc.run(f"create . {s}")
+    if new_global is None:
+        assert "settings: new_global=" not in tc.out
+    else:
+        assert f"settings: new_global={new_global}" in tc.out

@@ -8,12 +8,21 @@ from jinja2 import Template, StrictUndefined
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
 
 _PCInfo = namedtuple("PCInfo", ['name', 'version', 'requires', 'description',
                                 'cpp_info', 'aliases', 'custom_content'])
+
+
+def alias_content(name, version, aliased):
+    return textwrap.dedent(f"""\
+        Name: {name}
+        Description: Alias {name} for {aliased}
+        Version: {version}
+        Requires: {aliased}
+        """)
 
 
 class _PCContentGenerator:
@@ -55,8 +64,6 @@ class _PCContentGenerator:
         """
         prefix_path = self._get_prefix_path()
         pc_variables = {"prefix": prefix_path}
-        if cpp_info is None:
-            return pc_variables
         # Already formatted directories
         pc_variables.update(self._get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path))
         pc_variables.update(self._get_formatted_dirs("includedir", cpp_info.includedirs, prefix_path))
@@ -81,12 +88,13 @@ class _PCContentGenerator:
     def _get_lib_flags(self, libdirvars, cpp_info):
         gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
         libdirsflags = ['-L"${%s}"' % d for d in libdirvars]
-        system_libs = ["-l%s" % l for l in (cpp_info.libs + cpp_info.system_libs)]
+        system_libs = ["-l%s" % li for li in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         framework_flags = gnudeps_flags.frameworks + gnudeps_flags.framework_paths
         return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)
 
-    def _get_cflags(self, includedirvars, cpp_info):
+    @staticmethod
+    def _get_cflags(includedirvars, cpp_info):
         includedirsflags = ['-I"${%s}"' % d for d in includedirvars]
         cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
         cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
@@ -114,16 +122,11 @@ class _PCContentGenerator:
             "version": info.version,
             "requires": info.requires,
             "pc_variables": pc_variables,
-            "cflags": "",
-            "libflags": ""
-        }
-        if info.cpp_info is not None:
-            context.update({
-                "cflags": self._get_cflags([d for d in pc_variables if d.startswith("includedir")],
-                                           info.cpp_info),
-                "libflags": self._get_lib_flags([d for d in pc_variables if d.startswith("libdir")],
-                                                info.cpp_info)
-            })
+            "cflags": self._get_cflags([d for d in pc_variables if d.startswith("includedir")],
+                                       info.cpp_info),
+            "libflags": self._get_lib_flags([d for d in pc_variables if d.startswith("libdir")],
+                                            info.cpp_info)
+            }
         return context
 
     def content(self, info):
@@ -141,7 +144,6 @@ class _PCGenerator:
         self._properties = pkgconfigdeps._properties  # noqa
         self._require = require
         self._dep = dep
-        self._content_generator = _PCContentGenerator(self._conanfile, self._dep)
         self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
         self._is_build_context = require.build
         self._build_context_folder = pkgconfigdeps.build_context_folder
@@ -180,7 +182,7 @@ class _PCGenerator:
                     continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
-            comp_name = self._get_component_name(req_conanfile, comp_ref_name)
+            comp_name = self._get_component_name(req_conanfile, pkg_ref_name, comp_ref_name)
             if not comp_name:
                 pkg_name = self._get_package_name(req_conanfile)
                 # Creating a component name with namespace, e.g., dep-comp1
@@ -201,13 +203,13 @@ class _PCGenerator:
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = self._get_component_name(self._dep, comp_ref_name)
+            comp_name = self._get_component_name(self._dep, pkg_name, comp_ref_name)
             if not comp_name:
                 comp_name = self._get_name_with_namespace(pkg_name, comp_ref_name)
                 comp_description = f"Conan component: {comp_name}"
             else:
                 comp_description = f"Conan component: {pkg_name}-{comp_name}"
-            comp_aliases = self._get_component_aliases(self._dep, comp_ref_name)
+            comp_aliases = self._get_component_aliases(self._dep, pkg_name, comp_ref_name)
             comp_version = (self.get_property("component_version", self._dep, comp_ref_name) or
                             self.get_property("system_package_version", self._dep, comp_ref_name) or
                             self._dep.ref.version)
@@ -258,38 +260,33 @@ class _PCGenerator:
 
         * Apart from those PC files, if there are any aliases declared, they will be created too.
         """
-        def _fill_pc_files(pc_info):
-            content = self._content_generator.content(pc_info)
+        def _file_name(name):
             # If no suffix is defined, we can save the *.pc file in the build_context_folder
-            if self._is_build_context and self._build_context_folder and not self._suffix:
-                # Issue: https://github.com/conan-io/conan/issues/12342
-                # Issue: https://github.com/conan-io/conan/issues/14935
-                pc_files[f"{self._build_context_folder}/{pc_info.name}.pc"] = content
-            else:
-                # Saving also the suffixed names as usual
-                pc_files[f"{pc_info.name}.pc"] = content
+            build = self._is_build_context and self._build_context_folder and not self._suffix
+            # Issue: https://github.com/conan-io/conan/issues/12342
+            # Issue: https://github.com/conan-io/conan/issues/14935
+            return f"{self._build_context_folder}/{name}.pc" if build else f"{name}.pc"
 
-        def _update_pc_files(info):
-            _fill_pc_files(info)
-            for alias in info.aliases:
-                alias_info = _PCInfo(alias, self._dep.ref.version, [info.name],
-                                     f"Alias {alias} for {info.name}", None, [], None)
-                _fill_pc_files(alias_info)
+        def _add_pc_files(pc_info):
+            content_generator = _PCContentGenerator(self._conanfile, self._dep)
+            result = {_file_name(pc_info.name): content_generator.content(pc_info)}
+            for alias in pc_info.aliases:
+                result[_file_name(alias)] = alias_content(alias, pc_info.version, pc_info.name)
+            return result
 
-        pc_files = {}
         # If the package has no components, then we have to calculate only the root pc file
         if not self._dep.cpp_info.has_components:
-            package_info = self._package_info()
-            _update_pc_files(package_info)
-            return pc_files
+            pkg_pc_info = self._package_info()
+            return _add_pc_files(pkg_pc_info)
 
         # First, let's load all the components PC files
         # Loop through all the package's components
+        pc_files = {}
         pkg_requires = []
-        for component_info in self._components_info():
-            _update_pc_files(component_info)
+        for comp_pc_info in self._components_info():
+            pc_files.update(_add_pc_files(comp_pc_info))
             # Saving components name as the package requires
-            pkg_requires.append(component_info.name)
+            pkg_requires.append(comp_pc_info.name)
 
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
@@ -303,7 +300,7 @@ class _PCGenerator:
                                    pkg_requires, f"Conan package: {pkg_name}",
                                    self._dep.cpp_info, self._get_package_aliases(self._dep),
                                    self.get_property("pkg_config_custom_content", self._dep))
-            _update_pc_files(package_info)
+            pc_files.update(_add_pc_files(package_info))
         return pc_files
 
     @staticmethod
@@ -317,10 +314,14 @@ class _PCGenerator:
         pkg_aliases = self.get_property("pkg_config_aliases", dep, check_type=list)
         return pkg_aliases or []
 
-    def _get_component_aliases(self, dep, comp_name):
+    def _get_component_aliases(self, dep, pkg_name, comp_name):
+        # TODO: LET'S DEPRECATE ALL THE ALIASES MECHANISM!!
         if comp_name not in dep.cpp_info.components:
-            # foo::foo might be referencing the root cppinfo
-            if dep.ref.name == comp_name:
+            # Either foo::foo might be referencing the root cpp_info
+            if (dep.ref.name == comp_name or
+                # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
+                # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
+                (dep.ref.name != pkg_name and pkg_name == comp_name)):
                 return self._get_package_aliases(dep)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -332,10 +333,13 @@ class _PCGenerator:
         pkg_name = self.get_property("pkg_config_name", dep) or dep.ref.name
         return f"{pkg_name}{self._suffix}"
 
-    def _get_component_name(self, dep, comp_name):
+    def _get_component_name(self, dep, pkg_name, comp_name):
         if comp_name not in dep.cpp_info.components:
-            # foo::foo might be referencing the root cppinfo
-            if dep.ref.name == comp_name:
+            # Either foo::foo might be referencing the root cpp_info
+            if (dep.ref.name == comp_name or
+                # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
+                # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
+                (dep.ref.name != pkg_name and pkg_name == comp_name)):
                 return self._get_package_name(dep)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,

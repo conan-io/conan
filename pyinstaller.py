@@ -105,15 +105,26 @@ def pyinstall(source_folder, onefile=False):
               # Modules that can be imported in ConanFile conan.tools and errors
               "--collect-submodules=conan.cli.commands "
               "--hidden-import=conan.errors "
-              "--hidden-import=conan.tools.microsoft "
-              "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
-              "--hidden-import=conan.tools.meson --hidden-import=conan.tools.apple "
-              "--hidden-import=conan.tools.build --hidden-import=conan.tools.env "
+              "--hidden-import=conan.tools.android "
+              "--hidden-import=conan.tools.apple "
+              "--hidden-import=conan.tools.build "
+              "--hidden-import=conan.tools.cmake "
+              "--hidden-import=conan.tools.env "
               "--hidden-import=conan.tools.files "
-              "--hidden-import=conan.tools.google --hidden-import=conan.tools.intel "
-              "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
-              "--hidden-import=conan.tools.qbs --hidden-import=conan.tools.scm "
-              "--hidden-import=conan.tools.system --hidden-import=conan.tools.system.package_manager")
+              "--hidden-import=conan.tools.gnu "
+              "--hidden-import=conan.tools.google "
+              "--hidden-import=conan.tools.intel "
+              "--hidden-import=conan.tools.layout "
+              "--hidden-import=conan.tools.meson "
+              "--hidden-import=conan.tools.microsoft "
+              "--hidden-import=conan.tools.premake "
+              "--hidden-import=conan.tools.qbs "
+              "--hidden-import=conan.tools.ros "
+              "--hidden-import=conan.tools.sbom "
+              "--hidden-import=conan.tools.scm "
+              "--hidden-import=conan.tools.scons "
+              "--hidden-import=conan.tools.system "
+              "--hidden-import=conan.tools.system.package_manager")
 
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
@@ -127,7 +138,6 @@ def pyinstall(source_folder, onefile=False):
         with open(win_ver_file, 'w') as file:
             file.write(content)
         win_ver = ["--version-file", win_ver_file]
-
 
     if onefile:
         distpath = os.path.join(pyinstaller_path, "dist", "conan")

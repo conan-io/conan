@@ -1,4 +1,4 @@
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
 
 
 class SearchAPI:
@@ -12,7 +12,7 @@ class SearchAPI:
             only_none_user_channel = True
             query = query[:-1]
 
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if remote:
             refs = app.remote_manager.search_recipes(remote, query)
         else:

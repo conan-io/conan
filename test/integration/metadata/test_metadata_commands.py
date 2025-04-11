@@ -151,7 +151,7 @@ class TestMetadataCommands:
         c2 = TestClient(servers=c.servers)
         tmp_folder = temp_folder()
         # MOST important part: activate cache
-        save(c2.cache.new_config_path, f"core.download:download_cache={tmp_folder}\n")
+        save(c2.paths.new_config_path, f"core.download:download_cache={tmp_folder}\n")
 
         # download package and metadata
         c2.run("download pkg/0.1 -r=default --metadata=*")

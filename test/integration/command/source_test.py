@@ -246,9 +246,9 @@ class TestSourceWithoutDefaultProfile:
     def client(self):
         c = TestClient()
         # The ``source()`` should still receive necessary configuration
-        save(c.cache.new_config_path, "tools.files.download:retry=MYCACHE")
+        save(c.paths.new_config_path, "tools.files.download:retry=MYCACHE")
         # Make sure we don't have default profile
-        os.remove(c.cache.default_profile_path)
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         return c
 
     def test_source_without_default_profile(self, client):

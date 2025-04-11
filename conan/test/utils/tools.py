@@ -8,23 +8,24 @@ import shutil
 import socket
 import sys
 import textwrap
-import threading
-import time
 import traceback
 import uuid
 import zipfile
-from collections import OrderedDict
 from contextlib import contextmanager
+from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import bottle
 import mock
+import pytest
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
+from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
+from conan.api.subapi.config import ConfigAPI
+from conan.api.subapi.remotes import _save
+from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -33,13 +34,8 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
-from conan.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.profile import Profile
-from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
-from conan.test.assets import copy_assets
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.artifactory import ArtifactoryServer
 from conan.test.utils.mocks import RedirectedInputStream
@@ -77,33 +73,11 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=13
+        compiler.version=15
         compiler.libcxx=libc++
         build_type=Release
         """)
 }
-
-def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = RecipeReference.loads(reference)
-    path = cache.get_latest_recipe_reference(ref).export()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    path = cache.get_latest_package_reference(package_reference).package()
-    manifest = FileTreeManifest.load(path)
-    manifest.time += inc_time
-    manifest.save(path)
-
-
-def create_profile(profile=None, settings=None):
-    if profile is None:
-        profile = Profile()
-    if profile.processed_settings is None:
-        profile.processed_settings = settings or Settings()
-    return profile
 
 
 class TestingResponse(object):
@@ -275,8 +249,20 @@ class TestRequester:
                 kwargs["headers"] = {}
             kwargs["headers"].update(mock_request.headers)
 
+    def mount(self, *args, **kwargs):
+        pass
 
-class TestServer(object):
+    def Session(self):
+        return self
+
+    @property
+    def codes(self):
+        return requests.codes
+
+
+class TestServer:
+    __test__ = False
+
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_capabilities=None, complete_urls=False):
@@ -430,18 +416,11 @@ class TestClient:
         self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
-
-        if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception(textwrap.dedent("""
-                Testing framework error: Servers should be an OrderedDict. e.g:
-                    servers = OrderedDict()
-                    servers["r1"] = server
-                    servers["r2"] = TestServer()
-            """))
-
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
+
+        self.update_providers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
         # Once the client is ready, modify the configuration
@@ -456,10 +435,10 @@ class TestClient:
         # create default profile
         if light:
             text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.cache.settings_path, "os: [Linux, Windows]")
+            save(self.paths.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
-        save(self.cache.default_profile_path, text)
+        save(os.path.join(self.cache_folder, "profiles", "default"), text)
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 
@@ -475,23 +454,11 @@ class TestClient:
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        api = ConanAPI(cache_folder=self.cache_folder)
-        global_conf = api.config.global_conf
+        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
 
-        class MyCache(PkgCache, HomePaths):  # Temporary class to avoid breaking all tests
-            def __init__(self, cache_folder):
-                PkgCache.__init__(self, cache_folder, global_conf)
-                HomePaths.__init__(self, cache_folder)
-
-            @property
-            def plugins_path(self):  # Temporary to not break tests
-                return os.path.join(self._home, "extensions", "plugins")
-
-            @property
-            def default_profile_path(self):
-                return os.path.join(self._home, "profiles", "default")
-
-        return MyCache(self.cache_folder)
+    @property
+    def paths(self):
+        return HomePaths(self.cache_folder)
 
     @property
     def base_folder(self):
@@ -503,17 +470,25 @@ class TestClient:
         return self.cache.store
 
     def update_servers(self):
-        api = ConanAPI(cache_folder=self.cache_folder)
-        for r in api.remotes.list():
-            api.remotes.remove(r.name)
-
+        remotes = []
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
-                api.remotes.add(Remote(name, server.repo_api_url))
+                remotes.append(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
-                api.remotes.add(Remote(name, server.fake_url))
+                remotes.append(Remote(name, server.fake_url))
             else:
-                api.remotes.add(Remote(name, server))
+                remotes.append(Remote(name, server))
+        _save(HomePaths(self.cache_folder).remotes_path, remotes)
+
+
+    def update_providers(self):
+        default_providers = {
+            CONAN_CENTER_AUDIT_PROVIDER_NAME: {
+                "url": "https://fakeurl/",
+                "type": "conan-center-proxy"
+            }
+        }
+        _save_providers(HomePaths(self.cache_folder).providers_path, default_providers)
 
     @contextmanager
     def chdir(self, newdir):
@@ -544,32 +519,26 @@ class TestClient:
                     yield
 
     def _run_cli(self, command_line, assert_error=False):
+        args = shlex.split(command_line)
+        error = SUCCESS
+        trace = None
+        # save state
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
         old_modules = list(sys.modules.keys())
-
-        args = shlex.split(command_line)
-
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
-        except ConanException as e:
-            sys.stderr.write("Error in Conan initialization: {}".format(e))
-            return ERROR_GENERAL
-
-        error = SUCCESS
-        trace = None
-        try:
             if self._custom_commands_folder:
                 with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
-                                             self._custom_commands_folder}):
+                                         self._custom_commands_folder}):
                     command.run(args)
             else:
                 command.run(args)
         except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
-            error = command.exception_exit_error(e)
+            error = Cli.exception_exit_error(e)
         finally:
             sys.path = old_path
             os.chdir(current_dir)
@@ -600,6 +569,7 @@ class TestClient:
                         http_requester = self.requester_class(self.servers)
                     else:
                         http_requester = TestRequester(self.servers)
+
                 try:
                     if http_requester:
                         with self.mocked_servers(http_requester):
@@ -636,15 +606,15 @@ class TestClient:
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
-            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n".format(
-                header='{:=^80}'.format(msg),
-                output_header='{:=^80}'.format(" Output: "),
-                cmd=command,
-                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
-            )
+
+            output = str(self.stderr) + str(self.stdout) + "\n"
+            exc_message = f"\n{msg:=^80}\n{command}\n{' Output: ':=^80}\n{output}\n"
             if trace:
-                exc_message += '{:=^80}'.format(" Traceback: ") + f"\n{trace}"
-            raise Exception(exc_message)
+                exc_message += f'{" Traceback: ":=^80}\n{trace}'
+
+            caller = getframeinfo(stack()[3][0])
+            exc_message = f"{caller.filename}:{caller.lineno}" + exc_message
+            pytest.fail(exc_message, pytrace=False)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -660,9 +630,6 @@ class TestClient:
 
     def save_home(self, files):
         self.save(files, path=self.cache_folder)
-
-    def copy_assets(self, origin_folder, assets=None):
-        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
@@ -733,6 +700,8 @@ class TestClient:
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
+        if not ref.revision:
+            ref = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
@@ -861,28 +830,6 @@ def get_free_port():
     ret = sock.getsockname()[1]
     sock.close()
     return ret
-
-
-class StoppableThreadBottle(threading.Thread):
-    """
-    Real server to test download endpoints
-    """
-
-    def __init__(self, host=None, port=None):
-        self.host = host or "127.0.0.1"
-        self.server = bottle.Bottle()
-        self.port = port or get_free_port()
-        super(StoppableThreadBottle, self).__init__(target=self.server.run,
-                                                    kwargs={"host": self.host, "port": self.port})
-        self.daemon = True
-        self._stop = threading.Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def run_server(self):
-        self.start()
-        time.sleep(1)
 
 
 def zipdir(path, zipfilename):

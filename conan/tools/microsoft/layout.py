@@ -26,11 +26,11 @@ def vs_layout(conanfile):
         raise ConanException("The 'vs_layout' requires the 'arch' setting")
 
     if arch != "None" and arch != "x86":
-        arch = msbuild_arch(arch)
-        if not arch:
-            raise ConanException("The 'vs_layout' doesn't "
-                                 "work with the arch '{}'".format(arch))
-        bindirs = os.path.join(arch, build_type)
+        msvc_arch = msbuild_arch(arch)
+        if not msvc_arch:
+            raise ConanException(f"The 'vs_layout' doesn't work with the arch '{arch}'. "
+                                 "Accepted architectures: 'x86', 'x86_64', 'armv7', 'armv8'")
+        bindirs = os.path.join(msvc_arch, build_type)
     else:
         bindirs = build_type
 
