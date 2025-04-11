@@ -407,4 +407,3 @@ class TestAutotoolsTemplateWindows:
         c.save({"msys2": msys2})
         c.run("create . -pr=msys2")
         assert "hello/1.0: _MSC_VER19" in c.out
->>>>>>> develop2:test/functional/toolchains/gnu/test_v2_autotools_template.py
