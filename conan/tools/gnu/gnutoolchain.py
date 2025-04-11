@@ -205,12 +205,13 @@ class GnuToolchain:
         if not extra_env_vars:
             # Normally, these are the most common default flags used by MSVC in Windows
             if is_msvc(self._conanfile):
-                compile_wrapper = unix_path(self._conanfile,
+                """compile_wrapper = unix_path(self._conanfile,
                                             self._conanfile.conf.get("user.automake:compile-wrapper",
                                                                      check_type=str))
                 ar_wrapper = unix_path(self._conanfile,
                                        self._conanfile.conf.get("user.automake:lib-wrapper",
                                                                 check_type=str))
+                """
                 compile_wrapper = unix_path(self._conanfile,
                                             r"C:\ws\msys64\usr\share\automake-1.15\compile")
                 ar_wrapper = unix_path(self._conanfile,

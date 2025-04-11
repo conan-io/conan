@@ -376,13 +376,13 @@ def test_autotools_template_windows():
     print(client.out)
 
 
-@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+#@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
 @pytest.mark.tool("msys2")
 @pytest.mark.tool("cmake")  # to use Windows cmake, not msys2 internal cmake
 class TestAutotoolsTemplateWindows:
     def test_msys2_autotoolsdeps_windows(self):
         c = TestClient(path_with_spaces=False)
-        c.run("remote add conancenter https://center.conan.io")
+        # c.run("remote add conancenter https://center.conan.io")
         c.run("new cmake_lib -d name=hello -d version=1.0")
         c.run("create . -tf=")
         conanfile = textwrap.dedent("""\
@@ -397,7 +397,8 @@ class TestAutotoolsTemplateWindows:
                 requires = "hello/1.0"
 
                 def build_requirements(self):
-                    self.tool_requires("automake/1.16.5")
+                    pass
+                    # self.tool_requires("automake/1.16.5")
 
                 def build(self):
                     autotools = Autotools(self)

@@ -30,8 +30,6 @@ class {{package_name}}Conan(ConanFile):
 
     exports_sources = "configure.ac", "Makefile.am", "src/*"
 
-    win_bash = True
-
     def config_options(self):
         if self.settings.os == "Windows":
             self.options.rm_safe("fPIC")
@@ -95,8 +93,6 @@ from conan.tools.build import can_run
 class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "AutotoolsDeps", "AutotoolsToolchain"
-    win_bash = True
-
     win_bash = True
 
     def requirements(self):
