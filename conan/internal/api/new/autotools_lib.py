@@ -30,6 +30,8 @@ class {{package_name}}Conan(ConanFile):
 
     exports_sources = "configure.ac", "Makefile.am", "src/*"
 
+    win_bash = True
+
     def config_options(self):
         if self.settings.os == "Windows":
             self.options.rm_safe("fPIC")
@@ -95,6 +97,8 @@ class {{package_name}}TestConan(ConanFile):
     generators = "AutotoolsDeps", "AutotoolsToolchain"
     win_bash = True
 
+    win_bash = True
+
     def requirements(self):
         self.requires(self.tested_reference_str)
 
@@ -126,6 +130,7 @@ AC_OUTPUT
 test_makefile_am = """
 bin_PROGRAMS = main
 main_SOURCES = main.cpp
+main_LDADD=$(LDFLAGS)
 """
 
 autotools_lib_files = {"conanfile.py": conanfile_sources_v2,
