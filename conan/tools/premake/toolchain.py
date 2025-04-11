@@ -9,40 +9,9 @@ from pathlib import Path
 
 from conan.tools.files import save
 
-
-class PremakeToolchain:
-    """
-    PremakeToolchain generator
-    """
-
-    filename = "conantoolchain.premake5.lua"
-
-    _premake_file_template = textwrap.dedent(
+def _generate_flags(self):
+    _premake_flags_template = textwrap.dedent(
         """\
-    #!lua
-    include("conandeps.premake5.lua")
-
-    local locationDir = "{{ build_folder }}"
-
-    workspace "{{workspace}}"
-        filename("{{filename}}")
-
-        {% if cppstd %}
-        cppdialect "{{cppstd}}"
-        {% endif %}
-        {% if cstd %}
-        cdialect "{{cstd}}"
-        {% endif %}
-        location(locationDir)
-        targetdir(path.join(locationDir, "bin"))
-        objdir(path.join(locationDir, "obj"))
-
-        {% if cross_build_arch %}
-        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
-        buildoptions "-arch {{cross_build_arch}}"
-        linkoptions "-arch {{cross_build_arch}}"
-        {% endif %}
-
         {% if extra_cflags %}
         filter {"files:**.c"}
             buildoptions { {{extra_cflags}} }
@@ -60,6 +29,55 @@ class PremakeToolchain:
         {% if variables %}
         defines { {{variables}} }
         {% endif %}
+    """)
+
+    formated_variables = ""
+    for key, value in self.extra_defines.items():
+        if isinstance(value, bool):
+            value = 1 if value else 0
+        formated_variables += f'"{key}={value}", '
+    extra_c_flags = ",".join(f'"{flag}"' for flag in self.extra_cflags) if self.extra_cflags else None
+    extra_cxx_flags = ",".join(f'"{flag}"' for flag in self.extra_cxxflags) if self.extra_cxxflags else None
+    extra_ld_flags = ",".join(f'"{flag}"' for flag in self.extra_ldflags) if self.extra_ldflags else None
+    return Template(
+        _premake_flags_template, trim_blocks=True, lstrip_blocks=False
+    ).render(
+        variables=formated_variables,
+        extra_cflags=extra_c_flags,
+        extra_cxxflags=extra_cxx_flags,
+        extra_ldflags=extra_ld_flags,
+    )
+
+
+class _PremakeWorkspace:
+    _premake_workspace_template = textwrap.dedent(
+        """\
+    {% if is_global %}
+    for wks in premake.global.eachWorkspace() do
+        workspace(wks.name)
+    {% else %}
+    workspace "{{name}}"
+    {% endif %}
+
+        {% if cppstd %}
+        cppdialect "{{cppstd}}"
+        {% endif %}
+        {% if cstd %}
+        cdialect "{{cstd}}"
+        {% endif %}
+        location(locationDir)
+        targetdir(path.join(locationDir, "bin"))
+        objdir(path.join(locationDir, "obj"))
+
+        {% if cross_build_arch %}
+        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
+        buildoptions "-arch {{cross_build_arch}}"
+        linkoptions "-arch {{cross_build_arch}}"
+        {% endif %}
+
+        {% if flags %}
+        {{ flags }}
+        {% endif %}
 
         filter { "system:macosx" }
             -- runpathdirs { "@loader_path" }
@@ -67,24 +85,33 @@ class PremakeToolchain:
         filter {}
 
         conan_setup()
-    """
-    )
 
-    def __init__(self, conanfile, workspace):
-        # '*' is the global workspace
+    {% for project in projects.values() %}
+    {{ project._generate() }}
+    {% endfor %}
+
+    {% if is_global %}
+    end
+    {% endif %}
+    """)
+
+    extra_cxxflags = []
+    extra_cflags = []
+    extra_ldflags = []
+    extra_defines = {}
+
+    def __init__(self, name, conanfile) -> None:
+        self.name = name
+        self.is_global = name == "*"
+        self._projects = {}
         self._conanfile = conanfile
-        self.workspace = workspace
-        # Extra flags
-        #: List of extra ``CXX`` flags. Added to ``cpp_args``
-        self.extra_cxxflags = []
-        #: List of extra ``C`` flags. Added to ``c_args``
-        self.extra_cflags = []
-        #: List of extra linker flags. Added to ``c_link_args`` and ``cpp_link_args``
-        self.extra_ldflags = []
-        # TODO: not possible to overwrite upstream defines yet
-        self.extra_defines = {}
 
-    def generate(self):
+    def project(self, project):
+        if project not in self._projects:
+            self._projects[project] = _PremakeProject(project, "wks" if self.is_global else self.name)
+        return self._projects[project]
+
+    def _generate(self):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         if cppstd:
             # TODO
@@ -95,29 +122,113 @@ class PremakeToolchain:
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
         cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
 
-        formated_variables = ""
-        for key, value in self.extra_defines.items():
-            if isinstance(value, bool):
-                value = 1 if value else 0
-            formated_variables += f'"{key}={value}", '
+        return Template(
+            self._premake_workspace_template, trim_blocks=True, lstrip_blocks=True
+        ).render(is_global=self.is_global,
+            name=self.name,
+            cppstd=cppstd,
+            cstd=cstd,
+            cross_build_arch=cross_build_arch,
+            projects=self._projects,
+            flags=_generate_flags(self),
+        )
 
-        extra_c_flags = ",".join(f'"{flag}"' for flag in self.extra_cflags) if self.extra_cflags else None
-        extra_cxx_flags = ",".join(f'"{flag}"' for flag in self.extra_cxxflags) if self.extra_cxxflags else None
-        extra_ld_flags = ",".join(f'"{flag}"' for flag in self.extra_ldflags) if self.extra_ldflags else None
+
+class _PremakeProject:
+
+    _premake_project_template = textwrap.dedent(
+        """\
+    {% if is_global %}
+    for prj in premake.workspace.eachproject({{ workspace }}) do
+        project (prj.name)
+    {% else %}
+    project "{{ name }}"
+    {% endif %}
+        {% if kind %}
+        kind({{kind}})
+        {% endif %}
+        {% if flags %}
+        {{ flags }}
+        {% endif %}
+    {% if is_global %}
+    end
+    {% endif %}
+    """
+    )
+
+    kind = None
+    extra_cxxflags = []
+    extra_cflags = []
+    extra_ldflags = []
+    extra_defines = {}
+
+    def __init__(self, name, workspace) -> None:
+        self.name = name
+        self.workspace = workspace
+
+    def _generate(self):
+        is_global = self.name == "*"
+        return Template(
+            self._premake_project_template, trim_blocks=True, lstrip_blocks=True
+        ).render(
+            is_global=is_global,
+            name=self.name,
+            workspace=self.workspace,
+            kind=self.kind,
+            flags=_generate_flags(self),
+        )
+
+
+class PremakeToolchain:
+    """
+    PremakeToolchain generator
+    """
+
+    filename = "conantoolchain.premake5.lua"
+    _premake_file_template = textwrap.dedent(
+        """\
+    #!lua
+    include("conandeps.premake5.lua")
+
+    local locationDir = "{{ build_folder }}"
+    {% for workspace in workspaces.values() %}
+    {{ workspace._generate() }}
+    {% endfor %}
+    """
+    )
+
+    def __init__(self, conanfile):
+        # '*' is the global workspace
+        self._conanfile = conanfile
+        self._workspaces = {}
+
+        self.extra_cxxflags = []
+        self.extra_cflags = []
+        self.extra_ldflags = []
+        self.extra_defines = {}
+
+    def workspace(self, workspace):
+        if workspace not in self._workspaces:
+            self._workspaces[workspace] = _PremakeWorkspace(workspace, self._conanfile)
+        return self._workspaces[workspace]
+
+    def project(self, project, workspace = '*'):
+        if workspace not in self._workspaces:
+            self._workspaces[workspace] = _PremakeWorkspace(workspace, self._conanfile)
+        return self._workspaces[workspace].project(project)
+
+    def generate(self):
+        self.workspace("*").extra_cxxflags = self.extra_cxxflags
+        self.workspace("*").extra_cflags = self.extra_cflags
+        self.workspace("*").extra_ldflags = self.extra_ldflags
+        self.workspace("*").extra_defines = self.extra_defines
 
         content = Template(
             self._premake_file_template, trim_blocks=True, lstrip_blocks=True
         ).render(
             workspace=self.workspace,
             build_folder=Path(self._conanfile.build_folder).as_posix(),
-            cppstd=cppstd,
-            cstd=cstd,
-            variables=formated_variables,
-            cross_build_arch=cross_build_arch,
-            extra_cflags=extra_c_flags,
-            extra_cxxflags=extra_cxx_flags,
-            extra_ldflags=extra_ld_flags,
-            filename=self._conanfile.name
+            workspaces=self._workspaces,
         )
         save(
             self,
