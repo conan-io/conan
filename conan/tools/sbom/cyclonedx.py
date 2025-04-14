@@ -73,7 +73,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
-            "type": "library",
+            "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
@@ -82,7 +82,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
                 "author": conanfile.author or "Unknown",
                 "bom-ref": special_id if has_special_root_node else f"pkg:conan/{conanfile.name}@{conanfile.ref.version}?rref={conanfile.ref.revision}",
                 "name": name if name else name_default,
-                "type": "library"
+                "type": "application" if conanfile.package_type == "application" else "library",
             },
             "timestamp": f"{datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
             "tools": [{
@@ -173,7 +173,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
-            "type": "application" if node.package_type == "application" else "library",
+            "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),

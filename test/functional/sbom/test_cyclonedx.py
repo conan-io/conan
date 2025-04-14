@@ -322,10 +322,10 @@ def test_cyclonedx_check_content(cyclone_version):
     content_json = json.loads(content)
     if cyclone_version == 'cyclonedx_1_4':
         assert content_json["metadata"]["component"]["author"]
-        assert content_json["metadata"]["component"]["type"] == 'library'
+        assert content_json["metadata"]["component"]["type"] == 'application'
         assert content_json["metadata"]["tools"][0]
         assert content_json["components"][0]["author"]
-        assert content_json["components"][0]["type"] == 'library'
+        assert content_json["components"][0]["type"] == 'application'
     elif cyclone_version == 'cyclonedx_1_6':
         assert not content_json["metadata"]["component"].get("author")
         assert content_json["metadata"]["component"]["authors"]
