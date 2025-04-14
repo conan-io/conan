@@ -197,13 +197,14 @@ class _PremakeProject:
         self.extra_cflags = []
         self.extra_ldflags = []
         self.extra_defines = {}
+        self.disable = False
 
     def _generate_body(self, current_indent_level):
         """Generates the inner content of the project block."""
         flags_content = _generate_flags(self) # Generate flags specific to this project
 
         return self._project_body_template.render(
-            kind=self.kind,
+            kind="None" if self.disable else self.kind,
             flags=flags_content,
             is_global=self.is_global, # Pass is_global for the comment
             indent_level=INDENT_LEVEL,
