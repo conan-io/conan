@@ -19,7 +19,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
 
     Example usage:
     ```
-    cyclonedx(conanfile, name="custom_name", add_build=True, add_test=True, **kwargs)
+    cyclonedx_1_4(conanfile, name="custom_name", add_build=True, add_test=True, **kwargs)
     ```
 
     """
@@ -119,7 +119,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
 
     Example usage:
     ```
-    cyclonedx(conanfile, name="custom_name", add_build=True, add_test=True, **kwargs)
+    cyclonedx_1_6(conanfile, name="custom_name", add_build=True, add_test=True, **kwargs)
     ```
 
     """
@@ -173,7 +173,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
-            "type": "application" if conanfile.package_type == "application" else "library",
+            "type": "application" if node.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
