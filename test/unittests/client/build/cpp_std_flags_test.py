@@ -247,6 +247,15 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("apple-clang", "16.0", "26"), "-std=c++26")
         self.assertEqual(_make_cppstd_flag("apple-clang", "16.0", "gnu26"), "-std=gnu++26")
 
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "17"), "-std=c++17")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "gnu17"), "-std=gnu++17")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "20"), "-std=c++20")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "gnu20"), "-std=gnu++20")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "23"), "-std=c++23")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "gnu23"), "-std=gnu++23")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "26"), "-std=c++26")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "17.0", "gnu26"), "-std=gnu++26")
+
     def test_apple_clang_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("apple-clang", "2"), "gnu98")
         self.assertEqual(_make_cppstd_default("apple-clang", "3"), "gnu98")
@@ -262,6 +271,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("apple-clang", "13"), "gnu98")
         self.assertEqual(_make_cppstd_default("apple-clang", "14"), "gnu98")
         self.assertEqual(_make_cppstd_default("apple-clang", "15"), "gnu98")
+        self.assertEqual(_make_cppstd_default("apple-clang", "16"), "gnu98")
+        self.assertEqual(_make_cppstd_default("apple-clang", "17"), "gnu14")
 
     def test_visual_cppstd_flags(self):
         self.assertEqual(_make_cppstd_flag("msvc", "170", "11"), None)
