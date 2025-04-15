@@ -31,3 +31,4 @@ CONAN_TO_PREMAKE_ARCH = {
     "asm.js": "wasm32",
 }
 
+INDENT_LEVEL = 4

@@ -9,14 +9,12 @@ from pathlib import Path
 
 from conan.tools.files import save
 from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
+from conan.tools.premake.constants import INDENT_LEVEL
 
-jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
-
-INDENT_LEVEL = 4
-INDENT_SPACES = " " * INDENT_LEVEL
+_jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
 
 def _generate_flags(self):
-    template = jinja_env.from_string(textwrap.dedent(
+    template = _jinja_env.from_string(textwrap.dedent(
         """\
         {% if extra_cflags %}
         filter {"files:**.c"}
@@ -55,113 +53,8 @@ def _generate_flags(self):
     ).strip()
 
 
-class _PremakeWorkspace:
-    # Main template only handles the workspace definition and includes the body
-    _premake_workspace_template = jinja_env.from_string(textwrap.dedent(
-        """\
-    {% if is_global %}
-    for wks in premake.global.eachWorkspace() do
-        workspace(wks.name)
-    {{ workspace_body | indent(indent_level, first=True) }}
-    end -- End of for wks loop
-    {% else %}
-    workspace "{{ name }}"
-    {{ workspace_body | indent(indent_level, first=True) }}
-    {% endif %}
-    """))
-
-    # Template for the content INSIDE a workspace block
-    _workspace_body_template = jinja_env.from_string(textwrap.dedent(
-        """\
-        location(locationDir)
-        targetdir(path.join(locationDir, "bin"))
-        objdir(path.join(locationDir, "obj"))
-
-        {% if cppstd %}
-        cppdialect "{{ cppstd }}"
-        {% endif %}
-        {% if cstd %}
-        cdialect "{{ cstd }}"
-        {% endif %}
-
-        {% if cross_build_arch %}
-        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
-        buildoptions "-arch {{ cross_build_arch }}"
-        linkoptions "-arch {{ cross_build_arch }}"
-        {% endif %}
-
-        {% if flags %}
-        -- Workspace flags
-    {{ flags | indent(indent_level, first=True) }}
-        {% endif %}
-
-        filter { "system:macosx" }
-        {{ indent_spaces }}-- runpathdirs { "@loader_path" }
-        {{ indent_spaces }}linkoptions { "-Wl,-rpath,@loader_path" }
-        filter {}
-
-        conan_setup()
-
-        {% for project in projects.values() %}
-
-    {{ project._generate(current_indent_level + indent_level) | indent(indent_level, first=True) }}
-        {% endfor %}
-    """))
-
-    def __init__(self, name, conanfile) -> None:
-        self.name = name
-        self.is_global = name == "*"
-        self._projects = {}
-        self._conanfile = conanfile
-        self.extra_cxxflags = []
-        self.extra_cflags = []
-        self.extra_ldflags = []
-        self.extra_defines = {}
-
-    def project(self, project_name):
-        if project_name not in self._projects:
-            self._projects[project_name] = _PremakeProject(project_name)
-        return self._projects[project_name]
-
-    def _generate_body(self, current_indent_level):
-        """Generates the inner content of the workspace block."""
-        cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        if cppstd:
-            if cppstd.startswith("gnu"):
-                cppstd = f"gnu++{cppstd[3:]}"
-            elif self._conanfile.settings.os == "Windows":
-                cppstd = cppstd_msvc_flag(str(self._conanfile.settings.compiler.version), cppstd)
-        cstd = self._conanfile.settings.get_safe("compiler.cstd")
-        cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
-
-        flags_content = _generate_flags(self) # Generate flags specific to this workspace
-
-        return self._workspace_body_template.render(
-            cppstd=cppstd,
-            cstd=cstd,
-            cross_build_arch=cross_build_arch,
-            projects=self._projects,
-            flags=flags_content,
-            indent_level=INDENT_LEVEL,
-            indent_spaces=INDENT_SPACES,
-            current_indent_level=current_indent_level
-        )
-
-    def _generate(self, current_indent_level=0):
-        """Generates the full workspace block (header + body)."""
-        workspace_body_content = self._generate_body(current_indent_level)
-
-        return self._premake_workspace_template.render(
-            is_global=self.is_global,
-            name=self.name,
-            workspace_body=workspace_body_content,
-            indent_level=INDENT_LEVEL if self.is_global else 0,
-        )
-
-
 class _PremakeProject:
-    # Main template only handles the project definition and includes the body
-    _premake_project_template = jinja_env.from_string(textwrap.dedent(
+    _premake_project_template = _jinja_env.from_string(textwrap.dedent(
         """\
     project "{{ name }}"
         {% if kind %}
@@ -171,7 +64,6 @@ class _PremakeProject:
         -- Project flags {{ "(global)" if is_global else "(specific)"}}
     {{ flags | indent(indent_level, first=True) }}
         {% endif %}
-        -- Add other project settings here
     """))
 
     def __init__(self, name) -> None:
@@ -183,8 +75,8 @@ class _PremakeProject:
         self.extra_defines = {}
         self.disable = False
 
-    def _generate(self, current_intent_level):
-        """Generates the full project block (header + body)."""
+    def _generate(self):
+        """Generates project block"""
         flags_content = _generate_flags(self) # Generate flags specific to this project
         return self._premake_project_template.render(
             name=self.name,
@@ -214,41 +106,82 @@ class PremakeToolchain:
     local locationDir = path.normalize("{{ build_folder }}")
 
     -- Generate workspace configurations
-    {% for workspace in workspaces.values() %}
-    {{ workspace._generate() }}
-    {% endfor %}
+    workspace "{{ workspace }}"
+        location(locationDir)
+        targetdir(path.join(locationDir, "bin"))
+        objdir(path.join(locationDir, "obj"))
+
+        {% if cppstd %}
+        cppdialect "{{ cppstd }}"
+        {% endif %}
+        {% if cstd %}
+        cdialect "{{ cstd }}"
+        {% endif %}
+
+        {% if cross_build_arch %}
+        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
+        buildoptions "-arch {{ cross_build_arch }}"
+        linkoptions "-arch {{ cross_build_arch }}"
+        {% endif %}
+
+        {% if flags %}
+        -- Workspace flags
+    {{ flags | indent(indent_level, first=True) }}
+        {% endif %}
+
+        filter { "system:macosx" }
+            -- runpathdirs { "@loader_path" }
+            linkoptions { "-Wl,-rpath,@loader_path" }
+        filter {}
+
+        conan_setup()
+
+        {% for project in projects.values() %}
+
+    {{ project._generate() }}
+        {% endfor %}
     """)
 
-    def __init__(self, conanfile):
+
+    def __init__(self, conanfile, workspace: str):
         self._conanfile = conanfile
-        self._workspaces = {}
-        # Toolchain-level flags (will be pushed to global workspace)
+        self._workspace_name = workspace
+        self._projects = {}
         self.extra_cxxflags = []
         self.extra_cflags = []
         self.extra_ldflags = []
         self.extra_defines = {}
 
-    def workspace(self, workspace_name):
-        if workspace_name not in self._workspaces:
-            self._workspaces[workspace_name] = _PremakeWorkspace(workspace_name, self._conanfile)
-        return self._workspaces[workspace_name]
+    def project(self, project_name):
+        if project_name not in self._projects:
+            self._projects[project_name] = _PremakeProject(project_name)
+        return self._projects[project_name]
 
     def generate(self):
-        # Assign toolchain-level flags to the global workspace ('*')
-        global_ws = self.workspace("*")
-        # Combine potentially pre-set flags with toolchain level ones
-        global_ws.extra_cxxflags = list(set(global_ws.extra_cxxflags + self.extra_cxxflags))
-        global_ws.extra_cflags = list(set(global_ws.extra_cflags + self.extra_cflags))
-        global_ws.extra_ldflags = list(set(global_ws.extra_ldflags + self.extra_ldflags))
-        global_ws.extra_defines.update(self.extra_defines) # Merge defines
-
         premake_conan_deps = Path(self._conanfile.generators_folder) / PREMAKE_ROOT_FILE
-        template = jinja_env.from_string(self._premake_file_template)
+        cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
+        if cppstd:
+            if cppstd.startswith("gnu"):
+                cppstd = f"gnu++{cppstd[3:]}"
+            elif self._conanfile.settings.os == "Windows":
+                cppstd = cppstd_msvc_flag(str(self._conanfile.settings.compiler.version), cppstd)
+        cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
+
+        flags_content = _generate_flags(self) # Generate flags specific to this workspace
+
+        template = _jinja_env.from_string(self._premake_file_template)
         content = template.render(
             # Pass posix path for better cross-platform compatibility in Lua
             build_folder=Path(self._conanfile.build_folder).as_posix(),
             has_conan_deps=premake_conan_deps.exists(),
-            workspaces=self._workspaces,
+            workspace=self._workspace_name,
+            cppstd=cppstd,
+            cstd=cstd,
+            cross_build_arch=cross_build_arch,
+            projects=self._projects,
+            flags=flags_content,
+            indent_level=INDENT_LEVEL,
         )
         save(
             self,
