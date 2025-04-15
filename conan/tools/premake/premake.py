@@ -3,7 +3,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
-from conan.errors import ConanInvalidConfiguration
+from conan.errors import ConanException
 from conan.tools.files import save
 from conan.tools.microsoft.msbuild import MSBuild
 from conan.tools.premake.toolchain import PremakeToolchain
@@ -43,9 +43,7 @@ class Premake:
 
         arch = str(self._conanfile.settings.arch)
         if arch not in CONAN_TO_PREMAKE_ARCH:
-            raise ConanInvalidConfiguration(
-                f"Premake does not support {arch} architecture."
-            )
+            raise ConanException(f"Premake does not support {arch} architecture.")
         self.arguments["arch"] = CONAN_TO_PREMAKE_ARCH[arch]
 
         if "msvc" in self._conanfile.settings.compiler:
@@ -63,7 +61,7 @@ class Premake:
     def configure(self):
         premake_conan_toolchain = Path(self._conanfile.generators_folder) / PremakeToolchain.filename
         if not premake_conan_toolchain.exists():
-            raise ConanInvalidConfiguration(
+            raise ConanException(
                 f"Premake toolchain file does not exist: {premake_conan_toolchain}\nUse PremakeToolchain to generate it."
             )
         content = Template(self._premake_file_template).render(
