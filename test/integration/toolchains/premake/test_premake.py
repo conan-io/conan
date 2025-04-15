@@ -15,7 +15,7 @@ def test_premake_args():
             def run(self, cmd, *args, **kwargs):
                 self.output.info(f"Running {cmd}!!")
             def generate(self):
-                toolchain = PremakeToolchain(self, "Pkg")
+                toolchain = PremakeToolchain(self)
                 toolchain.generate()
             def build(self):
                 premake = Premake(self)
@@ -82,7 +82,7 @@ def test_premake_full_compilation():
             def generate(self):
                 deps = PremakeDeps(self)
                 deps.generate()
-                tc = PremakeToolchain(self, workspace="Project")
+                tc = PremakeToolchain(self)
                 tc.generate()
 
             def build(self):

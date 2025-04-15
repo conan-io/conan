@@ -1,52 +1,77 @@
 import os
 import textwrap
-
-from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import cppstd_msvc_flag
-from conan.tools.microsoft.visual import VCVars
-from jinja2 import Environment
 from pathlib import Path
 
+from jinja2 import Environment
+
+from conan.tools.build.cross_building import cross_building
 from conan.tools.files import save
-from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
+from conan.tools.microsoft.visual import VCVars
 from conan.tools.premake.constants import INDENT_LEVEL
+from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
 
 _jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
 
-def _generate_flags(self):
+def _generate_flags(self, conanfile):
     template = _jinja_env.from_string(textwrap.dedent(
         """\
+        -- Workspace flags
+
         {% if extra_cflags %}
+        -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags) and extra_cflags
         filter {"files:**.c"}
             buildoptions { {{ extra_cflags }} }
         filter {}
         {% endif %}
         {% if extra_cxxflags %}
+        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
         filter {"files:**.cpp", "**.cxx", "**.cc"}
             buildoptions { {{ extra_cxxflags }} }
         filter {}
         {% endif %}
         {% if extra_ldflags %}
+        -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags) and extra_cxxflags
         linkoptions { {{ extra_ldflags }} }
         {% endif %}
-        {% if variables %}
-        defines { {{ variables }} }
+        {% if extra_defines %}
+        -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
+        defines { {{ extra_defines }} }
         {% endif %}
     """))
 
     def format_list(items):
         return ", ".join(f'"{item}"' for item in items) if items else None
 
-    formatted_variables = format_list(
-        f"{key}={1 if isinstance(value, bool) and value else (0 if isinstance(value, bool) else value)}"
-        for key, value in self.extra_defines.items()
+
+    build_env = self._conanfile.buildenv.vars(self._conanfile)
+    def _get_env_list(env):
+        v = build_env.get(env, [])
+        return v.strip().split() if not isinstance(v, list) else v
+
+    extra_defines = format_list(
+        _get_env_list("DEFINES")
+        + conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        + self.extra_defines
     )
-    extra_c_flags = format_list(self.extra_cflags)
-    extra_cxx_flags = format_list(self.extra_cxxflags)
-    extra_ld_flags = format_list(self.extra_ldflags)
+    extra_c_flags = format_list(
+        _get_env_list("CFLAGS")
+        + conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        + self.extra_cflags
+    )
+    extra_cxx_flags = format_list(
+        _get_env_list("CXXFLAGS")
+        + conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        + self.extra_cxxflags
+    )
+    extra_ld_flags = format_list(
+        _get_env_list("LDFLAGS")
+        + conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        + conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        + self.extra_ldflags
+    )
 
     return template.render(
-        variables=formatted_variables,
+        extra_defines=extra_defines,
         extra_cflags=extra_c_flags,
         extra_cxxflags=extra_cxx_flags,
         extra_ldflags=extra_ld_flags,
@@ -66,18 +91,19 @@ class _PremakeProject:
         {% endif %}
     """))
 
-    def __init__(self, name) -> None:
+    def __init__(self, name, conanfile) -> None:
         self.name = name
         self.kind = None
         self.extra_cxxflags = []
         self.extra_cflags = []
         self.extra_ldflags = []
-        self.extra_defines = {}
+        self.extra_defines = []
         self.disable = False
+        self._conanfile = conanfile
 
     def _generate(self):
         """Generates project block"""
-        flags_content = _generate_flags(self) # Generate flags specific to this project
+        flags_content = _generate_flags(self, self._conanfile) # Generate flags specific to this project
         return self._premake_project_template.render(
             name=self.name,
             kind="None" if self.disable else self.kind,
@@ -106,35 +132,38 @@ class PremakeToolchain:
     local locationDir = path.normalize("{{ build_folder }}")
 
     -- Generate workspace configurations
-    workspace "{{ workspace }}"
-        location(locationDir)
-        targetdir(path.join(locationDir, "bin"))
-        objdir(path.join(locationDir, "obj"))
+    for wks in premake.global.eachWorkspace() do
+        workspace(wks.name)
+            -- Set base location for all workspaces
+            location(locationDir)
+            targetdir(path.join(locationDir, "bin"))
+            objdir(path.join(locationDir, "obj"))
 
-        {% if cppstd %}
-        cppdialect "{{ cppstd }}"
-        {% endif %}
-        {% if cstd %}
-        cdialect "{{ cstd }}"
-        {% endif %}
+            {% if cppstd %}
+            cppdialect "{{ cppstd }}"
+            {% endif %}
+            {% if cstd %}
+            cdialect "{{ cstd }}"
+            {% endif %}
 
-        {% if cross_build_arch %}
-        -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
-        buildoptions "-arch {{ cross_build_arch }}"
-        linkoptions "-arch {{ cross_build_arch }}"
-        {% endif %}
+            {% if cross_build_arch %}
+            -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
+            buildoptions "-arch {{ cross_build_arch }}"
+            linkoptions "-arch {{ cross_build_arch }}"
+            {% endif %}
 
-        {% if flags %}
-        -- Workspace flags
+            {% if flags %}
     {{ flags | indent(indent_level, first=True) }}
-        {% endif %}
+            {% endif %}
 
-        filter { "system:macosx" }
-            -- runpathdirs { "@loader_path" }
-            linkoptions { "-Wl,-rpath,@loader_path" }
-        filter {}
+            filter { "system:macosx" }
+                -- runpathdirs { "@loader_path" }
+                -- TODO Fix shared libs
+                linkoptions { "-Wl,-rpath,@loader_path" }
+            filter {}
 
-        conan_setup()
+            conan_setup()
+    end
 
         {% for project in projects.values() %}
 
@@ -143,45 +172,47 @@ class PremakeToolchain:
     """)
 
 
-    def __init__(self, conanfile, workspace: str):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._workspace_name = workspace
         self._projects = {}
         self.extra_cxxflags = []
         self.extra_cflags = []
         self.extra_ldflags = []
-        self.extra_defines = {}
+        self.extra_defines = []
 
     def project(self, project_name):
         if project_name not in self._projects:
-            self._projects[project_name] = _PremakeProject(project_name)
+            self._projects[project_name] = _PremakeProject(project_name, self._conanfile)
         return self._projects[project_name]
 
     def generate(self):
         premake_conan_deps = Path(self._conanfile.generators_folder) / PREMAKE_ROOT_FILE
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         if cppstd:
+            # TODO consider improving using existing function
+            # See premake possible cppstd values: https://premake.github.io/docs/cppdialect/
             if cppstd.startswith("gnu"):
                 cppstd = f"gnu++{cppstd[3:]}"
-            elif self._conanfile.settings.os == "Windows":
-                cppstd = cppstd_msvc_flag(str(self._conanfile.settings.compiler.version), cppstd)
+            elif cppstd[0].isnumeric():
+                cppstd = f"c++{cppstd}"
+
+        # TODO: for some reason, cstd is always None
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
         cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
 
-        flags_content = _generate_flags(self) # Generate flags specific to this workspace
+        flags_content = _generate_flags(self, self._conanfile) # Generate flags specific to this workspace
 
         template = _jinja_env.from_string(self._premake_file_template)
         content = template.render(
             # Pass posix path for better cross-platform compatibility in Lua
             build_folder=Path(self._conanfile.build_folder).as_posix(),
             has_conan_deps=premake_conan_deps.exists(),
-            workspace=self._workspace_name,
             cppstd=cppstd,
             cstd=cstd,
             cross_build_arch=cross_build_arch,
             projects=self._projects,
             flags=flags_content,
-            indent_level=INDENT_LEVEL,
+            indent_level=INDENT_LEVEL*2,
         )
         save(
             self,
