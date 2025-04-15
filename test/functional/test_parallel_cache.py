@@ -5,7 +5,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def run_parallel_and_check_errors(test_client, operation_func, num_tasks=4, *args):
+def run_parallel_and_check_errors(test_client, operation_func, num_tasks=10, *args):
     """Run operations in parallel and check for expected errors"""
     exceptions = []
     parallel_known_errors = [
@@ -17,16 +17,18 @@ def run_parallel_and_check_errors(test_client, operation_func, num_tasks=4, *arg
         "raise ConanException",
         "WinError 3",
     ]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
-        try:
-            futures = [executor.submit(operation_func, test_client, i, *args) for i in range(num_tasks)]
-            done_tasks, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+    exceptions = []
+    while not exceptions:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
+            try:
+                futures = [executor.submit(operation_func, test_client, i, *args) for i in range(num_tasks)]
+                done_tasks, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-            for task in done_tasks:
-                if task.exception():
-                    exceptions.append(task.exception())
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
+                for task in done_tasks:
+                    if task.exception():
+                        exceptions.append(task.exception())
+            finally:
+                executor.shutdown(wait=False, cancel_futures=True)
 
     for err in exceptions:
         str_err = str(err)
