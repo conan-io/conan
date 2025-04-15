@@ -38,10 +38,8 @@ class Premake:
         self._conanfile = conanfile
         # Path to the root (premake5) lua file
         self.luafile = (Path(self._conanfile.source_folder) / "premake5.lua").as_posix()
-        print("luafile", self.luafile)
         # (key value pairs. Will translate to "--{key}={value}")
         self.arguments = {}  # https://premake.github.io/docs/Command-Line-Arguments/
-        # self.arguments["scripts"] = Path(self._conanfile.generators_folder).as_posix()
 
         arch = str(self._conanfile.settings.arch)
         if arch not in CONAN_TO_PREMAKE_ARCH:
@@ -56,7 +54,7 @@ class Premake:
             )
             self.action = f"vs{msvc_version}"
         else:
-            self.action = "gmake"
+            self.action = "gmake" # New generator (old gmakelegacy is deprecated)
 
     @staticmethod
     def _expand_args(args):
@@ -71,7 +69,6 @@ class Premake:
         content = Template(self._premake_file_template).render(
             premake_conan_toolchain=premake_conan_toolchain, luafile=self.luafile
         )
-        # TODO: consider raising if toolchain does not exist
 
         conan_luafile = Path(self._conanfile.build_folder) / self.filename
         save(self._conanfile, conan_luafile, content)

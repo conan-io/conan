@@ -120,8 +120,7 @@ class _PremakeWorkspace:
 
     def project(self, project_name):
         if project_name not in self._projects:
-            workspace_context_name = "wks" if self.is_global else f'"{self.name}"'
-            self._projects[project_name] = _PremakeProject(project_name, workspace_context_name)
+            self._projects[project_name] = _PremakeProject(project_name)
         return self._projects[project_name]
 
     def _generate_body(self, current_indent_level):
@@ -156,7 +155,7 @@ class _PremakeWorkspace:
             is_global=self.is_global,
             name=self.name,
             workspace_body=workspace_body_content,
-            indent_level=INDENT_LEVEL
+            indent_level=INDENT_LEVEL if self.is_global else 0,
         )
 
 
@@ -164,20 +163,7 @@ class _PremakeProject:
     # Main template only handles the project definition and includes the body
     _premake_project_template = jinja_env.from_string(textwrap.dedent(
         """\
-    {% if is_global %}
-    for prj in premake.workspace.eachproject({{ workspace_context_name }}) do
-        project(prj.name)
-    {{ project_body | indent(indent_level, first=True) }}
-    end -- End of for prj loop
-    {% else %}
     project "{{ name }}"
-    {{ project_body | indent(indent_level, first=True) }}
-    {% endif %}
-    """))
-
-    # Template for the content INSIDE a project block
-    _project_body_template = jinja_env.from_string(textwrap.dedent(
-        """\
         {% if kind %}
         kind "{{ kind }}"
         {% endif %}
@@ -188,10 +174,8 @@ class _PremakeProject:
         -- Add other project settings here
     """))
 
-    def __init__(self, name, workspace_context_name) -> None:
+    def __init__(self, name) -> None:
         self.name = name
-        self.workspace_context_name = workspace_context_name
-        self.is_global = self.name == "*"
         self.kind = None
         self.extra_cxxflags = []
         self.extra_cflags = []
@@ -199,29 +183,14 @@ class _PremakeProject:
         self.extra_defines = {}
         self.disable = False
 
-    def _generate_body(self, current_indent_level):
-        """Generates the inner content of the project block."""
+    def _generate(self, current_intent_level):
+        """Generates the full project block (header + body)."""
         flags_content = _generate_flags(self) # Generate flags specific to this project
-
-        return self._project_body_template.render(
+        return self._premake_project_template.render(
+            name=self.name,
             kind="None" if self.disable else self.kind,
             flags=flags_content,
-            is_global=self.is_global, # Pass is_global for the comment
             indent_level=INDENT_LEVEL,
-            indent_spaces=INDENT_SPACES,
-            current_indent_level=current_indent_level
-        )
-
-    def _generate(self, current_indent_level=0):
-        """Generates the full project block (header + body)."""
-        project_body_content = self._generate_body(current_indent_level)
-
-        return self._premake_project_template.render(
-            is_global=self.is_global,
-            name=self.name,
-            workspace_context_name=self.workspace_context_name,
-            project_body=project_body_content,
-            indent_level=INDENT_LEVEL
         )
 
 
@@ -263,11 +232,6 @@ class PremakeToolchain:
         if workspace_name not in self._workspaces:
             self._workspaces[workspace_name] = _PremakeWorkspace(workspace_name, self._conanfile)
         return self._workspaces[workspace_name]
-
-    def project(self, project_name, workspace_name = '*'):
-        if workspace_name not in self._workspaces:
-            self.workspace(workspace_name)
-        return self._workspaces[workspace_name].project(project_name)
 
     def generate(self):
         # Assign toolchain-level flags to the global workspace ('*')
