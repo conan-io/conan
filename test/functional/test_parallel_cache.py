@@ -7,7 +7,6 @@ from conan.test.utils.tools import TestClient
 
 def run_parallel_and_check_errors(test_client, operation_func, num_tasks=10, *args):
     """Run operations in parallel and check for expected errors"""
-    exceptions = []
     parallel_known_errors = [
         "Folder might be busy or open",
         "conanfile.py not found",
