@@ -176,8 +176,9 @@ def test_pkg_config_external_path():
     c.save({"conanfile.py": conanfile,
             "mypcs/libastral.pc": libastral_pc,
             "profile": profile})
-    c.run("export .")
-    c.run("install --requires=pkg/0.1 -pr=profile -g CMakeDeps --build=missing")
+    c.run("create .")
+    # FIXME: THis install fails, no PKG_CONFIG_PATH injected
+    c.run("install --requires=pkg/0.1 -pr=profile -g CMakeDeps --build=*")
     pkg_data = c.load("pkg-none-armv8-data.cmake")
     assert 'set(pkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
     assert 'set(pkg_SHARED_LINK_FLAGS_NONE "-Wl,--whole-archive")' in pkg_data
