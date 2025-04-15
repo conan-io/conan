@@ -7,7 +7,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
-    resolve_apple_flags
+    resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags, architecture_flag
 from conan.tools.env import VirtualBuildEnv
@@ -338,6 +338,8 @@ class MesonToolchain:
         self.apple_isysroot_flag = []
         #: Apple minimum binary version flag as a list, e.g., ``["-mios-version-min", "10.8"]``
         self.apple_min_version_flag = []
+        #: Apple bitcode, visibility and arc flags
+        self.apple_extra_flags = apple_extra_flags(self._conanfile)
         #: Defines the Meson ``objc`` variable. Defaulted to ``None``, if if any Apple OS ``clang``
         self.objc = None
         #: Defines the Meson ``objcpp`` variable. Defaulted to ``None``, if if any Apple OS ``clang++``
@@ -443,6 +445,10 @@ class MesonToolchain:
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags
+        # Apple extra flags from confs (visibilty, bitcode, arc)
+        cxxflags += self.apple_extra_flags
+        cflags += self.apple_extra_flags
+        ld += self.apple_extra_flags
         return {
             "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags,
             "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags,

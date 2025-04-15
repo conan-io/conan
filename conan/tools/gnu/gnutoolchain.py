@@ -2,7 +2,7 @@ import os
 
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
@@ -104,6 +104,7 @@ class GnuToolchain:
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
+        self.apple_extra_flags = apple_extra_flags(conanfile)
         # Default initial environment flags
         self._initialize_default_extra_env()
 
@@ -245,6 +246,7 @@ class GnuToolchain:
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cxxflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
@@ -255,6 +257,7 @@ class GnuToolchain:
         fpic = "-fPIC" if self.fpic else None
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
@@ -264,6 +267,7 @@ class GnuToolchain:
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],

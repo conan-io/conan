@@ -1108,7 +1108,7 @@ class TestProtobuf:
         assert "protobuf: Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.27")
 class TestConfigs:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC multi-conf")
     def test_multi_config(self, matrix_client):
@@ -1137,9 +1137,9 @@ class TestConfigs:
 
         # With modern CMake > 3.26 not necessary set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
         cmake = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.15)
+            cmake_minimum_required(VERSION 3.27)
             project(app CXX)
-            set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+            # set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
             find_package(matrix CONFIG REQUIRED)
 
             add_executable(app src/app.cpp src/main.cpp)
@@ -1155,6 +1155,41 @@ class TestConfigs:
         assert "matrix/1.0: Hello World Release!" in c.out
         assert "app/0.1: Hello World Debug!" in c.out
 
+    def test_cross_config_components(self, matrix_client_components):
+        # Release dependencies, but compiling app in Debug
+        c = matrix_client_components
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=matrix/1.0")
+        app_cpp = textwrap.dedent("""
+            #include "app.h"
+            #include "module.h"
+            void app(){
+               module();
+            }""")
+        c.save({"src/app.cpp": app_cpp,
+                "src/main.cpp": gen_function_cpp(name="main", includes=["app"], calls=["app"])})
+
+        c.run(f"install . -s &:build_type=Debug -c tools.cmake.cmakedeps:new={new_value}")
+        # With modern CMake > 3.26 not necessary set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+        cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.27)
+            project(app CXX)
+            # set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+            find_package(matrix CONFIG REQUIRED)
+
+            add_executable(app src/app.cpp src/main.cpp)
+            target_link_libraries(app PRIVATE matrix::matrix)
+            """)
+        c.save({"CMakeLists.txt": cmake})
+
+        preset = "conan-default" if platform.system() == "Windows" else "conan-debug"
+        c.run_command(f"cmake --preset {preset}")
+        c.run_command("cmake --build --preset conan-debug")
+
+        c.run_command(os.path.join("build", "Debug", "app"))
+        assert "main: Debug!" in c.out
+        assert "module: Release!" in c.out
+        assert "vector: Release!" in c.out
+
     @pytest.mark.skipif(platform.system() == "Windows", reason="This doesn't work in MSVC")
     def test_cross_config_implicit(self, matrix_client):
         # Release dependencies, but compiling app in Debug, without specifying it
@@ -1164,9 +1199,9 @@ class TestConfigs:
 
         # With modern CMake > 3.26 not necessary set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
         cmake = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.15)
+            cmake_minimum_required(VERSION 3.27)
             project(app CXX)
-            set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+            # set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
             find_package(matrix CONFIG REQUIRED)
 
             add_executable(app src/app.cpp src/main.cpp)

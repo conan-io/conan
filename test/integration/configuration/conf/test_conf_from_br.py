@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -266,3 +268,28 @@ def test_conf_both_build_and_host():
     client.run("install app --build=missing -s:h build_type=Debug -s:b build_type=Release")
     assert "myprotobuf/0.1: MYCONF build: Release" in client.out
     assert "myprotobuf/0.1: MYCONF host: Debug" in client.out
+
+
+@pytest.mark.parametrize("conf", ['define("user.myorg:myconf", self.options.myopt)',
+                                  'define("user.myorg:myconf", self.settings.os)',
+                                  'append("user.myorg:myconf", self.settings.os)',
+                                  'prepend("user.myorg:myconf", self.settings.os)'])
+def test_error_bad_types(conf):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            settings = "os"
+            options = {{"myopt": [True, False]}}
+            default_options = {{"myopt": True}}
+            def package_info(self):
+                self.conf_info.{conf}
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "ERROR: tool/0.1: Error in package_info() method, line 10"
+    assert f'self.conf_info.{conf}' in c.out
+    assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
+

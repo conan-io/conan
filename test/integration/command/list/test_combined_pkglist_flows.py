@@ -268,6 +268,15 @@ class TestPkgListMerge:
         c.run("pkglist merge -l mylist.json", assert_error=True)
         assert "ERROR: Package list file invalid JSON:" in c.out
 
+        # This can happen when using a graph JSON file instead of a package list file
+        c.save({"conanfile.py": GenConanfile("lib")})
+        c.run("create . --version=1.0 --format=json", redirect_stdout="out/graph.json")
+        c.run("pkglist merge -l out/graph.json", assert_error=True)
+        assert (
+            'ERROR: Expected a package list file but found a graph file. You can create a "package list" JSON file by running:'
+            in c.out
+        )
+        assert "conan list --graph graph.json --format=json > pkglist.json" in c.out
 
 class TestDownloadUpload:
     @pytest.fixture()

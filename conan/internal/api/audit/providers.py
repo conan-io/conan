@@ -121,7 +121,7 @@ class PrivateProvider:
         for ref in refs:
             response = self._get(ref)
             if "error" in response:
-                ConanOutput().error(f"Error: {response['error']['details']}")
+                ConanOutput().error(response['error']['details'])
                 result["error"] = response["error"]
                 return result, True
             result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
@@ -191,10 +191,19 @@ class PrivateProvider:
                     "query": textwrap.dedent(full_query)
                 }
             )
+
+            if response.status_code == 404:
+                ConanOutput().write("\n")
+                ConanOutput().warning(
+                    f"An error occurred while connecting to the '{self.name}' provider.\n"
+                    "This is likely because your JFrog Platform instance does not have JFrog Curation.\n"
+                    "For more information, visit: https://audit.conan.io/missing-curation\n"
+                )
+
             # Raises if some HTTP error was found
             response.raise_for_status()
         except Exception as e:
-            return {"error": {"details": f"Something went wrong: {e}"}}
+            return {"error": {"details": str(e)}}
 
         response_json = response.json()
         # filter the extensions key with graphql data

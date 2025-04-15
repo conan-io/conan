@@ -746,3 +746,51 @@ def test_cross_x86_64_to_x86():
     cross = c.load(MesonToolchain.cross_filename)
     assert "cpu = 'x86_64'" in cross  # This is the build machine
     assert "cpu = 'x86'" in cross  # This is the host machine
+
+
+def test_conf_extra_apple_flags():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    compiler=apple-clang
+    compiler.version=14.0
+    [conf]
+    tools.apple:enable_bitcode = True
+    tools.apple:enable_arc = True
+    tools.apple:enable_visibility = True
+    """)
+
+    c = TestClient()
+    c.save({"conanfile.txt": f"[generators]\nMesonToolchain",
+            "host": host})
+    c.run("install . -pr:a host")
+    f = "conan_meson_native.ini"
+    tc = c.load(f)
+    for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
+        assert f"{flags} = ['-m64', '-fembed-bitcode', '-fobjc-arc', '-fvisibility=default']" in tc
+
+    c.run("install . -pr:a host -s build_type=Debug")
+    tc = c.load(f)
+    for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
+        assert f"{flags} = ['-m64', '-fembed-bitcode-marker'," \
+               " '-fobjc-arc', '-fvisibility=default']" in tc
+
+    host = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        os=Macos
+        compiler=apple-clang
+        compiler.version=14.0
+        [conf]
+        tools.apple:enable_bitcode = False
+        tools.apple:enable_arc = False
+        tools.apple:enable_visibility = False
+        """)
+
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load(f)
+    for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
+        assert f"{flags} = ['-m64', '-fno-objc-arc', '-fvisibility=hidden', " \
+               "'-fvisibility-inlines-hidden']" in tc

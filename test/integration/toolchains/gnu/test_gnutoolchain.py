@@ -456,3 +456,49 @@ def test_conf_build_does_not_exist():
     tc = c.load("conangnutoolchain.sh")
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
+
+
+@pytest.mark.parametrize("toolchain", ["GnuToolchain", "AutotoolsToolchain"])
+def test_conf_extra_apple_flags(toolchain):
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    [conf]
+    tools.apple:enable_bitcode = True
+    tools.apple:enable_arc = True
+    tools.apple:enable_visibility = True
+    """)
+
+    c = TestClient()
+    c.save({"conanfile.txt": f"[generators]\n{toolchain}",
+            "host": host})
+    c.run("install . -pr:a host")
+    f = "conanautotoolstoolchain.sh" if toolchain == "AutotoolsToolchain" else "conangnutoolchain.sh"
+    tc = c.load(f)
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
+
+    c.run("install . -pr:a host -s build_type=Debug")
+    tc = c.load(f)
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
+
+    host = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        os=Macos
+        [conf]
+        tools.apple:enable_bitcode = False
+        tools.apple:enable_arc = False
+        tools.apple:enable_visibility = False
+        """)
+
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load(f)
+    assert 'CXXFLAGS="$CXXFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'CFLAGS="$CFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'LDFLAGS="$LDFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc

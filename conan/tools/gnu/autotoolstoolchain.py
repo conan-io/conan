@@ -3,7 +3,7 @@ import os
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import is_apple_os, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
@@ -84,9 +84,9 @@ class AutotoolsToolchain:
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
-        self.configure_args = self._default_configure_shared_flags() + \
-                              self._default_configure_install_flags() + \
-                              self._get_triplets()
+        self.configure_args = (self._default_configure_shared_flags() +
+                               self._default_configure_install_flags() +
+                               self._get_triplets())
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
         # Apple stuff
@@ -101,6 +101,7 @@ class AutotoolsToolchain:
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
+        self.apple_extra_flags = apple_extra_flags(self._conanfile)
 
     def _resolve_android_cross_compilation(self):
         # Issue related: https://github.com/conan-io/conan/issues/13443
@@ -188,6 +189,7 @@ class AutotoolsToolchain:
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cxxflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
@@ -198,6 +200,7 @@ class AutotoolsToolchain:
         fpic = "-fPIC" if self.fpic else None
         ret = [self.cstd, self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
@@ -207,6 +210,7 @@ class AutotoolsToolchain:
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],

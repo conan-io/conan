@@ -4,7 +4,7 @@ import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conans.util.files import load
 
 

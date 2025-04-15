@@ -298,7 +298,7 @@ def test_conf_get_check_type_and_default():
     assert c.get("user.company.cpu:jobs", check_type=str) == "5"  # smart conversion
     with pytest.raises(ConanException) as exc_info:
         c.get("user.company.cpu:jobs", check_type=list)
-        assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
+    assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
     # Check type does not affect to default value
     assert c.get("user.non:existing", default=0, check_type=dict) == 0
     assert c.get("zlib:user.company.check:shared") is None  # unset value
@@ -315,16 +315,16 @@ def test_conf_get_check_type_and_default():
             "The value 'True' introduced is a bool object") in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_0", check_type=bool)
-    assert ("[conf] user:bad_value_0 must be a boolean-like object (true/false, 1/0, on/off) and value 'Fasle' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_0 must be a boolean-like object (true/false, 1/0, on/off) and value 'Fasle' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_1", check_type=bool)
-    assert ("[conf] user:bad_value_1 must be a boolean-like object (true/false, 1/0, on/off) and value 'ture' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_1 must be a boolean-like object (true/false, 1/0, on/off) and value 'ture' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_2", check_type=bool)
-    assert ("[conf] user:bad_value_2 must be a boolean-like object (true/false, 1/0, on/off) and value '10' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_2 must be a boolean-like object (true/false, 1/0, on/off) and value '10' does not match it." in str(exc_info.value)
     with pytest.raises(ConanException) as exc_info:
         c.get("user:bad_value_3", check_type=bool)
-    assert ("[conf] user:bad_value_3 must be a boolean-like object (true/false, 1/0, on/off) and value '\'00\'' does not match it.") in str(exc_info.value)
+    assert "[conf] user:bad_value_3 must be a boolean-like object (true/false, 1/0, on/off) and value '\'00\'' does not match it." in str(exc_info.value)
 
 
 def test_conf_pop():

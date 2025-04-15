@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -63,3 +65,18 @@ class TestDeprecated:
 
         tc.run("graph info . --version=2.0")
         assert "deprecated: None" in tc.out
+
+class TestDeprecatedIncludesMessages:
+    @pytest.mark.parametrize("import_stm,way", [
+        ["from conans.model.package_ref import PkgReference", "PkgReference()"],
+        ["from conans.model.package_ref import PkgReference", "PkgReference.loads('foo/1.0:123')"],
+        ["from conans.model.recipe_ref import RecipeReference", "RecipeReference()"],
+        ["from conans.model.recipe_ref import RecipeReference", "RecipeReference.loads('foo/1.0@user/channel')"]
+    ])
+    def test_deprecated_package_ref_include(self, import_stm, way):
+        t = TestClient(light=True)
+        t.save({"conanfile.py": GenConanfile("pkg", "0.1")
+               .with_import(import_stm)
+                .with_package_id(f"ref = {way}")})
+        t.run("create conanfile.py")
+        assert f"Private '{import_stm}'" in t.out

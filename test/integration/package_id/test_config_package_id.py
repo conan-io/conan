@@ -20,6 +20,7 @@ def test_config_package_id(config_version, mode, result):
     save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
+    assert f"config_version: {result}" in c.out
     c.run("list pkg/0.1:* --format=json")
     info = json.loads(c.stdout)
     rrev = info["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
@@ -39,3 +40,16 @@ def test_error_config_package_id():
     c.run("create .", assert_error=True)
     assert "ERROR: core.package_id:config_mode defined, " \
            "but error while loading 'config_version.json'" in c.out
+
+@pytest.mark.parametrize("config_version, mode, result", [
+    ("myconfig/1.2.3#rev1:pid1#prev1", "minor_mode", "myconfig/1.2.Z"),
+    ("myconfig/1.2.3#rev1:pid1#prev1", "patch_mode", "myconfig/1.2.3"),
+])
+def test_config_package_id_clear(config_version, mode, result):
+    c = TestClient(light=True)
+    config_version = json.dumps({"config_version": [config_version]})
+    save(c.paths.config_version_path, config_version)
+    save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_id("self.info.clear()")})
+    c.run("create .")
+    assert f"config_version: {result}" not in c.out

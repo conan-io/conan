@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
+from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
 from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, \
     RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP, \
     BINARY_PLATFORM, BINARY_BUILD
@@ -115,13 +115,14 @@ def print_graph_packages(graph):
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
+        node_info = node.conanfile.info
         if node.context == CONTEXT_BUILD:
-            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote])
+            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
         else:
             if node.test:
-                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote])
+                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
             else:
-                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote])
+                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
         # TO avoid showing as "skip" something that is used in other node of the graph
         if existing[0] == BINARY_SKIP:
             existing[0] = node.binary
@@ -130,7 +131,7 @@ def print_graph_packages(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
+        for pref, (status, remote, info) in sorted(reqs_to_print.items(), key=repr):
             name = pref.repr_notime() if status != BINARY_PLATFORM else str(pref.ref)
             msg = f"{tab}{name} - "
             if status == BINARY_SKIP:
@@ -148,6 +149,10 @@ def print_graph_packages(graph):
                 if remote:
                     msg += f" ({remote.name})"
                 output.info(msg, Color.BRIGHT_CYAN)
+            if output.level_allowed(LEVEL_DEBUG):
+                compact_dumps = info.summarize_compact()
+                for line in compact_dumps:
+                    output.debug(f"{tab}{tab}{line}", Color.BRIGHT_GREEN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)

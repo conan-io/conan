@@ -2,7 +2,7 @@ import os
 import shutil
 from multiprocessing.pool import ThreadPool
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, Color
 from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
@@ -309,6 +309,9 @@ class BinaryInstaller:
             ConanOutput(scope=str(pref.ref))\
                 .highlight("Building from source")\
                 .info(f"Package {pref}")
+            compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
+            for line in compact_dumps:
+                ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
             package_layout = self._cache.create_build_pkg_layout(pref)
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed

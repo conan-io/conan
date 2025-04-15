@@ -80,7 +80,7 @@ class TargetConfigurationTemplate2:
                         assert required_pkg == required_comp
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
-                        link = pkg_type is not PackageType.SHARED 
+                        link = pkg_type is not PackageType.SHARED
                     else:
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
@@ -364,6 +364,8 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
                               "{{lib_info["location"]}}")
+        {% elif lib_info.get("type") == "INTERFACE" %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         {% endif %}
         {% if lib_info.get("link_location") %}
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}

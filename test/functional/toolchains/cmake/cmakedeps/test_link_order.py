@@ -216,8 +216,8 @@ def _validate_link_order(libs):
     assert libs.index(prefix + 'Z2' + ext) < libs.index('system_lib' + ext_system)
 
     if platform.system() == "Darwin":
-       assert libs.index('liblibz.a') < libs.index('Carbon')
-       assert libs.index('libZ2.a') < libs.index('Carbon')
+        assert libs.index('liblibz.a') < libs.index('Carbon')
+        assert libs.index('libZ2.a') < libs.index('Carbon')
 
 
 def _get_link_order_from_cmake(content):
@@ -263,12 +263,13 @@ def _get_link_order_from_xcode(content):
 
     # Find the right Release block in the XCode file
     results = re.finditer(r'/\* Release \*/ = {', content)
+    header_found = False
     for r in results:
         release_section = content[r.start():].split("name = Release;", 1)[0]
         if "-headerpad_max_install_names" in release_section:
+            header_found = True
             break
-    else:
-        raise Exception("Cannot find the Release block linking the expected libraries")
+    assert header_found, "Cannot find the Release block linking the expected libraries"
 
     start_key = '-Wl,-headerpad_max_install_names'
     end_key = ');'
