@@ -59,3 +59,4 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         assert 'conanfile.py: Buffer got stderr msgs Hello' in client.out
+
