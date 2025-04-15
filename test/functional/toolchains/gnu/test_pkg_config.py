@@ -136,3 +136,54 @@ def test_pkg_config_round_tripe_cpp_info():
     # paths
     assert f'set(pkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
     assert f'set(pkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
+
+
+@pytest.mark.tool("pkg_config")
+def test_pkg_config_external_path():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import PkgConfig
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package_info(self):
+                pkg_config = PkgConfig(self, "libastral")
+                pkg_config.fill_cpp_info(self.cpp_info, is_system=False, system_libs=["m"])
+        """)
+    prefix = "C:" if platform.system() == "Windows" else ""
+    libastral_pc = textwrap.dedent("""\
+        prefix=%s/usr/local
+        exec_prefix=${prefix}
+        libdir=${exec_prefix}/lib
+        includedir=${prefix}/include
+
+        Name: libastral
+        Description: Interface library for Astral data flows
+        Version: 6.6.6
+        Libs: -L${libdir}/libastral -lastral -lm -Wl,--whole-archive
+        Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
+        """ % prefix)
+    profile = textwrap.dedent(f"""
+        [settings]
+        os=Linux
+        arch=armv8
+        [buildenv]
+        PKG_CONFIG_PATH+=(path){{{{profile_dir}}}}/mypcs
+        """)
+    c.save({"conanfile.py": conanfile,
+            "mypcs/libastral.pc": libastral_pc,
+            "profile": profile})
+    c.run("export .")
+    c.run("install --requires=pkg/0.1 -pr=profile -g CMakeDeps --build=missing")
+    pkg_data = c.load("pkg-none-armv8-data.cmake")
+    assert 'set(pkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
+    assert 'set(pkg_SHARED_LINK_FLAGS_NONE "-Wl,--whole-archive")' in pkg_data
+    assert 'set(pkg_COMPILE_DEFINITIONS_NONE "_USE_LIBASTRAL")' in pkg_data
+    assert 'set(pkg_LIBS_NONE astral)' in pkg_data
+    assert 'set(pkg_SYSTEM_LIBS_NONE m)' in pkg_data
+    # paths
+    assert f'set(pkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
+    assert f'set(pkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
