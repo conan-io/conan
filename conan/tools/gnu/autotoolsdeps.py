@@ -2,7 +2,6 @@ from conan.internal import check_duplicated_generator
 from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conan.tools.microsoft import is_msvc, unix_path
 
 
 class AutotoolsDeps:
@@ -42,35 +41,6 @@ class AutotoolsDeps:
                  to modify some of the computed values you can access to the ``environment`` object.
         """
         if self._environment is None:
-            if is_msvc(self._conanfile):
-                includedirs = []
-                defines = []
-                libs = []
-                libdirs = []
-                linkflags = []
-                cxxflags = []
-                cflags = []
-                for dependency in self.ordered_deps:
-                    deps_cpp_info = dependency.cpp_info.aggregated_components()
-                    includedirs.extend(deps_cpp_info.includedirs)
-                    defines.extend(deps_cpp_info.defines)
-                    libs.extend(deps_cpp_info.libs + deps_cpp_info.system_libs)
-                    libdirs.extend(deps_cpp_info.libdirs)
-                    linkflags.extend(deps_cpp_info.sharedlinkflags + deps_cpp_info.exelinkflags)
-                    cxxflags.extend(deps_cpp_info.cxxflags)
-                    cflags.extend(deps_cpp_info.cflags)
-
-                env = Environment()
-                env.append("CPPFLAGS",
-                           [f"-I{unix_path(self._conanfile, p)}" for p in includedirs] + [f"-D{d}" for d in
-                                                                               defines])
-                env.append("_LINK_", [lib if lib.endswith(".lib") else f"{lib}.lib" for lib in libs])
-                env.append("LDFLAGS", [f"-L{unix_path(self._conanfile, p)}" for p in libdirs] + linkflags)
-                env.append("CXXFLAGS", cxxflags)
-                env.append("CFLAGS", cflags)
-                self._environment = env
-                return self._environment
-
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
             # cpp_flags

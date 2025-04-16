@@ -4,7 +4,7 @@
 # FIXME: only for tools.gnu? perhaps it should be a global module
 
 from conan.tools.apple.apple import is_apple_os
-from conan.tools.microsoft import is_msvc
+from conan.tools.microsoft import is_msvc, unix_path
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 
 
@@ -59,16 +59,20 @@ class GnuDepsFlags(object):
     def _format_include_paths(self, include_paths):
         if not include_paths:
             return []
-        pattern = "-I%s" if is_msvc(self._conanfile) else "-I%s"
-        return [pattern % (self._adjust_path(include_path))
-                for include_path in include_paths if include_path]
+        if is_msvc(self._conanfile):
+            return [f"-I{unix_path(self._conanfile, p)}" for p in include_paths if p]
+        else:
+            return ["-I%s" % (self._adjust_path(include_path))
+                    for include_path in include_paths if include_path]
 
     def _format_library_paths(self, library_paths):
         if not library_paths:
             return []
-        pattern = "-link -LIBPATH:%s"
-        return [pattern % library_path
-                for library_path in library_paths if library_path]
+        if is_msvc(self._conanfile):
+            return [f"-L{unix_path(self._conanfile, p)}" for p in library_paths if p]
+        else:
+            return ["-L%s" % self._adjust_path(library_path)
+                    for library_path in library_paths if library_path]
 
     def _format_libraries(self, libraries):
         if not libraries:

@@ -205,13 +205,21 @@ class GnuToolchain:
         if not extra_env_vars:
             # Normally, these are the most common default flags used by MSVC in Windows
             if is_msvc(self._conanfile):
+                extra_env_vars = {"CC": "cl -nologo",
+                                  "CXX": "cl -nologo",
+                                  "LD": "link -nologo",
+                                  "AR": "lib",
+                                  "NM": "dumpbin -symbols",
+                                  "OBJDUMP": ":",
+                                  "RANLIB": ":",
+                                  "STRIP": ":"}
                 """compile_wrapper = unix_path(self._conanfile,
-                                            self._conanfile.conf.get("user.automake:compile-wrapper",
-                                                                     check_type=str))
-                ar_wrapper = unix_path(self._conanfile,
-                                       self._conanfile.conf.get("user.automake:lib-wrapper",
-                                                                check_type=str))
-                """
+                                                           self._conanfile.conf.get("user.automake:compile-wrapper",
+                                                                                    check_type=str))
+                               ar_wrapper = unix_path(self._conanfile,
+                                                      self._conanfile.conf.get("user.automake:lib-wrapper",
+                                                                               check_type=str))
+                               """
                 compile_wrapper = unix_path(self._conanfile,
                                             r"C:\ws\msys64\usr\share\automake-1.15\compile")
                 ar_wrapper = unix_path(self._conanfile,
@@ -224,15 +232,6 @@ class GnuToolchain:
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
-
-                """extra_env_vars = {"CC": "cl -nologo",
-                                  "CXX": "cl -nologo",
-                                  "LD": "link -nologo",
-                                  "AR": "lib",
-                                  "NM": "dumpbin -symbols",
-                                  "OBJDUMP": ":",
-                                  "RANLIB": ":",
-                                  "STRIP": ":"}"""
             extra_env_vars.update(self._resolve_compilers_mapping_variables())
 
         # Update the extra_env attribute with all the compiler values
