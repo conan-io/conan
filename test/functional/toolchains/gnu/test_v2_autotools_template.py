@@ -349,6 +349,7 @@ def test_autotools_fix_shared_libs():
 
 
 #@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows msys2")
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
 
