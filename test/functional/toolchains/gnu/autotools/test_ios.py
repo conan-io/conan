@@ -71,9 +71,10 @@ def test_ios():
     autoreconf_args = conanbuild["autoreconf_args"]
     build_arch = client.api.profiles.get_profile([client.api.profiles.get_default_build()]).settings['arch']
     build_arch = "aarch64" if build_arch == "armv8" else build_arch
-    assert configure_args == "--prefix=/ '--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' " \
-                             "'--libdir=${prefix}/lib' '--includedir=${prefix}/include' " \
-                             "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res' " \
-                             f"--host=aarch64-apple-ios --build={build_arch}-apple-darwin"
+    assert configure_args == ("--prefix=/ '--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' "
+                              "'--libdir=${prefix}/lib' '--includedir=${prefix}/include' "
+                              "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res' "
+                              "'--libexecdir=${prefix}/bin' --host=aarch64-apple-ios "
+                              f"--build={build_arch}-apple-darwin")
     assert make_args == ""
     assert autoreconf_args == "--force --install"
