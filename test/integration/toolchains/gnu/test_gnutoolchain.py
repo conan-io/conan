@@ -517,7 +517,7 @@ def test_toolchain_and_default_dirs(toolchain):
     os=Macos
     """)
     c.save({"conanfile.txt": f"[generators]\n{toolchain}", "host": default})
-    c.run("install . -pr host")
+    c.run("install . -pr:a host")
     tc = c.load("conanbuild.conf")
     for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin', '--libdir=${prefix}/lib',
                 '--includedir=${prefix}/include', '--oldincludedir=${prefix}/include',
