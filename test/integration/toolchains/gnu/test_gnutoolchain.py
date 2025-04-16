@@ -510,8 +510,14 @@ def test_toolchain_and_default_dirs(toolchain):
     Issue: https://github.com/conan-io/conan/issues/12020
     """
     c = TestClient()
-    c.save({"conanfile.txt": f"[generators]\n{toolchain}"})
-    c.run("install .")
+    default = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    os=Macos
+    """)
+    c.save({"conanfile.txt": f"[generators]\n{toolchain}", "host": default})
+    c.run("install . -pr host")
     tc = c.load("conanbuild.conf")
     for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin', '--libdir=${prefix}/lib',
                 '--includedir=${prefix}/include', '--oldincludedir=${prefix}/include',
