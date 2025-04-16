@@ -1,5 +1,6 @@
-compile_wrapper = """\
-#! /bin/sh
+# From Automake 1.15 from msys2
+
+compile_wrapper = r"""#! /bin/sh
 # Wrapper for compilers which do not understand '-c -o'.
 
 scriptversion=2016-01-11.22; # UTC
@@ -35,7 +36,6 @@ nl='
 # We need space, tab and new line, in precisely that order.  Quoting is
 # there to prevent tools from complaining about whitespace usage.
 IFS=" ""	$nl"
-
 
 file_conv=
 
@@ -350,8 +350,8 @@ exit $ret
 # End:
 """
 
-lib_wrapper = """\
-#! /bin/sh
+
+lib_wrapper = r"""#! /bin/sh
 # Wrapper for Microsoft lib.exe
 
 me=ar-lib

@@ -348,94 +348,9 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
-@pytest.mark.tool("msys2")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
-def test_autotools_template_windows():
-    client = TestClient(path_with_spaces=False)
-    client.run("new autotools_lib -d name=hello -d version=0.1")
-    profile = textwrap.dedent("""
-        [settings]
-        arch=x86_64
-        build_type=Release
-        compiler=msvc
-        compiler.runtime=dynamic
-        compiler.runtime_type=Release
-        compiler.version=191
-        os=Windows
-
-        [conf]
-        tools.microsoft.bash:subsystem=msys2
-        tools.microsoft.bash:path=bash.exe
-
-        [buildenv]
-        CC=cl
-        CXX=cl
-        """)
-    client.save({"profile": profile})
-    client.run("create . -pr=profile")
-    print(client.out)
-
-
 #@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
 @pytest.mark.tool("msys2")
-@pytest.mark.tool("cmake")  # to use Windows cmake, not msys2 internal cmake
 class TestAutotoolsTemplateWindows:
-    def test_msys2_autotoolsdeps_windows(self):
-        c = TestClient(path_with_spaces=False)
-        # c.run("remote add conancenter https://center.conan.io")
-        c.run("new cmake_lib -d name=hello -d version=1.0")
-        c.run("create . -tf=")
-        conanfile = textwrap.dedent("""\
-            from conan import ConanFile
-            from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
-            from conan.tools.layout import basic_layout
-
-            class TestConan(ConanFile):
-                settings = "os", "compiler", "build_type", "arch"
-                generators = "AutotoolsDeps", "GnuToolchain"
-                win_bash = True
-                requires = "hello/1.0"
-
-                def build_requirements(self):
-                    pass
-                    # self.tool_requires("automake/1.16.5")
-
-                def build(self):
-                    autotools = Autotools(self)
-                    autotools.autoreconf()
-                    autotools.configure()
-                    autotools.make()
-
-                def layout(self):
-                    basic_layout(self)
-            """)
-        make_am = textwrap.dedent("""\
-            bin_PROGRAMS = myapp
-            myapp_SOURCES = main.cpp
-            """)
-        configure_ac = textwrap.dedent("""\
-            AC_INIT([myapp], [1.0], [])
-            AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-            AC_PROG_CXX
-            AM_PROG_AR
-            LT_INIT
-            AC_CONFIG_FILES([Makefile])
-            AC_OUTPUT
-            """)
-        c.save({"conanfile.py": conanfile,
-                "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
-                "Makefile.am": make_am,
-                "configure.ac": configure_ac},
-               clean_first=True)
-        msys2 = textwrap.dedent("""
-           include(default)
-           [conf]
-           tools.microsoft.bash:subsystem=msys2
-           tools.microsoft.bash:path=bash
-           """)
-        c.save({"msys2": msys2})
-        c.run("build . -pr=msys2")
-        print(c.out)
 
     def test_msys2_autotools_windows(self):
         c = TestClient(path_with_spaces=False)
@@ -447,10 +362,13 @@ class TestAutotoolsTemplateWindows:
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path=bash
             """)
-        c.save({"msys2": msys2})
-        # FIXME: Need to deactivate test_package because AutotoolsDeps doesn't work in Win
-        c.run("create . -pr=msys2 -tf=")
-        # This will not crash
+        conanfile = c.load("test_package/conanfile.py")
+        # GnuToolchain solves the test_package in Windows
+        conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
+        c.save({"msys2": msys2,
+                "test_package/conanfile.py": conanfile})
+        c.run("create . -pr=msys2")
+        assert "hello/1.0: Hello World Release!" in c.out
         assert "conanvcvars.bat: Activating environment" in c.out
         assert "hello/1.0: package(): Packaged 1 '.lib' file: hello.lib" in c.out
 

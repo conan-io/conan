@@ -200,6 +200,9 @@ class GnuToolchain:
                 ret["CXX_FOR_BUILD"] = compilers_build_mapping["cpp"]
         return ret
 
+    def _wrapper_path(self, p):
+        return os.path.join(self._conanfile.generators_folder, "wrappers", p)
+
     def _initialize_default_extra_env(self):
         """Initialize the default environment variables."""
         # If it's an Android cross-compilation
@@ -207,23 +210,9 @@ class GnuToolchain:
         if not extra_env_vars:
             # Normally, these are the most common default flags used by MSVC in Windows
             if is_msvc(self._conanfile):
-                extra_env_vars = {"CC": "cl -nologo",
-                                  "CXX": "cl -nologo",
-                                  "LD": "link -nologo",
-                                  "AR": "lib",
-                                  "NM": "dumpbin -symbols",
-                                  "OBJDUMP": ":",
-                                  "RANLIB": ":",
-                                  "STRIP": ":"}
-                """compile_wrapper = unix_path(self._conanfile,
-                                                           self._conanfile.conf.get("user.automake:compile-wrapper",
-                                                                                    check_type=str))
-                               ar_wrapper = unix_path(self._conanfile,
-                                                      self._conanfile.conf.get("user.automake:lib-wrapper",
-                                                                               check_type=str))
-                               """
-                cl_wrapper = unix_path(self._conanfile, os.path.join(self._conanfile.generators_folder, "wrappers", "compile"))
-                ar_wrapper = unix_path(self._conanfile, os.path.join(self._conanfile.generators_folder, "wrappers", "ar-lib"))
+                # FIXME: Proof of concept, should this allow configuration?
+                cl_wrapper = unix_path(self._conanfile, self._wrapper_path("compile"))
+                ar_wrapper = unix_path(self._conanfile, self._wrapper_path("ar-lib"))
                 extra_env_vars = {"CC": f"{cl_wrapper} cl -nologo",
                                   "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
@@ -359,7 +348,5 @@ class GnuToolchain:
         save_toolchain_args(args, namespace=self._namespace)
         VCVars(self._conanfile).generate()
         if is_msvc(self._conanfile):
-            save(os.path.join(self._conanfile.generators_folder, "wrappers", "compile"),
-                 compile_wrapper)
-            save(os.path.join(self._conanfile.generators_folder, "wrappers", "ar-lib"),
-                 lib_wrapper)
+            save(self._wrapper_path("compile"), compile_wrapper)
+            save(self._wrapper_path("ar-lib"), lib_wrapper)
