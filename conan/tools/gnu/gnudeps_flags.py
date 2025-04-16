@@ -59,6 +59,7 @@ class GnuDepsFlags(object):
     def _format_include_paths(self, include_paths):
         if not include_paths:
             return []
+        pattern = "/I%s" if is_msvc(self._conanfile) else "-I%s"
         if is_msvc(self._conanfile):
             return [f"-I{unix_path(self._conanfile, p)}" for p in include_paths if p]
         else:

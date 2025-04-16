@@ -10,9 +10,11 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
     libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.gnu.wrappers import compile_wrapper, lib_wrapper
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
+from conans.util.files import save
 
 
 class GnuToolchain:
@@ -220,12 +222,10 @@ class GnuToolchain:
                                                       self._conanfile.conf.get("user.automake:lib-wrapper",
                                                                                check_type=str))
                                """
-                compile_wrapper = unix_path(self._conanfile,
-                                            r"C:\ws\msys64\usr\share\automake-1.15\compile")
-                ar_wrapper = unix_path(self._conanfile,
-                                       r"C:\ws\msys64\usr\share\automake-1.15\ar-lib")
-                extra_env_vars = {"CC": f"{compile_wrapper} cl -nologo",
-                                  "CXX": f"{compile_wrapper} cl -nologo",
+                cl_wrapper = unix_path(self._conanfile, os.path.join(self._conanfile.generators_folder, "wrappers", "compile"))
+                ar_wrapper = unix_path(self._conanfile, os.path.join(self._conanfile.generators_folder, "wrappers", "ar-lib"))
+                extra_env_vars = {"CC": f"{cl_wrapper} cl -nologo",
+                                  "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
                                   "LD": f"{ar_wrapper} link -nologo",
                                   "AR": "lib -nologo",
@@ -339,6 +339,7 @@ class GnuToolchain:
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
+        # FIXME: Is LIBS missing here?
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Let's compose with user extra env variables defined (user ones have precedence)
@@ -357,3 +358,8 @@ class GnuToolchain:
         }
         save_toolchain_args(args, namespace=self._namespace)
         VCVars(self._conanfile).generate()
+        if is_msvc(self._conanfile):
+            save(os.path.join(self._conanfile.generators_folder, "wrappers", "compile"),
+                 compile_wrapper)
+            save(os.path.join(self._conanfile.generators_folder, "wrappers", "ar-lib"),
+                 lib_wrapper)
