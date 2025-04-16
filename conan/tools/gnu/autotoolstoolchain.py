@@ -310,7 +310,8 @@ class AutotoolsToolchain:
                                        _get_argument("libdir", "libdirs"),
                                        _get_argument("includedir", "includedirs"),
                                        _get_argument("oldincludedir", "includedirs"),
-                                       _get_argument("datarootdir", "resdirs")])
+                                       _get_argument("datarootdir", "resdirs"),
+                                       _get_argument("libexecdir", "bindirs")])
         return [el for el in configure_install_flags if el]
 
     @staticmethod

@@ -298,8 +298,8 @@ class GnuToolchain:
         # If someone want arguments but not the defaults can pass them in args manually
         for flag_name, cppinfo_name in [("bindir", "bindirs"), ("sbindir", "bindirs"),
                                         ("libdir", "libdirs"), ("includedir", "includedirs"),
-                                        ("oldincludedir", "includedirs"),
-                                        ("datarootdir", "resdirs")]:
+                                        ("oldincludedir", "includedirs"), ("datarootdir", "resdirs"),
+                                        ("libexecdir", "bindirs")]:
             elements = getattr(self._conanfile.cpp.package, cppinfo_name)
             cppinfo_value = f"${{prefix}}/{elements[0]}" if elements else None
             if cppinfo_value:

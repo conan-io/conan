@@ -1,7 +1,7 @@
 import os
 import platform
-import textwrap
 import re
+import textwrap
 
 import pytest
 
@@ -502,3 +502,18 @@ def test_conf_extra_apple_flags(toolchain):
     assert 'CXXFLAGS="$CXXFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
     assert 'CFLAGS="$CFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
     assert 'LDFLAGS="$LDFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+
+
+@pytest.mark.parametrize("toolchain", ["GnuToolchain", "AutotoolsToolchain"])
+def test_toolchain_and_default_dirs(toolchain):
+    """
+    Issue: https://github.com/conan-io/conan/issues/12020
+    """
+    c = TestClient()
+    c.save({"conanfile.txt": f"[generators]\n{toolchain}"})
+    c.run("install .")
+    tc = c.load("conanbuild.conf")
+    for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin', '--libdir=${prefix}/lib',
+                '--includedir=${prefix}/include', '--oldincludedir=${prefix}/include',
+                '--libexecdir=${prefix}/bin']:
+        assert arg in tc
