@@ -1,4 +1,5 @@
 from conan.errors import ConanException
+from conan.tools.microsoft.visual import msvc_platform_from_arch
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
@@ -17,14 +18,7 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
     return ""
 
 
-def msbuild_arch(arch):
-    return {'x86': 'x86',
-            'x86_64': 'x64',
-            'armv7': 'ARM',
-            'armv8': 'ARM64'}.get(str(arch))
-
-
-class MSBuild(object):
+class MSBuild:
     """
     MSBuild build helper class
     """
@@ -39,11 +33,12 @@ class MSBuild(object):
         # if platforms:
         #    msvc_arch.update(platforms)
         arch = conanfile.settings.get_safe("arch")
-        msvc_arch = msbuild_arch(arch)
+        # MSVC default platform for VS projects is "x86", not "Win32" (but CMake default is "Win32")
+        msvc_platform = msvc_platform_from_arch(arch) if arch != "x86" else "x86"
         if conanfile.settings.get_safe("os") == "WindowsCE":
-            msvc_arch = conanfile.settings.get_safe("os.platform")
+            msvc_platform = conanfile.settings.get_safe("os.platform")
         #: Defines the platform name, e.g., ``ARM`` if ``settings.arch == "armv7"``.
-        self.platform = msvc_arch
+        self.platform = msvc_platform
 
     def command(self, sln, targets=None):
         """

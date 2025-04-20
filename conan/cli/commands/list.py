@@ -1,4 +1,5 @@
 import json
+import datetime
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
@@ -7,7 +8,6 @@ from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 from conan.errors import ConanException
-from conans.util.dates import timestamp_to_str
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
 remote_color = Color.BRIGHT_BLUE
@@ -17,6 +17,12 @@ reference_color = Color.WHITE
 error_color = Color.BRIGHT_RED
 field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
+
+
+def _format_timestamp_human(timestamp):
+    # used by ref.repr_humantime() to print human readable time
+    return datetime.datetime.fromtimestamp(int(timestamp),
+                                           datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def print_serial(item, indent=None, color_index=None):
@@ -78,7 +84,7 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k} ({timestamp_to_str(timestamp)})"
+                    k = f"{k} ({_format_timestamp_human(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
@@ -108,7 +114,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({_format_timestamp_human(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:
