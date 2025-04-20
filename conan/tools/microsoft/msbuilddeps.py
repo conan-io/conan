@@ -10,6 +10,7 @@ from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
+from conan.tools.microsoft.visual import msvc_platform_from_arch
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
@@ -102,10 +103,7 @@ class MSBuildDeps:
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
         #: Platform name, e.g., ``Win32`` if ``settings.arch == "x86"``.
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        self.platform = msvc_platform_from_arch(str(conanfile.settings.arch))
         #: Defines the platform key used to conditionally select which property sheet to
         #: import (defaults to ``"Platform"``).
         self.platform_key = "Platform"

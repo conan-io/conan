@@ -15,7 +15,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
@@ -991,11 +991,7 @@ class GenericSystemBlock(Block):
             return settings.get_safe("os.platform")
 
         if compiler in ("msvc", "clang") and generator and "Visual" in generator:
-            return {"x86": "Win32",
-                    "x86_64": "x64",
-                    "armv7": "ARM",
-                    "armv8": "ARM64",
-                    "arm64ec": "ARM64EC"}.get(arch)
+            return msvc_platform_from_arch(arch)
         return None
 
     def _get_generic_system_name(self):
