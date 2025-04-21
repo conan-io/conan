@@ -287,10 +287,10 @@ class SSHRunner:
 
 
 class RemoteConnection:
-    def __init__(self, client, logger: RunnerOutput):
+    def __init__(self, client, runner_output: RunnerOutput):
         from paramiko.client import SSHClient
         self.client: SSHClient = client
-        self.logger = logger
+        self.runner_output = runner_output
 
     def put(self, src: str, dst: str) -> None:
         try:
@@ -298,7 +298,7 @@ class RemoteConnection:
             sftp.put(src, dst)
             sftp.close()
         except IOError as e:
-            self.logger.error(f"Unable to copy {src} to {dst}:\n{e}")
+            self.runner_output.error(f"Unable to copy {src} to {dst}:\n{e}")
 
     def get(self, src: str, dst: str) -> None:
         try:
@@ -306,7 +306,7 @@ class RemoteConnection:
             sftp.get(src, dst)
             sftp.close()
         except IOError as e:
-            self.logger.error(f"Unable to copy from remote {src} to {dst}:\n{e}")
+            self.runner_output.error(f"Unable to copy from remote {src} to {dst}:\n{e}")
 
     def mkdir(self, folder: str) -> None:
         sftp = self.client.open_sftp()
@@ -330,7 +330,7 @@ class RemoteConnection:
             sftp.chmod(script_path, 0o755)
             sftp.close()
         except Exception as e:
-            self.logger.error(f"Unable to create remote script in {script_path}:\n{e}")
+            self.runner_output.error(f"Unable to create remote script in {script_path}:\n{e}")
         return script_path
 
     class RunResult:
@@ -341,9 +341,9 @@ class RemoteConnection:
 
     def run_command(self, command: str, friendly_command: str = "", verbose: bool = False) -> RunResult:
         _, stdout, stderr = self.client.exec_command(command)
-        log = self.logger.status if verbose else self.logger.verbose
+        log = self.runner_output.status if verbose else self.runner_output.verbose
         log(f'{friendly_command}...', fg=Color.BLUE)
-        self.logger.debug(f'$ {command}')
+        self.runner_output.debug(f'$ {command}')
         result = RemoteConnection.RunResult(stdout.channel.recv_exit_status() == 0,
                                             stdout.read().decode().strip(),
                                             stderr.read().decode().strip())
@@ -357,14 +357,14 @@ class RemoteConnection:
             terminal
             :return: True if the command succeeded
         '''
-        self.logger.status(f'{friendly_command}...', fg=Color.BLUE)
-        self.logger.debug(f"$ {command}")
+        self.runner_output.status(f'{friendly_command}...', fg=Color.BLUE)
+        self.runner_output.debug(f"$ {command}")
         channel = self.client.get_transport().open_session()
         if sys.stdout.isatty():
             width, height = os.get_terminal_size()
         else:
             width, height = 80, 24
-        width -= self.logger.padding
+        width -= self.runner_output.padding
         channel.get_pty(width=width, height=height)
 
         channel.exec_command(command)
@@ -393,5 +393,5 @@ class RemoteConnection:
             # sys.stdout.buffer.write(line)
             # sys.stdout.buffer.flush()
             line = remove_cursor_movements(line.replace(b'\r', b'').decode(errors='ignore').strip())
-            self.logger.status(line)
+            self.runner_output.status(line)
         return stdout.channel.recv_exit_status() == 0
