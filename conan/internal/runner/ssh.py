@@ -18,6 +18,7 @@ from conan.internal.model.version import Version
 from conan.internal.model.profile import Profile
 from conan.internal.runner.output import RunnerOutput
 
+
 class SSHRunner:
     def __init__(
         self,
@@ -178,9 +179,8 @@ class SSHRunner:
         if not self.remote_conn.run_command(f"{self.remote_conan} profile detect --force", "Detecting remote profile").success:
             self.output.error("Error creating default profile in remote machine")
 
-
     def _copy_profiles(self):
-        self.output.status(f"Copying profiles and recipe to host...", fg=Color.BRIGHT_MAGENTA)
+        self.output.status("Copying profiles and recipe to host...", fg=Color.BRIGHT_MAGENTA)
         if not self.remote_conan_home:
             raise ConanException("Remote Conan home folder not set")
         remote_profile_path = Path(self.remote_conan_home) / "profiles"
@@ -231,7 +231,7 @@ class SSHRunner:
                     extra_path = resolved_path.relative_to(tmp)
                     self.remote_create_dir = (remote_tmp_dir / extra_path).as_posix()
                     resolved_path = tmp
-            except:
+            except Exception:
                 pass
         # Copy current folder to destination using sftp
         for root, dirs, files in os.walk(resolved_path.as_posix()):
@@ -372,6 +372,7 @@ class RemoteConnection:
         first_line = True
 
         cursor_movement_pattern = re.compile(r'(\x1b\[(\d+);(\d+)H)')
+
         def remove_cursor_movements(data):
             """Replace cursor movements with newline if column is 1, or empty otherwise."""
             def replace_cursor_match(match):
@@ -381,13 +382,12 @@ class RemoteConnection:
                 return ""        # Otherwise, replace with empty string
             return cursor_movement_pattern.sub(replace_cursor_match, data)
 
-
         while not stdout.channel.exit_status_ready():
             line = stdout.channel.recv(2048)
             if first_line and is_remote_windows:
                 # Avoid clearing and moving the cursor when the remote server is Windows
                 # https://github.com/PowerShell/Win32-OpenSSH/issues/1738#issuecomment-789434169
-                line = line.replace(b"\x1b[2J\x1b[m\x1b[H",b"").replace(b"\r\n", b"")
+                line = line.replace(b"\x1b[2J\x1b[m\x1b[H", b"").replace(b"\r\n", b"")
                 first_line = False
             # This is the easiest and better working approach but not testable
             # sys.stdout.buffer.write(line)
