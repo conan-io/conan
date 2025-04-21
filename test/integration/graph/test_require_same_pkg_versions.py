@@ -262,13 +262,15 @@ def test_require_different_versions_transitive():
     assert "RUNNING myqemu/1.0!!" in c.out
 
     c.run("upload * -r=default -c")
-    c.run("remove * -c")
-    # Re-downloads and it works
-    c.run("build consumer")
-    assert "RUNNING valgrind/1.0!!" in c.out
-    assert "RUNNING myqemu/2.0!!" in c.out
-    assert "RUNNING snippy/1.0!!" in c.out
-    assert "RUNNING myqemu/1.0!!" in c.out
+    # The "tools.graph:skip_binaries" shouldn't affect the result, it is never skipped
+    for skip in ("-c tools.graph:skip_binaries=True", "-c tools.graph:skip_binaries=False", ""):
+        c.run("remove * -c")
+        # Re-downloads and it works
+        c.run(f"build consumer {skip}")
+        assert "RUNNING valgrind/1.0!!" in c.out
+        assert "RUNNING myqemu/2.0!!" in c.out
+        assert "RUNNING snippy/1.0!!" in c.out
+        assert "RUNNING myqemu/1.0!!" in c.out
 
     c.run("create consumer")
     c.run("upload consumer/1.0 -r=default -c")
