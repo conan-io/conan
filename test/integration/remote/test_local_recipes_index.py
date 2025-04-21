@@ -102,6 +102,13 @@ class TestSearchList:
         revs = listjson["local"]["zlib/1.2.11"]["revisions"]
         assert len(revs) == 1 and "6f5c31bb1219e9393743d1fbf2ee1b52" in revs
 
+    def test_list_revisions_notfound(self, c3i_folder):
+        client = TestClient(light=True)
+        client.run(f"remote add local '{c3i_folder}'")
+        client.run("list potato/1.0#* -r=local")
+        # More like remotes than cache
+        assert "ERROR: Recipe not found: 'potato/1.0'"
+
     def test_list_rrevs(self, c3i_folder):
         client = TestClient(light=True)
         client.run(f"remote add local '{c3i_folder}'")
