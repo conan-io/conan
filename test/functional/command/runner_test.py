@@ -8,12 +8,16 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 
+def docker_from_env():
+    try:
+        return docker.from_env()
+    except Exception:
+        return docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+
+
 def docker_skip(test_image='ubuntu:22.04'):
     try:
-        try:
-            docker_client = docker.from_env()
-        except:
-            docker_client = docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+        docker_client = docker_from_env()
         if test_image:
             docker_client.images.pull(test_image)
     except docker.errors.DockerException:
@@ -460,7 +464,7 @@ def test_create_docker_runner_from_configfile_with_args():
     client = TestClient()
 
     # Ensure the network exists
-    docker_client = docker.from_env()
+    docker_client = docker_from_env()
     docker_client.networks.create("my-network")
 
     configfile = textwrap.dedent(f"""
