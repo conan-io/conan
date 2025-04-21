@@ -960,4 +960,3 @@ def test_create_multiple_runner_types():
     client.run("new cmake_lib -d name=pkg -d version=2.0")
     client.run("create . -pr:h host_docker -pr:h host_ssh -vverbose", assert_error=True)
     assert "Found different runner types in profile composition (docker and ssh)" in client.out
-
