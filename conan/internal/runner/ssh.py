@@ -133,7 +133,7 @@ class SSHRunner:
             python_command = remote_folder + "/venv" + "/bin" + "/python"
 
         if not has_remote_conan:
-            self.output.verbose(f"Creating remote venv")
+            self.output.verbose("Creating remote venv")
             result = self.remote_conn.run_command(f"{self.remote_python_command} -m venv {conan_venv}", "Creating remote venv")
             if not result.success:
                 self.output.error(f"Unable to create remote venv: {result.stderr}")
@@ -164,14 +164,14 @@ class SSHRunner:
         # Create conan wrapper with proper environment variables
         remote_env = {
             'CONAN_HOME': remote_conan_home,
-            'CONAN_RUNNER_ENVIRONMENT': "1" # This env will prevent conan (running remotely) to start an infinite remote call
+            'CONAN_RUNNER_ENVIRONMENT': "1"  # This env will prevent conan (running remotely) to start an infinite remote call
         }
         if self.is_remote_windows:
             # Wrapper script with environment variables preset
-            env_lines = "\n".join([f"set {k}={v}" for k,v in remote_env.items()])
+            env_lines = "\n".join([f"set {k}={v}" for k, v in remote_env.items()])
             conan_wrapper_contents = f"""@echo off\n{env_lines}\n{conan_cmd} %*\n"""
         else:
-            env_lines = "\n".join([f"export {k}={v}" for k,v in remote_env.items()])
+            env_lines = "\n".join([f"export {k}={v}" for k, v in remote_env.items()])
             conan_wrapper_contents = f"""{env_lines}\n{conan_cmd} $@\n"""
 
         self.remote_conan = self.remote_conn.create_remote_script(conan_wrapper_contents, remote_folder + "/conan", self.is_remote_windows)
@@ -194,7 +194,7 @@ class SSHRunner:
             self.output.verbose(f"Copying profile '{profile}': {profile_path} -> {dest_filename}")
             self.remote_conn.put(profile_path, dest_filename.as_posix())
         if not self.args.profile_build:
-            dest_filename = remote_profile_path / "default" # in remote use "default" profile
+            dest_filename = remote_profile_path / "default"  # in remote use "default" profile
             default_build_profile = self.conan_api.profiles.get_default_build()
             self.output.verbose(f"Copying default profile: {default_build_profile} -> {dest_filename}")
             self.remote_conn.put(default_build_profile, dest_filename.as_posix())
@@ -236,7 +236,7 @@ class SSHRunner:
         # Copy current folder to destination using sftp
         for root, dirs, files in os.walk(resolved_path.as_posix()):
             relative_root = Path(root).relative_to(resolved_path)
-            dirs[:] = [d for d in dirs if d not in {'venv', '.venv'}] # Filter out virtualenv folders
+            dirs[:] = [d for d in dirs if d not in {'venv', '.venv'}]  # Filter out virtualenv folders
             for dir in dirs:
                 dst = remote_tmp_dir.joinpath(relative_root).joinpath(dir).as_posix()
                 self.remote_conn.mkdir(dst)
