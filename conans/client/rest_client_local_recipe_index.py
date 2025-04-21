@@ -162,6 +162,8 @@ class RestApiClientLocalRecipesIndex:
             sys.stderr = original_stderr
             ConanOutput(scope="local-recipes-index").debug(f"Internal export for {ref}:\n"
                                                            f"{textwrap.indent(export_err, '    ')}")
+        if new_ref.user != ref.user or new_ref.channel != ref.channel:
+            raise RecipeNotFoundException(ref)
         return new_ref
 
     @staticmethod
