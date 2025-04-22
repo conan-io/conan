@@ -552,6 +552,15 @@ def test_toolchain_crossbuild_to_android():
             assert 'export CC="clang"' not in content
             assert 'export CXX="clang++"' not in content
             assert 'export LD="/path/to/ndk' in content
+            assert 'export STRIP="/path/to/ndk' in content
+            assert 'export RANLIB="/path/to/ndk' in content
+            assert 'export AS="/path/to/ndk' in content
+            assert 'export AR="/path/to/ndk' in content
+            assert 'export ADDR2LINE="/path/to/ndk' in content
+            assert 'export NM="/path/to/ndk' in content
+            assert 'export OBJCOPY="/path/to/ndk' in content
+            assert 'export OBJDUMP="/path/to/ndk' in content
+            assert 'export READELF="/path/to/ndk' in content
             assert 'export ELFEDIT="/path/to/ndk' in content
 
             build_env = os.path.join(self.generators_folder, "conanbuildenv-x86_64.sh")
@@ -559,7 +568,16 @@ def test_toolchain_crossbuild_to_android():
             assert 'export CC="clang"' in content
             assert 'export CXX="clang++"' in content
             assert 'export LD=' not in content
-            assert 'export ELFEDIT=' not in content
+            assert 'export STRIP="/path/to/ndk' not in content
+            assert 'export RANLIB="/path/to/ndk' not in content
+            assert 'export AS="/path/to/ndk' not in content
+            assert 'export AR="/path/to/ndk' not in content
+            assert 'export ADDR2LINE="/path/to/ndk' not in content
+            assert 'export NM="/path/to/ndk' not in content
+            assert 'export OBJCOPY="/path/to/ndk' not in content
+            assert 'export OBJDUMP="/path/to/ndk' not in content
+            assert 'export READELF="/path/to/ndk' not in content
+            assert 'export ELFEDIT="/path/to/ndk' not in content
     """)
     client = TestClient()
     client.save({
