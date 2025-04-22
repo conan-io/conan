@@ -196,8 +196,9 @@ vuln_html = """
           <td>{{ vuln.package }}</td>
           <td>{{ vuln.vuln_id }}</td>
           <td>
+            <span style="display: none">{% if severity_id == 'N/A' %}-1{% else %}{{ severity_id }}{% endif %}</span>
             {% if vuln.severity not in ['N/A', ''] %}
-              <span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span>
+              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
