@@ -502,3 +502,87 @@ def test_conf_extra_apple_flags(toolchain):
     assert 'CXXFLAGS="$CXXFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
     assert 'CFLAGS="$CFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
     assert 'LDFLAGS="$LDFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+
+
+def test_toolchain_crossbuild_to_android():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/17441
+    """
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    host = textwrap.dedent("""
+    [settings]
+    os = Android
+    os.api_level = 21
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [buildenv]
+    CC=clang
+    CXX=clang++
+
+    [conf]
+    tools.android:ndk_path=/path/to/ndk
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "GnuToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="clang"' not in content
+            assert 'export CXX="clang++"' not in content
+            assert 'export LD="/path/to/ndk' in content
+            assert 'export STRIP="/path/to/ndk' in content
+            assert 'export RANLIB="/path/to/ndk' in content
+            assert 'export AS="/path/to/ndk' in content
+            assert 'export AR="/path/to/ndk' in content
+            assert 'export ADDR2LINE="/path/to/ndk' in content
+            assert 'export NM="/path/to/ndk' in content
+            assert 'export OBJCOPY="/path/to/ndk' in content
+            assert 'export OBJDUMP="/path/to/ndk' in content
+            assert 'export READELF="/path/to/ndk' in content
+            assert 'export ELFEDIT="/path/to/ndk' in content
+
+            build_env = os.path.join(self.generators_folder, "conanbuildenv-x86_64.sh")
+            content = load(self, build_env)
+            assert 'export CC="clang"' in content
+            assert 'export CXX="clang++"' in content
+            assert 'export LD=' not in content
+            assert 'export STRIP="/path/to/ndk' not in content
+            assert 'export RANLIB="/path/to/ndk' not in content
+            assert 'export AS="/path/to/ndk' not in content
+            assert 'export AR="/path/to/ndk' not in content
+            assert 'export ADDR2LINE="/path/to/ndk' not in content
+            assert 'export NM="/path/to/ndk' not in content
+            assert 'export OBJCOPY="/path/to/ndk' not in content
+            assert 'export OBJDUMP="/path/to/ndk' not in content
+            assert 'export READELF="/path/to/ndk' not in content
+            assert 'export ELFEDIT="/path/to/ndk' not in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": consumer
+    })
+    client.run("create . -pr:h host -pr:b build")
