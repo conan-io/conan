@@ -10,7 +10,7 @@ from conan.internal.model.recipe_ref import RecipeReference
 from conans.util.files import save, load
 
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
-CYPHER_KEY = os.environ.pop('CONAN_AUDIT_ENCRYPTION_KEY', "private")
+CYPHER_KEY = "private"
 
 
 class AuditAPI:
