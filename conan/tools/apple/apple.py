@@ -80,8 +80,8 @@ def apple_min_version_flag(conanfile):
         "watchsimulator": f"-mwatchos-simulator-version-min={os_version}",
         "appletvos": f"-mtvos-version-min={os_version}",
         "appletvsimulator": f"-mtvos-simulator-version-min={os_version}",
-        "xros": f"-target arm64-apple-xros{os_version}",
-        "xrsimulator": f"-target arm64-apple-xros{os_version}-simulator",
+        "xros": f"--target=arm64-apple-xros{os_version}",
+        "xrsimulator": f"--target=arm64-apple-xros{os_version}-simulator",
     }.get(os_sdk, "")
 
 
