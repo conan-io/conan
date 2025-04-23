@@ -64,6 +64,8 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', None, None),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', '10.11', None),
+    ('armv8', 'visionOS', '1.0', 'xros'),
+    ('armv8', 'visionOS', '1.0', 'xrsimulator')
 ])
 def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     profile = textwrap.dedent("""

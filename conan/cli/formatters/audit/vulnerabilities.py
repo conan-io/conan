@@ -132,17 +132,17 @@ vuln_html = """
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #333; color: #ffffff; }
     .container { width: 80%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
     h1 { text-align: center; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; padding-top: 10px;}
-    col.pkg-col { min-width: 100px; }
-    col.id-col { min-width: 160px; }
-    col.sev-col { min-width: 100px; }
-    col.score-col { min-width: 120px; }
-    col.desc-col { }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; padding-top: 10px;}
+    col.pkg-col   { width: 15%; }
+    col.id-col    { width: 15%; }
+    col.sev-col   { width: 15%; }
+    col.score-col { width: 15%; }
+    col.desc-col  { width: 40%; }
     thead { background: #333; color: #fff; }
     thead th { padding: 12px; text-align: left; }
     tbody tr { border-bottom: 1px solid #ddd; }
     tbody tr:hover { background: #f0f0f0; }
-    td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; }
+    td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;}
     .severity-badge { padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold; display: inline-block; }
     .severity-Critical { background: #d9534f; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217,83,79,0.7); } 70% { box-shadow: 0 0 0 12px rgba(217,83,79,0); } 100% { box-shadow: 0 0 0 0 rgba(217,83,79,0); } }
@@ -196,8 +196,9 @@ vuln_html = """
           <td>{{ vuln.package }}</td>
           <td>{{ vuln.vuln_id }}</td>
           <td>
+            <span style="display: none">{% if severity_id == 'N/A' %}-1{% else %}{{ severity_id }}{% endif %}</span>
             {% if vuln.severity not in ['N/A', ''] %}
-              <span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span>
+              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
