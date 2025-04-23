@@ -5,7 +5,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
@@ -348,19 +347,14 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
-<<<<<<< HEAD
-#@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows msys2")
-=======
 @pytest.mark.skipif(platform.system() != "Windows", reason="Using msys2")
->>>>>>> develop2
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
 
     def test_msys2_autotools_windows(self):
         c = TestClient(path_with_spaces=False)
         c.run("new autotools_lib -d name=hello -d version=1.0")
-        # TODO: Can we reduce the configuration? maybe path=bash can be defaulted?
+        # TODO: Can we reduce the configuration, maybe path=bash can be defaulted?
         msys2 = textwrap.dedent("""
             include(default)
             [conf]
