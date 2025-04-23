@@ -185,7 +185,7 @@ class PrivateProvider:
             return None
 
         error_msgs = filter(bool, [_replace_message(error["message"]) for error in errors])
-        return {"details": next(error_msgs, "Unknown error")}
+        return next(error_msgs, "Unknown error")
 
     def _get(self, ref):
         full_query = self._build_query(ref)

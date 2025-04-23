@@ -35,18 +35,10 @@ def text_vuln_formatter(result):
         lines.append(" " * indent + txt)
         return "\n".join(lines)
 
-    response, errors_in_response = result
-
-    #FIXME: check if this makes sense
-    if not response or "data" not in response or not response["data"]:
-        if not errors_in_response:
-            cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-        return
-
     total_vulns = 0
     summary_lines = []
 
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
 
