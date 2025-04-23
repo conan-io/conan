@@ -40,8 +40,8 @@ class ConanCenterProvider:
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
 
-        result = {"data": {}}
-        errors_in_response = False
+        result = {"data": {}, "error": ""}
+
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
             response = self._session.post(self._query_url, headers=build_headers(self._token),
@@ -62,7 +62,7 @@ class ConanCenterProvider:
                                     f" - Set a valid token using: 'conan audit provider auth {self.name} --token=<your_token>'\n"
                                     f" - If you don’t have a token, register at: https://audit.conan.io/register")
 
-                errors_in_response = True
+                result["error"] = f"Authentication error ({response.status_code})."
                 break
             elif response.status_code == 429:
                 reset_seconds = int(response.headers.get("retry-after", 0))
@@ -93,19 +93,21 @@ class ConanCenterProvider:
                 output.write("https://jfrog.com/devops-native-security/", newline=True,
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
+
+                # FIXME: check if we can take all these messages to the formatters
                 ConanOutput().error("Rate limit exceeded.\n")
-                errors_in_response = True
+                result["error"] = f"Rate limit exceeded.\n"
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user
                 ConanOutput().error(f"Internal server error ({response.status_code})")
-                errors_in_response = True
+                result["error"] = f"Internal server error ({response.status_code})"
                 break
             else:
                 ConanOutput().error(f"Error in {ref} ({response.status_code})")
-                errors_in_response = True
+                result["error"] = f"Error in {ref} ({response.status_code})"
                 break
-        return result, errors_in_response
+        return result
 
 
 class PrivateProvider:
@@ -118,16 +120,24 @@ class PrivateProvider:
         self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
     def get_cves(self, refs):
-        result = {"data": {}}
+        if not self._token:
+            raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
+                                 f"Please authenticate using 'conan audit provider auth' and retry.")
+
+        result = {"data": {}, "error": ""}
+
         for ref in refs:
-            response = self._get(ref)
-            if "error" in response:
-                error_message = response['error']['details']
-                ConanOutput().error(error_message)
-                result["data"][str(ref)] = {"error": error_message}
-                return result, True
-            result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
-        return result, False
+            try:
+                response = self._get(ref)
+                if "error" in response:
+                    result["data"][str(ref)] = {"error": response["error"]}
+                else:
+                    result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
+            except Exception as e:
+                result["error"] = str(e)
+                break
+
+        return result
 
     @staticmethod
     def _build_query(ref):
@@ -179,11 +189,6 @@ class PrivateProvider:
 
     def _get(self, ref):
         full_query = self._build_query(ref)
-
-        if not self._token:
-            raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
-                                    f"Please authenticate using 'conan audit provider auth' and retry.")
-
         try:
             response = self._session.post(
                 self._query_url,
@@ -204,7 +209,7 @@ class PrivateProvider:
             # Raises if some HTTP error was found
             response.raise_for_status()
         except Exception as e:
-            return {"error": {"details": str(e)}}
+            raise e
 
         response_json = response.json()
         # filter the extensions key with graphql data
