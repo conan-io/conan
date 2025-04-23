@@ -4,17 +4,23 @@ from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
 
+def build_headers(token):
+    return {"Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {token}"}
+
+
 class ConanCenterProvider:
     def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
         self.type = provider_data["type"]
-        self.token = provider_data.get("token")
+        self._token = provider_data.get("token")
         self._session = conan_api.remotes.requester
         self._query_url = urljoin(self.url, "api/v1/query")
 
     def get_cves(self, refs):
-        if not self.token:
+        if not self._token:
             from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
             if self.name == CONAN_CENTER_AUDIT_PROVIDER_NAME:
                 output = ConanOutput()
@@ -34,15 +40,11 @@ class ConanCenterProvider:
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
 
-        headers = {"Content-Type": "application/json",
-                   "Accept": "application/json",
-                   "Authorization": f"Bearer {self.token}"}
-
         result = {"data": {}}
         errors_in_response = False
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
-            response = self._session.post(self._query_url, headers=headers,
+            response = self._session.post(self._query_url, headers=build_headers(self._token),
                                           json={"reference": str(ref)})
             if response.status_code == 200:
                 result["data"].setdefault(str(ref), {}).update(response.json()["data"]["query"])
@@ -51,9 +53,8 @@ class ConanCenterProvider:
                                       f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
                                       f"Please ensure the package exists in the official repository: https://conan.io/center\n"
                                       f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
-                # errors_in_response = True
+                result["data"][str(ref)] = {"error": f"Package '{ref}' not scanned: Not found."}
                 continue
-
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
                 ConanOutput().error(f"Authentication error ({response.status_code}).\n"
@@ -112,7 +113,7 @@ class PrivateProvider:
         self.name = name
         self.url = provider_data["url"]
         self.type = provider_data["type"]
-        self.data = provider_data
+        self._token = provider_data.get("token")
         self._session = conan_api.remotes.requester
         self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
@@ -121,8 +122,9 @@ class PrivateProvider:
         for ref in refs:
             response = self._get(ref)
             if "error" in response:
-                ConanOutput().error(response['error']['details'])
-                result["error"] = response["error"]
+                error_message = response['error']['details']
+                ConanOutput().error(error_message)
+                result["data"][str(ref)] = {"error": error_message}
                 return result, True
             result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
         return result, False
@@ -177,16 +179,15 @@ class PrivateProvider:
 
     def _get(self, ref):
         full_query = self._build_query(ref)
-        try:
-            headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-            if self.data.get("token"):
-                headers["Authorization"] = f"Bearer {self.data['token']}"
-            elif self.data.get("user") and self.data.get("password"):
-                headers["Authorization"] = f"Basic {self.data['user']}:{self.data['password']}"
 
+        if not self._token:
+            raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
+                                    f"Please authenticate using 'conan audit provider auth' and retry.")
+
+        try:
             response = self._session.post(
                 self._query_url,
-                headers=headers,
+                headers=build_headers(self._token),
                 json={
                     "query": textwrap.dedent(full_query)
                 }
