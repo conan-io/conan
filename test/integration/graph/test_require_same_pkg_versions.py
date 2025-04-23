@@ -218,7 +218,7 @@ def test_require_different_versions_transitive():
 
             def requirements(self):
                 version = "1.0" if self.name == "snippy" else "2.0"
-                self.requires(f"myqemu/{version}", visible=False, can_skip=False)
+                self.requires(f"myqemu/{version}", visible=False, no_skip=True)
 
             def package(self):
                 c = f'call "%1/myqemu.bat"' if platform.system() == "Windows" else f'"$1/myqemu.sh"'
