@@ -108,14 +108,9 @@ def text_vuln_formatter(result):
                       "the returned vulnerabilities to conan-research@jfrog.com.\n",
                       fg=Color.BRIGHT_GREEN)
 
-    if result["error"]:
-        raise ConanException(result["error"]["details"])
-
 
 def json_vuln_formatter(result):
     cli_out_write(json.dumps(result, indent=4))
-    if result["error"]:
-        raise ConanException(result["error"]["details"])
 
 
 def _render_vulns(vulns, template):
@@ -272,5 +267,3 @@ def html_vuln_formatter(result):
                 })
 
     cli_out_write(_render_vulns(vulns, vuln_html))
-    if result["error"]:
-        raise ConanException(result["error"]["details"])
