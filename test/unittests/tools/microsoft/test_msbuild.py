@@ -25,7 +25,7 @@ def test_msbuild_targets():
     msbuild = MSBuild(conanfile)
     cmd = msbuild.command('project.sln', targets=["static", "shared"])
 
-    assert '/target:static;shared' in cmd
+    assert '-target:static;shared' in cmd
 
 
 def test_msbuild_cpu_count():
@@ -40,12 +40,12 @@ def test_msbuild_cpu_count():
 
     msbuild = MSBuild(conanfile)
     cmd = msbuild.command('project.sln')
-    assert 'msbuild "project.sln" /p:Configuration="Release" /p:Platform=x64 /m:23' == cmd
+    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform=x64 -m:23' == cmd
 
     c.loads("tools.microsoft.msbuild:max_cpu_count=0")
     conanfile.conf = c.get_conanfile_conf(None)
     cmd = msbuild.command('project.sln')
-    assert 'msbuild "project.sln" /p:Configuration="Release" /p:Platform=x64 /m' == cmd
+    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform=x64 -m' == cmd
 
 
 def test_msbuild_toolset():

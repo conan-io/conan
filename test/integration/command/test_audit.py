@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import sys
 from contextlib import contextmanager
 
@@ -105,6 +106,13 @@ def test_conan_audit_paths():
             "it using: 'conan audit provider add conancenter --url=https://audit.conan.io/ "
             "--type=conan-center-proxy --token=<token>'") in tc.out
     assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
+
+    if platform.system() != "Windows":
+        providers_stat = os.stat(os.path.join(tc.cache_folder, "audit_providers.json"))
+        # Assert that only the current user can read/write the file
+        assert providers_stat.st_uid == os.getuid()
+        assert providers_stat.st_gid == os.getgid()
+        assert providers_stat.st_mode & 0o777 == 0o600
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10),

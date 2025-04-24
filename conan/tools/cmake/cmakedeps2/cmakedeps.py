@@ -174,6 +174,7 @@ class _PathGenerator:
             "libdirs": "CMAKE_LIBRARY_PATH",
             "includedirs": "CMAKE_INCLUDE_PATH",
             "frameworkdirs": "CMAKE_FRAMEWORK_PATH",
+            "builddirs": "CMAKE_MODULE_PATH"
         }
         for req, dep in requirements:
             cppinfo = dep.cpp_info.aggregated_components()
@@ -209,6 +210,10 @@ class _PathGenerator:
         {% endif %}
         {% if cmake_framework_path %}
         list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
+        {% endif %}
+        # Definition of CMAKE_MODULE_PATH to be able to include(module)
+        {% if cmake_module_path %}
+        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
         {% endif %}
         """)
         host_req = self._conanfile.dependencies.host
@@ -251,13 +256,15 @@ class _PathGenerator:
         cmake_library_path = self._get_cmake_paths(host_test_reqs, "libdirs")
         cmake_include_path = self._get_cmake_paths(host_test_reqs, "includedirs")
         cmake_framework_path = self._get_cmake_paths(host_test_reqs, "frameworkdirs")
+        cmake_module_path = self._get_cmake_paths(all_reqs, "builddirs")
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
                    "cmake_program_path": _join_paths(self._conanfile, cmake_program_path),
                    "cmake_library_path": _join_paths(self._conanfile, cmake_library_path),
                    "cmake_include_path": _join_paths(self._conanfile, cmake_include_path),
                    "cmake_framework_path": _join_paths(self._conanfile, cmake_framework_path),
-        }
+                   "cmake_module_path": _join_paths(self._conanfile, cmake_module_path)
+                   }
         content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 

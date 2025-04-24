@@ -151,6 +151,7 @@ jobs:
                 gcc
                 autoconf-wrapper
                 automake
+                libtool
 
       - name: Cache CMake and Bazel installations
         id: cache-tools

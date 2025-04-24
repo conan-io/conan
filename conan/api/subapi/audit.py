@@ -160,3 +160,5 @@ def _load_providers(providers_path):
 
 def _save_providers(providers_path, providers):
     save(providers_path, json.dumps(providers, indent=4))
+    # Make readable & writeable only by current user
+    os.chmod(providers_path, 0o600)
