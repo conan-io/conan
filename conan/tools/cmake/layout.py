@@ -41,7 +41,7 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         pass
 
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
-    config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
+    config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile, multi=multi)
     if config_build_folder:
         build_folder = os.path.join(build_folder, config_build_folder)
     if not multi and not user_defined_build:
@@ -60,7 +60,7 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_build_folder_custom_vars(conanfile):
+def get_build_folder_custom_vars(conanfile, multi):
     conanfile_vars = conanfile.folders.build_folder_vars
     build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars", check_type=list)
     if conanfile.tested_reference_str:
@@ -78,6 +78,9 @@ def get_build_folder_custom_vars(conanfile):
                 build_vars = conanfile_vars or []
         else:
             build_vars = conanfile_vars or []
+
+    if multi and "settings.build_type" in build_vars:
+        build_vars.remove("settings.build_type")
 
     ret = []
     for s in build_vars:

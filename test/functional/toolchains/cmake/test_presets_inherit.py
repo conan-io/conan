@@ -107,7 +107,7 @@ def test_inherit_custom_folders():
             settings = "os", "compiler", "build_type", "arch"
 
             def layout(self):
-                self.folders.build_folder_vars = ["settings.compiler", "settings.build_type"]
+                self.folders.build_folder_vars = ["settings.compiler"]
                 cmake_layout(self)
 
             def generate(self):
@@ -155,8 +155,10 @@ def test_inherit_custom_folders():
     print(c.out)
     print(c.load("ConanCMakePresets.json"))
     print(c.load("build/gcc/generators/CMakePresets.json"))
+
     c.run(f"install . --build=missing -s build_type=Debug {conf}")
     print(c.out)
+    print(c.load("ConanCMakePresets.json"))
     print(c.load("build/gcc/generators/CMakePresets.json"))
     c.run_command("cmake --list-presets")
     print(c.out)

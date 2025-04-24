@@ -1288,29 +1288,6 @@ def test_build_folder_vars_self_name_version():
     assert "conan-windows-pkg-0.1-debug" in presets
 
 
-def test_recipe_build_folders_vars_empty():
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.cmake import cmake_layout
-
-        class Conan(ConanFile):
-            name = "pkg"
-            version = "0.1"
-            settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeToolchain"
-
-            def layout(self):
-                self.folders.build_folder_vars = ["settings.compiler", "settings.build_type"]
-                cmake_layout(self)
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run("install . -s os=Windows -s compiler=gcc -s compiler.version=10 "
-               "-s compiler.libcxx=libstdc++11 -s arch=armv8 -s build_type=Debug")
-    presets = client.load("build/gcc-debug/generators/CMakePresets.json")
-    assert "conan-gcc-debug" in presets
-
-
 def test_build_folder_vars_constants_user():
     c = TestClient()
     conanfile = textwrap.dedent("""
