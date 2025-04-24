@@ -59,7 +59,8 @@ def test_conan_audit_paths():
                     ]
                 }
             }
-        }
+        },
+        "error": None
     }
 
     tc = TestClient(light=True)
@@ -86,13 +87,13 @@ def test_conan_audit_paths():
 
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
-        tc.run("audit list zlib/1.2.11")
+        tc.run("audit list zlib/1.2.11", assert_error=True)
         assert "You have exceeded the number of allowed requests" in tc.out
         assert "The limit will reset in 1 minute" in tc.out
 
     with proxy_response(400, {"error": "Not found"}):
         tc.run("audit list zlib/1.2.11")
-        assert "Package 'zlib/1.2.11' not found" in tc.out
+        assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.out
 
     tc.run("audit provider add myprivate --url=foo --type=private --token=valid_token")
 
