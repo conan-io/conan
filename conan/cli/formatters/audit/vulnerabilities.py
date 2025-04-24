@@ -88,8 +88,7 @@ def text_vuln_formatter(result):
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
 
-    if total_vulns > 0 or not "error" in result:
-        cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
+    cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
 
     if total_vulns > 0:
         cli_out_write("\nSummary:\n", fg=Color.BRIGHT_WHITE)
