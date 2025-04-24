@@ -727,6 +727,32 @@ class TestGitBasicSCMFlow:
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
+    def test_fetch_commit(self):
+        """ Testing fetch commit
+        """
+        url = git_create_bare_repo()
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone "file://{}" .'.format(url))
+        c.save({"conanfile.py": self.conanfile_scm,
+                "src/myfile.h": "myheader!",
+                "CMakeLists.txt": "mycmake"})
+        c.run_command("git checkout -b mybranch")
+        git_add_changes_commit(folder=c.current_folder)
+        c.run_command("git push --set-upstream origin mybranch")
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+        c.run("upload * -c -r=default")
+        # Create an orphan commit by removing the branch
+        c.run_command("git push origin --delete mybranch")
+        rmdir(c.current_folder)  # Remove current folder to make sure things are not used from here
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install --requires=pkg/0.1@ --build=pkg*")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
+        assert "pkg/0.1: MYFILE: myheader!" in c2.out
+
 
 @pytest.mark.tool("git")
 class TestGitBasicSCMFlowSubfolder:
