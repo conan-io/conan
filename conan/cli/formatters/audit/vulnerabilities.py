@@ -228,9 +228,8 @@ vuln_html = """
 """
 
 def html_vuln_formatter(result):
-    response, errors_in_response = result
     vulns = []
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
             vulns.append({
@@ -263,5 +262,5 @@ def html_vuln_formatter(result):
                     "description": desc,
                     "references": references,
                 })
-    if not errors_in_response or response["data"]:
-        cli_out_write(_render_vulns(vulns, vuln_html))
+
+    cli_out_write(_render_vulns(vulns, vuln_html))

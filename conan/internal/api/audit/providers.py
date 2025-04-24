@@ -132,7 +132,7 @@ class PrivateProvider:
                 if "error" in response:
                     result["data"][str(ref)] = {"error": response["error"]}
                 else:
-                    result["data"].setdefault(str(ref), {}).update(response["data"]["query"])
+                    result["data"].setdefault(str(ref), {}).update(response.get("data",{}).get("query",{}))
             except Exception as e:
                 result["error"] = str(e)
                 break
