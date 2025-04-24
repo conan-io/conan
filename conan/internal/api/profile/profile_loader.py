@@ -126,9 +126,9 @@ class ProfileLoader:
         # Always include the root Conan home "profiles" folder as secondary route for loading
         # imports and includes from jinja2 templates.
         loader_paths = [base_path, profiles_folder]
-        rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
 
         try:
+            rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
             text = rtemplate.render(context)
         except Exception as e:
             raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "

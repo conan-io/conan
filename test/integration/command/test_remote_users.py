@@ -93,6 +93,7 @@ class TestUser:
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.run(r'remote login default lasote -p="my \"password"')
+        assert "Connecting to remote" not in client.out
         assert "Changed user of remote 'default' from 'None' (anonymous) to 'lasote'" in client.out
         client.run('remote logout default')
         client.run(r'remote login default lasote -p "my \"password"')

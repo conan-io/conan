@@ -203,6 +203,44 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
         assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
 
+    def test_unknown_handling(self):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        conanfile = textwrap.dedent(f"""
+                            from conan import ConanFile
+                            from conan.tools.files import download
+                            class Pkg2(ConanFile):
+                                name = "pkg"
+                                version = "1.0"
+                                def source(self):
+                                    download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                             sha256="{sha256}")
+                            """)
+
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['origin']\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backups/"})
+
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source .")
+        json_path = os.path.join(self.download_cache_folder, "s", sha256 + ".json")
+        contents = json.loads(load(json_path))
+        assert "unknown" in contents["references"]
+
+        s_folder = os.path.join(self.download_cache_folder, "s")
+        assert len(os.listdir(s_folder)) == 2
+
+        self.client.run("export .")
+        self.client.run("upload * -c -r=default")
+        assert "No backup sources files to upload" in self.client.out
+
+        self.client.run("cache clean --backup-sources")
+        assert len(os.listdir(s_folder)) == 0
+
     def test_download_origin_first(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
 

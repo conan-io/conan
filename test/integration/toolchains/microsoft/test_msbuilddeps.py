@@ -61,14 +61,14 @@ def test_msbuilddeps_import_condition(build_type, arch, configuration, exp_platf
                 ms.platform = self.options.platform
                 ms.generate()
         """)
-    
+
     # Remove custom set of keys to test default values
     app = app.replace(f'ms.configuration_key = "{config_key}"', "") if config_key is None else app
     app = app.replace(f'ms.platform_key = "{platform_key}"', "") if platform_key is None else app
     config_key_expected = "Configuration" if config_key is None else config_key
     platform_key_expected = "Platform" if platform_key is None else platform_key
-    
-    client.save({"app/conanfile.py": app, 
+
+    client.save({"app/conanfile.py": app,
                  "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("header-library")})
     client.run("create lib")
     client.run(f'install app -s build_type={build_type} -s arch={arch} -o *:platform={exp_platform} -o *:configuration="{configuration}"')
@@ -181,18 +181,12 @@ class TestMSBuildDepsSkips:
 def test_msbuilddeps_relocatable(withdepl):
     c = TestClient()
     c.save({
-        "libh/conanfile.py": GenConanfile("libh", "0.1")
-            .with_package_type("header-library"),
-        "libs/conanfile.py": GenConanfile("libs", "0.2")
-            .with_package_type("static-library")
-            .with_requires("libh/0.1"),
-        "libd/conanfile.py": GenConanfile("libd", "0.3")
-            .with_package_type("shared-library"),
-        "app/conanfile.py": GenConanfile()
-            .with_requires("libh/0.1")
-            .with_requires("libs/0.2")
-            .with_requires("libd/0.3")
-            .with_settings("arch", "build_type"),
+        "libh/conanfile.py": GenConanfile("libh", "0.1").with_package_type("header-library"),
+        "libs/conanfile.py": GenConanfile("libs", "0.2").with_package_type("static-library")
+                                                        .with_requires("libh/0.1"),
+        "libd/conanfile.py": GenConanfile("libd", "0.3").with_package_type("shared-library"),
+        "app/conanfile.py": GenConanfile().with_requires("libh/0.1", "libs/0.2", "libd/0.3")
+                                          .with_settings("arch", "build_type"),
     })
 
     c.run("create libh")
@@ -206,7 +200,7 @@ def test_msbuilddeps_relocatable(withdepl):
         value = text.split(f"<{marker}>")[1].split(f"</{marker}>")[0]
         if withdepl:
             # path should be relative, since artifacts are moved along with project
-            prefix = '$(MSBuildThisFileDirectory)/'
+            prefix = '$(MSBuildThisFileDirectory)\\'
             assert value.startswith(prefix)
             tail = value[len(prefix):]
             assert not os.path.isabs(tail)
@@ -222,5 +216,5 @@ def test_msbuilddeps_relocatable(withdepl):
         for fn in propsfiles:
             text = c.load(fn)
             text = text.replace('\\', '/')
-            dir = c.current_folder.replace('\\', '/')
-            assert dir not in text
+            folder = c.current_folder.replace('\\', '/')
+            assert folder not in text

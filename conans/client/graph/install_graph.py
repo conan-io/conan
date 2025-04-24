@@ -66,7 +66,7 @@ class _InstallPackageReference:
         self.nodes.append(node)
 
     def _build_args(self):
-        if self.binary != BINARY_BUILD:
+        if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
@@ -126,6 +126,15 @@ class _InstallRecipeReference:
             if package.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
                 return True
         return False
+
+    def reduce(self):
+        result = _InstallRecipeReference()
+        result.ref = self.ref
+        result._node = self._node
+        result.depends = self.depends
+        result.packages = {pid: pkg for pid, pkg in self.packages.items()
+                           if pkg.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)}
+        return result
 
     @property
     def node(self):
@@ -236,6 +245,9 @@ class _InstallConfiguration:
     def need_build(self):
         return self.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
 
+    def reduce(self):
+        return self
+
     @property
     def pref(self):
         return PkgReference(self.ref, self.package_id, self.prev)
@@ -278,7 +290,7 @@ class _InstallConfiguration:
                     self.depends.append(dep.dst.pref)
 
     def _build_args(self):
-        if self.binary != BINARY_BUILD:
+        if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
         cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
@@ -436,7 +448,7 @@ class InstallGraph:
         result = {}
         for k, node in self._nodes.items():
             if node.need_build:
-                result[k] = node
+                result[k] = node.reduce()
             else:  # Eliminate this element from the graph
                 dependencies = node.depends
                 # Find all consumers

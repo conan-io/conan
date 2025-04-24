@@ -1,8 +1,10 @@
 import gzip
 import os
+import stat
 import platform
 import shutil
 import subprocess
+from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
@@ -263,6 +265,84 @@ def chdir(conanfile, newdir):
         os.chdir(old_path)
 
 
+def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=None, execute:Optional[bool]=None, recursive:bool=False):
+    """Change file or directory permissions cross-platform.
+
+    .. versionadded:: 2.15
+
+    This function is a simple wrapper around the chmod Unix command, but it is cross-platform supported.
+    It is indicated to use it instead of os.stat + os.chmod, as it only changes the permissions of the
+    directory or file for the owner and avoids issues with the umask.
+    On Windows is limited to changing write permission only.
+
+    Parameters
+    ----------
+    conanfile : object
+        The current recipe object. Always use ``self``.
+    path : str
+        Path to the file or directory whose permissions will be changed.
+    read : bool, optional
+        If ``True``, the file or directory will be given read permissions for owner user.
+        If ``False``, the read permission will be removed.
+        If ``None``, the read permission will be left unchanged.
+        Defaults to None.
+    write : bool, optional
+        If ``True``, the file or directory will be given write permissions for owner user.
+        If ``False``, the write permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    execute : bool, optional
+        If ``True``, the file or directory will be given execute permissions for owner user.
+        If ``False``, the execution permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    recursive : bool
+        If ``True``, the permissions will be applied recursively to all files and directories
+        inside the specified directory. If ``False``, only the specified file or directory will
+        be changed. Defaults to False.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    .. code-block:: python
+        :caption: Add execution permission to a packaged bash script
+
+        from conan.tools.files import chmod
+        chmod(self, os.path.join(self.package_folder, "bin", "script.sh"), execute=True)
+    """
+    if read is None and write is None and execute is None:
+        raise ConanException("Could not change permission: At least one of the permissions should be set.")
+
+    if not os.path.exists(path):
+        raise ConanException(f"Could not change permission: Path \"{path}\" does not exist.")
+
+    def _change_permission(it_path:str):
+        mode = os.stat(it_path).st_mode
+        permissions = [
+            (read, stat.S_IRUSR),
+            (write, stat.S_IWUSR),
+            (execute, stat.S_IXUSR)
+        ]
+        for enabled, mask in permissions:
+            if enabled is None:
+                continue
+            elif enabled:
+                mode |= mask
+            else:
+                mode &= ~mask
+        os.chmod(it_path, mode)
+
+    if recursive:
+        for root, _, files in os.walk(path):
+            for file in files:
+                _change_permission(os.path.join(root, file))
+    else:
+        _change_permission(path)
+
+
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
           strip_root=False, extract_filter=None):
     """
@@ -356,15 +436,14 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
-    with FileProgress(filename, msg="Uncompressing") as fileobj, tarfile.TarFile.open(fileobj=fileobj, mode='r:*') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
         if not pattern and not strip_root:
-            # Simple case: extract everything
             tarredgzippedFile.extractall(destination)
         else:
-            # Read members one by one and process them
             common_folder = None
+            members = []
             for member in tarredgzippedFile:
                 if pattern and not fnmatch(member.name, pattern):
                     continue  # Skip files that don’t match the pattern
@@ -380,7 +459,6 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                             raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
                     if not name.startswith(common_folder):
                         raise ConanException("The tgz file contains more than 1 folder in the root")
-
                     # Adjust the member's name for extraction
                     member.name = name[len(common_folder) + 1:]
                     member.path = member.name
@@ -388,9 +466,10 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         # https://github.com/conan-io/conan/issues/11065
                         member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
-                # Extract file one by one, avoiding `extractall()` with members parameter:
-                # This will avoid a first whole file read resulting in a performant improvement around 25%
-                tarredgzippedFile.extract(member, path=destination)
+                # Let's gather each member
+                members.append(member)
+            tarredgzippedFile.extractall(destination, members=members)
+
 
 def check_sha1(conanfile, file_path, signature):
     """

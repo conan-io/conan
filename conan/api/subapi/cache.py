@@ -24,7 +24,7 @@ class CacheAPI:
 
     def export_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export", ref_layout.export())
 
@@ -36,13 +36,13 @@ class CacheAPI:
 
     def export_source_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export_sources", ref_layout.export_sources())
 
     def source_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "source", ref_layout.source())
 

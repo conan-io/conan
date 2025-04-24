@@ -111,10 +111,8 @@ class PkgCache:
     def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
         """
-        if ref.revision is None:  # Latest one
-            ref_data = self._db.get_latest_recipe(ref)
-        else:
-            ref_data = self._db.get_recipe(ref)
+        assert ref.revision is not None
+        ref_data = self._db.get_recipe(ref)
         ref_path = ref_data.get("path")
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))

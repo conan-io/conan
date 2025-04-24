@@ -17,7 +17,7 @@ def test_cps():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["license"] == "MIT"
@@ -39,7 +39,7 @@ def test_cps_static_lib():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["configurations"] == ["release"]
@@ -56,7 +56,7 @@ def test_cps_header():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert "configurations" not in "pkg"
@@ -173,7 +173,7 @@ def test_extended_cpp_info():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["default_components"] == ["pkg"]

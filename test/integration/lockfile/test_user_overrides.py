@@ -435,3 +435,25 @@ class TestLockUpgrade:
         lock = c.load("conan.lock")
         assert "libd/1.1" in lock
         assert "libd/1.2" not in lock
+
+
+    def test_lock_upgrade_new_requirement(self):
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_requires("libb/1.0"),
+                "libb/conanfile.py": GenConanfile("libb").with_requires("libc/1.0"),
+                "libc/conanfile.py": GenConanfile("libc"),
+                "libd/conanfile.py": GenConanfile("libd")})
+        c.run(f"export liba --version=1.0")
+        c.run(f"export libb --version=1.0")
+        c.run(f"export libc --version=1.0")
+        c.run(f"export libd --version=1.0")
+        c.save({f"conanfile.py": GenConanfile().with_requires(f"liba/[>=1.0 <2]")})
+        c.run("lock create .")
+
+        c.save({"libb/conanfile.py": GenConanfile("libb").with_requires("libd/1.0")})
+        c.run(f"export libb --version=2.0")
+        c.run("lock upgrade --requires='libb/[>=2]' --update-requires='libb/*'")
+        lock = c.load("conan.lock")
+        assert "libb/2.0" in lock
+        assert "libd/1.0" in lock
+        assert "libc/1.0" in lock  # TODO: libc should be removed from lockfile? It is not required anymore...

@@ -20,6 +20,11 @@ class TestHelp:
         assert "The most similar command is" in c.out
         assert "install" in c.out
 
+        c.run("remole", assert_error=True)
+        assert "The most similar commands are" in c.out
+        assert "remove" in c.out
+        assert "remote" in c.out
+
     def test_help(self):
         c = TestClient()
         c.run("-h")

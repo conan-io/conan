@@ -29,6 +29,7 @@ class GraphBinariesAnalyzer:
         self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
+        self._hook_manager = conan_app.conan_api.config.hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
@@ -397,7 +398,7 @@ class GraphBinariesAnalyzer:
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._modes, config_version=config_version)
+        compute_package_id(node, self._modes, config_version, self._hook_manager)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -458,7 +459,7 @@ class GraphBinariesAnalyzer:
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._modes, config_version=config_version)
+                compute_package_id(node, self._modes, config_version, self._hook_manager)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):
@@ -502,7 +503,8 @@ class GraphBinariesAnalyzer:
 
                 # Finally accumulate all needed nodes for marking binaries as SKIP download
                 news_req = [r for r in deps_required
-                            if r.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE)
+                            if (r.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE)
+                                or any(req.no_skip for req in r.transitive_deps))
                             if r not in required_nodes]  # Avoid already expanded before
                 new_root_nodes.update(news_req)  # For expanding the next iteration
                 required_nodes.update(deps_required)

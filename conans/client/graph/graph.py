@@ -41,7 +41,7 @@ class TransitiveRequirement:
         return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
 
 
-class Node(object):
+class Node:
     def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
@@ -291,7 +291,7 @@ class Node(object):
         return Overrides.create(nodes)
 
 
-class Edge(object):
+class Edge:
     def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst
@@ -354,7 +354,7 @@ class Overrides:
         return result
 
 
-class DepsGraph(object):
+class DepsGraph:
     def __init__(self):
         self.nodes = []
         self.aliased = {}
@@ -417,13 +417,6 @@ class DepsGraph(object):
                 opened.pop(item)
 
         return result
-
-    def build_time_nodes(self):
-        """ return all the nodes in the graph that are build-requires (either directly or
-        transitively). Nodes that are both in requires and build_requires will not be returned.
-        This is used just for output purposes, printing deps, HTML graph, etc.
-        """
-        return [n for n in self.nodes if n.context == CONTEXT_BUILD]
 
     def report_graph_error(self):
         if self.error:

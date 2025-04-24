@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import os
+from collections import OrderedDict
 from urllib.parse import urlparse
 
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
@@ -8,6 +9,7 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanBasicApp
 from conans.client.rest.conan_requester import ConanRequester
+from conans.client.rest.remote_credentials import RemoteCredentials
 from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
@@ -29,14 +31,14 @@ class RemotesAPI:
 
     def __init__(self, conan_api):
         # This method is private, the subapi is not instantiated by users
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._home_folder = conan_api.home_folder
         self._remotes_file = HomePaths(self._home_folder).remotes_path
         # Wraps an http_requester to inject proxies, certs, etc
-        self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
+        self._requester = ConanRequester(self._conan_api.config.global_conf, self._conan_api.cache_folder)
 
     def reinit(self):
-        self._requester = ConanRequester(self.conan_api.config.global_conf, self.conan_api.cache_folder)
+        self._requester = ConanRequester(self._conan_api.config.global_conf, self._conan_api.cache_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -224,8 +226,28 @@ class RemotesAPI:
         :param username: the user login as ``str``
         :param password: password ``str``
         """
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         app.remote_manager.authenticate(remote, username, password)
+
+    def login(self, remotes, username=None, password=None):
+        creds = RemoteCredentials(self._conan_api.cache_folder, self._conan_api.config.global_conf)
+
+        ret = OrderedDict()
+        for r in remotes:
+            previous_info = self.user_info(r)
+
+            if username is not None and password is not None:
+                user, password = username, password
+            else:
+                user, password, _ = creds.auth(r, username)
+                if username is not None and username != user:
+                    raise ConanException(f"User '{username}' doesn't match user '{user}' in "
+                                         f"credentials.json or environment variables")
+
+            self.user_login(r, user, password)
+            info = self.user_info(r)
+            ret[r.name] = {"previous_info": previous_info, "info": info}
+        return ret
 
     def user_logout(self, remote: Remote):
         """
@@ -247,7 +269,7 @@ class RemotesAPI:
     def user_auth(self, remote: Remote, with_user=False, force=False):
         # TODO: Review
         localdb = LocalDB(self._home_folder)
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if with_user:
             user, token, _ = localdb.get_login(remote.url)
             if not user:

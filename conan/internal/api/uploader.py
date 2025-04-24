@@ -82,9 +82,9 @@ class PackagePreparator:
         self._app = app
         self._global_conf = global_conf
 
-    def prepare(self, upload_bundle, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle in upload_bundle.refs().items():
+        for ref, bundle in pkg_list.refs().items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -97,7 +97,7 @@ class PackagePreparator:
 
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in upload_bundle.prefs(ref, bundle).items():
+            for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
@@ -181,7 +181,7 @@ class PackagePreparator:
             clean_dirty(package_tgz)
 
         # Get all the files in that directory
-        # existing package, will use short paths if defined
+        # existing package
         package_folder = layout.package()
         files, symlinked_folders = gather_files(package_folder)
         files.update(symlinked_folders)

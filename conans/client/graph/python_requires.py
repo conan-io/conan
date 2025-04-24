@@ -20,7 +20,7 @@ class PyRequire(object):
                 "path": self.path}
 
 
-class PyRequires(object):
+class PyRequires:
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
