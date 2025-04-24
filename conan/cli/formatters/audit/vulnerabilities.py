@@ -49,7 +49,8 @@ def text_vuln_formatter(result):
         cli_out_write(border_line, fg=Color.BRIGHT_WHITE)
 
         if "error" in pkg_info:
-            cli_out_write(f"\n{pkg_info['error']}\n", fg=Color.BRIGHT_YELLOW)
+            details = pkg_info["error"].get("details", "")
+            cli_out_write(f"\n{details}\n", fg=Color.BRIGHT_YELLOW)
             continue
 
         if not count:

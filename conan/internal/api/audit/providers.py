@@ -126,7 +126,7 @@ class PrivateProvider:
             try:
                 response = self._get(ref)
                 if "error" in response:
-                    result["data"][str(ref)] = {"error": response["error"]}
+                    result["data"][str(ref)] = {"error": {"details": response["error"]}}
                 else:
                     result["data"][str(ref)] = response.get("data",{}).get("query",{})
             except Exception as e:
@@ -212,5 +212,5 @@ class PrivateProvider:
         response_json.pop('extensions', None)
 
         if "errors" in response_json:
-            return {"error": {"details": self._parse_error(response_json["errors"], ref)}}
+            return {"error": self._parse_error(response_json["errors"], ref)}
         return response_json
