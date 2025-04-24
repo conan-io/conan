@@ -513,10 +513,7 @@ class TestLibsComponents:
         engine::world -> engine::physix, matrix::module
         """
         c = matrix_client_components
-
-        from conan.test.assets.sources import gen_function_h
         bots_h = gen_function_h(name="bots")
-        from conan.test.assets.sources import gen_function_cpp
         bots_cpp = gen_function_cpp(name="bots", includes=["bots", "physix"], calls=["physix"])
         physix_h = gen_function_h(name="physix")
         physix_cpp = gen_function_cpp(name="physix", includes=["physix", "vector"], calls=["vector"])
@@ -637,10 +634,7 @@ class TestLibsComponents:
         cpp_info.libs = ["lib1", "lib2"]
         """
         c = TestClient()
-
-        from conan.test.assets.sources import gen_function_h
         vector_h = gen_function_h(name="vector")
-        from conan.test.assets.sources import gen_function_cpp
         vector_cpp = gen_function_cpp(name="vector", includes=["vector"])
         module_h = gen_function_h(name="module")
         module_cpp = gen_function_cpp(name="module", includes=["module"])
@@ -725,16 +719,13 @@ class TestLibsComponents:
         assert "module: Release!" in c.out
         assert "vector: Release!" in c.out
 
-    @pytest.mark.skip()
     def test_libs_components_multilib_component(self):
         """
         cpp_info.components["mycomp"].libs = ["lib1", "lib2"]
         """
         c = TestClient()
 
-        from conan.test.assets.sources import gen_function_h
         vector_h = gen_function_h(name="vector")
-        from conan.test.assets.sources import gen_function_cpp
         vector_cpp = gen_function_cpp(name="vector", includes=["vector"])
         module_h = gen_function_h(name="module")
         module_cpp = gen_function_cpp(name="module", includes=["module"])
