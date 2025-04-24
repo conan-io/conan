@@ -40,7 +40,7 @@ class ConanCenterProvider:
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
 
-        result = {"data": {}}
+        result = {"data": {}, "error": None}
 
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
@@ -120,7 +120,7 @@ class PrivateProvider:
             raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
                                  f"Please authenticate using 'conan audit provider auth' and retry.")
 
-        result = {"data": {}}
+        result = {"data": {}, "error": None}
 
         for ref in refs:
             try:
