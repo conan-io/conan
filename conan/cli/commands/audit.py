@@ -65,7 +65,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     deps_graph.report_graph_error()
 
     if deps_graph.error:
-        return {"error": deps_graph.error}
+        return {"conan_error": deps_graph.error}
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
