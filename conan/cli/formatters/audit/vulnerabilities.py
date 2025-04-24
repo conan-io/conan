@@ -239,7 +239,7 @@ def html_vuln_formatter(result):
     for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
-            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"]
+            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"].get("details", "")
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",
