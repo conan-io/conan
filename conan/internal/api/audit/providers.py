@@ -4,7 +4,7 @@ from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
 
-def build_headers(token):
+def _build_headers(token):
     return {"Content-Type": "application/json",
             "Accept": "application/json",
             "Authorization": f"Bearer {token}"}
@@ -44,7 +44,7 @@ class ConanCenterProvider:
 
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
-            response = self._session.post(self._query_url, headers=build_headers(self._token),
+            response = self._session.post(self._query_url, headers=_build_headers(self._token),
                                           json={"reference": str(ref)})
             if response.status_code == 200:
                 result["data"].setdefault(str(ref), {}).update(response.json()["data"]["query"])
@@ -188,7 +188,7 @@ class PrivateProvider:
         try:
             response = self._session.post(
                 self._query_url,
-                headers=build_headers(self._token),
+                headers=_build_headers(self._token),
                 json={
                     "query": textwrap.dedent(full_query)
                 }
