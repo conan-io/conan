@@ -47,7 +47,7 @@ class ConanCenterProvider:
             response = self._session.post(self._query_url, headers=_build_headers(self._token),
                                           json={"reference": str(ref)})
             if response.status_code == 200:
-                result["data"].setdefault(str(ref), {}).update(response.json()["data"]["query"])
+                result["data"][str(ref)] = response.json().get("data", {}).get("query", {})
             elif response.status_code == 400:
                 ConanOutput().warning(f"Package '{ref}' not found.\n"
                                       f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
@@ -128,7 +128,7 @@ class PrivateProvider:
                 if "error" in response:
                     result["data"][str(ref)] = {"error": response["error"]}
                 else:
-                    result["data"].setdefault(str(ref), {}).update(response.get("data",{}).get("query",{}))
+                    result["data"][str(ref)] = response.get("data",{}).get("query",{})
             except Exception as e:
                 result["error"] = str(e)
                 break
