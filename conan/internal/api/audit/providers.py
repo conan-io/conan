@@ -94,17 +94,13 @@ class ConanCenterProvider:
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
 
-                # FIXME: check if we can take all these messages to the formatters
-                ConanOutput().error("Rate limit exceeded.\n")
-                result["error"] = f"Rate limit exceeded.\n"
+                result["error"] = f"Rate limit exceeded."
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user
-                ConanOutput().error(f"Internal server error ({response.status_code})")
                 result["error"] = f"Internal server error ({response.status_code})"
                 break
             else:
-                ConanOutput().error(f"Error in {ref} ({response.status_code})")
                 result["error"] = f"Error in {ref} ({response.status_code})"
                 break
         return result

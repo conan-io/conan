@@ -3,6 +3,7 @@ import json
 from jinja2 import select_autoescape, Template
 
 from conan.api.output import cli_out_write, Color
+from conan.errors import ConanException
 
 severity_order = {
     "Critical": 4,
@@ -86,7 +87,9 @@ def text_vuln_formatter(result):
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
-    cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
+
+    if total_vulns > 0 or not "error" in result:
+        cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
 
     if total_vulns > 0:
         cli_out_write("\nSummary:\n", fg=Color.BRIGHT_WHITE)
@@ -97,16 +100,22 @@ def text_vuln_formatter(result):
                       "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
                       fg=Color.BRIGHT_YELLOW)
 
-    cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
-                  "https://jfrog.com/advanced-security/ for more information.\n",
-                  fg=Color.BRIGHT_GREEN)
-    cli_out_write("You can send questions and report issues about "
-                  "the returned vulnerabilities to conan-research@jfrog.com.\n",
-                  fg=Color.BRIGHT_GREEN)
+    if total_vulns > 0 or not "error" in result:
+        cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
+                      "https://jfrog.com/advanced-security/ for more information.\n",
+                      fg=Color.BRIGHT_GREEN)
+        cli_out_write("You can send questions and report issues about "
+                      "the returned vulnerabilities to conan-research@jfrog.com.\n",
+                      fg=Color.BRIGHT_GREEN)
+
+    if "error" in result:
+        raise ConanException(result["error"])
 
 
 def json_vuln_formatter(result):
     cli_out_write(json.dumps(result, indent=4))
+    if "error" in result:
+        raise ConanException(result["error"])
 
 
 def _render_vulns(vulns, template):
@@ -263,3 +272,5 @@ def html_vuln_formatter(result):
                 })
 
     cli_out_write(_render_vulns(vulns, vuln_html))
+    if "error" in result:
+        raise ConanException(result["error"])
