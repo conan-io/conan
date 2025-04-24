@@ -65,7 +65,7 @@ def test_build_require_undetected_loop():
 
         class DemoRecipe(ConanFile):
             name = "test"
-            version = "1."
+            version = "1.0"
 
             def requirements(self):
                 self.requires("cmake/3.31.6", build=True)
@@ -74,10 +74,14 @@ def test_build_require_undetected_loop():
                 self.tool_requires("cmake/3.31.6", options={
                     "bad": True # this doesn't need to be a valid option
                 })
+
+            def generate(self):
+                self.output.info(f"NUM DEPS: {len(self.dependencies.items())}")
         """)
-    c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.31.6").with_option("bad", [True, False])
-                                                                 .with_default_option("bad", True),
+    c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.31.6").with_shared_option(True),
             "app/conanfile.py": conanfile})
 
     c.run("create cmake")
     c.run("install app")
+    # It doesn't hang, and it sees correctly just 1 dependency
+    assert "conanfile.py (test/1.0): NUM DEPS: 1" in c.out

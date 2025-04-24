@@ -41,7 +41,7 @@ class TransitiveRequirement:
         return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
 
 
-class Node(object):
+class Node:
     def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
@@ -291,7 +291,7 @@ class Node(object):
         return Overrides.create(nodes)
 
 
-class Edge(object):
+class Edge:
     def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst
@@ -354,7 +354,7 @@ class Overrides:
         return result
 
 
-class DepsGraph(object):
+class DepsGraph:
     def __init__(self):
         self.nodes = []
         self.aliased = {}
