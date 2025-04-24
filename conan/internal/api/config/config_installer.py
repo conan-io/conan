@@ -14,18 +14,19 @@ from conans.util.runners import detect_runner
 
 class _ConanIgnoreMatcher:
     def __init__(self, conanignore_path, ignore=None):
-        conanignore_path = os.path.abspath(conanignore_path)
         self._ignored_entries = {".conanignore"}
         self._included_entries = set()
-        if os.path.exists(conanignore_path):
-            with open(conanignore_path, 'r') as conanignore:
-                for line in conanignore:
-                    line_content = line.split("#", maxsplit=1)[0].strip()
-                    if line_content:
-                        if line_content.startswith("!"):
-                            self._included_entries.add(line_content[1:])
-                        else:
-                            self._ignored_entries.add(line_content)
+        if conanignore_path is None or not os.path.exists(conanignore_path):
+            return
+        conanignore_path = os.path.abspath(conanignore_path)
+        with open(conanignore_path, 'r') as conanignore:
+            for line in conanignore:
+                line_content = line.split("#", maxsplit=1)[0].strip()
+                if line_content:
+                    if line_content.startswith("!"):
+                        self._included_entries.add(line_content[1:])
+                    else:
+                        self._ignored_entries.add(line_content)
         if ignore:
             self._ignored_entries.update(ignore)
 
@@ -127,13 +128,28 @@ def _process_file(directory, filename, config, cache_folder, folder):
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
+def _find_conaningore(folder):
+    """ Traverse from the given folder up to the root folder looking for a .conanignore file."""
+    conanignore_path = os.path.join(folder, '.conanignore')
+    while not os.path.exists(conanignore_path):
+        parent_folder = os.path.dirname(folder)
+        if parent_folder == folder:
+            break
+        folder = parent_folder
+        conanignore_path = os.path.join(folder, '.conanignore')
+    if os.path.exists(conanignore_path):
+        conanignore_path = os.path.abspath(conanignore_path)
+    else:
+        conanignore_path = None
+    return conanignore_path
+
 
 def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
-    conanignore_path = os.path.join(folder, '.conanignore')
+    conanignore_path = _find_conaningore(folder)
     conanignore = _ConanIgnoreMatcher(conanignore_path, ignore)
     for root, dirs, files in os.walk(folder):
         # .git is always ignored by default, even if not present in .conanignore
