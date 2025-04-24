@@ -108,13 +108,13 @@ def text_vuln_formatter(result):
                       fg=Color.BRIGHT_GREEN)
 
     if "error" in result:
-        raise ConanException(result["error"])
+        raise ConanException(result["error"].get("details", ""))
 
 
 def json_vuln_formatter(result):
     cli_out_write(json.dumps(result, indent=4))
     if "error" in result:
-        raise ConanException(result["error"])
+        raise ConanException(result["error"].get("details", ""))
 
 
 def _render_vulns(vulns, template):
@@ -272,4 +272,4 @@ def html_vuln_formatter(result):
 
     cli_out_write(_render_vulns(vulns, vuln_html))
     if "error" in result:
-        raise ConanException(result["error"])
+        raise ConanException(result["error"].get("details", ""))

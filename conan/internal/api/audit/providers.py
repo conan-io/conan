@@ -53,7 +53,7 @@ class ConanCenterProvider:
                                       f"Only libraries available in Conan Center can be queried for vulnerabilities.\n"
                                       f"Please ensure the package exists in the official repository: https://conan.io/center\n"
                                       f"If the package exists in the repository, please report it to conan-research@jfrog.com.\n")
-                result["data"][str(ref)] = {"error": f"Package '{ref}' not scanned: Not found."}
+                result["data"][str(ref)] = {"error": {"details": f"Package '{ref}' not scanned: Not found."}}
                 continue
             elif response.status_code == 403:
                 # TODO: How to report auth error to the user
@@ -62,7 +62,7 @@ class ConanCenterProvider:
                                     f" - Set a valid token using: 'conan audit provider auth {self.name} --token=<your_token>'\n"
                                     f" - If you don’t have a token, register at: https://audit.conan.io/register")
 
-                result["error"] = f"Authentication error ({response.status_code})."
+                result["error"] = {"details": f"Authentication error ({response.status_code})."}
                 break
             elif response.status_code == 429:
                 reset_seconds = int(response.headers.get("retry-after", 0))
@@ -94,14 +94,14 @@ class ConanCenterProvider:
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
 
-                result["error"] = f"Rate limit exceeded."
+                result["error"] = {"details": "Rate limit exceeded."}
                 break
             elif response.status_code == 500:
                 # TODO: How to report internal server error to the user
-                result["error"] = f"Internal server error ({response.status_code})"
+                result["error"] = {"details": f"Internal server error ({response.status_code})"}
                 break
             else:
-                result["error"] = f"Error in {ref} ({response.status_code})"
+                result["error"] = {"details": f"Error in {ref} ({response.status_code})"}
                 break
         return result
 
@@ -130,7 +130,7 @@ class PrivateProvider:
                 else:
                     result["data"][str(ref)] = response.get("data",{}).get("query",{})
             except Exception as e:
-                result["error"] = str(e)
+                result["error"] = {"details": str(e)}
                 break
 
         return result
@@ -212,5 +212,5 @@ class PrivateProvider:
         response_json.pop('extensions', None)
 
         if "errors" in response_json:
-            return {"error": self._parse_error(response_json["errors"], ref)}
+            return {"error": {"details": self._parse_error(response_json["errors"], ref)}}
         return response_json
