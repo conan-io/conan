@@ -181,7 +181,7 @@ class PrivateProvider:
 
         def _replace_message(message):
             if "not found" in message:
-                return f"{ref} was not found in the catalog"
+                return f"Package '{ref}' not scanned: Not found."
             return None
 
         error_msgs = filter(bool, [_replace_message(error["message"]) for error in errors])

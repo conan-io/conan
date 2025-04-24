@@ -106,9 +106,7 @@ def text_vuln_formatter(result):
 
 
 def json_vuln_formatter(result):
-    response, errors_in_response = result
-    if not errors_in_response or response["data"]:
-        cli_out_write(json.dumps(response, indent=4))
+    cli_out_write(json.dumps(result, indent=4))
 
 
 def _render_vulns(vulns, template):
@@ -232,13 +230,14 @@ def html_vuln_formatter(result):
     for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
+            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"]
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",
                 "aliases": [],
                 "severity": "N/A",
                 "score": "-",
-                "description": "No vulnerabilities found.",
+                "description": description,
                 "references": []
             })
         else:
