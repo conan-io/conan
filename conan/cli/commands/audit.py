@@ -36,7 +36,8 @@ def _parse_error_threshold(result: dict, error_level: float) -> None:
                 if preferred_base_score >= error_level:
                     result.update(
                         {"conan_error":
-                             "The conan audit command exceeded the threshold severity level."})
+                             f"The package {ref} has a CVSS score {preferred_base_score} and "
+                             f"exceeded the threshold severity level {error_level}."})
                     break
 
 

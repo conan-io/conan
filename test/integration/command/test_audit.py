@@ -273,3 +273,7 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
         tc.run(f"audit scan --requires=foobar/0.1.0 {severity_param}", assert_error=should_fail)
         assert "foobar/0.1.0 1 vulnerability found" in tc.out
         assert f"CVSS: {severity_level}" in tc.out
+        if should_fail:
+            if threshold is None:
+                threshold = "9.0"
+            assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
