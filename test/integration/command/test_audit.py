@@ -197,7 +197,7 @@ def test_audit_global_error_exception():
 
     mock_provider_result = {
         "data": {},
-        "error": {"details": "Fatal error."}
+        "conan_error": "Fatal error."
     }
 
     with patch("conan.api.conan_api.AuditAPI.list", return_value=mock_provider_result):
