@@ -1021,8 +1021,11 @@ def test_cmake_presets_not_forbidden_build_type():
     settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing", "settings.build_type"]\''
     client.run("install . {}".format(settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder,
-                                       "build/generators/conan_toolchain.cmake"))
+    if platform.system() == "Windows":
+        path = os.path.join(client.current_folder, "build/generators/conan_toolchain.cmake")
+    else:
+        path = os.path.join(client.current_folder, "build/release/generators/conan_toolchain.cmake")
+    assert os.path.exists(path)
 
 
 def test_resdirs_cmake_install():
