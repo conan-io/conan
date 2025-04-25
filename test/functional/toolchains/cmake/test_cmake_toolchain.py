@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import textwrap
 
 import pytest
@@ -747,14 +748,10 @@ def test_cmake_presets_options_single_config():
     for shared in (True, False):
         client.run("install . {} -o shared={}".format(conf_layout, shared))
         shared_str = "shared" if shared else "static"
-        assert os.path.exists(os.path.join(client.current_folder,
-                                           "build", "{}-release-{}".format(default_compiler, shared_str),
-                                           "generators"))
-
-    client.run("install . {}".format(conf_layout))
-    assert os.path.exists(os.path.join(client.current_folder,
-                                       "build", "{}-release-static".format(default_compiler),
-                                       "generators"))
+        # Multi-config the ``settings.build_type`` is ignored
+        folder = f"{default_compiler}-{shared_str}" if platform.system() == "Windows" \
+            else f"{default_compiler}-release-{shared_str}"
+        assert os.path.exists(os.path.join(client.current_folder, "build", folder, "generators"))
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
     assert os.path.exists(user_presets_path)
@@ -1025,7 +1022,7 @@ def test_cmake_presets_not_forbidden_build_type():
                       '\'["options.missing", "settings.build_type"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "build/release/generators/conan_toolchain.cmake"))
+                                       "build/generators/conan_toolchain.cmake"))
 
 
 def test_resdirs_cmake_install():
