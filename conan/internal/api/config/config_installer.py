@@ -18,7 +18,6 @@ class _ConanIgnoreMatcher:
         self._included_entries = set()
         if conanignore_path is None or not os.path.exists(conanignore_path):
             return
-        conanignore_path = os.path.abspath(conanignore_path)
         with open(conanignore_path, 'r') as conanignore:
             for line in conanignore:
                 line_content = line.split("#", maxsplit=1)[0].strip()

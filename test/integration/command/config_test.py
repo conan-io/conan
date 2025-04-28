@@ -165,7 +165,7 @@ def test_config_install_conanignore_ignore_all_allow_specific_workflow():
 
 @pytest.mark.parametrize("has_conanignore", [True, False])
 @pytest.mark.parametrize("folder", [None, "myfolder", "myfolder/subfolder"])
-def test_config_install_conanignore_march_directories(has_conanignore, folder):
+def test_config_install_conanignore_walk_directories(has_conanignore, folder):
     tc = TestClient(light=True)
     if has_conanignore:
         conanignore = "*"
