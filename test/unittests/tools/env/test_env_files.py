@@ -76,6 +76,8 @@ def check_env_files_output(cmd_, prevenv):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_env_files_bat(env, prevenv):
+    prevenv.update(dict(os.environ.copy()))  # Necessary from Python 3.12, for SYSTEMROOT var
+
     display = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
@@ -164,13 +166,13 @@ def test_relative_paths():
     os.chmod(os.path.join(scripts_folder, "myhello.sh"), 0o777)
 
     with chdir(folder):
-        env = Environment()
-        env.define_path("PATH", scripts_folder)
+        myenv = Environment()
+        myenv.define_path("PATH", scripts_folder)
         conanfile = ConanFileMock()
         conanfile.folders._base_generators = folder
-        env = env.vars(conanfile)
-        env.save_bat("test.bat")
-        env.save_sh("test.sh")
+        myenv = myenv.vars(conanfile)
+        myenv.save_bat("test.bat")
+        myenv.save_sh("test.sh")
         if platform.system() == "Windows":
             test_bat = load("test.bat")
             assert r'set "PATH=%~dp0\myscripts"' in test_bat
