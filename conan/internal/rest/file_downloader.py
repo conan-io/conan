@@ -4,7 +4,7 @@ import time
 
 
 from conan.api.output import ConanOutput, TimedOutput
-from conans.client.rest import response_to_str
+from conan.internal.rest import response_to_str
 from conan.internal.errors import ConanConnectionError, RequestErrorException, AuthenticationException, \
     ForbiddenException, NotFoundException
 from conan.errors import ConanException

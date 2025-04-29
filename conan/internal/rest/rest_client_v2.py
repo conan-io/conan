@@ -9,10 +9,10 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 
-from conans.client.downloaders.caching_file_downloader import ConanInternalCacheDownloader
-from conans.client.rest import response_to_str
-from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.file_uploader import FileUploader
+from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
+from conan.internal.rest import response_to_str
+from conan.internal.rest.client_routes import ClientV2Router
+from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException, \
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException

@@ -23,7 +23,7 @@ class TestDownloadCacheBackupSources:
             assert not url.startswith("http://myback")
             save(filepath, f"Hello, world!")
 
-        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+        with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
             client = TestClient(default_server_user=True, light=True)
             tmp_folder = temp_folder()
@@ -514,7 +514,7 @@ class TestDownloadCacheBackupSources:
         def custom_download(this, url, *args, **kwargs):
             raise NotFoundException()
 
-        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+        with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
             client = TestClient(default_server_user=True, light=True)
             download_cache_folder = temp_folder()
@@ -829,7 +829,7 @@ class TestDownloadCacheBackupSources:
 
         self.client.save({"conanfile.py": conanfile})
 
-        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader._download_file",
+        with mock.patch("conan.internal.rest.file_downloader.FileDownloader._download_file",
                         custom_download):
             self.client.run("source .", assert_error=True)
             # The mock does not actually download a file, let's add it for the test
@@ -871,7 +871,7 @@ class TestDownloadCacheBackupSources:
                             f"core.sources:upload_url={self.file_server.fake_url}/backup/"})
 
         self.client.save({"conanfile.py": conanfile})
-        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader._download_file",
+        with mock.patch("conan.internal.rest.file_downloader.FileDownloader._download_file",
                         custom_download):
             self.client.run("source .", assert_error=True)
 

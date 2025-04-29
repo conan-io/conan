@@ -93,7 +93,7 @@ def test_download_verify_ssl_conf():
     def custom_download(this, url, filepath, *args, **kwargs):
         did_verify[url] = args[2]
 
-    with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+    with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                     custom_download):
         client.run("create . -c tools.files.download:verify=True")
         assert did_verify["http://verify.true"]

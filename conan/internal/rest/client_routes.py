@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 from conan.api.model import RecipeReference
-from conans.client.rest.rest_routes import RestRoutes
+from conan.internal.rest.rest_routes import RestRoutes
 
 
 def _format_ref(url, ref):

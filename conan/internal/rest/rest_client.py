@@ -1,5 +1,5 @@
 from conan.internal import REVISIONS
-from conans.client.rest.rest_client_v2 import RestV2Methods
+from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
 
 CHECKSUM_DEPLOY = "checksum_deploy"  # capability

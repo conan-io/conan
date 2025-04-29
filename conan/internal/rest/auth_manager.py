@@ -11,8 +11,8 @@ Flow:
 """
 
 from conan.api.output import ConanOutput
-from conans.client.rest.remote_credentials import RemoteCredentials
-from conans.client.rest.rest_client import RestApiClient
+from conan.internal.rest.remote_credentials import RemoteCredentials
+from conan.internal.rest.rest_client import RestApiClient
 from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.errors import ConanException
 

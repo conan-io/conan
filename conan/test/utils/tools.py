@@ -505,7 +505,7 @@ class TestClient:
     @contextmanager
     def mocked_servers(self, requester=None):
         _req = requester or TestRequester(self.servers)
-        with mock.patch("conans.client.rest.conan_requester.requests", _req):
+        with mock.patch("conan.internal.rest.conan_requester.requests", _req):
             yield
 
     @contextmanager

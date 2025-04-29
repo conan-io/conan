@@ -12,8 +12,8 @@ from conan.test.utils.env import environment_update
 from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import get_free_port
-from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClient
+from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.rest_client import RestApiClient
 from conans.util.files import md5, save
 
 

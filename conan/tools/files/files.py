@@ -10,9 +10,9 @@ from fnmatch import fnmatch
 from shutil import which
 
 
-from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
+from conan.internal.rest.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.client.rest.file_uploader import FileProgress
+from conan.internal.rest.file_uploader import FileProgress
 from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 

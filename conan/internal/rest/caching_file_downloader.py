@@ -6,8 +6,8 @@ from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.downloaders.file_downloader import FileDownloader
-from conans.client.downloaders.download_cache import DownloadCache
+from conan.internal.rest.file_downloader import FileDownloader
+from conan.internal.rest.download_cache import DownloadCache
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException
 from conan.errors import ConanException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size

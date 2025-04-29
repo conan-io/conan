@@ -80,7 +80,7 @@ def test_source_credentials_only_download():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     # add_auth should never be called for regular upload/download
-    with mock.patch("conans.client.rest.conan_requester._SourceURLCredentials.add_auth", None):
+    with mock.patch("conan.internal.rest.conan_requester._SourceURLCredentials.add_auth", None):
         c.run("upload * -c -r=default")
         c.run("remove * -c")
         c.run("download pkg/0.1 -r=default")

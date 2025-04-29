@@ -9,7 +9,7 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
-from conans.client.downloaders.download_cache import DownloadCache
+from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
