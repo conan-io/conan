@@ -99,7 +99,7 @@ def test_cmakedeps_deployer_relative_paths():
 
             def package_info(self):
                 self.cpp_info.includedirs = ["includea"]
-                self.cpp_info.libdirs = ["liba"]
+                self.cpp_info.libdirs = ["bina"]
                 self.cpp_info.bindirs = ["bina"]
                 crypto_module = os.path.join("share", "cmake", "crypto.cmake")
                 self.cpp_info.set_property("cmake_build_modules", [crypto_module])
