@@ -6,6 +6,7 @@ from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
+from conan.internal.paths import find_file_walk_up
 from conans.client.downloaders.file_downloader import FileDownloader
 from conan.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
@@ -127,24 +128,12 @@ def _process_file(directory, filename, config, cache_folder, folder):
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
-def _find_conanignore(folder):
-    """ Traverse from the given folder up to the root folder looking for a .conanignore file."""
-    conanignore_path = os.path.join(folder, '.conanignore')
-    while not os.path.exists(conanignore_path):
-        parent_folder = os.path.dirname(folder)
-        if parent_folder == folder:
-            break
-        folder = parent_folder
-        conanignore_path = os.path.join(folder, '.conanignore')
-    return conanignore_path if os.path.exists(conanignore_path) else None
-
-
 def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
-    conanignore = _ConanIgnoreMatcher(_find_conanignore(folder), ignore)
+    conanignore = _ConanIgnoreMatcher(find_file_walk_up(folder, ".conanignore"), ignore)
     for root, dirs, files in os.walk(folder):
         # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
