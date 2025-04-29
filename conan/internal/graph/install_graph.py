@@ -3,7 +3,7 @@ import os
 import textwrap
 
 from conan.api.output import ConanOutput
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference

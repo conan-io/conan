@@ -5,9 +5,9 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput, Color
 from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
-from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
+from conan.internal.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
-from conans.client.graph.install_graph import InstallGraph
+from conan.internal.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException

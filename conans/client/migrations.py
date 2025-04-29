@@ -46,7 +46,7 @@ class ClientMigrator(Migrator):
         # Update settings.yml
         migrate_settings_file(self.cache_folder)
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
-        from conans.client.graph.compatibility import migrate_compatibility_files
+        from conan.internal.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
         from conan.internal.api.profile.profile_loader import migrate_profile_plugin

@@ -11,10 +11,10 @@ from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
 from conan.internal.model.workspace import Workspace
 from conan.tools.scm import Git
-from conans.client.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
+from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
     RECIPE_CONSUMER
-from conans.client.graph.graph import TransitiveRequirement
-from conans.client.graph.profile_node_definer import consumer_definer
+from conan.internal.graph.graph import TransitiveRequirement
+from conan.internal.graph.profile_node_definer import consumer_definer
 from conans.client.loader import load_python_file
 from conans.client.source import retrieve_exports_sources
 from conans.util.files import merge_directories

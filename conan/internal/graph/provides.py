@@ -1,4 +1,4 @@
-from conans.client.graph.graph_error import GraphProvidesError
+from conan.internal.graph.graph_error import GraphProvidesError
 from conan.api.model import RecipeReference
 
 

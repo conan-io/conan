@@ -4,15 +4,15 @@ from collections import OrderedDict
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.compatibility import BinaryCompatibility
-from conans.client.graph.compute_pid import compute_package_id
-from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
-                                       BINARY_PLATFORM)
-from conans.client.graph.proxy import should_update_reference
+from conan.internal.graph.build_mode import BuildMode
+from conan.internal.graph.compatibility import BinaryCompatibility
+from conan.internal.graph.compute_pid import compute_package_id
+from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
+                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
+                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
+                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
+                                        BINARY_PLATFORM)
+from conan.internal.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException

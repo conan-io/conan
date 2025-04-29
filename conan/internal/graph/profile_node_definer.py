@@ -1,4 +1,4 @@
-from conans.client.graph.graph import CONTEXT_BUILD
+from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
 

@@ -4,11 +4,10 @@ import os
 from json import JSONDecodeError
 
 from conan.api.model import RecipeReference, PkgReference
-from conan.cli import make_abs_path
 from conan.errors import ConanException
 from conan.internal.errors import NotFoundException
 from conan.internal.model.version_range import VersionRange
-from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
+from conan.internal.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
 from conans.util.files import load
 

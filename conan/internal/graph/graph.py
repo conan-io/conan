@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph_error import GraphError
+from conan.internal.graph.graph_error import GraphError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -258,7 +258,7 @@ class Node:
         result["prev_timestamp"] = self.pref_timestamp
         result["remote"] = self.remote.name if self.remote else None
         result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
-        from conans.client.installer import build_id
+        from conan.internal.graph.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it

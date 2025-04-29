@@ -12,9 +12,9 @@ from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.default_settings import default_settings_yml
-from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import consumer_definer
+from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
 from conan.internal.model.pkg_type import PackageType
