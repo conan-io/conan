@@ -122,8 +122,9 @@ class TargetConfigurationTemplate2:
         if not self._require.build:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = cpp_info.aggregated_components()
             # FIXME: Proper escaping of paths for CMake
+            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in aggregated_cppinfo.includedirs]
+                       for i in incdirs]
             include_dirs = ";".join(incdirs)
             definitions = ""
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)

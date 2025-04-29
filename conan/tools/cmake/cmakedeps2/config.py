@@ -38,7 +38,6 @@ class ConfigTemplate2:
         build_modules_paths = [relativize_path(p, self._cmakedeps._conanfile,
                                                "${CMAKE_CURRENT_LIST_DIR}")
                                for p in build_modules_paths]
-        print("build_modules_paths:", build_modules_paths)
         components = self._cmakedeps.get_property("cmake_components", self._conanfile,
                                                   check_type=list)
         if components is None:  # Lets compute the default components names
