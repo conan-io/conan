@@ -8,7 +8,7 @@ from conan.api.output import ConanOutput
 from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import rmdir, mkdir
+from conan.internal.util.files import rmdir, mkdir
 
 
 def _find_deployer(d, cache_deploy_folder):

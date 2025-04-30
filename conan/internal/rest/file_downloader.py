@@ -8,7 +8,7 @@ from conan.internal.rest import response_to_str
 from conan.internal.errors import ConanConnectionError, RequestErrorException, AuthenticationException, \
     ForbiddenException, NotFoundException
 from conan.errors import ConanException
-from conans.util.files import human_size, check_with_algorithm_sum
+from conan.internal.util.files import human_size, check_with_algorithm_sum
 
 
 class FileDownloader:

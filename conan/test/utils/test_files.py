@@ -12,7 +12,7 @@ from conan.tools.files.files import untargz
 from conan.internal.subsystems import get_cased_path
 from conan.errors import ConanException
 from conan.internal.paths import PACKAGE_TGZ_NAME
-from conans.util.files import gzopen_without_timestamps
+from conan.internal.util.files import gzopen_without_timestamps
 
 
 def wait_until_removed(folder):

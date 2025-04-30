@@ -14,7 +14,7 @@ from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo, MockInfoProperty
 from conan.api.model import PkgReference
 from conan.internal.paths import CONANINFO
-from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
+from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
 
 def build_id(conan_file):

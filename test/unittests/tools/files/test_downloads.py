@@ -11,7 +11,7 @@ from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output, TestRequester
-from conans.util.files import save, load, chdir, mkdir
+from conan.internal.util.files import save, load, chdir, mkdir
 
 
 @mock.patch('ftplib.FTP', autospec=True)

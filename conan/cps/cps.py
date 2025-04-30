@@ -3,7 +3,7 @@ import os
 from enum import Enum
 
 from conan.internal.model.cpp_info import CppInfo
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 class CPSComponentType(Enum):

@@ -5,7 +5,7 @@ from conan.api.output import ConanOutput
 from conan.internal.loader import load_python_file
 from conan.errors import ConanException, ConanMigrationError
 from conan.internal.model.version import Version
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 CONAN_VERSION = "version.txt"
 

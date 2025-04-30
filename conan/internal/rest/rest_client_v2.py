@@ -3,6 +3,7 @@ import fnmatch
 import hashlib
 import json
 import os
+from threading import Thread
 
 from requests.auth import AuthBase, HTTPBasicAuth
 from uuid import getnode as get_mac
@@ -19,8 +20,24 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.api.model import RecipeReference
-from conans.util.dates import from_iso8601_to_timestamp
-from conans.util.thread import ExceptionThread
+from conan.internal.util.dates import from_iso8601_to_timestamp
+
+
+# TODO: We might want to replace this raw Thread for a ThreadPool, to align with other code usages
+class ExceptionThread(Thread):
+    def run(self):
+        self._exc = None
+        try:
+            super().run()
+        except Exception as e:
+            self._exc = e
+
+    def join(self, timeout=None):
+        super().join(timeout=timeout)
+
+    def raise_errors(self):
+        if self._exc:
+            raise self._exc
 
 
 class JWTAuth(AuthBase):

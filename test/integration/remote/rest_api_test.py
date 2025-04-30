@@ -14,7 +14,7 @@ from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import get_free_port
 from conan.internal.rest.conan_requester import ConanRequester
 from conan.internal.rest.rest_client import RestApiClient
-from conans.util.files import md5, save
+from conan.internal.util.files import md5, save
 
 
 class RestApiTest(unittest.TestCase):

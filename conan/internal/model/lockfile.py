@@ -8,7 +8,7 @@ from conan.internal.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 LOCKFILE = "conan.lock"
 LOCKFILE_VERSION = "0.5"

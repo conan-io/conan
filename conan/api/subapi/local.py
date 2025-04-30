@@ -9,7 +9,7 @@ from conan.internal.graph.profile_node_definer import initialize_conanfile_profi
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
-from conans.util.files import chdir
+from conan.internal.util.files import chdir
 
 
 class LocalAPI:

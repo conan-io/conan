@@ -11,7 +11,7 @@ from conan.tools.files import save
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.fixture

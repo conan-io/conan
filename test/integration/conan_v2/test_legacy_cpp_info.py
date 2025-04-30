@@ -3,7 +3,7 @@ import textwrap
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 def test_legacy_names_filenames():

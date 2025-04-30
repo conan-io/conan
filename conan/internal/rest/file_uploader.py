@@ -7,7 +7,7 @@ from conan.internal.rest import response_to_str
 from conan.internal.errors import InternalErrorException, RequestErrorException, AuthenticationException, \
     ForbiddenException, NotFoundException
 from conan.errors import ConanException
-from conans.util.files import sha1sum
+from conan.internal.util.files import sha1sum
 
 
 class FileUploader(object):

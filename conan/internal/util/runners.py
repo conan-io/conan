@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from io import StringIO
 
 from conan.errors import ConanException
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:

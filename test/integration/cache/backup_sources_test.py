@@ -14,7 +14,7 @@ from conan.errors import ConanException
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load, rmdir, mkdir, remove
+from conan.internal.util.files import save, load, rmdir, mkdir, remove
 
 
 class TestDownloadCacheBackupSources:

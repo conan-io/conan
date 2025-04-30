@@ -8,7 +8,7 @@ from conan.errors import ConanException
 from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_profile_parser():

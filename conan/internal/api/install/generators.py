@@ -7,7 +7,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import save, mkdir, chdir
+from conan.internal.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",

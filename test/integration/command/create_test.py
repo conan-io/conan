@@ -5,7 +5,7 @@ import textwrap
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_dependencies_order_matches_requires():

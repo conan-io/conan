@@ -13,7 +13,7 @@ from shutil import which
 from conan.internal.rest.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
 from conan.internal.rest.file_uploader import FileProgress
-from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
+from conan.internal.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):

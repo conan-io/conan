@@ -19,7 +19,7 @@ from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class GraphBinariesAnalyzer:

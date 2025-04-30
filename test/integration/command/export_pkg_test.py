@@ -8,7 +8,7 @@ from textwrap import dedent
 
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class ExportPkgTest(unittest.TestCase):

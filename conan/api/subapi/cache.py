@@ -13,8 +13,8 @@ from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
+from conan.internal.util.dates import revision_timestamp_now
+from conan.internal.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
 
 
 class CacheAPI:

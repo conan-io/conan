@@ -8,8 +8,8 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conan.internal.rest.file_downloader import FileDownloader
 from conan.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import mkdir, rmdir, remove, unzip, chdir
+from conan.internal.util.runners import detect_runner
 
 
 class _ConanIgnoreMatcher:

@@ -4,7 +4,7 @@ import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 class Workspace:

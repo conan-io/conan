@@ -4,7 +4,7 @@ import pytest
 # Check it is importable from tools
 from conan.tools.files import rm, chdir
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save_files
+from conan.internal.util.files import save_files
 
 
 def test_remove_files_by_mask_recursively():

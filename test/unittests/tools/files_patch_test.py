@@ -7,7 +7,7 @@ from parameterized.parameterized import parameterized
 from conan.internal.loader import ConanFileLoader
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 base_conanfile = '''
 from conan import ConanFile

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, mkdir
+from conan.internal.util.files import load, mkdir
 
 conanfile = '''
 from conan import ConanFile

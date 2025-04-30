@@ -1,8 +1,8 @@
 import os
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save_files, chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import save_files, chdir
+from conan.internal.util.runners import detect_runner
 
 
 def git_create_bare_repo(folder=None, reponame="repo.git"):

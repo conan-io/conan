@@ -9,7 +9,7 @@ from parameterized import parameterized
 from conan.internal.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
 from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, chdir
+from conan.internal.util.files import save, chdir
 
 
 class ConanLoaderTxtTest(unittest.TestCase):

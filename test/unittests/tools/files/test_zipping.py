@@ -7,7 +7,7 @@ import pytest
 from conan.tools.files import unzip
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 from conan.errors import ConanException
 
 

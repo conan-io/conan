@@ -3,7 +3,7 @@ import re
 from conan.errors import ConanException
 
 
-class ConfigParser(object):
+class TextINIParse:
     """ util class to load a file with sections as [section1]
     checking the values of those sections, and returns each section
     as parser.section

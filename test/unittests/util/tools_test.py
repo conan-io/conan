@@ -12,8 +12,8 @@ from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
 from conan.test.utils.env import environment_update
-from conans.util.files import load, md5, save
-from conans.util.runners import check_output_runner
+from conan.internal.util.files import load, md5, save
+from conan.internal.util.runners import check_output_runner
 
 
 class RunnerMock:

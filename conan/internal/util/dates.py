@@ -4,8 +4,6 @@ import time
 
 from dateutil import parser
 
-from conan.errors import ConanException
-
 
 def from_timestamp_to_iso8601(timestamp):
     # Used exclusively by conan_server to return the date in iso format (same as artifactory)
@@ -24,6 +22,7 @@ def from_iso8601_to_timestamp(iso_str):
 
 def timestamp_now():
     # seconds since epoch 0, easy to store, in UTC
+    # Used in Manifest timestamp, in packagesDB LRU and in timestamp of backup-sources json
     return calendar.timegm(time.gmtime())
 
 
@@ -35,29 +34,3 @@ def timestamp_to_str(timestamp):
     # used by ref.repr_humantime() to print human readable time
     assert timestamp is not None
     return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
-
-
-def timelimit(expression):
-    """ convert an expression like "2d" (2 days) or "3h" (3 hours) to a timestamp in the past
-    with respect to current time
-    """
-    time_value = expression[:-1]
-    try:
-        time_value = int(time_value)
-    except TypeError:
-        raise ConanException(f"Time value '{time_value}' must be an integer")
-    time_units = expression[-1]
-    units = {"y": 365 * 24 * 60 * 60,
-             "M": 30 * 24 * 60 * 60,
-             "w": 7 * 24 * 60 * 60,
-             "d": 24 * 60 * 60,
-             "h": 60 * 60,
-             "m": 60,
-             "s": 1}
-    try:
-        lru_value = time_value * units[time_units]
-    except KeyError:
-        raise ConanException(f"Unrecognized time unit: '{time_units}'. Use: {list(units)}")
-
-    limit = timestamp_now() - lru_value
-    return limit

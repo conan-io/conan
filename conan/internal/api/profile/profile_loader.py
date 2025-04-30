@@ -14,8 +14,8 @@ from conan.internal.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.options import Options
 from conan.internal.model.profile import Profile
 from conan.api.model import RecipeReference
-from conans.util.config_parser import ConfigParser
-from conans.util.files import mkdir, load_user_encoded
+from conan.internal.util.config_parser import TextINIParse
+from conan.internal.util.files import mkdir, load_user_encoded
 
 
 def _unquote(text):
@@ -224,7 +224,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+        doc = TextINIParse(profile_text, allowed_fields=["tool_requires",
                                                          "system_tools",  # DEPRECATED: platform_tool_requires
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",

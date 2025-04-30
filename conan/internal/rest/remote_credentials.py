@@ -11,7 +11,7 @@ from conan.internal.loader import load_python_file
 from conan.api.output import ConanOutput
 from conan.internal.errors import scoped_traceback
 from conan.errors import ConanException
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class RemoteCredentials:

@@ -10,7 +10,7 @@ from mock import mock
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir, load
+from conan.internal.util.files import rmdir, load
 
 
 def test_cross_build():
