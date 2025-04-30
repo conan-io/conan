@@ -79,6 +79,13 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("gcc", "14", "23"), '-std=c++23')
         self.assertEqual(_make_cppstd_flag("gcc", "14", "26"), '-std=c++26')
 
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "11"), '-std=c++11')
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "14"), '-std=c++14')
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "17"), '-std=c++17')
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "20"), '-std=c++20')
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "23"), '-std=c++23')
+        self.assertEqual(_make_cppstd_flag("gcc", "15", "26"), '-std=c++26')
+
     def test_gcc_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("gcc", "4"), "gnu98")
         self.assertEqual(_make_cppstd_default("gcc", "5"), "gnu98")
@@ -88,6 +95,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("gcc", "8.1"), "gnu14")
         self.assertEqual(_make_cppstd_default("gcc", "11"), "gnu17")
         self.assertEqual(_make_cppstd_default("gcc", "11.1"), "gnu17")
+        self.assertEqual(_make_cppstd_default("gcc", "15.1"), "gnu17")
 
     def test_clang_cppstd_flags(self):
         self.assertEqual(_make_cppstd_flag("clang", "2.0", "98"), None)
