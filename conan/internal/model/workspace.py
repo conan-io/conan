@@ -79,7 +79,7 @@ class Workspace:
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        from conans.client.loader import ConanFileLoader
+        from conan.internal.loader import ConanFileLoader
         from conan.internal.cache.home_paths import HomePaths
         from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
         cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)

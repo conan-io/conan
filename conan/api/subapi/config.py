@@ -20,7 +20,7 @@ from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
-from conans.client.hook_manager import HookManager
+from conan.internal.hook_manager import HookManager
 from conans.util.files import load, save, rmdir, remove
 
 

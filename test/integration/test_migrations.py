@@ -9,7 +9,7 @@ from conan import conan_version
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.client.migrations import ClientMigrator
+from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version import Version
 from conans.util.files import save, load
 

@@ -2,7 +2,7 @@ import os
 
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conans.util.files import mkdir
 
 

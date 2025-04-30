@@ -15,8 +15,8 @@ from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST,
     RECIPE_CONSUMER
 from conan.internal.graph.graph import TransitiveRequirement
 from conan.internal.graph.profile_node_definer import consumer_definer
-from conans.client.loader import load_python_file
-from conans.client.source import retrieve_exports_sources
+from conan.internal.loader import load_python_file
+from conan.internal.source import retrieve_exports_sources
 from conans.util.files import merge_directories
 
 

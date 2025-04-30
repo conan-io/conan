@@ -10,7 +10,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanBasicApp
 from conan.internal.rest.conan_requester import ConanRequester
 from conan.internal.rest.remote_credentials import RemoteCredentials
-from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
+from conan.internal.rest.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.errors import ConanException

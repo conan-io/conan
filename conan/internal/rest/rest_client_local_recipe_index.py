@@ -10,8 +10,8 @@ from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.export import cmd_export
-from conans.client.hook_manager import HookManager
-from conans.client.loader import ConanFileLoader
+from conan.internal.hook_manager import HookManager
+from conan.internal.loader import ConanFileLoader
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException

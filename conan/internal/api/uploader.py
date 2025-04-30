@@ -5,7 +5,7 @@ import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
-from conans.client.source import retrieve_exports_sources
+from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,

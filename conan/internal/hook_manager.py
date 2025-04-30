@@ -1,6 +1,6 @@
 import os
 
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conan.errors import ConanException
 
 valid_hook_methods = ["pre_export", "post_export",

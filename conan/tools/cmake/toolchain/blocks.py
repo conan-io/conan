@@ -17,7 +17,7 @@ from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
-from conans.client.subsystems import deduce_subsystem, WINDOWS
+from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
 from conans.util.files import load

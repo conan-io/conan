@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from conan.api.output import ConanOutput, Color
-from conans.client.subsystems import command_env_wrapper
+from conan.internal.subsystems import command_env_wrapper
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import MockInfoProperty
 from conan.internal.model.conf import Conf

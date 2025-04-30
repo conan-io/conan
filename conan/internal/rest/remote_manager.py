@@ -5,11 +5,11 @@ from typing import List
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
-from conans.client.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
+from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
-from conans.client.pkg_sign import PkgSignaturesPlugin
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info

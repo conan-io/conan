@@ -1,4 +1,4 @@
-from conans.client.subsystems import deduce_subsystem, subsystem_path
+from conan.internal.subsystems import deduce_subsystem, subsystem_path
 
 
 def unix_path(conanfile, path, scope="build"):

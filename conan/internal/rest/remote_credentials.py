@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.api.input import UserInput
 from conan.internal.cache.home_paths import HomePaths
 
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conan.api.output import ConanOutput
 from conan.internal.errors import scoped_traceback
 from conan.errors import ConanException

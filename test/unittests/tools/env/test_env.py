@@ -8,7 +8,7 @@ import pytest
 from conan.errors import ConanException
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.subsystems import WINDOWS
+from conan.internal.subsystems import WINDOWS
 from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder

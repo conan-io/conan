@@ -8,7 +8,7 @@ from conan.internal.rest.auth_manager import ConanApiAuthManager
 from conan.internal.graph.proxy import ConanProxy
 from conan.internal.graph.python_requires import PyRequireLoader
 from conan.internal.graph.range_resolver import RangeResolver
-from conans.client.loader import ConanFileLoader, load_python_file
+from conan.internal.loader import ConanFileLoader, load_python_file
 from conan.internal.rest.remote_manager import RemoteManager
 from conan.internal.api.remotes.localdb import LocalDB
 

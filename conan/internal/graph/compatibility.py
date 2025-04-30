@@ -4,10 +4,10 @@ from collections import OrderedDict
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.graph.compute_pid import run_validate_package_id
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter, scoped_traceback
 from conan.errors import ConanException
-from conans.client.migrations import CONAN_GENERATED_COMMENT
+from conan.internal.api.migrations import CONAN_GENERATED_COMMENT
 
 # TODO: Define other compatibility besides applications
 from conans.util.files import load, save
