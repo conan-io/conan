@@ -75,6 +75,7 @@ def create(conan_api, parser, *args):
                                                          lockfile=lockfile,
                                                          remotes=remotes, update=args.update,
                                                          python_requires=[ref])
+        deps_graph = None  # TODO: This can be simplified, not necessary to load graph
     else:
         requires = [ref] if not is_build else None
         tool_requires = [ref] if is_build else None
