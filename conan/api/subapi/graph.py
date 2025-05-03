@@ -2,7 +2,7 @@ from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp, ConanBasicApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
-    CONTEXT_BUILD, BINARY_MISSING
+    CONTEXT_BUILD, BINARY_MISSING, DepsGraph
 from conan.internal.graph.graph_binaries import GraphBinariesAnalyzer
 from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.install_graph import InstallGraph, ProfileArgs
@@ -151,6 +151,17 @@ class GraphAPI:
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
         return deps_graph
+
+    def load_python_requires(self, ref, lockfile, remotes, update):
+        app = ConanApp(self.conan_api)
+        conanfile = app.loader.load_virtual(python_requires=[ref], graph_lock=lockfile,
+                                            remotes=remotes, update=update)
+
+        # consumer_definer(conanfile, profile_host, profile_build)
+        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        dep_graph = DepsGraph()
+        dep_graph.add_node(root_node)
+        return dep_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
                    update=None, check_update=False):

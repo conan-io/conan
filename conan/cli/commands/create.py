@@ -69,13 +69,8 @@ def create(conan_api, parser, *args):
         args.build_test = args.build
 
     if is_python_require:
-        deps_graph = conan_api.graph.load_graph_requires([], [],
-                                                         profile_host=profile_host,
-                                                         profile_build=profile_build,
-                                                         lockfile=lockfile,
-                                                         remotes=remotes, update=args.update,
-                                                         python_requires=[ref])
-        deps_graph = None  # TODO: This can be simplified, not necessary to load graph
+        deps_graph = conan_api.graph.load_python_requires(ref, lockfile=lockfile,
+                                                         remotes=remotes, update=args.update)
     else:
         requires = [ref] if not is_build else None
         tool_requires = [ref] if is_build else None
