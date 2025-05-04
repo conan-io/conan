@@ -152,11 +152,10 @@ class GraphAPI:
                                      remotes=remotes, update=update, check_update=check_updates)
         return deps_graph
 
-    def load_python_requires(self, ref, lockfile, remotes, update):
+    def load_graph_root_python_require(self, ref, lockfile, remotes, update):
         app = ConanApp(self.conan_api)
         conanfile = app.loader.load_virtual(python_requires=[ref], graph_lock=lockfile,
                                             remotes=remotes, update=update)
-
         # consumer_definer(conanfile, profile_host, profile_build)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         dep_graph = DepsGraph()

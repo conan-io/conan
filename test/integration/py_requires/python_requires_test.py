@@ -1106,9 +1106,9 @@ class TestTestPackagePythonRequire:
         assert "WARN: deprecated: test_package/conanfile.py" not in c.out
         assert "common/0.1 (test package): 42!!!" in c.out
 
+        # https://github.com/conan-io/conan/issues/18224
         c.save({"myprofile": "[tool_requires]\nmytool/0.1"})
         c.run("create . -pr=myprofile")
-        print(c.out)
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
