@@ -20,7 +20,9 @@ def test_cache_clean():
     assert os.path.exists(pkg_layout.build())
     assert os.path.exists(pkg_layout.download_package())
 
-    c.run('cache clean "*" -s -b')
+    c.run('cache clean "*" -s -b -v')
+    assert f"{ref_layout.reference.repr_notime()}: Cleaning recipe cache contents" in c.out
+    assert f"{pkg_layout.reference}: Cleaning package cache contents" in c.out
     assert not os.path.exists(pkg_layout.build())
     assert not os.path.exists(ref_layout.source())
     assert os.path.exists(ref_layout.download_export())
@@ -29,6 +31,9 @@ def test_cache_clean():
     c.run('cache clean -d')
     assert not os.path.exists(ref_layout.download_export())
     assert not os.path.exists(pkg_layout.download_package())
+
+    c.run("cache clean -bs -v")
+    assert "Cleaning 0 backup sources" in c.out
 
 
 def test_cache_clean_all():
