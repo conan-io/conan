@@ -10,7 +10,7 @@ from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import msvs_toolset
 from conan.tools.microsoft.visual import vs_installation_path, _vcvars_path, _vcvars_versions
 from conan.tools.qbs import common
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def _find_msvc(conanfile):

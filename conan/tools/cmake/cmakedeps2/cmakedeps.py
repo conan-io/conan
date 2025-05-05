@@ -14,7 +14,7 @@ from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
-from conans.util.files import load
+from conan.internal.util.files import load
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"

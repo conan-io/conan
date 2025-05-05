@@ -6,7 +6,7 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 class SettingsTest(unittest.TestCase):

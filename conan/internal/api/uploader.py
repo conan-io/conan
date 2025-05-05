@@ -10,9 +10,8 @@ from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size)
+from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
+                                       gzopen_without_timestamps, set_dirty_context_manager, mkdir, human_size)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"

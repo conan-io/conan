@@ -10,7 +10,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def test_cache_save_restore():

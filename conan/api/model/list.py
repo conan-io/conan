@@ -9,7 +9,7 @@ from conan.internal.errors import NotFoundException
 from conan.internal.model.version_range import VersionRange
 from conan.internal.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class MultiPackagesList:

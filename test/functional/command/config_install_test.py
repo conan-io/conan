@@ -16,7 +16,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conan.test.utils.tools import TestClient, zipdir
-from conans.util.files import load, mkdir, save, save_files
+from conan.internal.util.files import load, mkdir, save, save_files
 
 
 def make_file_read_only(file_path):

@@ -11,7 +11,7 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.tools.env.environment import environment_wrap_command
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.fixture

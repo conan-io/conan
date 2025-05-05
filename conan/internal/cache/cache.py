@@ -14,8 +14,8 @@ from conan.internal.errors import ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, renamedir, mkdir
+from conan.internal.util.dates import revision_timestamp_now
+from conan.internal.util.files import rmdir, renamedir, mkdir
 
 
 class PkgCache:

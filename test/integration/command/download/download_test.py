@@ -5,7 +5,7 @@ from unittest import mock
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_download_with_sources():

@@ -17,7 +17,7 @@ from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundExcept
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 from conan.api.model import RecipeReference
-from conans.util.files import load, save, rmdir, copytree_compat
+from conan.internal.util.files import load, save, rmdir, copytree_compat
 
 
 def add_local_recipes_index_remote(home_folder, remote):

@@ -5,8 +5,7 @@ from conan.internal.methods import run_source_method
 from conan.tools.env import VirtualBuildEnv
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
-                               merge_directories, clean_dirty)
+from conan.internal.util.files import is_dirty, mkdir, rmdir, set_dirty_context_manager, merge_directories, clean_dirty
 
 
 def _try_get_sources(ref, remote_manager, recipe_layout, remote):

@@ -8,7 +8,7 @@ from conan import __version__
 from conan.internal.rest.conan_requester import ConanRequester
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.tools import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class MockRequesterGet(Mock):

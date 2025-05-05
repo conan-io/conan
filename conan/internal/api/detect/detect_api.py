@@ -7,8 +7,8 @@ import textwrap
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conans.util.files import load, save
-from conans.util.runners import check_output_runner, detect_runner
+from conan.internal.util.files import load, save
+from conan.internal.util.runners import check_output_runner, detect_runner
 
 
 def detect_os():

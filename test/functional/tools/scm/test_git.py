@@ -10,7 +10,7 @@ from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir, save_files, save
+from conan.internal.util.files import rmdir, save_files, save
 
 
 @pytest.mark.tool("git")

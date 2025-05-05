@@ -2,11 +2,11 @@ import os
 import unittest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, mkdir
+from conan.internal.util.files import load, mkdir
 
 conanfile = '''
 from conan import ConanFile
-from conans.util.files import save, load
+from conan.tools.files import save, load
 from conan.tools.files import copy
 import os
 
@@ -20,9 +20,9 @@ class ConanFileToolsTest(ConanFile):
         self.folders.source = "."
 
     def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
-        save("myartifact.lib", "artifact contents!")
-        save("subdir/myartifact2.lib", "artifact2 contents!")
+        self.output.info("Source files: %s" % load(self, os.path.join(self.source_folder, "file.h")))
+        save(self, "myartifact.lib", "artifact contents!")
+        save(self, "subdir/myartifact2.lib", "artifact2 contents!")
 
     def package(self):
         copy(self, "*.h", self.source_folder, self.package_folder)
@@ -99,7 +99,7 @@ class DevInSourceFlowTest(unittest.TestCase):
 
 conanfile_out = '''
 from conan import ConanFile
-from conans.util.files import save, load
+from conan.tools.files import save, load
 from conan.tools.files import copy
 import os
 
@@ -108,11 +108,11 @@ class ConanFileToolsTest(ConanFile):
     version = "0.1"
 
     def source(self):
-        save(os.path.join(self.source_folder, "file.h"), "file_h_contents!")
+        save(self, os.path.join(self.source_folder, "file.h"), "file_h_contents!")
 
     def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
-        save("myartifact.lib", "artifact contents!")
+        self.output.info("Source files: %s" % load(self, os.path.join(self.source_folder, "file.h")))
+        save(self, "myartifact.lib", "artifact contents!")
 
     def package(self):
         copy(self, "*.h", self.source_folder, self.package_folder)

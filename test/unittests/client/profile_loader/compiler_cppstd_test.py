@@ -13,7 +13,7 @@ from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class SettingsCppStdTests(unittest.TestCase):

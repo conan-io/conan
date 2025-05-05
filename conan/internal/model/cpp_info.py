@@ -8,7 +8,7 @@ from collections import OrderedDict, defaultdict
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]

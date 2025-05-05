@@ -13,7 +13,7 @@ from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.env import environment_update
-from conans.util.files import save, chdir
+from conan.internal.util.files import save, chdir
 
 
 def test_compose():

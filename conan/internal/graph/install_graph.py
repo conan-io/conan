@@ -8,7 +8,7 @@ from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_S
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class _InstallPackageReference:

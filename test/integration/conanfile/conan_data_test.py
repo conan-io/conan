@@ -11,7 +11,7 @@ from conan.api.model import RecipeReference
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import tgz_with_contents
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import md5sum, sha1sum, sha256sum, load
+from conan.internal.util.files import md5sum, sha1sum, sha256sum, load
 
 
 class ConanDataTest(unittest.TestCase):

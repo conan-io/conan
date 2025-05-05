@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class RemoteServerTest(unittest.TestCase):

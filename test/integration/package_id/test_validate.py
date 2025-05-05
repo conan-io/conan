@@ -10,7 +10,7 @@ import pytest
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conan.internal.graph.graph import BINARY_INVALID
 from conan.test.assets.genconanfile import GenConanfile
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 

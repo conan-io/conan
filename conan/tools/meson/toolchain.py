@@ -14,7 +14,7 @@ from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.meson.helpers import get_apple_subsystem
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class MesonToolchain:

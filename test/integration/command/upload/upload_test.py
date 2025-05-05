@@ -16,7 +16,7 @@ from conan.api.model import RecipeReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
-from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
+from conan.internal.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy

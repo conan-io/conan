@@ -15,7 +15,7 @@ from conan.test.utils.tools import TestClient
 from conan.test.utils.tools import TestRequester
 from conan.test.utils.tools import TestServer
 from conan.test.utils.env import environment_update
-from conans.util.files import save
+from conan.internal.util.files import save
 
 conan_content = """
 from conan import ConanFile

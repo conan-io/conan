@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class RemoveSubsettingTest(unittest.TestCase):

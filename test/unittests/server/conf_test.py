@@ -5,8 +5,8 @@ from datetime import timedelta
 from conan.errors import ConanException
 from conans.server.conf import ConanServerConfigParser
 from conan.test.utils.test_files import temp_folder
-from conans.util.config_parser import ConfigParser
-from conans.util.files import save
+from conan.internal.util.config_parser import TextINIParse
+from conan.internal.util.files import save
 
 fileconfig = '''
 [server]
@@ -53,8 +53,8 @@ var
 var=walker
 """
 
-        self.assertRaises(ConanException, ConfigParser, text, ["one", "two", "three"])
-        conf = ConfigParser(text)
+        self.assertRaises(ConanException, TextINIParse, text, ["one", "two", "three"])
+        conf = TextINIParse(text)
         self.assertEqual(conf.one, "text=value")
         self.assertEqual(conf.two, "other=var")
         self.assertEqual(conf.three, "var")
@@ -65,7 +65,7 @@ var=walker
 [one]
 text=value
         """
-        conf = ConfigParser(text)
+        conf = TextINIParse(text)
         self.assertEqual(conf.two, "")
 
     def test_values(self):

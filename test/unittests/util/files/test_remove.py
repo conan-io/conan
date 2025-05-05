@@ -5,7 +5,7 @@ import stat
 import unittest
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import remove, save
+from conan.internal.util.files import remove, save
 
 
 class RemoveTest(unittest.TestCase):

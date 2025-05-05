@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class CompatibleIDsTest(unittest.TestCase):

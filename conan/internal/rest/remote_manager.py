@@ -15,9 +15,9 @@ from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.files import rmdir, human_size
+from conan.internal.util.files import rmdir, human_size
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import mkdir, tar_extract
+from conan.internal.util.files import mkdir, tar_extract
 
 
 class RemoteManager:

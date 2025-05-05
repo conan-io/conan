@@ -10,7 +10,7 @@ from conan.internal.rest.file_downloader import FileDownloader
 from conan.internal.rest.download_cache import DownloadCache
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException
 from conan.errors import ConanException
-from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
+from conan.internal.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
 
 
 class SourcesCachingDownloader:

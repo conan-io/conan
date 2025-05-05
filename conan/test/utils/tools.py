@@ -43,7 +43,7 @@ from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.server_launcher import (TestServerLauncher)
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir, save_files, save, load
+from conan.internal.util.files import mkdir, save_files, save, load
 
 NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
@@ -591,7 +591,7 @@ class TestClient:
         self.stderr = RedirectedTestOutput()
         try:
             with redirect_output(self.stderr, self.stdout):
-                from conans.util.runners import conan_run
+                from conan.internal.util.runners import conan_run
                 ret = conan_run(command, cwd=cwd or self.current_folder)
         finally:
             self.stdout = str(self.stdout)

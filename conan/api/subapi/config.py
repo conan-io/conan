@@ -21,7 +21,7 @@ from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.internal.hook_manager import HookManager
-from conans.util.files import load, save, rmdir, remove
+from conan.internal.util.files import load, save, rmdir, remove
 
 
 class ConfigAPI:

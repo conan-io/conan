@@ -20,7 +20,7 @@ from conan.errors import ConanException
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
 # TODO: Fix this security warning
-from conans.util.files import load
+from conan.internal.util.files import load
 
 logging.captureWarnings(True)
 

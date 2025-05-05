@@ -12,7 +12,7 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load, rmdir
+from conan.internal.util.files import save, load, rmdir
 from test.conftest import tools_locations
 
 

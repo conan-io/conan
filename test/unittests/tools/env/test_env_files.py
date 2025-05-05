@@ -10,7 +10,7 @@ from conan.tools.env import Environment
 from conan.internal.subsystems import WINDOWS
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, chdir, load
+from conan.internal.util.files import save, chdir, load
 
 
 @pytest.fixture

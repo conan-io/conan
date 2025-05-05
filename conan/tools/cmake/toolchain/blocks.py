@@ -20,7 +20,7 @@ from conan.internal.api.install.generators import relativize_path
 from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class Block:
