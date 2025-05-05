@@ -129,6 +129,12 @@ class GraphAPI:
                                                       update=update,
                                                       python_requires=python_requires)
 
+        if not requires and not tool_requires and python_requires is not None:
+            # This only happens at `conan create` for python-requires, the graph is not needed
+            # in fact, it can cause errors, if tool-requires injected
+            dep_graph = DepsGraph()
+            dep_graph.add_node(root_node)
+            return dep_graph
         # check_updates = args.check_updates if "check_updates" in args else False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build,
@@ -151,16 +157,6 @@ class GraphAPI:
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
         return deps_graph
-
-    def load_graph_root_python_require(self, ref, lockfile, remotes, update):
-        app = ConanApp(self.conan_api)
-        conanfile = app.loader.load_virtual(python_requires=[ref], graph_lock=lockfile,
-                                            remotes=remotes, update=update)
-        # consumer_definer(conanfile, profile_host, profile_build)
-        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        dep_graph = DepsGraph()
-        dep_graph.add_node(root_node)
-        return dep_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
                    update=None, check_update=False):
