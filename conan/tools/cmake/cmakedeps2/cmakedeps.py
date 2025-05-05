@@ -59,7 +59,7 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
-            if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
+            if cmake_find_mode == FIND_MODE_MODULE:
                 ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
                                                          f"module find mode in {dep}.\n"
                                                          f"Config mode will be used regardless.",
