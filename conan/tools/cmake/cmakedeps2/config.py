@@ -3,6 +3,8 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
+from conan.internal.api.install.generators import relativize_path
+
 
 class ConfigTemplate2:
     """
@@ -33,6 +35,9 @@ class ConfigTemplate2:
         # FIXME: Proper escaping of paths for CMake and relativization
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
+        build_modules_paths = [relativize_path(p, self._cmakedeps._conanfile,
+                                               "${CMAKE_CURRENT_LIST_DIR}")
+                               for p in build_modules_paths]
         components = self._cmakedeps.get_property("cmake_components", self._conanfile,
                                                   check_type=list)
         if components is None:  # Lets compute the default components names

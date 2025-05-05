@@ -30,9 +30,6 @@ def test_cmakedeps_direct_deps_paths():
             requires = "lib/1.0"
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeDeps"
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
     """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
     c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
@@ -76,24 +73,80 @@ def test_cmakedeps_transitive_paths():
     c.run("create .")
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.cmake import CMake
         class PkgConan(ConanFile):
             requires = "libb/1.0"
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeDeps"
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
     """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
     c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
-    cmake_paths.replace("\\", "/")
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/libb.*/p/binb\"\)", cmake_paths)
     assert not re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH /bina\"", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/libb.*/p/libb\" \".*/liba.*/p/liba\"\)", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/libb.*/p/includeb\" \".*/liba.*/p/includea\"\)", cmake_paths)
 
+
+def test_cmakedeps_deployer_relative_paths():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan.tools.files import copy
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            name = "liba"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.includedirs = ["includea"]
+                self.cpp_info.libdirs = ["bina"]
+                self.cpp_info.bindirs = ["bina"]
+                crypto_module = os.path.join("share", "cmake", "crypto.cmake")
+                self.cpp_info.set_property("cmake_build_modules", [crypto_module])
+    """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    conanfile_cmake = textwrap.dedent("""
+        import os
+        from conan.tools.files import save
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            name = "libb"
+            version = "1.0"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "libb-config.cmake"), "")
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "none")
+        """)
+
+    c.save({"conanfile.py": conanfile_cmake})
+    c.run("create .")
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class PkgConan(ConanFile):
+            requires = "liba/1.0", "libb/1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeDeps"
+    """)
+    c.save({"conanfile.py": conanfile}, clean_first=True)
+
+    # Now with a deployment
+    c.run(f"install . -c tools.cmake.cmakedeps:new={new_value} --deployer=full_deploy")
+    cmake_paths = c.load("conan_cmakedeps_paths.cmake")
+    assert 'set(libb_DIR "${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/libb/1.0")' in cmake_paths
+    assert ('set(CONAN_RUNTIME_LIB_DIRS "$<$<CONFIG:Release>:${CMAKE_CURRENT_LIST_DIR}'
+            '/full_deploy/host/liba/1.0/bina>"') in cmake_paths
+    liba_config = c.load("liba-config.cmake")
+    assert ('include("${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
+            'host/liba/1.0/share/cmake/crypto.cmake")') in liba_config
+    liba_targets = c.load("liba-Targets-release.cmake")
+    assert ('set(liba_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
+            'host/liba/1.0")') in liba_targets
+    assert ('set(liba_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
+            'host/liba/1.0/includea" )') in liba_targets
 
 def test_cmakeconfigdeps_recipe():
     c = TestClient()

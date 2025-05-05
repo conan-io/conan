@@ -244,7 +244,8 @@ class _PathGenerator:
                     f = self._cmakedeps.get_cmake_filename(dep)
                     for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = pkg_folder
+                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
+                                                                  "${CMAKE_CURRENT_LIST_DIR}")
                 continue
 
             # If CMakeDeps generated, the folder is this one
@@ -292,6 +293,7 @@ class _PathGenerator:
             runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
             for d in runtime_dirs:
                 d = d.replace("\\", "/")
+                d = relativize_path(d, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                 existing = host_runtime_dirs.setdefault(config, [])
                 if d not in existing:
                     existing.append(d)
