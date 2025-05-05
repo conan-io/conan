@@ -2,6 +2,7 @@ import os
 
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.util.files import save
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
@@ -14,7 +15,6 @@ from conan.tools.gnu.wrappers import compile_wrapper, lib_wrapper
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
-from conans.util.files import save
 
 
 class GnuToolchain:
