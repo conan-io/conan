@@ -2,7 +2,8 @@ import json
 
 from jinja2 import select_autoescape, Template
 
-from conan.api.output import cli_out_write, Color, ConanOutput
+from conan.api.output import cli_out_write, Color
+from conan.errors import ConanException
 
 severity_order = {
     "Critical": 4,
@@ -13,9 +14,6 @@ severity_order = {
 
 
 def text_vuln_formatter(result):
-    from conan.api.output import cli_out_write, Color
-
-    response, errors_in_response = result
 
     severity_colors = {
         "Critical": Color.BRIGHT_RED,
@@ -38,15 +36,10 @@ def text_vuln_formatter(result):
         lines.append(" " * indent + txt)
         return "\n".join(lines)
 
-    if not response or "data" not in response or not response["data"]:
-        if not errors_in_response:
-            cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-        return
-
     total_vulns = 0
     summary_lines = []
 
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
 
@@ -55,10 +48,14 @@ def text_vuln_formatter(result):
         cli_out_write(f"* {ref} *", fg=Color.BRIGHT_WHITE)
         cli_out_write(border_line, fg=Color.BRIGHT_WHITE)
 
+        if "error" in pkg_info:
+            details = pkg_info["error"].get("details", "")
+            cli_out_write(f"\n{details}\n", fg=Color.BRIGHT_YELLOW)
+            continue
+
         if not count:
-            if not errors_in_response:
-                cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-                continue
+            cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
+            continue
 
         total_vulns += count
         summary_lines.append(
@@ -91,6 +88,7 @@ def text_vuln_formatter(result):
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
+
     cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
 
     if total_vulns > 0:
@@ -102,18 +100,17 @@ def text_vuln_formatter(result):
                       "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
                       fg=Color.BRIGHT_YELLOW)
 
-    cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
-                  "https://jfrog.com/advanced-security/ for more information.\n",
-                  fg=Color.BRIGHT_GREEN)
-    cli_out_write("You can send questions and report issues about "
-                  "the returned vulnerabilities to conan-research@jfrog.com.\n",
-                  fg=Color.BRIGHT_GREEN)
+    if total_vulns > 0 or not "error" in result:
+        cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
+                      "https://jfrog.com/advanced-security/ for more information.\n",
+                      fg=Color.BRIGHT_GREEN)
+        cli_out_write("You can send questions and report issues about "
+                      "the returned vulnerabilities to conan-research@jfrog.com.\n",
+                      fg=Color.BRIGHT_GREEN)
 
 
 def json_vuln_formatter(result):
-    response, errors_in_response = result
-    if not errors_in_response or response["data"]:
-        cli_out_write(json.dumps(response, indent=4))
+    cli_out_write(json.dumps(result, indent=4))
 
 
 def _render_vulns(vulns, template):
@@ -132,17 +129,17 @@ vuln_html = """
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #333; color: #ffffff; }
     .container { width: 80%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
     h1 { text-align: center; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: auto; padding-top: 10px;}
-    col.pkg-col { min-width: 100px; }
-    col.id-col { min-width: 160px; }
-    col.sev-col { min-width: 100px; }
-    col.score-col { min-width: 120px; }
-    col.desc-col { }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; padding-top: 10px;}
+    col.pkg-col   { width: 15%; }
+    col.id-col    { width: 15%; }
+    col.sev-col   { width: 15%; }
+    col.score-col { width: 15%; }
+    col.desc-col  { width: 40%; }
     thead { background: #333; color: #fff; }
     thead th { padding: 12px; text-align: left; }
     tbody tr { border-bottom: 1px solid #ddd; }
     tbody tr:hover { background: #f0f0f0; }
-    td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; }
+    td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;}
     .severity-badge { padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold; display: inline-block; }
     .severity-Critical { background: #d9534f; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217,83,79,0.7); } 70% { box-shadow: 0 0 0 12px rgba(217,83,79,0); } 100% { box-shadow: 0 0 0 0 rgba(217,83,79,0); } }
@@ -196,8 +193,9 @@ vuln_html = """
           <td>{{ vuln.package }}</td>
           <td>{{ vuln.vuln_id }}</td>
           <td>
+            <span style="display: none">{% if severity_id == 'N/A' %}-1{% else %}{{ severity_id }}{% endif %}</span>
             {% if vuln.severity not in ['N/A', ''] %}
-              <span class="severity-badge severity-{{ severity_label }}"><span style="display: none">{{ severity_id }}</span>{{ severity_label }}</span>
+              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
@@ -232,18 +230,18 @@ vuln_html = """
 """
 
 def html_vuln_formatter(result):
-    response, errors_in_response = result
     vulns = []
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
+            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"].get("details", "")
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",
                 "aliases": [],
                 "severity": "N/A",
                 "score": "-",
-                "description": "No vulnerabilities found.",
+                "description": description,
                 "references": []
             })
         else:
@@ -267,5 +265,5 @@ def html_vuln_formatter(result):
                     "description": desc,
                     "references": references,
                 })
-    if not errors_in_response or response["data"]:
-        cli_out_write(_render_vulns(vulns, vuln_html))
+
+    cli_out_write(_render_vulns(vulns, vuln_html))

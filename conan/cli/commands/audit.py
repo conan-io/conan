@@ -20,10 +20,31 @@ def _add_provider_arg(subparser):
     subparser.add_argument("-p", "--provider", help="Provider to use for scanning")
 
 
+def _parse_error_threshold(result: dict, error_level: float) -> None:
+    """Mark the result as error if any of the vulnerabilities has a severity greater than or equal to
+       The error_level reflects the severity level configured by the user. As it uses float and CVSS
+       score is limited to 10.0, users can use any higher number to skip it.
+
+       :param result: Conan audit scan result. It's expected to find cvss there
+       :param error_level: Threshold to raise an error in case of matching the severity level
+       :return: None
+    """
+    if "conan_error" not in result:
+        for ref in result["data"]:
+            for edge in result["data"][ref]["vulnerabilities"]["edges"]:
+                preferred_base_score = float(edge["node"]["cvss"].get("preferredBaseScore", 0.0))
+                if preferred_base_score >= error_level:
+                    result.update(
+                        {"conan_error":
+                             f"The package {ref} has a CVSS score {preferred_base_score} and "
+                             f"exceeded the threshold severity level {error_level}."})
+                    break
+
+
 @conan_subcommand(formatters={"text": text_vuln_formatter,
                               "json": json_vuln_formatter,
                               "html": html_vuln_formatter})
-def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
+def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
     """
     Scan a given recipe for vulnerabilities in its dependencies.
     """
@@ -32,6 +53,10 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     # TODO: Do we then want to hide it in the --help?
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
+    subparser.add_argument("-sl", "--severity-level", action="store", default=9.0, type=float,
+                           help="Set threshold for severity level to raise an error. "
+                                "By default raises an error for any critical CVSS (9.0 or higher). "
+                                " Use 100.0 to disable it.")
 
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
@@ -65,11 +90,13 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args):
     deps_graph.report_graph_error()
 
     if deps_graph.error:
-        return {"error": deps_graph.error}
+        return {"conan_error": deps_graph.error}
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
-    return conan_api.audit.scan(deps_graph, provider)
+    scan_result = conan_api.audit.scan(deps_graph, provider)
+    _parse_error_threshold(scan_result, args.severity_level)
+    return scan_result
 
 
 @conan_subcommand(formatters={"text": text_vuln_formatter,

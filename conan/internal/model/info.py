@@ -4,7 +4,7 @@ from conan.errors import ConanException
 from conan.internal.model.dependencies import UserRequirementsDict
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.config_parser import ConfigParser
+from conan.internal.util.config_parser import TextINIParse
 
 
 class _VersionRepr:
@@ -312,7 +312,7 @@ class PythonRequiresInfo:
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    parser = ConfigParser(text)
+    parser = TextINIParse(text)
     conan_info_json = {}
     for section, lines in parser.line_items():
         try:
@@ -431,6 +431,18 @@ class ConanInfo:
             result.append(config_version_dumps)
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
+
+    def summarize_compact(self):
+        result = []
+        serialized = self.serialize()
+
+        for key, values in serialized.items():
+            if isinstance(values, dict):
+                result.append(f"{key}: " + " ".join(f"{k}={v}" for k, v in values.items()))
+            elif isinstance(values, type([])):
+                result.append(f"{key}: {' '.join(values)}")
+
+        return result
 
     def dump_diff(self, compatible):
         self_dump = self.dumps()

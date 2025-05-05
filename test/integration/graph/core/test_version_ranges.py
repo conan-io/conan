@@ -2,7 +2,7 @@ from collections import OrderedDict
 import pytest
 
 from conan.api.model import Remote
-from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
+from conan.internal.graph.graph_error import GraphConflictError, GraphMissingError
 from conan.test.assets.genconanfile import GenConanfile
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID

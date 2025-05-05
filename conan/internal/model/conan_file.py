@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from conan.api.output import ConanOutput, Color
-from conans.client.subsystems import command_env_wrapper
+from conan.internal.subsystems import command_env_wrapper
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import MockInfoProperty
 from conan.internal.model.conf import Conf
@@ -362,7 +362,7 @@ class ConanFile:
         assert isinstance(env, list), "env argument to ConanFile.run() should be a list"
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
-        from conans.util.runners import conan_run
+        from conan.internal.util.runners import conan_run
         if not quiet:
             ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")

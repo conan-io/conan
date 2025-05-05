@@ -9,7 +9,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conan.internal.model.dependencies import get_transitive_requires
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 _PCInfo = namedtuple("PCInfo", ['name', 'version', 'requires', 'description',

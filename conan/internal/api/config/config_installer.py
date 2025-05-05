@@ -6,10 +6,10 @@ from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
-from conans.client.downloaders.file_downloader import FileDownloader
+from conan.internal.rest.file_downloader import FileDownloader
 from conan.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import mkdir, rmdir, remove, unzip, chdir
+from conan.internal.util.runners import detect_runner
 
 
 class _ConanIgnoreMatcher:

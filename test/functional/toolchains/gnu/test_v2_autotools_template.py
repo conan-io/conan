@@ -347,7 +347,7 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
-@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Using msys2")
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
     def test_msys2_autotools_windows(self):

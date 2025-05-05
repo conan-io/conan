@@ -7,8 +7,8 @@ import textwrap
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conans.util.files import load, save
-from conans.util.runners import check_output_runner, detect_runner
+from conan.internal.util.files import load, save
+from conan.internal.util.runners import check_output_runner, detect_runner
 
 
 def detect_os():
@@ -461,14 +461,12 @@ def detect_gcc_compiler(compiler_exe="gcc"):
             if "clang" in out:
                 return None, None, None
 
+        # TODO: Add -dumpfullversion to always return major.minor
         ret, out = detect_runner('%s -dumpversion' % compiler_exe)
         if ret != 0:
             return None, None, None
         compiler = "gcc"
         installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
-        # Since GCC 7.1, -dumpversion return the major version number
-        # only ("7"). We must use -dumpfullversion to get the full version
-        # number ("7.1.1").
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe

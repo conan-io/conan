@@ -1,7 +1,7 @@
 import os
 from io import StringIO
 
-from conans.util.runners import check_output_runner
+from conan.internal.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 
@@ -80,8 +80,8 @@ def apple_min_version_flag(conanfile):
         "watchsimulator": f"-mwatchos-simulator-version-min={os_version}",
         "appletvos": f"-mtvos-version-min={os_version}",
         "appletvsimulator": f"-mtvos-simulator-version-min={os_version}",
-        "xros": f"-target arm64-apple-xros{os_version}",
-        "xrsimulator": f"-target arm64-apple-xros{os_version}-simulator",
+        "xros": f"--target=arm64-apple-xros{os_version}",
+        "xrsimulator": f"--target=arm64-apple-xros{os_version}-simulator",
     }.get(os_sdk, "")
 
 
@@ -328,3 +328,28 @@ def fix_apple_shared_install_name(conanfile):
     # there is nothing to do.
     if substitutions:
         _fix_executables(conanfile, substitutions)
+
+
+def apple_extra_flags(conanfile):
+    if not is_apple_os(conanfile):
+        return []
+    enable_bitcode = conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
+    enable_arc = conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+    enable_visibility = conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
+    is_debug = conanfile.settings.get_safe('build_type') == "Debug"
+
+    flags = []
+    if enable_bitcode:
+        if is_debug:
+            flags.append("-fembed-bitcode-marker")
+        else:
+            flags.append("-fembed-bitcode")
+    if enable_arc:
+        flags.append("-fobjc-arc")
+    if enable_arc is False:
+        flags.append("-fno-objc-arc")
+    if enable_visibility:
+        flags.append("-fvisibility=default")
+    if enable_visibility is False:
+        flags.extend(["-fvisibility=hidden", "-fvisibility-inlines-hidden"])
+    return flags

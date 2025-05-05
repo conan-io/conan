@@ -10,7 +10,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, save_files
+from conan.internal.util.files import save, save_files
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 

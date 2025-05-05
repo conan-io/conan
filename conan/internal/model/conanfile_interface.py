@@ -1,5 +1,5 @@
 from pathlib import Path
-from conans.client.graph.graph import CONTEXT_BUILD
+from conan.internal.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:

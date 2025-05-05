@@ -7,7 +7,7 @@ import pytest
 
 from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir, save, merge_directories, load
+from conan.internal.util.files import mkdir, save, merge_directories, load
 
 
 class MergeDirectoriesTest(unittest.TestCase):

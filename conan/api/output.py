@@ -207,9 +207,9 @@ class ConanOutput:
             self._write_message(msg, fg=Color.BLUE)
         return self
 
-    def debug(self, msg):
+    def debug(self, msg, fg=Color.MAGENTA, bg=None):
         if self._conan_output_level <= LEVEL_DEBUG:
-            self._write_message(msg, fg=Color.MAGENTA)
+            self._write_message(msg, fg=fg, bg=bg)
         return self
 
     def verbose(self, msg, fg=None, bg=None):

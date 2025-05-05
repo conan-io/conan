@@ -14,8 +14,34 @@ from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.dates import timelimit
-from conans.util.files import load
+from conan.internal.util.dates import timestamp_now
+from conan.internal.util.files import load
+
+
+def _timelimit(expression):
+    """ convert an expression like "2d" (2 days) or "3h" (3 hours) to a timestamp in the past
+    with respect to current time
+    """
+    time_value = expression[:-1]
+    try:
+        time_value = int(time_value)
+    except TypeError:
+        raise ConanException(f"Time value '{time_value}' must be an integer")
+    time_units = expression[-1]
+    units = {"y": 365 * 24 * 60 * 60,
+             "M": 30 * 24 * 60 * 60,
+             "w": 7 * 24 * 60 * 60,
+             "d": 24 * 60 * 60,
+             "h": 60 * 60,
+             "m": 60,
+             "s": 1}
+    try:
+        lru_value = time_value * units[time_units]
+    except KeyError:
+        raise ConanException(f"Unrecognized time unit: '{time_units}'. Use: {list(units)}")
+
+    limit = timestamp_now() - lru_value
+    return limit
 
 
 class ListAPI:
@@ -145,7 +171,7 @@ class ListAPI:
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
         app = ConanBasicApp(self.conan_api)
-        limit_time = timelimit(lru) if lru else None
+        limit_time = _timelimit(lru) if lru else None
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
         if search_ref:

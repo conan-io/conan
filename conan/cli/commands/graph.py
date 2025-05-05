@@ -12,7 +12,6 @@ from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.client.graph.install_graph import InstallGraph, ProfileArgs
 
 
 def explain_formatter_text(data):
@@ -111,13 +110,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-
-    install_graph = InstallGraph(deps_graph, order_by=args.order_by,
-                                 profile_args=ProfileArgs.from_args(args))
-    if args.reduce:
-        if args.order_by is None:
-            raise ConanException("--reduce needs --order-by argument defined")
-        install_graph.reduce()
+    install_graph = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
+                                                profile_args=args)
     install_order_serialized = install_graph.install_build_order()
     if args.order_by is None:  # legacy
         install_order_serialized = install_order_serialized["order"]
@@ -144,21 +138,12 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):  # noqa
     if not args.file or len(args.file) < 2:
         raise ConanException("At least 2 files are needed to be merged")
 
-    result = InstallGraph.load(make_abs_path(args.file[0]))
-    if result.reduced:
-        raise ConanException(f"Reduced build-order file cannot be merged: {args.file[0]}")
-    for f in args.file[1:]:
-        install_graph = InstallGraph.load(make_abs_path(f))
-        if install_graph.reduced:
-            raise ConanException(f"Reduced build-order file cannot be merged: {f}")
-        result.merge(install_graph)
+    files = [make_abs_path(f) for f in args.file]
+    result = conan_api.graph.build_order_merge(files, args.reduce)
 
-    if args.reduce:
-        result.reduce()
     install_order_serialized = result.install_build_order()
     if getattr(result, "legacy"):
         install_order_serialized = install_order_serialized["order"]
-
     return {"build_order": install_order_serialized,
             "conan_error": result.get_errors()}
 
@@ -236,13 +221,22 @@ def graph_info(conan_api, parser, subparser, *args):
             base_folder = args.deployer_folder or os.getcwd()
             conan_api.install.deploy(deps_graph, args.deployer, None, base_folder)
 
+    warn_msg = None
+    missing = set(str(n.ref.name) for n in deps_graph.nodes if n.binary == "Missing")
+    invalid = set(str(n.ref.name) for n in deps_graph.nodes if n.binary == "Invalid")
+    if missing or invalid:
+        warn_msg = "There are some error(s) in the graph:"
+        if missing:
+            warn_msg += f"\n    - Missing packages: {', '.join(missing)}"
+        if invalid:
+            warn_msg += f"\n    - Invalid packages: {', '.join(invalid)}"
+
     return {"graph": deps_graph,
             "field_filter": args.filter,
             "package_filter": args.package_filter,
             "conan_api": conan_api,
             "conan_error": str(deps_graph.error) if deps_graph.error else None,
-            # Do not compute graph errors if there are dependency errors
-            "conan_warning": InstallGraph(deps_graph).get_errors() if not deps_graph.error else None}
+            "conan_warning": warn_msg}
 
 
 @conan_subcommand(formatters={"text": explain_formatter_text,

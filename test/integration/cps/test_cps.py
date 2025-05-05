@@ -6,7 +6,7 @@ from conan.cps import CPS
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save_files
+from conan.internal.util.files import save_files
 
 
 def test_cps():

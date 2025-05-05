@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import sys
 from contextlib import contextmanager
 
@@ -36,7 +37,7 @@ def test_conan_audit_paths():
                                 "description": "Zip vulnerability",
                                 "severity": "Critical",
                                 "cvss": {
-                                    "preferredBaseScore": 9.8
+                                    "preferredBaseScore": 8.9
                                 },
                                 "aliases": [
                                     "CVE-2023-45853",
@@ -58,7 +59,8 @@ def test_conan_audit_paths():
                     ]
                 }
             }
-        }
+        },
+        "error": None
     }
 
     tc = TestClient(light=True)
@@ -85,13 +87,13 @@ def test_conan_audit_paths():
 
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
-        tc.run("audit list zlib/1.2.11")
+        tc.run("audit list zlib/1.2.11", assert_error=True)
         assert "You have exceeded the number of allowed requests" in tc.out
         assert "The limit will reset in 1 minute" in tc.out
 
     with proxy_response(400, {"error": "Not found"}):
         tc.run("audit list zlib/1.2.11")
-        assert "Package 'zlib/1.2.11' not found" in tc.out
+        assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.stdout
 
     tc.run("audit provider add myprivate --url=foo --type=private --token=valid_token")
 
@@ -105,6 +107,13 @@ def test_conan_audit_paths():
             "it using: 'conan audit provider add conancenter --url=https://audit.conan.io/ "
             "--type=conan-center-proxy --token=<token>'") in tc.out
     assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
+
+    if platform.system() != "Windows":
+        providers_stat = os.stat(os.path.join(tc.cache_folder, "audit_providers.json"))
+        # Assert that only the current user can read/write the file
+        assert providers_stat.st_uid == os.getuid()
+        assert providers_stat.st_gid == os.getgid()
+        assert providers_stat.st_mode & 0o777 == 0o600
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10),
@@ -176,3 +185,95 @@ def test_audit_provider_env_credentials_with_proxy(monkeypatch):
 
     # Verify that the Authorization header uses the token from the environment variable
     assert captured_headers.get("Authorization") == "Bearer env_token_value"
+
+
+def test_audit_global_error_exception():
+    """
+    Test that a global error returned by the provider results in ConanException
+    raised by the formatter, using the 'details' field.
+    """
+    tc = TestClient(light=True)
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    mock_provider_result = {
+        "data": {},
+        "conan_error": "Fatal error."
+    }
+
+    with patch("conan.api.conan_api.AuditAPI.list", return_value=mock_provider_result):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "ERROR: Fatal error." in tc.out
+
+        tc.run("audit list zlib/1.2.11 -f json", assert_error=True)
+        assert "ERROR: Fatal error." in tc.out
+
+        tc.run("audit list zlib/1.2.11 -f html", assert_error=True)
+        assert "ERROR: Fatal error." in tc.out
+
+
+@pytest.mark.parametrize("severity_level, threshold, should_fail", [
+    (1.0, None, False),
+    (8.9, None, False),
+    (9.0, None, True),
+    (9.1, None, True),
+    (5.0, 5.1, False),
+    (5.1, 5.1, True),
+    (5.2, 5.1, True),
+    (9.0, 11.0, False),
+])
+def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
+    """In case the severity level is equal or higher than the found for a CVE,
+       the command should output the information as usual, and exit with non-success code error.
+    """
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": {
+                                    "preferredBaseScore": severity_level
+                                },
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529"
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("foobar", "0.1.0")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    with proxy_response(200, successful_response):
+        severity_param = "" if threshold is None else f"-sl {threshold}"
+        tc.run(f"audit scan --requires=foobar/0.1.0 {severity_param}", assert_error=should_fail)
+        assert "foobar/0.1.0 1 vulnerability found" in tc.out
+        assert f"CVSS: {severity_level}" in tc.out
+        if should_fail:
+            if threshold is None:
+                threshold = "9.0"
+            assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
