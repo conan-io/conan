@@ -17,7 +17,7 @@ def run_parallel_and_check_errors(test_client, operation_func, num_tasks=10, *ar
         "WinError 3",
     ]
     exceptions = []
-    while not exceptions:
+    for _ in range(100):
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
             try:
                 futures = [executor.submit(operation_func, test_client, i, *args) for i in range(num_tasks)]
