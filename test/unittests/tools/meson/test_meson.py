@@ -1,8 +1,11 @@
 import textwrap
 
+import pytest
+
 from conan.tools.meson import Meson
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.tools.meson.helpers import get_apple_subsystem
 
 
 def test_meson_build():
@@ -25,3 +28,16 @@ def test_meson_build():
     meson.build()
 
     assert '-j10' in str(conanfile.command)
+
+
+@pytest.mark.parametrize("apple_sdk, subsystem", [
+    ("iphoneos", "ios"),
+    ("iphonesimulator", "ios-simulator"),
+    ("appletvos", "tvos"),
+    ("appletvsimulator", "tvos-simulator"),
+    ("watchos", "watchos"),
+    ("watchsimulator", "watchos-simulator"),
+    (None, "macos")
+])
+def test_meson_subsystem_helper(apple_sdk, subsystem):
+    assert get_apple_subsystem(apple_sdk) == subsystem

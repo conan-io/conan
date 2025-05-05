@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from collections import namedtuple
 
-from conans.client.rest.file_uploader import FileUploader
+from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import InternalErrorException, AuthenticationException, ForbiddenException
 from conans.util.files import save
 

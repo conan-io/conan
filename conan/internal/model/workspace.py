@@ -62,14 +62,17 @@ class Workspace:
         return found_ref
 
     def clean(self):
+        self.output.info("Default workspace clean: Removing the output-folder of each editable")
         for ref, info in self.conan_data.get("editables", {}).items():
-            if info.get("output_folder"):
-                of = os.path.join(self.folder, info["output_folder"])
-                try:
-                    self.output.info(f"Removing {ref} output folder: {of}")
-                    shutil.rmtree(of)
-                except OSError as e:
-                    self.output.warning(f"Error removing {ref} output folder: {str(e)}")
+            if not info.get("output_folder"):
+                self.output.info(f"Editable {ref} doesn't have an output_folder defined")
+                continue
+            of = os.path.join(self.folder, info["output_folder"])
+            try:
+                self.output.info(f"Removing {ref} output folder: {of}")
+                shutil.rmtree(of)
+            except OSError as e:
+                self.output.warning(f"Error removing {ref} output folder: {str(e)}")
 
     def _conan_rel_path(self, path):
         if path is None:
@@ -90,7 +93,7 @@ class Workspace:
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        from conans.client.loader import ConanFileLoader
+        from conan.internal.loader import ConanFileLoader
         from conan.internal.cache.home_paths import HomePaths
         from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
         cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
@@ -100,3 +103,6 @@ class Workspace:
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
+
+    def root_conanfile(self):  # noqa
+        return None

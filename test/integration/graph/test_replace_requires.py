@@ -418,14 +418,15 @@ class TestReplaceRequiresTransitiveGenerators:
             class App(ConanFile):
                 name = "app"
                 version = "0.1"
-                settings = "build_type"
+                settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps"
+                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
             build_type = Release
+            arch=x86_64
 
             [replace_requires]
             zlib/0.1: zlib-ng/0.1
@@ -451,8 +452,15 @@ class TestReplaceRequiresTransitiveGenerators:
         cmake = c.load("app/openssl-Targets-release.cmake")
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
-        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
-               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+        assert "set_property(TARGET openssl::openssl APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+               '             "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+
+        # checking MSBuildDeps
+        zlib_ng_props = c.load("app/conan_zlib-ng.props")
+        assert 'Project="conan_zlib-ng_release_x64.props"' in zlib_ng_props
+        props = c.load("app/conan_openssl_release_x64.props")
+        assert "<Import Condition=\"'$(conan_zlib-ng_props_imported)' != 'True'\"" \
+               " Project=\"conan_zlib-ng.props\"/>" in props
 
     @pytest.mark.parametrize("diamond", [True, False])
     def test_openssl_components(self, diamond):
@@ -490,14 +498,15 @@ class TestReplaceRequiresTransitiveGenerators:
             class App(ConanFile):
                 name = "app"
                 version = "0.1"
-                settings = "build_type"
+                settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps"
+                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
             build_type = Release
+            arch=x86_64
 
             [replace_requires]
             zlib/0.1: zlib-ng/0.1
@@ -523,8 +532,16 @@ class TestReplaceRequiresTransitiveGenerators:
         cmake = c.load("app/openssl-Targets-release.cmake")
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
-        assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
-               '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+        assert "set_property(TARGET openssl::crypto APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+               '             "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+
+        # checking MSBuildDeps
+        zlib_ng_props = c.load("app/conan_zlib-ng.props")
+        assert 'Project="conan_zlib-ng_release_x64.props"' in zlib_ng_props
+
+        props = c.load("app/conan_openssl_crypto_release_x64.props")
+        assert "<Import Condition=\"'$(conan_zlib-ng_props_imported)' != 'True'\"" \
+               " Project=\"conan_zlib-ng.props\"/>" in props
 
     @pytest.mark.parametrize("diamond", [True, False])
     @pytest.mark.parametrize("explicit_requires", [True, False])
@@ -565,14 +582,15 @@ class TestReplaceRequiresTransitiveGenerators:
             class App(ConanFile):
                 name = "app"
                 version = "0.1"
-                settings = "build_type"
+                settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps"
+                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
             build_type = Release
+            arch = x86_64
 
             [replace_requires]
             zlib/0.1: zlib-ng/0.1
@@ -601,8 +619,17 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
         # It should access the generic zlib-ng target
-        assert "set_target_properties(openssl::openssl PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
-               '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
+        assert "set_property(TARGET openssl::openssl APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+               '             "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
+
+        # checking MSBuildDeps
+        zlib_ng_props = c.load("app/conan_zlib-ng.props")
+        assert "<Import Condition=\"'$(conan_zlib-ng_myzlib_props_imported)' != 'True'\" " \
+               "Project=\"conan_zlib-ng_myzlib.props\"/" in zlib_ng_props
+
+        props = c.load("app/conan_openssl_release_x64.props")
+        assert "<Import Condition=\"'$(conan_zlib-ng_props_imported)' != 'True'\"" \
+               " Project=\"conan_zlib-ng.props\"/>" in props
 
     @pytest.mark.parametrize("diamond", [True, False])
     @pytest.mark.parametrize("package_requires", [False, True])
@@ -645,14 +672,15 @@ class TestReplaceRequiresTransitiveGenerators:
             class App(ConanFile):
                 name = "app"
                 version = "0.1"
-                settings = "build_type"
+                settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps"
+                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
             build_type = Release
+            arch = x86_64
 
             [replace_requires]
             zlib/0.1: zlib-ng/0.1
@@ -682,8 +710,21 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
         if package_requires:
             # The generic package requirement uses the package name zlib-ng
-            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
-                   '                      "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
+            assert "set_property(TARGET openssl::crypto APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+                   '             "$<$<CONFIG:RELEASE>:zlib-ng::zlib-ng>")' in cmake
         else:
-            assert "set_target_properties(openssl::crypto PROPERTIES INTERFACE_LINK_LIBRARIES\n" \
-                   '                      "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+            assert "set_property(TARGET openssl::crypto APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+                   '             "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
+
+        # checking MSBuildDeps
+        zlib_ng_props = c.load("app/conan_zlib-ng.props")
+        assert "<Import Condition=\"'$(conan_zlib-ng_myzlib_props_imported)' != 'True'\" " \
+               "Project=\"conan_zlib-ng_myzlib.props\"/" in zlib_ng_props
+
+        props = c.load("app/conan_openssl_crypto_release_x64.props")
+        if package_requires:
+            assert "<Import Condition=\"'$(conan_zlib-ng_props_imported)' != 'True'\"" \
+                   " Project=\"conan_zlib-ng.props\"/>" in props
+        else:
+            assert "<Import Condition=\"'$(conan_zlib-ng_myzlib_props_imported)' != 'True'\"" \
+                   " Project=\"conan_zlib-ng_myzlib.props\"/>" in props

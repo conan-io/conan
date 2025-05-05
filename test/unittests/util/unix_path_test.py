@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conan.tools.microsoft.subsystems import subsystem_path
-from conans.client.subsystems import get_cased_path
+from conan.internal.subsystems import get_cased_path
 from conan.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 

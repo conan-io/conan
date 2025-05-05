@@ -1,10 +1,15 @@
+import os
+from unittest.mock import patch, MagicMock
+
 import pytest
 
-from conan.tools.build import cmd_args_to_string
-from conan.tools.gnu import GnuToolchain
 from conan.errors import ConanException
 from conan.internal.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.test_files import temp_folder
+from conan.tools.build import cmd_args_to_string
+from conan.tools.files import save
+from conan.tools.gnu import GnuToolchain
 
 
 @pytest.fixture()
@@ -195,3 +200,38 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     assert "--new-complex-flag=new-value" in new_make_args
     assert "--new-empty-flag=" in new_make_args
     assert "--new-no-value-flag" in new_make_args and "--new-no-value-flag=" not in new_make_args
+
+
+@patch("conan.tools.gnu.gnutoolchain.VirtualBuildEnv")
+def test_crossbuild_to_android(build_env_mock):
+    """
+    Issue related: https://github.com/conan-io/conan/issues/17441
+    """
+    vars = MagicMock()
+    # VirtualBuildEnv defines these variables
+    vars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
+    build_env_mock.return_value = vars
+
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": "armv8", "os.api_level": "26r"})
+    conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
+    assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
+    assert env_vars.get("LD") is None
+    assert env_vars.get("STRIP") is None
+
+    # Defining the ndk_path too
+    ndk_path = temp_folder()
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "darwin-x86_64", "bin")
+    save(conanfile, os.path.join(ndk_bin, "ld"), "")
+    conanfile.conf.define("tools.android:ndk_path", ndk_path)
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
+    assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
+    assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
+    assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears

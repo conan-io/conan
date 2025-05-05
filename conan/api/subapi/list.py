@@ -1,8 +1,9 @@
+import copy
 import os
 from collections import OrderedDict
 from typing import Dict
 
-from conan.api.model import PackagesList
+from conan.api.model import PackagesList, MultiPackagesList, ListPattern
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
 from conan.internal.conan_app import ConanBasicApp
@@ -242,7 +243,7 @@ class ListAPI:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
                 pkg_configurations = self.packages_configurations(ref, remote=remote)
             except Exception as e:
-                ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
+                ConanOutput().error(f"Error in remote '{remote.name}': {e}")
             else:
                 candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
                                   for pref, data in pkg_configurations.items())
@@ -265,6 +266,82 @@ class ListAPI:
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
         return pkglist
+
+    def find_remotes(self, package_list, remotes):
+        """
+        (Experimental) Find the remotes where the current package lists can be found
+        """
+        result = MultiPackagesList()
+        for r in remotes:
+            result_pkg_list = PackagesList()
+            for ref, recipe_bundle in package_list.refs().items():
+                ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
+                ref_no_rev.revision = None
+                try:
+                    revs = self.recipe_revisions(ref_no_rev, remote=r)
+                except NotFoundException:
+                    continue
+                if ref not in revs:  # not found
+                    continue
+                result_pkg_list.add_refs([ref])
+                for pref, pref_bundle in package_list.prefs(ref, recipe_bundle).items():
+                    pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
+                    pref_no_rev.revision = None
+                    try:
+                        prevs = self.package_revisions(pref_no_rev, remote=r)
+                    except NotFoundException:
+                        continue
+                    if pref in prevs:
+                        result_pkg_list.add_prefs(ref, [pref])
+                        info = recipe_bundle["packages"][pref.package_id]["info"]
+                        result_pkg_list.add_configurations({pref: info})
+            if result_pkg_list.recipes:
+                result.add(r.name, result_pkg_list)
+        return result
+
+    def outdated(self, deps_graph, remotes):
+        # DO NOT USE YET
+        # Data structure to store info per library
+        dependencies = deps_graph.nodes[1:]
+        dict_nodes = {}
+
+        # When there are no dependencies command should stop
+        if len(dependencies) == 0:
+            return dict_nodes
+
+        ConanOutput().title("Checking remotes")
+
+        for node in dependencies:
+            dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
+                                              "latest_remote": None})["cache_refs"].add(node.ref)
+
+        for version_range in deps_graph.resolved_ranges.keys():
+            dict_nodes[version_range.name]["version_ranges"].append(version_range)
+
+        # find in remotes
+        for node_name, node_info in dict_nodes.items():
+            ref_pattern = ListPattern(node_name, rrev=None, prev=None)
+            for remote in remotes:
+                try:
+                    remote_ref_list = self.select(ref_pattern, package_query=None, remote=remote)
+                except NotFoundException:
+                    continue
+                if not remote_ref_list.recipes:
+                    continue
+                str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+                recipe_ref = RecipeReference.loads(str_latest_ref)
+                if (node_info["latest_remote"] is None
+                        or node_info["latest_remote"]["ref"] < recipe_ref):
+                    node_info["latest_remote"] = {"ref": recipe_ref, "remote": remote.name}
+
+        # Filter nodes with no outdated versions
+        filtered_nodes = {}
+        for node_name, node in dict_nodes.items():
+            if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
+                    node['latest_remote']['ref']:
+                filtered_nodes[node_name] = node
+
+        return filtered_nodes
 
 
 class _BinaryDistance:

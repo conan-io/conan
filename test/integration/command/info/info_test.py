@@ -357,6 +357,37 @@ class TestErrorsInGraph:
         assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
         assert exit_code == ERROR_GENERAL
 
+    def test_missing_invalid(self):
+        c = TestClient()
+        dep_invalid = textwrap.dedent(
+            """
+           from conan import ConanFile
+           from conan.errors import ConanInvalidConfiguration
+           class Pkg(ConanFile):
+               name = "dep_invalid"
+               settings = "os", "build_type"
+               version = "0.1"
+               def validate(self):
+                   raise ConanInvalidConfiguration("Invalid package")
+        """
+        )
+
+        c.save({
+                "dep/conanfile.py": GenConanfile("dep").with_version("0.1"),
+                "dep_invalid/conanfile.py": dep_invalid,
+                "consumer/conanfile.py": GenConanfile("consumer")
+                                        .with_requires("dep/0.1")
+                                        .with_requires("dep_invalid/0.1"),
+            })
+        c.run("export dep")
+        c.run("export dep_invalid")
+        exit_code = c.run("graph info consumer")
+        assert "WARN: There are some error(s) in the graph:" in c.out
+        assert "- Missing packages: dep" in c.out
+        assert "- Invalid packages: dep_invalid" in c.out
+        assert exit_code == 0
+
+
 
 class TestInfoUpdate:
 

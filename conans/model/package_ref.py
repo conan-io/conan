@@ -17,7 +17,8 @@ class PkgReference(_PkgReference):
 
     def __init__(self, *args, **kwargs):
         if PkgReference.usage_counter == 0:
-            ConanOutput().warning(_msg.format("from conans.model.package_ref import PkgReference"))
+            ConanOutput().warning(_msg.format("from conans.model.package_ref import PkgReference"),
+                                  warn_tag="deprecated")
         PkgReference.usage_counter += 1
         super(PkgReference, self).__init__(*args, **kwargs)
 

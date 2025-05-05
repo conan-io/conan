@@ -1,10 +1,12 @@
 import fnmatch
 import os
+import shutil
 
 from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.util.files import load
+from conans.util.files import load, save
 from conan import __version__
 
 
@@ -13,6 +15,69 @@ class NewAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
+
+    def save_template(self, template, defines=None, output_folder=None, force=False):
+        """
+        Save the 'template' files in the output_folder, replacing the template variables
+        with the 'defines'
+        :param template: The name of the template to use
+        :param defines: A list with the 'k=v' variables to replace in the template
+        :param output_folder: The folder where the template files will be saved, cwd if None
+        :param force: If True, overwrite the files if they already exist, otherwise raise an error
+        """
+        # Manually parsing the remainder
+        definitions = {}
+        for u in defines or []:
+            try:
+                k, v = u.split("=", 1)
+            except ValueError:
+                raise ConanException(f"Template definitions must be 'key=value', received {u}")
+            k = k.replace("-", "")  # Remove possible "--name=value"
+            # For variables that only show up once, no need for list to keep compatible behaviour
+            if k in definitions:
+                if isinstance(definitions[k], list):
+                    definitions[k].append(v)
+                else:
+                    definitions[k] = [definitions[k], v]
+            else:
+                definitions[k] = v
+
+        files = self.get_template(template)  # First priority: user folder
+        is_builtin = False
+        if not files:  # then, try the templates in the Conan home
+            files = self.get_home_template(template)
+        if files:
+            template_files, non_template_files = files
+        else:
+            template_files = self.get_builtin_template(template)
+            non_template_files = {}
+            is_builtin = True
+
+        if not template_files and not non_template_files:
+            raise ConanException(f"Template doesn't exist or not a folder: {template}")
+
+        if is_builtin and template == "workspace":  # hardcoded for the workspace special case
+            definitions["name"] = "liba"
+        template_files = self.render(template_files, definitions)
+
+        # Saving the resulting files
+        output = ConanOutput()
+        output_folder = output_folder or os.getcwd()
+        # Making sure they don't overwrite existing files
+        for f, v in sorted(template_files.items()):
+            path = os.path.join(output_folder, f)
+            if os.path.exists(path) and not force:
+                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+            save(path, v)
+            output.success("File saved: %s" % f)
+
+        # copy non-templates
+        for f, v in sorted(non_template_files.items()):
+            path = os.path.join(output_folder, f)
+            if os.path.exists(path) and not force:
+                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+            shutil.copy2(v, path)
+            output.success("File saved: %s" % f)
 
     @staticmethod
     def get_builtin_template(template_name):
@@ -111,7 +176,7 @@ class NewAPI:
         ensure_list("tool_requires")
 
         def as_package_name(n):
-            return n.replace("-", "_").replace("+", "_").replace(".", "_")
+            return n.replace("-", "_").replace("+", "_")
 
         def as_name(ref):
             ref = as_package_name(ref)
@@ -119,7 +184,7 @@ class NewAPI:
                 ref = ref[0:ref.index('/')]
             return ref
 
-        definitions["package_name"] = as_package_name(name)
+        definitions["package_name"] = as_package_name(name).replace(".", "_")
         definitions["as_name"] = as_name
         definitions["names"] = lambda x: ", ".join(r.split("/", 1)[0] for r in x)
         if "name" not in definitions:

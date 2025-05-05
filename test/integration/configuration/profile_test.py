@@ -33,9 +33,8 @@ class AConan(ConanFile):
 """
 
 
-def create_profile(folder, name, settings=None, package_settings=None, env=None,
-                   package_env=None, options=None):
-    _create_profile(folder, name, settings, package_settings, env, package_env, options)
+def create_profile(folder, name, settings=None, package_settings=None, options=None):
+    _create_profile(folder, name, settings, package_settings, options)
     content = load(os.path.join(folder, name))
     content = "include(default)\n    \n" + content
     save(os.path.join(folder, name), content)

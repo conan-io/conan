@@ -325,9 +325,12 @@ def default_cppstd(compiler, compiler_version):
         # https://www.intel.com/content/www/us/en/developer/articles/troubleshooting/icx-changes-default-cpp-std-to-cpp17-with-2023.html
         return "17" if major >= "2023" else "14"
 
+    def _apple_clang_cppstd_default(version):
+        return "gnu98" if version < "17" else "gnu14"
+
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",
+               "apple-clang": _apple_clang_cppstd_default(compiler_version),
                "intel-cc": _intel_cppstd_default(compiler_version),
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
@@ -338,7 +341,7 @@ def detect_cppstd(compiler, compiler_version):
     cppstd = default_cppstd(compiler, compiler_version)
     if compiler == "apple-clang" and compiler_version >= "11":
         # Conan does not detect the default cppstd for apple-clang,
-        # because it's still 98 for the compiler (eben though xcode uses newer in projects)
+        # because it's still 98/14 for the compiler (even though xcode uses newer in projects)
         # and having it be so old would be annoying for users
         cppstd = "gnu17"
     return cppstd
@@ -458,14 +461,12 @@ def detect_gcc_compiler(compiler_exe="gcc"):
             if "clang" in out:
                 return None, None, None
 
+        # TODO: Add -dumpfullversion to always return major.minor
         ret, out = detect_runner('%s -dumpversion' % compiler_exe)
         if ret != 0:
             return None, None, None
         compiler = "gcc"
         installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
-        # Since GCC 7.1, -dumpversion return the major version number
-        # only ("7"). We must use -dumpfullversion to get the full version
-        # number ("7.1.1").
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe

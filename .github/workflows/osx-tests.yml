@@ -2,6 +2,10 @@ name: OSX Tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   osx_setup:
@@ -11,10 +15,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.8
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: '3.10'
 
       - name: Cache pip packages
         id: cache-pip
@@ -32,7 +36,7 @@ jobs:
           pip install meson
 
       - name: Uninstall default CMake
-        run: brew uninstall cmake || true
+        run: brew uninstall --formula cmake || true
 
       - name: Cache Homebrew packages
         id: cache-brew
@@ -54,6 +58,7 @@ jobs:
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
@@ -82,7 +87,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9")
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.0.0-rc3")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -114,7 +119,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [3.8, 3.12, 3.13]
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
@@ -141,6 +146,8 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0

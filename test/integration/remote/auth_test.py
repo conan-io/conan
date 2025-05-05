@@ -62,12 +62,13 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_auth_with_env(self):
 
-        def _upload_with_credentials(credentials):
+        def _upload_with_credentials(credentials, assert_error=False):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . --user=lasote --channel=testing")
             with environment_update(credentials):
-                cli.run("upload %s -r default --only-recipe" % str(self.ref))
+                cli.run("upload %s -r default --only-recipe" % str(self.ref),
+                        assert_error=assert_error)
             return cli
 
         # Try with remote name in credentials
@@ -89,10 +90,9 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIn("Got password '******' from environment", client.out)
 
         # Bad pass raise
-        with self.assertRaises(Exception):
-            client = _upload_with_credentials({"CONAN_PASSWORD": "bad",
-                                               "CONAN_LOGIN_USERNAME": "pepe"})
-            self.assertIn("Too many failed login attempts, bye!", client.out)
+        client = _upload_with_credentials({"CONAN_PASSWORD": "bad",
+                                           "CONAN_LOGIN_USERNAME": "pepe"}, assert_error=True)
+        self.assertIn("Authentication error in remote 'default'", client.out)
 
     def test_max_retries(self):
         """Bad login 3 times"""

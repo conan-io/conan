@@ -13,7 +13,6 @@ from conan import ConanFile
 class AConan(ConanFile):
     name = "package"
     version = "0.1.0"
-    short_paths=False
 """
 
 with_deps_path_file = """

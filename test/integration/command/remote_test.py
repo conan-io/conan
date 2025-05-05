@@ -404,6 +404,9 @@ def test_allowed_packages_remotes():
     tc.run("remove * -c")
 
     tc.run('remote update default --allowed-packages="liba/*" --allowed-packages="app/*"')
+    tc.run("remote list -f=json")
+    assert "app/*" in tc.out
+
     tc.run("install --requires=app/1.0 -r=default", assert_error=True)
     assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
     assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out

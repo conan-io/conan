@@ -10,7 +10,7 @@ from mock import patch
 
 from conan.api.model import Remote
 from conan.internal.api.config.config_installer import _hide_password
-from conans.client.downloaders.file_downloader import FileDownloader
+from conan.internal.rest.file_downloader import FileDownloader
 from conan.internal.paths import DEFAULT_CONAN_HOME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer

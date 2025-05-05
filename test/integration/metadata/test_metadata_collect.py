@@ -17,7 +17,7 @@ from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 # TODO, fix private API
-from conans.client.graph.install_graph import InstallGraph
+from conan.internal.graph.install_graph import InstallGraph
 
 
 @conan_command(group="Metadata")

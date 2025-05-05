@@ -432,6 +432,18 @@ class ConanInfo:
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
+    def summarize_compact(self):
+        result = []
+        serialized = self.serialize()
+
+        for key, values in serialized.items():
+            if isinstance(values, dict):
+                result.append(f"{key}: " + " ".join(f"{k}={v}" for k, v in values.items()))
+            elif isinstance(values, type([])):
+                result.append(f"{key}: {' '.join(values)}")
+
+        return result
+
     def dump_diff(self, compatible):
         self_dump = self.dumps()
         compatible_dump = compatible.dumps()

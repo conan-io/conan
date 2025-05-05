@@ -4,13 +4,14 @@ import traceback
 import importlib
 
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.subsystems import deduce_subsystem, subsystem_path
+from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conans.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
+               "CMakeConfigDeps": "conan.tools.cmake",
                "MesonToolchain": "conan.tools.meson",
                "MSBuildDeps": "conan.tools.microsoft",
                "MSBuildToolchain": "conan.tools.microsoft",
@@ -57,7 +58,7 @@ def _get_generator_class(generator_name):
 
 
 def load_cache_generators(path):
-    from conans.client.loader import load_python_file
+    from conan.internal.loader import load_python_file
     result = {}  # Name of the generator: Class
     if not os.path.isdir(path):
         return result
@@ -241,15 +242,20 @@ def relativize_paths(conanfile, placeholder):
     return abs_base_path, new_path
 
 
-def relativize_path(path, conanfile, placeholder):
-    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
-    if abs_base_path is None:
+def relativize_path(path, conanfile, placeholder, normalize=True):
+    """
+    relative path from the "generators_folder" to "path", asuming the root file, like
+    conan_toolchain.cmake will be directly in the "generators_folder"
+    """
+    base_common_folder = conanfile.folders._base_generators # noqa
+    if not base_common_folder or not os.path.isabs(base_common_folder):
         return path
-    if path.startswith(abs_base_path):
-        path = path.replace(abs_base_path, new_path, 1)
-    else:
-        abs_base_path = abs_base_path.replace("\\", "/")
-        new_path = new_path.replace("\\", "/")
-        if path.startswith(abs_base_path):
-            path = path.replace(abs_base_path, new_path, 1)
+    try:
+        common_path = os.path.commonpath([path, conanfile.generators_folder, base_common_folder])
+        if common_path == base_common_folder:
+            rel_path = os.path.relpath(path, conanfile.generators_folder)
+            new_path = os.path.join(placeholder, rel_path)
+            return new_path.replace("\\", "/") if normalize else new_path
+    except ValueError:  # In case the unit in Windows is different, path cannot be made relative
+        pass
     return path

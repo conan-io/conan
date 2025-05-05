@@ -9,7 +9,7 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
-from conans.client.downloaders.download_cache import DownloadCache
+from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
@@ -24,7 +24,7 @@ class CacheAPI:
 
     def export_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export", ref_layout.export())
 
@@ -36,13 +36,13 @@ class CacheAPI:
 
     def export_source_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export_sources", ref_layout.export_sources())
 
     def source_path(self, ref: RecipeReference):
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        ref.revision = None if ref.revision == "latest" else ref.revision
+        ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "source", ref_layout.source())
 
@@ -92,6 +92,7 @@ class CacheAPI:
             # Clean those build folders that didn't succeed to create a package and wont be in DB
             builds_folder = cache.builds_folder
             if os.path.isdir(builds_folder):
+                ConanOutput().verbose(f"Cleaning temporary folders")
                 for subdir in os.listdir(builds_folder):
                     folder = os.path.join(builds_folder, subdir)
                     manifest = os.path.join(folder, "p", "conanmanifest.txt")
@@ -100,16 +101,19 @@ class CacheAPI:
                         rmdir(folder)
         if backup_sources:
             backup_files = self.conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
+            ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
 
         for ref, ref_bundle in package_list.refs().items():
+            ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
             for pref, _ in package_list.prefs(ref, ref_bundle).items():
+                ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
                 if build:
                     rmdir(pref_layout.build())
