@@ -34,13 +34,16 @@ else:
 DEFAULT_CONAN_HOME = ".conan2"
 
 
-def find_file_walk_up(start, filename):
+def find_file_walk_up(start, filename, end=None):
     path = Path(start)
+    end = Path(end) if end else None
     while True:
         file = path / filename
         if file.is_file():
             return file
         if len(path.parts) == 1:  # finish at '/'
+            break
+        if end and path == end:
             break
         path = path.parent
     return None
