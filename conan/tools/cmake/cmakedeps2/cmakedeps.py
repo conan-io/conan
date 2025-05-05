@@ -61,9 +61,7 @@ class CMakeDeps2:
                 continue
             if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
                 ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
-                                                         "module find mode.\n"
-                                                         f"{dep} has set cmake_find_mode "
-                                                         f"property to {cmake_find_mode}.\n"
+                                                         f"module find mode in {dep}.\n"
                                                          f"Config mode will be used regardless.",
                                                          # Should this be risk?
                                                          warn_tag="deprecated")

@@ -342,8 +342,7 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component_in_another_
     c.run("create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
 
 
-@pytest.mark.parametrize("find_mode", ["both", "module"])
-def test_cmake_find_mode_deprecated(find_mode):
+def test_cmake_find_mode_deprecated():
     tc = TestClient()
     dep = textwrap.dedent("""
         from conan import ConanFile
@@ -351,8 +350,10 @@ def test_cmake_find_mode_deprecated(find_mode):
             name = "dep"
             version = "0.1"
             def package_info(self):
-                self.cpp_info.set_property("cmake_find_mode", "{}")
-        """.format(find_mode))
+                # Having both is ok as the user expects that config would
+                # be generated nonetheless
+                self.cpp_info.set_property("cmake_find_mode", "module")
+        """)
     tc.save({"conanfile.py": dep})
     tc.run("create .")
     args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
