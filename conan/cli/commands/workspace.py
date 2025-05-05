@@ -164,6 +164,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.local.build(conanfile)
 
 
+@conan_subcommand()
 def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     """
     Install the workspace as a monolith, installing only external dependencies to the workspace,
