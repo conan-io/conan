@@ -215,8 +215,8 @@ class GnuToolchain:
                 extra_env_vars = {"CC": f"{cl_wrapper} cl -nologo",
                                   "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
-                                  "LD": f"{ar_wrapper} link -nologo",
-                                  "AR": "lib -nologo",
+                                  "LD": 'link -nologo',
+                                  "AR": f'{ar_wrapper} "lib -nologo"',
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
