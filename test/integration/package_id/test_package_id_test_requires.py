@@ -1,7 +1,7 @@
 import pytest
 
 from conan.test.utils.tools import GenConanfile, TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.parametrize("build_mode", [None, "patch_mode"])

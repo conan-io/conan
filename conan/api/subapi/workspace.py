@@ -11,13 +11,13 @@ from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
 from conan.internal.model.workspace import Workspace
 from conan.tools.scm import Git
-from conans.client.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
+from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
     RECIPE_CONSUMER
-from conans.client.graph.graph import TransitiveRequirement
-from conans.client.graph.profile_node_definer import consumer_definer
-from conans.client.loader import load_python_file
-from conans.client.source import retrieve_exports_sources
-from conans.util.files import merge_directories
+from conan.internal.graph.graph import TransitiveRequirement
+from conan.internal.graph.profile_node_definer import consumer_definer
+from conan.internal.loader import load_python_file
+from conan.internal.source import retrieve_exports_sources
+from conan.internal.util.files import merge_directories
 
 
 def _find_ws_folder():
@@ -204,6 +204,10 @@ class WorkspaceAPI:
     def remove(self, path):
         self._check_ws()
         return self._ws.remove(path)
+
+    def clean(self):
+        self._check_ws()
+        return self._ws.clean()
 
     def info(self):
         self._check_ws()

@@ -2,7 +2,8 @@ import json
 
 from jinja2 import select_autoescape, Template
 
-from conan.api.output import cli_out_write, Color, ConanOutput
+from conan.api.output import cli_out_write, Color
+from conan.errors import ConanException
 
 severity_order = {
     "Critical": 4,
@@ -13,9 +14,6 @@ severity_order = {
 
 
 def text_vuln_formatter(result):
-    from conan.api.output import cli_out_write, Color
-
-    response, errors_in_response = result
 
     severity_colors = {
         "Critical": Color.BRIGHT_RED,
@@ -38,15 +36,10 @@ def text_vuln_formatter(result):
         lines.append(" " * indent + txt)
         return "\n".join(lines)
 
-    if not response or "data" not in response or not response["data"]:
-        if not errors_in_response:
-            cli_out_write("No vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-        return
-
     total_vulns = 0
     summary_lines = []
 
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         count = len(edges)
 
@@ -55,10 +48,14 @@ def text_vuln_formatter(result):
         cli_out_write(f"* {ref} *", fg=Color.BRIGHT_WHITE)
         cli_out_write(border_line, fg=Color.BRIGHT_WHITE)
 
+        if "error" in pkg_info:
+            details = pkg_info["error"].get("details", "")
+            cli_out_write(f"\n{details}\n", fg=Color.BRIGHT_YELLOW)
+            continue
+
         if not count:
-            if not errors_in_response:
-                cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
-                continue
+            cli_out_write("\nNo vulnerabilities found.\n", fg=Color.BRIGHT_GREEN)
+            continue
 
         total_vulns += count
         summary_lines.append(
@@ -91,6 +88,7 @@ def text_vuln_formatter(result):
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
+
     cli_out_write(f"Total vulnerabilities found: {total_vulns}\n", fg=color_for_total)
 
     if total_vulns > 0:
@@ -102,18 +100,17 @@ def text_vuln_formatter(result):
                       "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
                       fg=Color.BRIGHT_YELLOW)
 
-    cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
-                  "https://jfrog.com/advanced-security/ for more information.\n",
-                  fg=Color.BRIGHT_GREEN)
-    cli_out_write("You can send questions and report issues about "
-                  "the returned vulnerabilities to conan-research@jfrog.com.\n",
-                  fg=Color.BRIGHT_GREEN)
+    if total_vulns > 0 or not "error" in result:
+        cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
+                      "https://jfrog.com/advanced-security/ for more information.\n",
+                      fg=Color.BRIGHT_GREEN)
+        cli_out_write("You can send questions and report issues about "
+                      "the returned vulnerabilities to conan-research@jfrog.com.\n",
+                      fg=Color.BRIGHT_GREEN)
 
 
 def json_vuln_formatter(result):
-    response, errors_in_response = result
-    if not errors_in_response or response["data"]:
-        cli_out_write(json.dumps(response, indent=4))
+    cli_out_write(json.dumps(result, indent=4))
 
 
 def _render_vulns(vulns, template):
@@ -233,18 +230,18 @@ vuln_html = """
 """
 
 def html_vuln_formatter(result):
-    response, errors_in_response = result
     vulns = []
-    for ref, pkg_info in response["data"].items():
+    for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
+            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"].get("details", "")
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",
                 "aliases": [],
                 "severity": "N/A",
                 "score": "-",
-                "description": "No vulnerabilities found.",
+                "description": description,
                 "references": []
             })
         else:
@@ -268,5 +265,5 @@ def html_vuln_formatter(result):
                     "description": desc,
                     "references": references,
                 })
-    if not errors_in_response or response["data"]:
-        cli_out_write(_render_vulns(vulns, vuln_html))
+
+    cli_out_write(_render_vulns(vulns, vuln_html))

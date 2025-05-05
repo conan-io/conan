@@ -8,7 +8,7 @@ from conan.internal.model.conf import ConfDefinition, Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import MockSettings, ConanFileMock, MockOptions
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_msbuild_targets():

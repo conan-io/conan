@@ -10,7 +10,7 @@ from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")

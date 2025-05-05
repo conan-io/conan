@@ -364,7 +364,7 @@ class TestRemoteAuth:
         c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
                                                 "lasote", "mypass"])
 
-        with patch("conans.client.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
+        with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
             c.run("remote auth --force *")
             check_credentials_mock.assert_called_with(True)
 
@@ -375,7 +375,7 @@ class TestRemoteAuth:
         c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
                                                 "lasote", "mypass"])
 
-        with patch("conans.client.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
+        with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
             c.run("remote auth *")
             check_credentials_mock.assert_called_with(False)
 

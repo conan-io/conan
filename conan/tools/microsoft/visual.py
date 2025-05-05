@@ -7,7 +7,7 @@ from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
-from conans.util.files import save
+from conan.internal.util.files import save
 
 CONAN_VCVARS = "conanvcvars"
 

@@ -5,8 +5,8 @@ import pytest
 from conan.tools.scm import Git
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
-from conans.util.files import chdir
-from conans.util.runners import conan_run
+from conan.internal.util.files import chdir
+from conan.internal.util.runners import conan_run
 
 
 @pytest.mark.tool("git")

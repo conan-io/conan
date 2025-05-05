@@ -4,7 +4,7 @@ from conan.errors import ConanException
 from conan.internal.model.dependencies import UserRequirementsDict
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.config_parser import ConfigParser
+from conan.internal.util.config_parser import TextINIParse
 
 
 class _VersionRepr:
@@ -312,7 +312,7 @@ class PythonRequiresInfo:
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    parser = ConfigParser(text)
+    parser = TextINIParse(text)
     conan_info_json = {}
     for section, lines in parser.line_items():
         try:

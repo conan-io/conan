@@ -8,7 +8,7 @@ from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conans.util.files import mkdir, chdir, save
+from conan.internal.util.files import mkdir, chdir, save
 
 
 def run_source_method(conanfile, hook_manager):

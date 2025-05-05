@@ -5,7 +5,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

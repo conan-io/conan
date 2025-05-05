@@ -4,11 +4,11 @@ import os
 from collections import OrderedDict
 
 from conan.api.output import ConanOutput
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
+from conan.internal.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 LOCKFILE = "conan.lock"
 LOCKFILE_VERSION = "0.5"

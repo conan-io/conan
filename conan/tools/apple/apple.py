@@ -1,7 +1,7 @@
 import os
 from io import StringIO
 
-from conans.util.runners import check_output_runner
+from conan.internal.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 

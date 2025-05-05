@@ -2,7 +2,7 @@ import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_double_package_id_call():

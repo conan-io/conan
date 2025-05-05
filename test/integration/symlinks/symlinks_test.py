@@ -10,7 +10,7 @@ from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, rmdir, chdir, save
+from conan.internal.util.files import load, rmdir, chdir, save
 
 links_conanfile = textwrap.dedent("""
     from conan import ConanFile

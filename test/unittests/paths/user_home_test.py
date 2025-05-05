@@ -3,7 +3,7 @@ from pathlib import Path
 
 from conan.internal.paths import get_conan_user_home
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import chdir
+from conan.internal.util.files import chdir
 
 
 def test_conanrc_abs_path_get_conan_user_home():

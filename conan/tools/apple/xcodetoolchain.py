@@ -4,7 +4,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class XcodeToolchain(object):

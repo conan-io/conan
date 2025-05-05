@@ -14,7 +14,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.profiles import create_profile as _create_profile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 conanfile_scope_env = """
 from conan import ConanFile

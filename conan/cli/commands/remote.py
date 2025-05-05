@@ -13,7 +13,11 @@ from conan.errors import ConanException
 
 
 def _print_remotes_json(remotes):
-    info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
+    info = [{"name": r.name,
+             "url": r.url,
+             "verify_ssl": r.verify_ssl,
+             "enabled": not r.disabled,
+             "allowed_packages": r.allowed_packages,}
             for r in remotes]
     cli_out_write(json.dumps(info, indent=4))
 

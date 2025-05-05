@@ -22,7 +22,7 @@ from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
 from conan.internal.paths import get_conan_user_home
-from conans.client.migrations import ClientMigrator
+from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
 
 

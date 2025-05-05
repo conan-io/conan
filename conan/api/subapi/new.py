@@ -6,7 +6,7 @@ from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 from conan import __version__
 
 

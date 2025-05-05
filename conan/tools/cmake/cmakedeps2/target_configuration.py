@@ -6,7 +6,7 @@ from jinja2 import Template
 
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
-from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 
 class TargetConfigurationTemplate2:

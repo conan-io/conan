@@ -216,6 +216,15 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
                                        envs_generation=args.envs_generation)
 
 
+@conan_subcommand()
+def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Clean the temporary build folders when possible
+    """
+    parser.parse_args(*args)
+    conan_api.workspace.clean()
+
+
 @conan_command(group="Consumer")
 def workspace(conan_api, parser, *args):  # noqa
     """

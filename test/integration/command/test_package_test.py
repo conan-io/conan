@@ -6,7 +6,7 @@ import unittest
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class TestPackageTest(unittest.TestCase):

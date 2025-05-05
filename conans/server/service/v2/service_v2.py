@@ -8,7 +8,7 @@ from conan.internal.paths import CONAN_MANIFEST
 from conan.api.model import PkgReference
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class ConanServiceV2:

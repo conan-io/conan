@@ -3,9 +3,9 @@ from conan.internal.cache.cache import PkgCache
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.export import cmd_export
 from conan.internal.methods import run_package_method
-from conans.client.graph.graph import BINARY_BUILD, RECIPE_INCACHE
+from conan.internal.graph.graph import BINARY_BUILD, RECIPE_INCACHE
 from conan.api.model import PkgReference
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class ExportAPI:

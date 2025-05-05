@@ -5,7 +5,7 @@ import unittest
 
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import set_dirty, clean_dirty, set_dirty_context_manager, _DIRTY_FOLDER
+from conan.internal.util.files import set_dirty, clean_dirty, set_dirty_context_manager, _DIRTY_FOLDER
 
 
 class DirtyTest(unittest.TestCase):

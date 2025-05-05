@@ -9,7 +9,7 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.conftest import tools_locations
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
-from conans.util.runners import conan_run
+from conan.internal.util.runners import conan_run
 
 _conanfile_py = textwrap.dedent("""
 from conan import ConanFile

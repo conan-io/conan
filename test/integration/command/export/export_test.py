@@ -12,7 +12,7 @@ from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE, CONAN_MANIFEST
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 class ExportSettingsTest(unittest.TestCase):
