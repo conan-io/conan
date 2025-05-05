@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
@@ -439,7 +437,7 @@ class Requirements:
     """
     def __init__(self, declared=None, declared_build=None, declared_test=None,
                  declared_build_tool=None):
-        self._requires = OrderedDict()
+        self._requires = {}
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
@@ -490,7 +488,7 @@ class Requirements:
         as a result of an "alternative" replacement of the package name, otherwise the dictionary
         gets broken by modified key
         """
-        result = OrderedDict()
+        result = {}
         for k, v in self._requires.items():
             if k is require:
                 k.ref.name = new_name

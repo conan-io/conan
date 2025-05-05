@@ -9,7 +9,7 @@ import pytest
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class SourceTest(unittest.TestCase):
@@ -118,14 +118,14 @@ class ConanLib(ConanFile):
     def test_local_source(self):
         conanfile = '''
 from conan import ConanFile
-from conans.util.files import save
+from conan.tools.files import save
 
 class ConanLib(ConanFile):
 
     def source(self):
         self.output.info("Running source!")
         err
-        save("file1.txt", "Hello World")
+        save(self, "file1.txt", "Hello World")
 '''
         # First, failing source()
         client = TestClient(light=True)
@@ -191,12 +191,12 @@ class ConanLib(ConanFile):
         conanfile = textwrap.dedent('''
             import os
             from conan import ConanFile
-            from conans.util.files import save
+            from conan.tools.files import save
 
             class ConanLib(ConanFile):
 
                 def source(self):
-                    save(os.path.join(self.source_folder, "main.cpp"), "void main() {}")
+                    save(self, os.path.join(self.source_folder, "main.cpp"), "void main() {}")
                     self.output.info("Running source!")
             ''')
 

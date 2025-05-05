@@ -4,8 +4,8 @@ from conan.internal.api.install.generators import write_generators
 from conan.internal.conan_app import ConanBasicApp
 from conan.internal.deploy import do_deploys
 
-from conans.client.graph.install_graph import InstallGraph
-from conans.client.installer import BinaryInstaller
+from conan.internal.graph.install_graph import InstallGraph
+from conan.internal.graph.installer import BinaryInstaller
 from conan.errors import ConanInvalidConfiguration
 
 

@@ -3,7 +3,7 @@ import os
 import fasteners
 
 from conan.internal.errors import NotFoundException
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 from conans.server.utils.files import path_exists, relative_dirs
 
 

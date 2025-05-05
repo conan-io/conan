@@ -4,10 +4,10 @@ import traceback
 import importlib
 
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.subsystems import deduce_subsystem, subsystem_path
+from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import save, mkdir, chdir
+from conan.internal.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -58,7 +58,7 @@ def _get_generator_class(generator_name):
 
 
 def load_cache_generators(path):
-    from conans.client.loader import load_python_file
+    from conan.internal.loader import load_python_file
     result = {}  # Name of the generator: Class
     if not os.path.isdir(path):
         return result

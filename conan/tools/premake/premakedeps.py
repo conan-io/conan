@@ -3,7 +3,7 @@ import glob
 import re
 
 from conan.internal import check_duplicated_generator
-from conans.util.files import save
+from conan.internal.util.files import save
 
 # Filename format strings
 PREMAKE_VAR_FILE = "conan_{pkgname}_vars{config}.premake5.lua"

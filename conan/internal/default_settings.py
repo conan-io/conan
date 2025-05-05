@@ -112,7 +112,8 @@ compiler:
                     "11", "11.1", "11.2", "11.3", "11.4", "11.5",
                     "12", "12.1", "12.2", "12.3",  "12.4",
                     "13", "13.1", "13.2", "13.3",
-                    "14", "14.1", "14.2"]
+                    "14", "14.1", "14.2",
+                    "15", "15.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32, mcf]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
@@ -168,7 +169,7 @@ build_type: [null, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 
 def migrate_settings_file(cache_folder):
-    from conans.client.migrations import update_file
+    from conan.internal.api.migrations import update_file
 
     settings_path = os.path.join(cache_folder, "settings.yml")
     update_file(settings_path, default_settings_yml)

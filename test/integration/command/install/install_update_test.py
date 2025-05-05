@@ -4,7 +4,7 @@ from time import sleep
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile, TestServer
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_update_binaries():

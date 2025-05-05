@@ -10,7 +10,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, save_files
+from conan.internal.util.files import save, save_files
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -583,3 +583,42 @@ def test_workspace_with_local_recipes_index():
     assert "zlib/1.2.11" in c.out  # It doesn't crash
     c.run("list zlib/1.2.11#*")
     assert "zlib/1.2.11" not in c.out
+
+
+class TestClean:
+    def test_clean(self):
+        # Using cmake_layout, we can clean the build folders
+        c = TestClient()
+        c.save({"conanws.yml": "name: my_workspace"})
+        pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
+        pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
+        c.save({"pkga/conanfile.py": pkga ,
+                "pkgb/conanfile.py": pkgb,
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1")})
+        c.run("workspace add pkga -of=build/pkga")
+        c.run("workspace add pkgb -of=build/pkgb --product")
+        c.run("workspace add pkgc")
+        c.run("workspace build")
+        assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
+        assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
+        c.run("workspace clean")
+        assert "my_workspace: Removing pkga/0.1 output folder" in c.out
+        assert "my_workspace: Removing pkgb/0.1 output folder" in c.out
+        assert "Editable pkgc/0.1 doesn't have an output_folder defined" in c.out
+        assert not os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
+        assert not os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
+
+    def test_custom_clean(self):
+        conanfilews = textwrap.dedent("""
+            from conan import Workspace
+
+            class Ws(Workspace):
+                def name(self):
+                    return "my_workspace"
+                def clean(self):
+                    self.output.info("MY CLEAN!!!!")
+            """)
+        c = TestClient()
+        c.save({"conanws.py": conanfilews})
+        c.run("workspace clean")
+        assert "my_workspace: MY CLEAN!!!" in c.out

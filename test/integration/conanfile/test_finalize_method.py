@@ -7,7 +7,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 conanfile_dep = textwrap.dedent("""
     import os

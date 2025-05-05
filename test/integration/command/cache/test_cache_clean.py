@@ -1,13 +1,16 @@
 import os.path
 import re
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
-def test_cache_clean():
+@pytest.mark.parametrize("use_pkglist", [True, False])
+def test_cache_clean(use_pkglist):
     c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
@@ -20,7 +23,13 @@ def test_cache_clean():
     assert os.path.exists(pkg_layout.build())
     assert os.path.exists(pkg_layout.download_package())
 
-    c.run('cache clean "*" -s -b')
+    if use_pkglist:
+        c.run("list *:*#* -f=json", redirect_stdout="pkglist.json")
+        pkglist = c.load("pkglist.json")
+    arg = "--list=pkglist.json" if use_pkglist else "*"
+    c.run(f'cache clean {arg} -s -b -v')
+    assert f"{ref_layout.reference.repr_notime()}: Cleaning recipe cache contents" in c.out
+    assert f"{pkg_layout.reference}: Cleaning package cache contents" in c.out
     assert not os.path.exists(pkg_layout.build())
     assert not os.path.exists(ref_layout.source())
     assert os.path.exists(ref_layout.download_export())
@@ -29,6 +38,9 @@ def test_cache_clean():
     c.run('cache clean -d')
     assert not os.path.exists(ref_layout.download_export())
     assert not os.path.exists(pkg_layout.download_package())
+
+    c.run("cache clean -bs -v")
+    assert "Cleaning 0 backup sources" in c.out
 
 
 def test_cache_clean_all():

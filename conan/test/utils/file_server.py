@@ -5,7 +5,7 @@ import bottle
 from webtest import TestApp
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class TestFileServer:

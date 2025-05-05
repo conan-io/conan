@@ -2,7 +2,7 @@ import math
 import multiprocessing
 import os
 
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def build_jobs(conanfile):

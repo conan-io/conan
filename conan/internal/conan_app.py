@@ -4,12 +4,12 @@ from conan.internal.api.local.editable import EditablePackages
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.conf import ConfDefinition
-from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import PyRequireLoader
-from conans.client.graph.range_resolver import RangeResolver
-from conans.client.loader import ConanFileLoader, load_python_file
-from conans.client.remote_manager import RemoteManager
-from conans.client.rest.auth_manager import ConanApiAuthManager
+from conan.internal.rest.auth_manager import ConanApiAuthManager
+from conan.internal.graph.proxy import ConanProxy
+from conan.internal.graph.python_requires import PyRequireLoader
+from conan.internal.graph.range_resolver import RangeResolver
+from conan.internal.loader import ConanFileLoader, load_python_file
+from conan.internal.rest.remote_manager import RemoteManager
 from conan.internal.api.remotes.localdb import LocalDB
 
 

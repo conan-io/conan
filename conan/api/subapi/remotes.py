@@ -8,13 +8,13 @@ from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanBasicApp
-from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.remote_credentials import RemoteCredentials
-from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
+from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.remote_credentials import RemoteCredentials
+from conan.internal.rest.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.errors import ConanException
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
 

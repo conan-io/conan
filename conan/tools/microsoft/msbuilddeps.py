@@ -11,7 +11,7 @@ from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.tools.microsoft.visual import msvc_platform_from_arch
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 

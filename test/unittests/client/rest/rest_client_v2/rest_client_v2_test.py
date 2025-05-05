@@ -1,8 +1,8 @@
-from conans.client.rest.rest_client_v2 import RestV2Methods
-from mock import ANY, MagicMock, patch
+from conan.internal.rest.rest_client_v2 import RestV2Methods
+from mock import MagicMock, patch
 
 
-@patch("conans.client.rest.conan_requester.ConanRequester")
+@patch("conan.internal.rest.conan_requester.ConanRequester")
 def test_check_credentials_set_token_to_unset_with_force_auth_true_and_token_none(
     conanRequesterMock,
 ):
@@ -16,7 +16,7 @@ def test_check_credentials_set_token_to_unset_with_force_auth_true_and_token_non
     assert conanRequesterMock.get.call_args[1]["auth"].bearer == "Bearer unset"
 
 
-@patch("conans.client.rest.conan_requester.ConanRequester")
+@patch("conan.internal.rest.conan_requester.ConanRequester")
 def test_check_credentials_keep_token_none_with_force_auth_false_and_token_none(
     conanRequesterMock,
 ):

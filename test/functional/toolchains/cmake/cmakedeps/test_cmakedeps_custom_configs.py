@@ -5,12 +5,11 @@ import unittest
 
 import pytest
 
-from conan.internal.default_settings import default_settings_yml
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.tools import TestClient
 
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.tool("cmake")

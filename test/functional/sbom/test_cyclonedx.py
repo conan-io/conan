@@ -5,7 +5,7 @@ import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 import os
 
 # Using the sbom tool with "conan create"
@@ -321,16 +321,16 @@ def test_cyclonedx_check_content(cyclone_version):
     content = tc.load(cyclone_path)
     content_json = json.loads(content)
     if cyclone_version == 'cyclonedx_1_4':
-        assert content_json["metadata"]["component"]["author"]
+        assert content_json["metadata"]["component"]["author"] == 'conan-dev'
         assert content_json["metadata"]["component"]["type"] == 'application'
         assert content_json["metadata"]["tools"][0]
-        assert content_json["components"][0]["author"]
+        assert content_json["components"][0]["author"] == 'conan-dev'
         assert content_json["components"][0]["type"] == 'application'
     elif cyclone_version == 'cyclonedx_1_6':
         assert not content_json["metadata"]["component"].get("author")
-        assert content_json["metadata"]["component"]["authors"]
+        assert content_json["metadata"]["component"]["authors"][0]["name"] == 'conan-dev'
         assert content_json["metadata"]["component"]["type"] == 'application'
         assert content_json["metadata"]["tools"]["components"][0]
         assert not content_json["components"][0].get("author")
-        assert content_json["components"][0]["authors"]
+        assert content_json["components"][0]["authors"][0]["name"] == 'conan-dev'
         assert content_json["components"][0]["type"] == 'application'

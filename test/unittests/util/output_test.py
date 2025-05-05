@@ -9,7 +9,7 @@ from conan.tools.files import unzip
 from conan.test.utils.mocks import RedirectedTestOutput, ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, redirect_output
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 class OutputTest(unittest.TestCase):

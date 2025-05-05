@@ -13,7 +13,7 @@ from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.env import environment_update
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestParamErrors:
