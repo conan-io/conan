@@ -212,11 +212,13 @@ class GnuToolchain:
                 # FIXME: Proof of concept, should this allow configuration?
                 cl_wrapper = unix_path(self._conanfile, self._wrapper_path("compile"))
                 ar_wrapper = unix_path(self._conanfile, self._wrapper_path("ar-lib"))
+                ar_wrapper = unix_path(self._conanfile,
+                                       "C:/Users/Diego/.conan2/p/autome371915acf95c/p/res/automake-1.16/ar-lib")
                 extra_env_vars = {"CC": f"{cl_wrapper} cl -nologo",
                                   "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
                                   "LD": 'link -nologo',
-                                  "AR": f'{ar_wrapper} "lib -nologo"',
+                                  "AR": f'{ar_wrapper} lib',
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
