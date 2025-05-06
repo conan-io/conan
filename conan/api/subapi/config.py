@@ -22,7 +22,7 @@ from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.internal.hook_manager import HookManager
 from conan.internal.util.files import load, save, rmdir, remove
-from conan.internal.util.locker import process_lock
+from conan.internal.util.semaphore import interprocess_lock
 
 
 class ConfigAPI:
@@ -36,7 +36,7 @@ class ConfigAPI:
     def home(self):
         return self.conan_api.cache_folder
 
-    @process_lock()
+    @interprocess_lock()
     def install(self, path_or_url, verify_ssl, config_type=None, args=None,
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
@@ -47,7 +47,7 @@ class ConfigAPI:
                               source_folder=source_folder, target_folder=target_folder)
         self.conan_api.reinit()
 
-    @process_lock()
+    @interprocess_lock()
     def install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
@@ -208,7 +208,7 @@ class ConfigAPI:
 
         return Settings(settings)
 
-    @process_lock()
+    @interprocess_lock()
     def clean(self):
         contents = os.listdir(self.home())
         packages_folder = self.global_conf.get("core.cache:storage_path") or os.path.join(self.home(), "p")
