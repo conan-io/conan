@@ -263,9 +263,9 @@ class _PCFilesDeps:
         if pkg_name not in pc_files:
             cpp_info = self.dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
-            # Notice that whether DEP has components then they'll be the requirements == pc_files.keys()
+            # Note: If DEP has components,, they'll be the requirements == pc_files.keys()
             requires = list(pc_files.keys()) or self.get_component_requirement_names(cpp_info)
-            # If we have found some component requires it would be enough
+            # If we have found some component requirements it would be enough
             if not requires:
                 # If no requires were found, let's try to get all the direct visible dependencies,
                 # e.g., requires = "other_pkg/1.0"
