@@ -57,6 +57,7 @@ def test_meson_to_cstd_flag(cstd, expected):
     ("gcc", "14.0", "gnu26", "gnu++26"),
     ("gcc", "14.0", "gnu23", "gnu++23"),
     ("gcc", "14.0", "23", "c++23"),
+    ("gcc", "15.0", "26", "c++26"),
     ("msvc", "193", "23", "vc++latest"),
     (None, None, "26", "c++26"),
     (None, None, None, None)
