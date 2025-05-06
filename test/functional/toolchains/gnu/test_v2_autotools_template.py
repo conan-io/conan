@@ -361,11 +361,15 @@ class TestAutotoolsTemplateWindows:
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path=bash
             """)
-        conanfile = c.load("test_package/conanfile.py")
+        test_conanfile = c.load("test_package/conanfile.py")
+        # GnuToolchain solves the test_package in Windows
+        test_conanfile = test_conanfile.replace("AutotoolsToolchain", "GnuToolchain")
+        conanfile = c.load("conanfile.py")
         # GnuToolchain solves the test_package in Windows
         conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
         c.save({"msys2": msys2,
-                "test_package/conanfile.py": conanfile})
+                "conanfile.py": conanfile,
+                "test_package/conanfile.py": test_conanfile})
         c.run("create . -pr=msys2")
         assert "hello/1.0: Hello World Release!" in c.out
         assert "conanvcvars.bat: Activating environment" in c.out

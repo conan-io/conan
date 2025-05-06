@@ -218,7 +218,7 @@ class GnuToolchain:
                                   "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
                                   "LD": 'link -nologo',
-                                  "AR": f'{ar_wrapper} lib',
+                                  "AR": 'lib -nologo',
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
