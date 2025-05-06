@@ -499,7 +499,8 @@ def test_pkg_config_name_full_aliases():
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
-    Requires: compo1""")
+    Requires: compo1
+    """)
     assert content == pc_content
 
     pc_content = client.load("pkg_other_name.pc")
@@ -525,7 +526,8 @@ def test_pkg_config_name_full_aliases():
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
-    Requires: pkg_other_name""")
+    Requires: pkg_other_name
+    """)
     assert content == pc_content
 
     pc_content = client.load("pkg_alias2.pc")
@@ -533,7 +535,8 @@ def test_pkg_config_name_full_aliases():
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3
-    Requires: pkg_other_name""")
+    Requires: pkg_other_name
+    """)
     assert content == pc_content
 
     pc_content = client.load("second-mycomponent.pc")

@@ -302,7 +302,7 @@ class _PCFilesDeps:
 
     def _get_alias_pc_content(self, context):
         template = Template(self.alias_template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
+                            undefined=StrictUndefined, keep_trailing_newline=True)
         return template.render(context)
 
 
