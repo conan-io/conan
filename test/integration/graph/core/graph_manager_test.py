@@ -3,6 +3,7 @@ from parameterized import parameterized
 
 from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
+from functional.toolchains.cmake.cmakedeps.test_cmakedeps_aliases import consumer
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
 
@@ -1865,6 +1866,22 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
         self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
 
+    def test_issue(self):
+        # pkg1 -> pkg2 -(visible=False) -> pkg3 -> pkg4
+        #   \------------------------------>/
+        self._cache_recipe("pkg2/0.1", GenConanfile("pkg2", "0.1")
+                           .with_requirement("pkg3/0.1", visible=False)
+                           .with_shared_option(True))
+        self._cache_recipe("pkg3/0.1", GenConanfile("pkg3", "0.1")
+                           .with_package_type("header-library")
+                           .with_requires("pkg4/0.1"))
+        self._cache_recipe("pkg4/0.1", GenConanfile("pkg4", "0.1")
+                           .with_package_type("header-library"))
+
+        self.recipe_cache("pkg1/0.1", ["pkg2/0.1", "pkg3/0.1"], option_shared=True)
+        consumer = self.recipe_consumer("pkg0/0.1", ["pkg1/0.1"])
+        deps_graph = self.build_consumer(consumer, install=True)
+        print()
 
 class TransitiveOverridesGraphTest(GraphManagerTest):
 
