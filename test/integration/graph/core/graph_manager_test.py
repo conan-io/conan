@@ -3,7 +3,6 @@ from parameterized import parameterized
 
 from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
-from functional.toolchains.cmake.cmakedeps.test_cmakedeps_aliases import consumer
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
 
