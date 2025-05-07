@@ -192,7 +192,7 @@ def diff_to_single_html(name, diff_text, old_cache_path, new_cache_path):
     html_lines = [
         f"<html><head><title>{name}</title><style>",
         ".container { display: flex; height: 100%; }",
-        ".sidebar { width: 300px; padding: 10px; background: #f4f4f4; overflow-y: auto; border-right: 1px solid #ccc; }",
+        ".sidebar { min-width: 20%; padding: 10px; overflow-y: scroll;background: #f4f4f4; border-right: 1px solid #ccc; }",
         ".content { flex-grow: 1; padding: 20px; background: #fff; overflow-y: auto; }",
         ".add { background-color: #76ffbb; }",
         ".del { background-color: #fdb9c1; }",
@@ -211,8 +211,10 @@ def diff_to_single_html(name, diff_text, old_cache_path, new_cache_path):
 
     for line in diff_text.splitlines():
         if line.startswith('+++') or line.startswith('---') or line.startswith('index'):
-            pass
-        elif line.startswith('+'):
+            continue
+        # Escape HTML characters so the diff is displayed correctly
+        line = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if line.startswith('+'):
             html_lines.append(f'<span class="add">{line}</span>')
         elif line.startswith('-'):
             html_lines.append(f'<span class="del">{line}</span>')
