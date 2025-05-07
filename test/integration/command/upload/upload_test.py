@@ -16,7 +16,7 @@ from conan.api.model import RecipeReference
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
-from conan.internal.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
+from conan.internal.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty, sha1sum
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
@@ -542,4 +542,66 @@ def test_upload_json_output():
     list_pkgs = json.loads(c.stdout)
     revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
     pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    prev = pkg["revisions"]["f50f552c6e04b1f241e5f7864bc3957f"]
     assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}
+    assert revs["upload-urls"] == {
+        "conanfile.py": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanfile.py",
+            "checksum": sha1sum(revs["files"]["conanfile.py"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanmanifest.txt",
+            "checksum": sha1sum(revs["files"]["conanmanifest.txt"])
+        }
+    }
+    assert prev["upload-urls"] == {
+        "conan_package.tgz": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conan_package.tgz",
+            "checksum": sha1sum(prev["files"]["conan_package.tgz"])
+        },
+        "conaninfo.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conaninfo.txt",
+            "checksum": sha1sum(prev["files"]["conaninfo.txt"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conanmanifest.txt",
+            "checksum": sha1sum(prev["files"]["conanmanifest.txt"])
+        }
+    }
+
+
+def test_upload_dry_run_json_output():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
+                                                       .with_shared_option(False)})
+    c.run("create . -s os=Linux")
+    c.run("upload * -r=default -c --dry-run --format=json")
+    list_pkgs = json.loads(c.stdout)
+    revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
+    pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    prev = pkg["revisions"]["f50f552c6e04b1f241e5f7864bc3957f"]
+    assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}
+    assert revs["upload-urls"] == {
+        "conanfile.py": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanfile.py",
+            "checksum": sha1sum(revs["files"]["conanfile.py"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanmanifest.txt",
+            "checksum": sha1sum(revs["files"]["conanmanifest.txt"])
+        }
+    }
+    assert prev["upload-urls"] == {
+        "conan_package.tgz": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conan_package.tgz",
+            "checksum": sha1sum(prev["files"]["conan_package.tgz"])
+        },
+        "conaninfo.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conaninfo.txt",
+            "checksum": sha1sum(prev["files"]["conaninfo.txt"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conanmanifest.txt",
+            "checksum": sha1sum(prev["files"]["conanmanifest.txt"])
+        }
+    }

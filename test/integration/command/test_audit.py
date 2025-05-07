@@ -13,18 +13,18 @@ from conan.test.utils.tools import TestClient
 
 
 @contextmanager
-def proxy_response(status, data):
+def proxy_response(status, data, retry_after=60):
     with patch("conan.api.conan_api.RemotesAPI.requester") as conanRequesterMock:
         return_status = MagicMock()
         return_status.status_code = status
         return_status.json = MagicMock(return_value=data)
-        return_status.headers = {"retry-after": 60}
+        return_status.headers = {"retry-after": retry_after}
         conanRequesterMock.post = MagicMock(return_value=return_status)
 
         yield conanRequesterMock, return_status
 
 
-def test_conan_audit_paths():
+def test_conan_audit_proxy():
     successful_response = {
         "data": {
             "query": {
@@ -91,9 +91,28 @@ def test_conan_audit_paths():
         assert "You have exceeded the number of allowed requests" in tc.out
         assert "The limit will reset in 1 minute" in tc.out
 
+    with proxy_response(429, {"error": "Rate limit exceeded"}, retry_after=2 * 3600):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "You have exceeded the number of allowed requests" in tc.out
+        assert "The limit will reset in 2 hours and 0 minute" in tc.out
+
     with proxy_response(400, {"error": "Not found"}):
+        # Not finding a package should not be an error
         tc.run("audit list zlib/1.2.11")
         assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.stdout
+
+    with proxy_response(403, {"error": "Error not shown"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "ERROR: Authentication error (403)" in tc.out
+        assert "Error not shown" not in tc.out
+
+    with proxy_response(500, {"error": "Internal error"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "Internal server error (500)" in tc.out
+
+    with proxy_response(405, {"error": "Method not allowed"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "Error in zlib/1.2.11 (405)" in tc.out
 
     tc.run("audit provider add myprivate --url=foo --type=private --token=valid_token")
 
@@ -114,6 +133,97 @@ def test_conan_audit_paths():
         assert providers_stat.st_uid == os.getuid()
         assert providers_stat.st_gid == os.getgid()
         assert providers_stat.st_mode & 0o777 == 0o600
+
+
+def test_conan_audit_private():
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": {
+                                    "preferredBaseScore": 8.9
+                                },
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529"
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+    tc.run("export .")
+
+    tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
+
+    # TODO: If the CLI does not allow tokenless provider, should this case not be handled?
+    tc.run("audit provider add myprivate --url=foo --type=private --token=f")
+    # Now, remove the token as if the user didn't set it manually in the json
+    providers = json.loads(tc.load_home("audit_providers.json"))
+    providers["myprivate"].pop("token", None)
+    tc.save_home({"audit_providers.json": json.dumps(providers)})
+
+    tc.run("audit list zlib/1.2.11 -p=myprivate", assert_error=True)
+    assert "Missing authentication token for 'myprivate' provider" in tc.out
+
+    tc.run("audit provider auth myprivate --token=valid_token")
+
+    with proxy_response(200, successful_response):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list -l=pkglist.json -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit scan --requires=zlib/1.2.11  -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+    # Now some common errors, like rate limited or missing lib, but it should not fail!
+    with proxy_response(400, {"errors": [{"message": "Ref not found"}]}):
+        # Not finding a package should not be an error
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.stdout
+
+    with proxy_response(403, {"errors": [{"message": "Authentication error"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(500, {"errors": [{"message": "Internal error"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(405, {"errors": [{"message": "Method not allowed"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(404, {"errors": [{"message": "Not found"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "An error occurred while connecting to the 'myprivate' provider" in tc.out
+
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10),

@@ -1,6 +1,8 @@
 import re
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -338,3 +340,22 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component_in_another_
             "main/test_package/conanfile.py":test_package})
     c.run("create ./dependent/ --name=dependent --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
     c.run("create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+
+
+def test_cmake_find_mode_deprecated():
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                # Having both is ok as the user expects that config would
+                # be generated nonetheless
+                self.cpp_info.set_property("cmake_find_mode", "module")
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+    tc.run(f"install --requires=dep/0.1 {args}")
+    assert "CMakeConfigDeps does not support module find mode"
