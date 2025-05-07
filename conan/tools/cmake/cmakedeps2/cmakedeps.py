@@ -4,7 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.api.output import Color
+from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
@@ -59,6 +59,12 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
+            if cmake_find_mode == FIND_MODE_MODULE:
+                ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
+                                                         f"module find mode in {dep}.\n"
+                                                         f"Config mode will be used regardless.",
+                                                         # Should this be risk?
+                                                         warn_tag="deprecated")
 
             if require.direct:
                 direct_deps.append((require, dep))

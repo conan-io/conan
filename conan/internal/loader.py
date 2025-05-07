@@ -12,6 +12,7 @@ import yaml
 
 from pathlib import Path
 
+from conan.api.output import ConanOutput
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
@@ -60,6 +61,9 @@ class ConanFileLoader:
                 if getattr(conanfile, "python_requires", None) == "tested_reference_str":
                     conanfile.python_requires = tested_python_requires.repr_notime()
             elif tested_python_requires:
+                if getattr(conanfile, "python_requires", None) != "tested_reference_str":
+                    ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
+                                      " = \"tested_reference_str\"'", warn_tag="deprecated")
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:

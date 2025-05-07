@@ -10,7 +10,9 @@ from conan.test.utils.env import environment_update
 
 def test_profile_template():
     client = TestClient()
-    tpl = textwrap.dedent("""
+    tpl = textwrap.dedent("""\
+        # This is just to check that subprocess is injected in the render and can be used
+        {% set check_output = subprocess.check_output %}
         [settings]
         os = {{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
         build_type = {{ os.getenv("MY_BUILD_TYPE") }}
