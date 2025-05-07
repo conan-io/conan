@@ -5,7 +5,8 @@ from unittest.mock import patch
 import pytest
 from parameterized import parameterized
 
-from conan.internal.api.detect.detect_api import _cc_compiler
+from conan.internal.api.detect.detect_api import _cc_compiler, detect_suncc_compiler, \
+    detect_intel_compiler
 from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.internal.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -74,3 +75,12 @@ def test_detect_cc_versionings(detect_runner_mock, version_return, expected_vers
     detect_runner_mock.return_value = 0, version_return
     compiler, installed_version, compiler_exe = _cc_compiler()
     assert installed_version == Version(expected_version)
+
+@pytest.mark.parametrize("function,version_return,expected_version", [
+    [detect_suncc_compiler, "Sun C 5.13", ('sun-cc', Version("5.13"), 'cc')],
+    [detect_intel_compiler, "Intel C++ Compiler 2025.0", ('intel-cc', Version("2025.0"), 'icx')],
+])
+def test_detect_compiler(function, version_return, expected_version):
+    with mock.patch("conan.internal.api.detect.detect_api.detect_runner", mock.MagicMock(return_value=(0, version_return))):
+        ret = function()
+        assert ret == expected_version

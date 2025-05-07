@@ -5,6 +5,7 @@ import jinja2
 from jinja2 import Template
 
 from conan.errors import ConanException
+from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
@@ -120,13 +121,17 @@ class TargetConfigurationTemplate2:
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake and relativization
-            include_dirs = ";".join(i.replace("\\", "/") for i in aggregated_cppinfo.includedirs)
+            # FIXME: Proper escaping of paths for CMake
+            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
+            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in incdirs]
+            include_dirs = ";".join(incdirs)
             definitions = ""
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
-        # TODO: Missing find_modes
+        pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
+                                     "${CMAKE_CURRENT_LIST_DIR}")
         dependencies = self._get_dependencies()
         return {"dependencies": dependencies,
                 "pkg_folder": pkg_folder,

@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import yaml
 
@@ -19,7 +20,7 @@ class Workspace:
         self.output = ConanOutput(scope=self.name())
 
     def name(self):
-        return os.path.basename(self.folder)
+        return self.conan_data.get("name") or os.path.basename(self.folder)
 
     def _conan_load_data(self):
         data_path = os.path.join(self.folder, "conanws.yml")
@@ -59,6 +60,19 @@ class Workspace:
             self.conan_data["products"].remove(path)
         save(os.path.join(self.folder, "conanws.yml"), yaml.dump(self.conan_data))
         return found_ref
+
+    def clean(self):
+        self.output.info("Default workspace clean: Removing the output-folder of each editable")
+        for ref, info in self.conan_data.get("editables", {}).items():
+            if not info.get("output_folder"):
+                self.output.info(f"Editable {ref} doesn't have an output_folder defined")
+                continue
+            of = os.path.join(self.folder, info["output_folder"])
+            try:
+                self.output.info(f"Removing {ref} output folder: {of}")
+                shutil.rmtree(of)
+            except OSError as e:
+                self.output.warning(f"Error removing {ref} output folder: {str(e)}")
 
     def _conan_rel_path(self, path):
         if path is None:

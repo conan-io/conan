@@ -4,7 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.api.output import Color
+from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
@@ -59,6 +59,12 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
+            if cmake_find_mode == FIND_MODE_MODULE:
+                ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
+                                                         f"module find mode in {dep}.\n"
+                                                         f"Config mode will be used regardless.",
+                                                         # Should this be risk?
+                                                         warn_tag="deprecated")
 
             if require.direct:
                 direct_deps.append((require, dep))
@@ -244,7 +250,8 @@ class _PathGenerator:
                     f = self._cmakedeps.get_cmake_filename(dep)
                     for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = pkg_folder
+                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
+                                                                  "${CMAKE_CURRENT_LIST_DIR}")
                 continue
 
             # If CMakeDeps generated, the folder is this one
@@ -292,6 +299,7 @@ class _PathGenerator:
             runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
             for d in runtime_dirs:
                 d = d.replace("\\", "/")
+                d = relativize_path(d, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                 existing = host_runtime_dirs.setdefault(config, [])
                 if d not in existing:
                     existing.append(d)

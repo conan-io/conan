@@ -1077,6 +1077,8 @@ class TestTestPackagePythonRequire:
         """
 
         c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("mytool", "0.1")})
+        c.run("create .")
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             def mycommon():
@@ -1097,9 +1099,16 @@ class TestTestPackagePythonRequire:
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
         assert "common/0.1 (test package): 42!!!" in c.out
 
         c.run("test test_package common/0.1")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        # https://github.com/conan-io/conan/issues/18224
+        c.save({"myprofile": "[tool_requires]\nmytool/0.1"})
+        c.run("create . -pr=myprofile")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
