@@ -292,7 +292,7 @@ graph_info_html = r"""
                 while (control.firstChild) {
                     control.removeChild(control.firstChild);
                 }
-                if(ids[0] || ids_edges[0]) {
+                if(ids[0] !== undefined || ids_edges[0] !== undefined) {
                     selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
                     let div = document.createElement('div');
                     let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));

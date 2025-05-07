@@ -205,6 +205,10 @@ class WorkspaceAPI:
         self._check_ws()
         return self._ws.remove(path)
 
+    def clean(self):
+        self._check_ws()
+        return self._ws.clean()
+
     def info(self):
         self._check_ws()
         return {"name": self.name,
