@@ -10,5 +10,5 @@ def test_conan_new_compiles():
     tc.run("new header_lib -d name=hello -d version=1.0 -o=hello")
     tc.run("new header_lib -d name=bye -d version=1.0 -d requires=hello/1.0 -o=bye")
 
-    tc.run("create hello")
+    tc.run("create hello -tf=")
     tc.run("create bye")
