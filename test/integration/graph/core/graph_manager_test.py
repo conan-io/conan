@@ -1866,18 +1866,21 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
 
     def test_issue(self):
-        # pkg1 -> pkg2 -(visible=False) -> pkg3 -> pkg4
-        #   \------------------------------>/
+        # pkg1 -> pkg2 -(visible=False) -> pkg3/0.1 -> pkg4
+        #   \------------------------------>pkg3/0.2 --/
         self._cache_recipe("pkg2/0.1", GenConanfile("pkg2", "0.1")
                            .with_requirement("pkg3/0.1", visible=False)
                            .with_shared_option(True))
         self._cache_recipe("pkg3/0.1", GenConanfile("pkg3", "0.1")
                            .with_package_type("header-library")
                            .with_requires("pkg4/0.1"))
+        self._cache_recipe("pkg3/0.2", GenConanfile("pkg3", "0.2")
+                           .with_package_type("header-library")
+                           .with_requires("pkg4/0.1"))
         self._cache_recipe("pkg4/0.1", GenConanfile("pkg4", "0.1")
                            .with_package_type("header-library"))
 
-        self.recipe_cache("pkg1/0.1", ["pkg2/0.1", "pkg3/0.1"], option_shared=True)
+        self.recipe_cache("pkg1/0.1", ["pkg2/0.1", "pkg3/0.2"], option_shared=True)
         consumer = self.recipe_consumer("pkg0/0.1", ["pkg1/0.1"])
         deps_graph = self.build_consumer(consumer, install=True)
         print()
