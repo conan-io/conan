@@ -17,6 +17,7 @@ class {{package_name}}Recipe(ConanFile):
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "include/*"
 
+    # Automatically manage the package ID clearing of settings and options
     implements = ["auto_header_only"]
 
     def layout(self):
@@ -25,12 +26,6 @@ class {{package_name}}Recipe(ConanFile):
     def requirements(self):
         {% for require in requires -%}
         self.requires("{{ require }}")
-        {% endfor %}
-    {%- endif %}
-    {%- if tool_requires is defined %}
-    def build_requirements(self):
-        {% for require in tool_requires -%}
-        self.tool_requires("{{ require }}")
         {% endfor %}
     {%- endif %}
 
@@ -65,12 +60,6 @@ void {{package_name}}(){
     std::cout << "{{package_name}}/{{version}} header only called" << std::endl;
 }
 
-
-void {{package_name}}_print_vector(const std::vector<std::string> &strings) {
-    for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
-        std::cout << "{{package_name}}/{{version}} " << *it << std::endl;
-    }
-}
 """
 
 test_conanfile_v2 = """import os
@@ -117,11 +106,6 @@ test_main = """#include "{{name}}.h"
 
 int main() {
     {{package_name}}();
-
-    std::vector<std::string> vec;
-    vec.push_back("test_package");
-
-    {{package_name}}_print_vector(vec);
 }
 """
 
