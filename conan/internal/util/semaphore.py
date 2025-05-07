@@ -87,3 +87,75 @@ def interprocess_lock():
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been released.")
         return wrapper
     return decorator
+
+
+def interprocess_write_lock():
+    """ Decorator to acquire an interprocess write lock for a function.
+
+        This method uses the fasteners library to create an interprocess write lock.
+        Unlike the interprocess_lock, it prevents other writers from acquiring the lock at same time,
+        but allows multiple readers to access the shared resource concurrently.
+    """
+    def decorator(func):
+        pid = os.getpid()
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            from conan.api.conan_api import ConanAPI
+            conan_api = ConanAPI()
+            acquire_timeout = _acquire_timeout(conan_api.cache_folder)
+            now = datetime.now()
+            def _sleep_timeout(interval: float) -> None:
+                time.sleep(interval)
+                if (datetime.now() - now).total_seconds() > acquire_timeout:
+                    raise ConanException(
+                        f"Conan could not acquire interprocess-lock within {acquire_timeout} seconds"
+                         " during parallel process execution. Please, update the conf"
+                        " 'core.cache.parallel:timeout' in conan.conf file to a higher value."
+                    )
+
+            import fasteners
+            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api),
+                                              sleep_func=_sleep_timeout)
+            ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring write semaphore lock.")
+            with lock.write_lock():
+                ConanOutput().debug(f"{datetime.now()} [{pid}]: Write semaphore has been locked.")
+                return func(*args, **kwargs)
+        ConanOutput().debug(f"{datetime.now()} [{pid}]: Write semaphore has been released.")
+        return wrapper
+    return decorator
+
+
+def interprocess_read_lock():
+    """ Decorator to acquire an interprocess read lock for a function.
+
+        This method uses the fasteners library to create an interprocess read lock, and serves
+        as a proxy for the fasteners library. It should be used with interprocess_write_lock to allow
+        multiple processes to safely access shared resources.
+    """
+    def decorator(func):
+        pid = os.getpid()
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            from conan.api.conan_api import ConanAPI
+            conan_api = ConanAPI()
+            acquire_timeout = _acquire_timeout(conan_api.cache_folder)
+            now = datetime.now()
+            def _sleep_timeout(interval: float) -> None:
+                time.sleep(interval)
+                if (datetime.now() - now).total_seconds() > acquire_timeout:
+                    raise ConanException(
+                        f"Conan could not acquire interprocess-lock within {acquire_timeout} seconds"
+                         " during parallel process execution. Please, update the conf"
+                        " 'core.cache.parallel:timeout' in conan.conf file to a higher value."
+                    )
+
+            import fasteners
+            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api),
+                                              sleep_func=_sleep_timeout)
+            ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring read semaphore lock.")
+            with lock.read_lock():
+                ConanOutput().debug(f"{datetime.now()} [{pid}]: Read semaphore has been locked.")
+                return func(*args, **kwargs)
+        ConanOutput().debug(f"{datetime.now()} [{pid}]: Read semaphore has been released.")
+        return wrapper
+    return decorator
