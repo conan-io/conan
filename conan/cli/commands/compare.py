@@ -42,7 +42,7 @@ def compare(conan_api: ConanAPI, parser, *args):
         full_ref, matching_remote = None, None
         for remote in enabled_remotes:
             if ref.revision:
-                no_rrev_ref = RecipeReference().loads(reference)
+                no_rrev_ref = RecipeReference.loads(reference)
                 no_rrev_ref.revision = None
                 try:
                     remote_revisions = conan_api.list.recipe_revisions(no_rrev_ref, remote)
