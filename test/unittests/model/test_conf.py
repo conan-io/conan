@@ -274,6 +274,13 @@ def test_compose_conf_dict_updates():
     assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
                          "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
+def test_compose_conf_numbers():
+    c = ConfDefinition()
+    c.loads("user.version:value=8.1\n"
+            "foo/*:user.version:value=10")
+    assert c.get("user.version:value") == 8.1
+    assert c.get("foo/*:version:value") == 10
+
 
 def test_conf_get_check_type_and_default():
     text = textwrap.dedent("""\
