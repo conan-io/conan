@@ -38,7 +38,7 @@ compare_html = r"""
 
                     if (query.length === 0) {
                         sidebar.forEach(function(item) {
-                            item.style.display = "block";
+                            item.style.display = "list-item";
                         });
                         content.forEach(function(item) {
                             const associated_diff = document.getElementById("diff_" + item.id);
@@ -49,7 +49,7 @@ compare_html = r"""
                         sidebar.forEach(function(item) {
                             const text = item.textContent.toLowerCase();
                             if (text.includes(query)) {
-                                item.style.display = "block";
+                                item.style.display = "list-item";
                             } else {
                                 item.style.display = "none";
                             }
@@ -78,8 +78,8 @@ compare_html = r"""
                     <br/>
                     <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
                 </div>
-                <input type="text" id="search" placeholder="Search...">
                 <h2>File list:</h2>
+                <input type="text" id="search" placeholder="Search...">
                 <ul>
                     {%- for filename in file_names %}
                         <li><a href="#{{ safe_filename(filename) }}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
