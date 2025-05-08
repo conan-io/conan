@@ -328,33 +328,6 @@ def gather_files(folder):
     return file_dict, symlinked_folders
 
 
-# FIXME: This is very repeated with the tools.unzip, but wsa needed for config-install unzip
-def unzip(filename, destination="."):
-    from conan.tools.files.files import untargz  # FIXME, importing from conan.tools
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
-        return untargz(filename, destination)
-    if filename.endswith(".gz"):
-        with gzip.open(filename, 'rb') as f:
-            file_content = f.read()
-        target_name = filename[:-3] if destination == "." else destination
-        save(target_name, file_content)
-        return
-    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination)
-
-    import zipfile
-    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
-
-    with zipfile.ZipFile(filename, "r") as z:
-        zip_info = z.infolist()
-        extracted_size = 0
-        for file_ in zip_info:
-            extracted_size += file_.file_size
-            z.extract(file_, full_path)
-
-
 def human_size(size_bytes):
     """
     format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
