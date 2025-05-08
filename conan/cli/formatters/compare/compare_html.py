@@ -8,6 +8,7 @@ compare_html = r"""
             .container { display: flex; height: 100%; }
             .sidebar {
                 min-width: 20%;
+                max-width: 20%;
                 padding: 10px;
                 overflow-y: scroll;
                 background: #f4f4f4;
@@ -28,46 +29,42 @@ compare_html = r"""
             .filename { background-color: #ceffff; }
         </style>
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const searchInput = document.getElementById("search");
+            async function onSearchInput(event) {
+                const searchInput = event.currentTarget;
                 const sidebar = document.querySelectorAll(".sidebar li");
                 const content = document.querySelectorAll(".content .filename");
+                const query = searchInput.value.toLowerCase();
 
-                searchInput.addEventListener("input", function() {
-                    const query = this.value.toLowerCase();
-
-                    if (query.length === 0) {
-                        sidebar.forEach(function(item) {
+                if (query.length === 0) {
+                    sidebar.forEach(async function(item) {
+                        item.style.display = "list-item";
+                    });
+                    content.forEach(async function(item) {
+                        const associated_diff = document.getElementById("diff_" + item.id);
+                        associated_diff.style.display = "block";
+                    });
+                    return;
+                } else {
+                    sidebar.forEach(async function(item) {
+                        const text = item.textContent.toLowerCase();
+                        if (text.includes(query)) {
                             item.style.display = "list-item";
-                        });
-                        content.forEach(function(item) {
-                            const associated_diff = document.getElementById("diff_" + item.id);
+                        } else {
+                            item.style.display = "none";
+                        }
+                    });
+
+                    content.forEach(async function(item) {
+                        const text = item.textContent.toLowerCase();
+                        const associated_diff = document.getElementById("diff_" + item.id);
+                        if (text.includes(query)) {
                             associated_diff.style.display = "block";
-                        });
-                        return;
-                    } else {
-                        sidebar.forEach(function(item) {
-                            const text = item.textContent.toLowerCase();
-                            if (text.includes(query)) {
-                                item.style.display = "list-item";
-                            } else {
-                                item.style.display = "none";
-                            }
-                        });
-
-                        content.forEach(function(item) {
-                            const text = item.textContent.toLowerCase();
-                            const associated_diff = document.getElementById("diff_" + item.id);
-                            if (text.includes(query)) {
-                                associated_diff.style.display = "block";
-                            } else {
-                                associated_diff.style.display = "none";
-                            }
-                        });
-                    }
-
-                });
-            });
+                        } else {
+                            associated_diff.style.display = "none";
+                        }
+                    });
+                }
+            }
         </script>
     </head>
     <body>
@@ -79,7 +76,7 @@ compare_html = r"""
                     <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
                 </div>
                 <h2>File list:</h2>
-                <input type="text" id="search" placeholder="Search...">
+                <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
                 <ul>
                     {%- for filename in file_names %}
                         <li><a href="#{{ safe_filename(filename) }}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>

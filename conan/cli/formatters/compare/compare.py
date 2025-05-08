@@ -1,4 +1,5 @@
 import os
+import base64
 
 from jinja2 import Template
 
@@ -10,11 +11,8 @@ def _render_diff(diff_text, template, template_folder, **kwargs):
     from conan import __version__
     template = Template(template, autoescape=True)
     def _safe_filename(filename):
-        # Create a hash of the filename
-        # TODO: This is done to avoid broken links,
-        #  but it should be done in a better way, sha256 is overkill
-        import hashlib
-        return hashlib.sha256(filename.encode("utf-8")).hexdigest()
+        # Calculate base64 of the filename
+        return base64.b64encode(filename.encode(), altchars=b'-_').decode()
 
     def _replace_path_with_ref(cache_path, ref, line):
         # Replace the cache path with the reference

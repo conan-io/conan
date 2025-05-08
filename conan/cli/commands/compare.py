@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.cli.formatters.compare.compare import format_compare_html, format_compare_txt
 from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
@@ -56,7 +57,8 @@ def compare(conan_api: ConanAPI, parser, *args):
                     full_ref = latest_recipe_revision
                     matching_remote = remote
         if full_ref is None or matching_remote is None:
-            raise ConanException(f"No matching reference for {reference} in remotes")
+            raise ConanException(f"No matching reference for {reference} in remotes.\n"
+                                 "If you want to check against a local recipe, add an additional --{old,new}-path arg.\n")
 
         conan_api.download.recipe(full_ref, matching_remote)
         cache_path = conan_api.cache.export_path(full_ref)
@@ -86,6 +88,7 @@ def compare(conan_api: ConanAPI, parser, *args):
     old_export_ref, old_cache_path = _source(args.old_path, args.old_reference)
     new_export_ref, new_cache_path = _source(args.new_path, args.new_reference)
 
+    ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
     diff = check_output_runner(f"git diff --no-index {old_cache_path} {new_cache_path}",
                                # We ignore the errors because git diff returns 1 if there are differences
