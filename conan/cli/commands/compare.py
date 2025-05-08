@@ -43,7 +43,7 @@ def compare(conan_api: ConanAPI, parser, *args):
         full_ref, matching_remote = None, None
         for remote in enabled_remotes:
             if ref.revision:
-                no_rrev_ref = RecipeReference().loads(reference)
+                no_rrev_ref = RecipeReference.loads(reference)
                 no_rrev_ref.revision = None
                 try:
                     remote_revisions = conan_api.list.recipe_revisions(no_rrev_ref, remote)
@@ -70,7 +70,7 @@ def compare(conan_api: ConanAPI, parser, *args):
 
     def _export_recipe_from_path(path_to_conanfile, reference):
         path = conan_api.local.get_conanfile_path(path_to_conanfile, cwd, py=True)
-        ref = RecipeReference().loads(reference)
+        ref = RecipeReference.loads(reference)
         export_ref, conanfile = conan_api.export.export(path=path,
                                                         name=ref.name, version=ref.version,
                                                         user=ref.user, channel=ref.channel,
