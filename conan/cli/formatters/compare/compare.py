@@ -1,3 +1,4 @@
+import json
 import os
 import base64
 
@@ -51,3 +52,17 @@ def format_compare_html(result):
 def format_compare_txt(result):
     diff_text = result["diff"]
     cli_out_write(diff_text)
+
+
+def format_compare_json(result):
+    diff_text = result["diff"]
+    result = {}
+    filename = None
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git"):
+            filename = line.split()[2][1:]
+            result[filename] = {}
+        else:
+            result[filename].setdefault("diff", []).append(line)
+
+    cli_out_write(json.dumps(result, indent=2))

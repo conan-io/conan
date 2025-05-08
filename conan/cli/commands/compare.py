@@ -1,7 +1,8 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.formatters.compare.compare import format_compare_html, format_compare_txt
+from conan.cli.formatters.compare.compare import format_compare_html, format_compare_txt, \
+    format_compare_json
 from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command
@@ -10,7 +11,7 @@ from conan.internal.util.runners import check_output_runner
 
 
 @conan_command(group="Security", formatters={"text": format_compare_txt,
-                                             # "json": format_compare_json,  # TODO?
+                                             "json": format_compare_json,
                                              "html": format_compare_html})
 def compare(conan_api: ConanAPI, parser, *args):
     """
