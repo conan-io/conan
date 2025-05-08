@@ -35,7 +35,7 @@ def compare(conan_api: ConanAPI, parser, *args):
     enabled_remotes = conan_api.remotes.list(args.remote or "*")
 
     def _download_ref_from_remote(reference):
-        ref = RecipeReference().loads(reference)
+        ref = RecipeReference.loads(reference)
         full_ref, matching_remote = None, None
         for remote in enabled_remotes:
             if ref.revision:
