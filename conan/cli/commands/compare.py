@@ -17,12 +17,10 @@ def compare(conan_api: ConanAPI, parser, *args):
     """
 
     parser.add_argument("-op", "--old-path", help="Path to the old recipe")
-    parser.add_argument("-ov", "--old-reference", help='Old reference "mylib/1.0"')
-    parser.add_argument("-or", "--old-require", help='Old reference "mylib/1.0"')
+    parser.add_argument("-or", "--old-reference", help='Old reference "mylib/1.0"')
 
     parser.add_argument("-np", "--new-path", help="Path to the new recipe")
-    parser.add_argument("-nv", "--new-reference", help="New reference")
-    parser.add_argument("-nr", "--new-require", help='New reference "mylib/1.0"')
+    parser.add_argument("-nr", "--new-reference", help='New reference "mylib/1.0"')
 
     parser.add_argument("-s", "--split_diff", action="store_true")
     parser.add_argument("--encoding", default="utf-8", help="Encoding to read diff")
@@ -61,8 +59,8 @@ def compare(conan_api: ConanAPI, parser, *args):
             raise ConanException(f"No matching reference for {reference} in remotes")
 
         conan_api.download.recipe(full_ref, matching_remote)
-        cache_path = conan_api.cache.export_path(ref)
-        return ref, cache_path
+        cache_path = conan_api.cache.export_path(full_ref)
+        return full_ref, cache_path
 
     def _export_recipe_from_path(path_to_conanfile, reference):
         path = conan_api.local.get_conanfile_path(path_to_conanfile, cwd, py=True)
@@ -75,9 +73,9 @@ def compare(conan_api: ConanAPI, parser, *args):
         cache_path = conan_api.cache.export_path(export_ref)
         return export_ref, cache_path
 
-    def _source(path_to_conanfile, reference, required_ref):
-        if required_ref is not None:
-            export_ref, cache_path = _download_ref_from_remote(required_ref)
+    def _source(path_to_conanfile, reference):
+        if path_to_conanfile is None:
+            export_ref, cache_path = _download_ref_from_remote(reference)
         else:
             export_ref, cache_path = _export_recipe_from_path(path_to_conanfile, reference)
         exported_path = conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
@@ -85,8 +83,8 @@ def compare(conan_api: ConanAPI, parser, *args):
                                channel=export_ref.channel, remotes=enabled_remotes)
         return export_ref, cache_path
 
-    old_export_ref, old_cache_path = _source(args.old_path, args.old_reference, args.old_require)
-    new_export_ref, new_cache_path = _source(args.new_path, args.new_reference, args.new_require)
+    old_export_ref, old_cache_path = _source(args.old_path, args.old_reference)
+    new_export_ref, new_cache_path = _source(args.new_path, args.new_reference)
 
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
     diff = check_output_runner(f"git diff --no-index {old_cache_path} {new_cache_path}",
