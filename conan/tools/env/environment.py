@@ -403,6 +403,17 @@ class EnvVars:
             os.environ.clear()
             os.environ.update(old_env)
 
+    def save_dotenv(self, file_location):
+        filepath = os.path.dirname(file_location)
+        result = [f'CONAN_DOTENV_FOLDER="{os.path.abspath(filepath)}"']
+        abs_base_path, new_path = relativize_paths(self._conanfile, "${CONAN_DOTENV_FOLDER}")
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("${{{name}}}", subsystem=self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
+            result.append('{}="{}"'.format(varname, value))
+        content = "\n".join(result)
+        save(file_location, content)
+
     def save_bat(self, file_location, generate_deactivate=True):
         _, filename = os.path.split(file_location)
         deactivate_file = "deactivate_{}".format(filename)
@@ -487,7 +498,8 @@ class EnvVars:
         # It is very important to save it correctly with utf-16, the Conan util save() is broken
         # and powershell uses utf-16 files!!!
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
-        open(file_location, "w", encoding="utf-16").write(content)
+        with open(file_location, "w", encoding="utf-16") as f:
+            f.write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
@@ -567,6 +579,9 @@ class EnvVars:
             self.save_ps1(path)
         else:
             self.save_sh(path)
+
+        if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
+            self.save_dotenv(f"{name}.env")
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)

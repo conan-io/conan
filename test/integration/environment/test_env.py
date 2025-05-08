@@ -852,3 +852,26 @@ def test_deactivate_relocatable_substitute():
     conanbuild = c.load("conanbuildenv.sh")
     result = os.path.join("$script_folder", "deactivate_conanbuildenv.sh")
     assert f'"{result}"' in conanbuild
+
+
+def test_dotenv():
+    c = TestClient()
+    other_path = os.path.join(c.current_folder, "my", "rel", "path")
+    myprofile = textwrap.dedent(f"""
+        [buildenv]
+        MYVAR1=MyVal1
+        MYVAR3+=MyVal3
+        MYPATH+=(path)/some/path/here
+        MYOTHER_PATH=+(path){other_path}
+        [conf]
+        tools.env:dotenv=True
+        """)
+    c.save({"conanfile.txt": "",
+            "myprofile": myprofile})
+    c.run("install . -pr=myprofile")
+    dotenv = c.load("conanbuildenv.env")
+    assert f'CONAN_DOTENV_FOLDER="{c.current_folder}"' in dotenv
+    assert r'MYOTHER_PATH="${CONAN_DOTENV_FOLDER}\my\rel\path;${MYOTHER_PATH}"' in dotenv
+    assert 'MYPATH="${MYPATH};/some/path/here"' in dotenv
+    assert 'MYVAR3="${MYVAR3} MyVal3"' in dotenv
+    assert 'MYVAR1="MyVal1"' in dotenv
