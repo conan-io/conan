@@ -1,14 +1,10 @@
-import json
-import subprocess
 import os
 
 from conan.cli.formatters.compare.compare import format_compare_html, format_compare_txt
 from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
-from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
-from conan.internal.util.files import chdir
-from conan.api.model import RecipeReference, ListPattern
+from conan.api.model import RecipeReference
 from conan.internal.util.runners import check_output_runner
 
 
