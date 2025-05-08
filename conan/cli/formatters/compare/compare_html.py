@@ -27,6 +27,48 @@ compare_html = r"""
             .context { background-color: #f8f8f8; }
             .filename { background-color: #ceffff; }
         </style>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const searchInput = document.getElementById("search");
+                const sidebar = document.querySelectorAll(".sidebar li");
+                const content = document.querySelectorAll(".content .filename");
+
+                searchInput.addEventListener("input", function() {
+                    const query = this.value.toLowerCase();
+
+                    if (query.length === 0) {
+                        sidebar.forEach(function(item) {
+                            item.style.display = "block";
+                        });
+                        content.forEach(function(item) {
+                            const associated_diff = document.getElementById("diff_" + item.id);
+                            associated_diff.style.display = "block";
+                        });
+                        return;
+                    } else {
+                        sidebar.forEach(function(item) {
+                            const text = item.textContent.toLowerCase();
+                            if (text.includes(query)) {
+                                item.style.display = "block";
+                            } else {
+                                item.style.display = "none";
+                            }
+                        });
+
+                        content.forEach(function(item) {
+                            const text = item.textContent.toLowerCase();
+                            const associated_diff = document.getElementById("diff_" + item.id);
+                            if (text.includes(query)) {
+                                associated_diff.style.display = "block";
+                            } else {
+                                associated_diff.style.display = "none";
+                            }
+                        });
+                    }
+
+                });
+            });
+        </script>
     </head>
     <body>
         <div class='container'>
@@ -36,6 +78,7 @@ compare_html = r"""
                     <br/>
                     <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
                 </div>
+                <input type="text" id="search" placeholder="Search...">
                 <h2>File list:</h2>
                 <ul>
                     {%- for filename in file_names %}
@@ -44,11 +87,15 @@ compare_html = r"""
                 </ul>
             </div>
             <div class='content'>
+                <div><!--placeholder-->
                 {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
                     {%- if line.startswith('diff --git') %}
                         {%- set filename = line.split()[2][1:] %}
+                        {%- set as_safe = safe_filename(filename) %}
                         <hr/>
-                        <h1 id="{{ safe_filename(filename) }}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
+                        </div>
+                        <div id="diff_{{ as_safe }}">
+                        <h1 id="{{ as_safe }}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
                     {%- elif line.startswith('---') %}
                         <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
                         <br/>
@@ -67,6 +114,7 @@ compare_html = r"""
                     {%- endif %}
                 {%- endfor -%}
                 <hr/>
+                </div>
             </div>
         </div>
     </body>
