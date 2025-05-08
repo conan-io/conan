@@ -7,7 +7,37 @@ from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command
 from conan.api.model import RecipeReference
-from conan.internal.util.runners import check_output_runner
+
+
+# TODO: TESTING FOR ENCODING ISSUES
+def _execute_command(cmd, stderr=None, ignore_error=False):
+    # From internal, but here modified to test encoding issues
+    assert isinstance(cmd, str)
+    import tempfile
+    d = tempfile.mkdtemp()
+    tmp_file = os.path.join(d, "output")
+    output = None
+    try:
+        # We don't want stderr to print warnings that will mess the pristine outputs
+        import subprocess
+        stderr = stderr or subprocess.PIPE
+        command = '{} > "{}"'.format(cmd, tmp_file)
+        process = subprocess.Popen(command, shell=True, stderr=stderr)
+        stdout, stderr = process.communicate()
+
+        if process.returncode and not ignore_error:
+            # Only in case of error, we print also the stderr to know what happened
+            msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
+            raise ConanException(msg)
+
+        with open(tmp_file, 'r', encoding="utf-8", newline="", errors="ignore") as handle:
+            output = handle.read()
+    finally:
+        try:
+            os.unlink(tmp_file)
+        except OSError:
+            pass
+        return output
 
 
 @conan_command(group="Security", formatters={"text": format_compare_txt,
@@ -25,7 +55,6 @@ def compare(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-nr", "--new-reference", help='New reference "mylib/1.0"')
 
     parser.add_argument("-s", "--split_diff", action="store_true")
-    parser.add_argument("--encoding", default="utf-8", help="Encoding to read diff")
     parser.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
 
@@ -91,9 +120,9 @@ def compare(conan_api: ConanAPI, parser, *args):
 
     ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
-    diff = check_output_runner(f"git diff --no-index {old_cache_path} {new_cache_path}",
-                               # We ignore the errors because git diff returns 1 if there are differences
-                               ignore_error=True)
+    diff = _execute_command(f"git diff --no-index {old_cache_path} {new_cache_path}",
+                            # We ignore the errors because git diff returns 1 if there are differences
+                            ignore_error=True)
 
     return {
         "conan_api": conan_api,
