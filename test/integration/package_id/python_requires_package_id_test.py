@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conan.test.utils.tools import TestClient, GenConanfile
 from conan.internal.util.files import save
 
@@ -176,3 +178,23 @@ class TestPythonRequiresHeaderOnly:
         c.run("create tool --version=1.2")
         c.run("install --requires=pkg/0.1")
         c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
+
+
+@pytest.mark.parametrize("mode, pkg_id",
+                         [("unrelated_mode", "da39a3ee5e6b4b0d3255bfef95601890afd80709"),
+                          ("semver_mode", "1f0070b00ccebfec93dc90854a163c7af229f587"),
+                          ("patch_mode", "b9ca872dfd5b48f5f1f69d66f0950fc35469d0cd"),
+                          ("minor_mode", "c53bd9e48dd09ceeaa1bb425830490d8b243e39c"),
+                          ("major_mode", "331c17383dcdf37f79bc2b86fa55ac56afdc6fec"),
+                          ("full_version_mode", "1f0070b00ccebfec93dc90854a163c7af229f587"),
+                          ("revision_mode", "0071dd0296afa0db533e21f924273485c87f0d32"),
+                          ("full_mode", "0071dd0296afa0db533e21f924273485c87f0d32")])
+def test_modes(mode, pkg_id):
+    c = TestClient(light=True)
+    c.save_home({"global.conf": f"core.package_id:default_python_mode={mode}"})
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1.1.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/[*]")})
+    c.run("create dep")
+    c.run("create pkg")
+    pkgid = c.created_package_id("pkg/0.1")
+    assert pkgid == pkg_id
