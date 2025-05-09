@@ -13,10 +13,11 @@ from requests import Response
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
-from conan.internal.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty, sha1sum
+from conan.internal.util.files import is_dirty, save, set_dirty, sha1sum
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
@@ -148,10 +149,10 @@ class UploadTest(unittest.TestCase):
         pref = client.get_latest_package_reference(RecipeReference.loads("hello0/1.2.1@user/testing"),
                                                    NO_SETTINGS_PACKAGE_ID)
 
-        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
+        def gzopen_patched(name, fileobj, compresslevel=None):  # noqa
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
-            return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
+            return gzopen_without_timestamps(name, fileobj)
         with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm -r default", assert_error=True)
             self.assertIn("Error gzopen conan_package.tgz", client.out)
