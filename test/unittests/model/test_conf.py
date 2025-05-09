@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 
@@ -279,7 +280,7 @@ def test_compose_conf_numbers():
     c.loads("user.version:value=8.1\n"
             "foo/*:user.version:value=10")
     assert c.get("user.version:value") == 8.1
-    assert c.get("foo/*:version:value") == 10
+    assert c.get_conanfile_conf(RecipeReference.loads("foo/1.0")).get("user.version:value") == 10
 
 
 def test_conf_get_check_type_and_default():

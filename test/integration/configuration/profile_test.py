@@ -639,7 +639,9 @@ def test_consumer_invalid_profile_multiple_groups():
 
 def test_compose_numeric_values_scoped_pkg():
     tc = TestClient(light=True)
-    tc.save({"conanfile.py": GenConanfile("hello", "0.1"),
+    tc.save({"conanfile.py": GenConanfile("hello", "0.1")
+                .with_package("self.output.info('user.var.value: ' + str(self.conf.get('user.var:value')))"),
              "profile": """[conf]\nuser.var:value=8.1\nhello/*:user.var:value=10\n"""})
 
     tc.run("create . -pr=profile")
+    assert "user.var.value: 10" in tc.out
