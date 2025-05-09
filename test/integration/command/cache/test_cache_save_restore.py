@@ -105,7 +105,8 @@ def _validate_restore(cache_path):
     c2.save({"conanfile.py": GenConanfile().with_settings("os")})
     c2.run("create . --name=pkg2 --version=3.0 -s os=Windows")
     shutil.copy2(cache_path, c2.current_folder)
-    c2.run("cache restore conan_cache_save.tgz")
+    filename = os.path.basename(cache_path)
+    c2.run(f"cache restore {filename}")
     c2.run("list *:*#*")
     assert "pkg2/3.0" in c2.out
     assert "pkg/1.0" in c2.out
@@ -114,7 +115,7 @@ def _validate_restore(cache_path):
     tree = _get_directory_tree(c2.base_folder)
 
     # Restore again, just in case
-    c2.run("cache restore conan_cache_save.tgz")
+    c2.run(f"cache restore {filename}")
     c2.run("list *:*#*")
     assert "pkg2/3.0" in c2.out
     assert "pkg/1.0" in c2.out
@@ -293,3 +294,16 @@ def test_cache_save_restore_custom_storage_path(src_store, dst_store):
     c2.run("cache restore conan_cache_save.tgz")
     c2.run("list *:*")
     assert "pkg/1.0" in c2.out
+
+
+def test_cache_save_restore_xz():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c.run("create . --name=pkg --version=1.0 -s os=Linux")
+    c.run("create . --name=pkg --version=1.1 -s os=Linux")
+    c.run("create . --name=other --version=2.0 -s os=Linux")
+    # Force the compress level just to make sure it doesn't crash
+    c.run("cache save pkg/*:* --file=conan_cache.xz -cc core.gzip:compresslevel=9")
+    cache_path = os.path.join(c.current_folder, "conan_cache.xz")
+    assert os.path.exists(cache_path)
+    _validate_restore(cache_path)

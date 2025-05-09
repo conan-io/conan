@@ -16,7 +16,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
+from conan.internal.util.files import rmdir, mkdir, remove
 
 
 class CacheAPI:
@@ -132,9 +132,10 @@ class CacheAPI:
         mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
-        with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
-                                            compresslevel=compresslevel)
+        mode = "xz" if name.endswith(".xz") else "gz"
+        compress_key = "preset" if mode == "xz" else "compresslevel"
+        kwargs = {compress_key: compresslevel} if compresslevel else {}
+        with tarfile.open(tgz_path, f"w:{mode}", **kwargs) as tgz:
             for ref, ref_bundle in package_list.refs().items():
                 ref_layout = cache.recipe_layout(ref)
                 recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)

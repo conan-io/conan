@@ -36,7 +36,7 @@ class PkgCache:
             raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
     @property
-    def store(self):
+    def store(self) -> str:
         return self._base_folder
 
     @property
