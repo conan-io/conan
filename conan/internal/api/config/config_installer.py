@@ -1,6 +1,7 @@
 import os
 import shutil
 import fnmatch
+import zipfile
 
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
@@ -9,8 +10,9 @@ from conan.api.output import ConanOutput
 from conan.internal.paths import find_file_walk_up
 from conan.internal.rest.file_downloader import FileDownloader
 from conan.errors import ConanException
-from conan.internal.util.files import mkdir, rmdir, remove, unzip, chdir
+from conan.internal.util.files import mkdir, rmdir, remove, chdir
 from conan.internal.util.runners import detect_runner
+from conan.tools.files.files import untargz
 
 
 class _ConanIgnoreMatcher:
@@ -85,7 +87,20 @@ def _process_git_repo(config, cache_folder):
 
 
 def _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=False):
-    unzip(zippath, tmp_folder)
+    # First, unzip. This is repeated with the tools.unzip, but better do not mess
+    # Same list as below
+    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz")
+    if any(zippath.endswith(e) for e in tgz_exts):
+        untargz(zippath, tmp_folder)
+    else:
+        full_path = os.path.normpath(os.path.join(os.getcwd(), tmp_folder))
+        with zipfile.ZipFile(zippath, "r") as z:
+            zip_info = z.infolist()
+            extracted_size = 0
+            for file_ in zip_info:
+                extracted_size += file_.file_size
+                z.extract(file_, full_path)
+
     if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache_folder)
@@ -190,7 +205,7 @@ def _is_compressed_file(filename):
     import zipfile
     if zipfile.is_zipfile(filename):
         return True
-    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".gz", ".tar.xz", ".txz")
+    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz")
     return any(filename.endswith(e) for e in tgz_exts)
 
 

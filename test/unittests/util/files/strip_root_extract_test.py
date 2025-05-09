@@ -3,6 +3,7 @@ import tarfile
 import unittest
 import zipfile
 
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
 from conan.internal.model.manifest import gather_files
@@ -11,7 +12,7 @@ from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
 from conan.internal.util.files import chdir, save
-from conan.internal.util.files import gzopen_without_timestamps, rmdir
+from conan.internal.util.files import rmdir
 
 
 class ZipExtractPlainTest(unittest.TestCase):
@@ -110,7 +111,7 @@ class TarExtractPlainTest(unittest.TestCase):
         # Create a tar.gz file with the files in the folder and an additional TarInfo entry
         # for the folder_entry (the gather files doesn't return empty dirs)
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+            tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
             if folder_entry:
                 # Create an empty folder in the tgz file
                 t = tarfile.TarInfo(folder_entry)
@@ -131,7 +132,7 @@ class TarExtractPlainTest(unittest.TestCase):
         tgz_path = os.path.join(tmp_folder, "foo.tgz")
 
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+            tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
 
             # Regular file
             info = tarfile.TarInfo(name="common/foo.txt")
@@ -286,7 +287,7 @@ def _compress_root_folder(folder, tgz_path, root_folder_name="root"):
     root/parent/bin/file2
     """
     with open(tgz_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+        tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
         files, _ = gather_files(folder)
         tgz.add(root_folder_name, arcname=os.path.basename(root_folder_name))
         tgz.close()
