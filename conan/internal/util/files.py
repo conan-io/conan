@@ -256,40 +256,6 @@ def mkdir(path):
     os.makedirs(path)
 
 
-def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
-    """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
-        setted in Gzip file causing md5 to change. Not possible using the
-        previous tarfile open because arguments are not passed to GzipFile constructor
-    """
-
-    if mode not in ("r", "w"):
-        raise ValueError("mode must be 'r' or 'w'")
-
-    try:
-        compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
-        fileobj = gzip.GzipFile(name, mode, compresslevel, fileobj, mtime=0)
-    except OSError:
-        if fileobj is not None and mode == 'r':
-            raise tarfile.ReadError("not a gzip file")
-        raise
-
-    try:
-        # Format is forced because in Python3.8, it changed and it generates different tarfiles
-        # with different checksums, which break hashes of tgzs
-        # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
-        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.PAX_FORMAT, **kwargs)
-    except IOError:
-        fileobj.close()
-        if mode == 'r':
-            raise tarfile.ReadError("not a gzip file")
-        raise
-    except Exception:
-        fileobj.close()
-        raise
-    t._extfileobj = False
-    return t
-
-
 def tar_extract(fileobj, destination_dir):
     the_tar = tarfile.open(fileobj=fileobj)
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to

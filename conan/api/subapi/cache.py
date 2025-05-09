@@ -6,6 +6,7 @@ from io import BytesIO
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
     METADATA, DOWNLOAD_EXPORT_FOLDER
@@ -16,7 +17,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
+from conan.internal.util.files import rmdir, mkdir, remove
 
 
 class CacheAPI:
@@ -133,7 +134,7 @@ class CacheAPI:
         name = os.path.basename(tgz_path)
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
+            tgz = gzopen_without_timestamps(name, fileobj=tgz_handle,
                                             compresslevel=compresslevel)
             for ref, ref_bundle in package_list.refs().items():
                 ref_layout = cache.recipe_layout(ref)

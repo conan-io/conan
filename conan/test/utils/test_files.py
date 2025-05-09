@@ -8,11 +8,11 @@ import tempfile
 import time
 from io import BytesIO
 
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.tools.files.files import untargz
 from conan.internal.subsystems import get_cased_path
 from conan.errors import ConanException
 from conan.internal.paths import PACKAGE_TGZ_NAME
-from conan.internal.util.files import gzopen_without_timestamps
 
 
 def wait_until_removed(folder):
@@ -85,7 +85,7 @@ def tgz_with_contents(files, output_path=None):
     file_path = output_path or os.path.join(folder, "myfile.tar.gz")
 
     with open(file_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps("myfile.tar.gz", mode="w", fileobj=tgz_handle)
+        tgz = gzopen_without_timestamps("myfile.tar.gz", fileobj=tgz_handle)
 
         for name, content in files.items():
             info = tarfile.TarInfo(name=name)
