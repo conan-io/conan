@@ -822,6 +822,74 @@ class TestGitBasicSCMFlowSubfolder:
         assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
 
 
+
+@pytest.mark.tool("git")
+class TestGitBasicSCMFlowSubmodules:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load, update_conandata
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, self.recipe_folder)
+                scm_url, scm_commit = git.get_url_and_commit()
+                update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
+
+            def layout(self):
+                self.folders.source = "."
+
+            def source(self):
+                git = Git(self)
+                sources = self.conan_data["sources"]
+                url = sources["url"]
+                git.run(f'clone --recurse-submodules "{url}" .')
+                git.checkout(commit=sources["commit"])
+                self.output.info("MYCMAKE: {}".format(load(self, "libhello/CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "libhello/src/hello.cpp")))
+
+            def build(self):
+                cmake = os.path.join(self.source_folder, "libhello/CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "libhello/src/hello.cpp")
+                self.output.info("MYCMAKE-BUILD: {}".format(load(self, cmake)))
+                self.output.info("MYFILE-BUILD: {}".format(load(self, file_h)))
+        """)
+
+    def test_full_scm(self):
+        src_url = "https://github.com/conan-io/libhello"
+
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile},
+                                            submodules=[src_url], folder=folder)
+
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone --recurse-submodules "{}" .'.format(url))
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: cmake_minimum_required(VERSION 3.15)" in c.out
+        assert "pkg/0.1: MYFILE: #include <iostream>" in c.out
+        c.run("upload * -c -r=default")
+
+        # Do a change and commit, this commit will not be used by package
+        save_files(path=folder, files={"src/hello.cpp": "file changed!!"})
+        git_add_changes_commit(folder=folder)
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install --requires=pkg/0.1@ --build=pkg*")
+        assert "pkg/0.1: MYCMAKE: cmake_minimum_required(VERSION 3.15)" in c2.out
+        assert "pkg/0.1: MYFILE: #include <iostream>" in c2.out
+
+        # local flow
+        c.run("install .")
+        c.run("build .")
+        assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: cmake_minimum_required(VERSION 3.15)" in c.out
+        assert "conanfile.py (pkg/0.1): MYFILE-BUILD: #include <iostream>" in c.out
+
+
 @pytest.mark.tool("git")
 class TestGitMonorepoSCMFlow:
     """ Build the full new SCM approach:

@@ -27,7 +27,7 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
             _, out = detect_runner("git {}".format(cmd))
             return out.strip()
 
-    _run("init .", tmp)
+    _run("init . -b master", tmp)
     _run('config user.name "Your Name"', tmp)
     _run('config user.email "you@example.com"', tmp)
     _run("checkout -b {}".format(branch or main_branch), tmp)
