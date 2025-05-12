@@ -252,3 +252,19 @@ def test_profile_core_confs_error(conf_name):
     with pytest.raises(ConanException) as exc:
         profile_loader.from_cli_args([], [], [], [conf_name], None)
     assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)
+
+
+def test_profile_compose_numbers():
+    tmp = temp_folder()
+    txt = textwrap.dedent("""
+            [conf]
+            user.version:value=8.1
+            pkg/*:user.version:value=10
+            """)
+    current_profile_path = os.path.join(tmp, "default")
+    save(current_profile_path, txt)
+
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
+    profile = profile_loader.load_profile(current_profile_path)
+    assert profile.conf.get("user.version:value") == 8.1
+    assert profile.conf.get("pkg/*:user.version:value") == 10
