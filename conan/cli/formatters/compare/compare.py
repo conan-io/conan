@@ -2,7 +2,6 @@ import json
 import os
 import base64
 
-from docutils.nodes import field
 from jinja2 import Template
 
 from conan.api.output import cli_out_write
