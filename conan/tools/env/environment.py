@@ -580,8 +580,7 @@ class EnvVars:
         else:
             self.save_sh(path)
 
-        if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
-            self.save_dotenv(f"{name}.env")
+        self.save_dotenv(f"{name}.env")
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)
