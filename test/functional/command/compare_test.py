@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -36,8 +37,8 @@ def test_compare_paths(old_args, new_args, formatter):
 
     if "json" in formatter:
         output_json = json.loads(tc.load("output.json"))
-        assert output_json[v1_path + "/conanfile.py"]
-        assert output_json[v1_path + "/conanmanifest.txt"]
+        assert output_json[os.path.join(v1_path, "conanfile.py")]
+        assert output_json[os.path.join(v1_path, "conanmanifest.txt")]
 
     elif "html" in formatter:
         output_html = tc.load("output.html")
