@@ -1,14 +1,12 @@
-import unittest
-
 from conan.test.utils.tools import TestClient, GenConanfile
 from conan.internal.util.files import save
 
 
-class TransitiveIdsTest(unittest.TestCase):
+class TestTransitiveIds:
 
     def test_transitive_library(self):
         # https://github.com/conan-io/conan/issues/6450
-        client = TestClient()
+        client = TestClient(light=True)
         save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -38,7 +36,7 @@ class TransitiveIdsTest(unittest.TestCase):
         # LibC declares that it only depends on major version changes of its upstream
         # So LibC package ID doesn't change, even if LibA changes
         # But LibD package ID changes, even if its direct dependency LibC doesn't
-        client = TestClient()
+        client = TestClient(light=True)
         save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         # LibA
         client.save({"conanfile.py": GenConanfile()})
@@ -74,7 +72,7 @@ class TransitiveIdsTest(unittest.TestCase):
 
     def test_transitive_unrelated(self):
         # https://github.com/conan-io/conan/issues/6450
-        client = TestClient()
+        client = TestClient(light=True)
         # LibA
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -101,7 +99,7 @@ class TransitiveIdsTest(unittest.TestCase):
 
     def test_transitive_second_level_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
-        client = TestClient()
+        client = TestClient(light=True)
         # LibA
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -133,7 +131,7 @@ class TransitiveIdsTest(unittest.TestCase):
 
     def test_transitive_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
-        client = TestClient()
+        client = TestClient(light=True)
         save(client.paths.new_config_path, "core.package_id:default_unknown_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
