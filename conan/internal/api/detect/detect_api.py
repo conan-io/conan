@@ -347,6 +347,54 @@ def detect_cppstd(compiler, compiler_version):
     return cppstd
 
 
+def default_cstd(compiler, compiler_version):
+    """returns the default cstd for the compiler-version. This is not detected, just the default"""
+
+    def _clang_cstd_default(version):
+        if version >= "11":
+            return "gnu17"  # https://releases.llvm.org/11.0.0/tools/clang/docs/ReleaseNotes.html#c-language-changes-in-clang
+        elif version >= "4":  # 3.5 actually
+            return "gnu11"
+        else:
+            return "gnu99"  # It was gnu89 actually
+
+    def _gcc_cstd_default(version):
+        if version >= "15":
+            return "gnu23"
+        elif version >= "11":
+            return "gnu17"
+        elif version >= "5":
+            return "gnu11"
+        else:
+            return "gnu99"  # It was gnu89 actually
+
+    def _visual_cstd_default(version):
+        return None
+
+    def _apple_clang_cstd_default(version):
+        return None
+
+    def _intel_cstd_default(version):
+        return None
+
+    def _mcst_lcc_cstd_default(version):
+        return None
+
+    default = {
+        "gcc": _gcc_cstd_default(compiler_version),
+        "clang": _clang_cstd_default(compiler_version),
+        "apple-clang": _apple_clang_cstd_default(compiler_version),
+        "intel-cc": _intel_cstd_default(compiler_version),
+        "msvc": _visual_cstd_default(compiler_version),
+        "mcst-lcc": _mcst_lcc_cstd_default(compiler_version),
+    }.get(str(compiler), None)
+    return default
+
+
+def detect_cstd(compiler, compiler_version):
+    return default_cstd(compiler, compiler_version)
+
+
 def detect_default_compiler():
     """
         find the default compiler on the build machine
