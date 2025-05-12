@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conan.test.utils.tools import TestClient
@@ -13,7 +14,6 @@ def test_extra_flags_via_conf():
         compiler=gcc
         compiler.version=9
         compiler.cppstd=17
-        compiler.cstd=11
         compiler.libcxx=libstdc++
         build_type=Release
 
@@ -28,16 +28,14 @@ def test_extra_flags_via_conf():
         tools.build:sharedlinkflags+=["-flag5"]
         tools.build:exelinkflags+=["-flag6"]
         tools.build:defines=["define1=0"]
-   """
+    """
     )
-    t = TestClient()
-    t.save({"conanfile.txt": "[generators]\nPremakeToolchain", "profile": profile})
+    tc = TestClient()
+    tc.save({"conanfile.txt": "[generators]\nPremakeToolchain", "profile": profile})
 
-    t.run("install . -pr:a=profile")
-    content = t.load(PremakeToolchain.filename)
-    print(content)
+    tc.run("install . -pr:a=profile")
+    content = tc.load(PremakeToolchain.filename)
     assert 'cppdialect "c++17"' in content
-    # assert 'cdialect "99"' in content # TODO
 
     assert (
         """
@@ -58,8 +56,89 @@ def test_extra_flags_via_conf():
     )
 
     assert 'linkoptions { "-flag02", "-other=val2", "-flag5", "-flag6" }' in content
+    assert 'defines { "define1=0" }' in content
 
-    # assert "cpp_args = ['-flag0', '-other=val', '-m64', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
-    # assert "c_args = ['-flag0', '-other=val', '-m64', '-flag3', '-flag4', '-Ddefine1=0']" in content
-    # assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
-    # assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
+
+def test_project_configuration():
+    tc = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent(
+        """
+        from conan import ConanFile
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
+        import os
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "pkg"
+            version = "1.0"
+
+            def layout(self):
+                basic_layout(self, src_folder="src")
+
+            def generate(self):
+                tc = PremakeToolchain(self)
+                tc.extra_defines = ["VALUE=2"]
+                tc.extra_cflags = ["-Wextra"]
+                tc.extra_cxxflags = ["-Wall", "-Wextra"]
+                tc.extra_ldflags = ["-lm"]
+                tc.project("main").extra_defines = ["TEST=False"]
+                tc.project("test").disable = True
+                tc.project("main").extra_cxxflags = ["-FS"]
+                tc.generate()
+    """
+    )
+    tc.save({"conanfile.py": conanfile})
+    tc.run("install .")
+
+    toolchain = tc.load(
+        os.path.join("build-release", "conan", "conantoolchain.premake5.lua")
+    )
+    print(toolchain)
+
+    assert (
+        """
+        filter {"files:**.c"}
+            buildoptions { "-Wextra" }
+        filter {}
+        """
+        in toolchain
+    )
+    assert (
+        """
+        filter {"files:**.cpp", "**.cxx", "**.cc"}
+            buildoptions { "-Wall", "-Wextra" }
+        filter {}
+        """
+        in toolchain
+    )
+    assert 'linkoptions { "-lm" }' in toolchain
+    assert 'defines { "VALUE=2" }' in toolchain
+    assert 'linkoptions { "-Wl,-rpath,@loader_path" }' in toolchain
+    assert (
+        textwrap.dedent(
+            """
+    project "main"
+        -- Project flags (specific)
+        -- Workspace flags
+
+        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
+        filter {"files:**.cpp", "**.cxx", "**.cc"}
+            buildoptions { "-FS" }
+        filter {}
+        -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
+        defines { "TEST=False" }
+        """
+        )
+        in toolchain
+    )
+    assert (
+        textwrap.dedent(
+            """
+        project "test"
+            kind "None"
+        """
+        )
+        in toolchain
+    )

@@ -157,8 +157,7 @@ class PremakeToolchain:
             {% endif %}
 
             filter { "system:macosx" }
-                -- runpathdirs { "@loader_path" }
-                -- TODO Fix shared libs
+                -- Shared libs
                 linkoptions { "-Wl,-rpath,@loader_path" }
             filter {}
 

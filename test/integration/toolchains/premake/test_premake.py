@@ -88,7 +88,7 @@ def test_premake_full_compilation():
             def build(self):
                 premake = Premake(self)
                 premake.configure()
-                premake.build(workspace="Project")
+                premake.build(workspace="Project", targets=["app"])
         """)
 
     client.save({"consumer/conanfile.py": conanfile,
