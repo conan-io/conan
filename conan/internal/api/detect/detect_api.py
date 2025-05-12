@@ -359,12 +359,12 @@ def default_cstd(compiler, compiler_version):
             return "gnu99"  # It was gnu89 actually
 
     def _gcc_cstd_default(version):
-        if version >= "15":
+        if version >= "15":  # https://www.gnu.org/software/gcc/gcc-15/changes.html#c
             return "gnu23"
-        elif version >= "11":
-            return "gnu17"
+        elif version >= "8":
+            return "gnu17"  # https://www.gnu.org/software/gcc/gcc-8/changes.html#c
         elif version >= "5":
-            return "gnu11"
+            return "gnu11"  # https://www.gnu.org/software/gcc/gcc-5/changes.html#c
         else:
             return "gnu99"  # It was gnu89 actually
 
