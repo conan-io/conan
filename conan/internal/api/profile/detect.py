@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.internal.api.detect.detect_api import detect_os, detect_arch, default_msvc_runtime, \
-    detect_libcxx, detect_cppstd, detect_default_compiler, default_compiler_version
+    detect_libcxx, detect_cppstd, detect_default_compiler, default_compiler_version, detect_cstd
 
 
 def detect_defaults_settings():
@@ -34,5 +34,8 @@ def detect_defaults_settings():
     cppstd = detect_cppstd(compiler, version)
     if cppstd:
         result.append(("compiler.cppstd", cppstd))
+    cstd = detect_cstd(compiler, version)
+    if cstd:
+        result.append(("compiler.cstd", cstd))
     result.append(("build_type", "Release"))
     return result
