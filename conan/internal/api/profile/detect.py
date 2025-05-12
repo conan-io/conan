@@ -34,8 +34,5 @@ def detect_defaults_settings():
     cppstd = detect_cppstd(compiler, version)
     if cppstd:
         result.append(("compiler.cppstd", cppstd))
-    cstd = detect_cstd(compiler, version)
-    if cstd:
-        result.append(("compiler.cstd", cstd))
     result.append(("build_type", "Release"))
     return result
