@@ -2,6 +2,7 @@ import json
 import os
 import base64
 
+from docutils.nodes import field
 from jinja2 import Template
 
 from conan.api.output import cli_out_write
@@ -37,8 +38,8 @@ def format_compare_html(result):
         with open(user_template, 'r', encoding="utf-8", newline="") as handle:
             template = handle.read()
 
-    file_names = [line.split()[2][1:] for line in diff_text.splitlines() if
-                  line.startswith("diff --git")]
+    file_names = [line[len("--- a"):].strip()
+                  for line in diff_text.splitlines() if line.startswith("--- a")]
 
 
     cli_out_write(_render_diff(diff_text, template, template_folder,
@@ -55,13 +56,31 @@ def format_compare_txt(result):
 
 
 def format_compare_json(result):
+    '''
+        Example of how the diff appears for each file::
+        -----------------------------------------
+
+        diff --git a/path with spaces/.conan2/p/pkg1/e/conanfile.py b/path with spaces/.conan2/p/pkg2/e/conanfile.py
+        index aabbccdd..eeffgghh 123456
+        --- a/path with spaces/.conan2/p/pkg1/e/conanfile.py
+        +++ b/path with spaces/.conan2/p/pkg2/e/conanfile.py
+        @@ -3,5 +3,5 @@ class HelloConan(ConanFile):
+             name = 'pkg'
+             ...
+    '''
     diff_text = result["diff"]
     result = {}
     filename = None
-    for line in diff_text.splitlines():
-        if line.startswith("diff --git"):
-            filename = line.split()[2][1:]
-            result[filename] = {}
+    skip_lines = False
+    diff_splited_lines = diff_text.splitlines()
+    for i, line in enumerate(diff_splited_lines):
+        if line.startswith("--- a"):
+            filename = line[len("--- a"):].strip()
+            result.setdefault(filename, {})["new_name"] = diff_splited_lines[i+1][len("+++ b"):].strip()
+            skip_lines = False
+        elif line.startswith("diff --git") or skip_lines:
+            skip_lines = True
+            pass
         else:
             result[filename].setdefault("diff", []).append(line)
 

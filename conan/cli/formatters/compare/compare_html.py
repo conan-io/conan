@@ -79,20 +79,20 @@ compare_html = r"""
                 <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
                 <ul>
                     {%- for filename in file_names %}
-                        <li><a href="#{{ safe_filename(filename) }}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
+                        <li><a href="#{{- safe_filename(filename) -}}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
             <div class='content'>
                 <div><!--placeholder-->
                 {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
-                    {%- if line.startswith('diff --git') %}
-                        {%- set filename = line.split()[2][1:] %}
+                    {%- if line.startswith('--- a') %}
+                        {%- set filename = line[5:].strip() %}
                         {%- set as_safe = safe_filename(filename) %}
                         <hr/>
                         </div>
-                        <div id="diff_{{ as_safe }}">
-                        <h1 id="{{ as_safe }}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
+                        <div id="diff_{{- as_safe -}}">
+                        <h1 id="{{- as_safe -}}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
                     {%- elif line.startswith('---') %}
                         <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
                         <br/>

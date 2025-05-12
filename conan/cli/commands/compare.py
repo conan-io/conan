@@ -54,7 +54,6 @@ def compare(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-np", "--new-path", help="Path to the new recipe")
     parser.add_argument("-nr", "--new-reference", help='New reference "mylib/1.0"')
 
-    parser.add_argument("-s", "--split_diff", action="store_true")
     parser.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
 
@@ -120,7 +119,7 @@ def compare(conan_api: ConanAPI, parser, *args):
 
     ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
-    diff = _execute_command(f"git diff --no-index {old_cache_path} {new_cache_path}",
+    diff = _execute_command(f'git diff --no-index "{old_cache_path}" "{new_cache_path}"',
                             # We ignore the errors because git diff returns 1 if there are differences
                             ignore_error=True)
 
