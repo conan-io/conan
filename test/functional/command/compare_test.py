@@ -42,6 +42,6 @@ def test_compare_paths(old_args, new_args, formatter):
 
     elif "html" in formatter:
         output_html = tc.load("output.html")
-        assert "(old)/conanfile.py" in output_html
-        assert "(old)/conanmanifest.txt" in output_html
+        assert "self.output.warning(&#34;v1&#34;)" in output_html
+        assert "self.output.warning(&#34;v2&#34;)" in output_html
 
