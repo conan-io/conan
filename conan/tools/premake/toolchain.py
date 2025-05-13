@@ -156,7 +156,13 @@ class PremakeToolchain:
             {% endif %}
 
             filter { "system:macosx" }
-                -- Shared libs
+                -- SHARED LIBS
+                -- In the future we could add an opt in configuration to run
+                -- fix_apple_shared_install_name on executables to have a similar behavior as CMake
+                -- generator. Premake does not allow adding absolute RCPATHS
+                -- Due to this limitation, if a consumer depends on a premake shared recipe, it will
+                -- require to run conanrun script to setup proper DYLD_LIBRARY_PATH
+                -- Reference: https://github.com/premake/premake-core/issues/2262#issuecomment-2378250385
                 linkoptions { "-Wl,-rpath,@loader_path" }
             filter {}
 
@@ -187,14 +193,12 @@ class PremakeToolchain:
         premake_conan_deps = Path(self._conanfile.generators_folder) / PREMAKE_ROOT_FILE
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         if cppstd:
-            # TODO consider improving using existing function
             # See premake possible cppstd values: https://premake.github.io/docs/cppdialect/
             if cppstd.startswith("gnu"):
                 cppstd = f"gnu++{cppstd[3:]}"
             elif cppstd[0].isnumeric():
                 cppstd = f"c++{cppstd}"
 
-        # TODO: for some reason, cstd is always None
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
         cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
 

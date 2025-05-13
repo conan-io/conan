@@ -6,11 +6,13 @@ import pytest
 
 from conan.test.utils.tools import TestClient
 
+
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
 @pytest.mark.tool("premake")
 def test_premake_args():
     tc = TestClient(path_with_spaces=False)
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(
+        """
         from conan import ConanFile
         from conan.tools.premake import Premake, PremakeToolchain
 
@@ -26,9 +28,12 @@ def test_premake_args():
                 premake.luafile = "myproject.lua"
                 premake.arguments = {"myarg": "myvalue"}
                 premake.configure()
-                """)
+                """
+    )
     tc.save({"conanfile.py": conanfile})
-    tc.run("build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic")
+    tc.run(
+        "build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
+    )
     assert "conanfile.py: Running premake5" in tc.out
     assert "conanfile.premake5.lua vs2022 --myarg=myvalue!!" in tc.out
 
@@ -39,7 +44,8 @@ def test_premake_full_compilation():
     tc = TestClient(path_with_spaces=False)
     tc.run("new cmake_lib -d name=dep -d version=1.0 -o dep")
 
-    consumer_source = textwrap.dedent("""
+    consumer_source = textwrap.dedent(
+        """
         #include <iostream>
         #include "dep.h"
 
@@ -48,9 +54,11 @@ def test_premake_full_compilation():
            std::cout << "Hello World" << std::endl;
            return 0;
         }
-    """)
+    """
+    )
 
-    premake5 = textwrap.dedent("""
+    premake5 = textwrap.dedent(
+        """
         workspace "Project"
            language "C++"
            configurations { "Debug", "Release" }
@@ -64,10 +72,11 @@ def test_premake_full_compilation():
            filter "configurations:Release"
               defines { "NDEBUG" }
               optimize "On"
-    """)
+    """
+    )
 
-
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(
+        """
         from conan import ConanFile
         from conan.tools.layout import basic_layout
         from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
@@ -95,12 +104,16 @@ def test_premake_full_compilation():
                 premake = Premake(self)
                 premake.configure()
                 premake.build(workspace="Project", targets=["app"])
-        """)
+        """
+    )
 
-    tc.save({"consumer/conanfile.py": conanfile,
-                 "consumer/src/hello.cpp": consumer_source,
-                 "consumer/src/premake5.lua": premake5,
-                 })
+    tc.save(
+        {
+            "consumer/conanfile.py": conanfile,
+            "consumer/src/hello.cpp": consumer_source,
+            "consumer/src/premake5.lua": premake5,
+        }
+    )
 
     tc.run("create dep")
     tc.run("create consumer")
