@@ -1,6 +1,7 @@
 import textwrap
 from pathlib import Path
 
+from conan.tools.build.cpu import build_jobs
 from jinja2 import Template
 
 from conan.errors import ConanException
@@ -88,4 +89,5 @@ class Premake:
         else:
             build_type = str(self._conanfile.settings.build_type)
             targets = "all" if targets is None else " ".join(targets)
-            self._conanfile.run(f"make config={build_type.lower()} {targets} -j")
+            njobs = build_jobs(self._conanfile)
+            self._conanfile.run(f"make config={build_type.lower()} {targets} -j{njobs}")

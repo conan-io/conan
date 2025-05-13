@@ -7,7 +7,6 @@ from jinja2 import Environment
 from conan.tools.build.cross_building import cross_building
 from conan.tools.files import save
 from conan.tools.microsoft.visual import VCVars
-from conan.tools.premake.constants import INDENT_LEVEL
 from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
 
 _jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
@@ -108,7 +107,7 @@ class _PremakeProject:
             name=self.name,
             kind="None" if self.disable else self.kind,
             flags=flags_content,
-            indent_level=INDENT_LEVEL,
+            indent_level=4,
         )
 
 
@@ -211,7 +210,7 @@ class PremakeToolchain:
             cross_build_arch=cross_build_arch,
             projects=self._projects,
             flags=flags_content,
-            indent_level=INDENT_LEVEL*2,
+            indent_level=8,
         )
         save(
             self,

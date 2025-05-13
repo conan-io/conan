@@ -1,11 +1,15 @@
+import os
+import platform
 import textwrap
 
+import pytest
+
 from conan.test.utils.tools import TestClient
-import os
 
-
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
 def test_premake_args():
-    c = TestClient()
+    tc = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.premake import Premake, PremakeToolchain
@@ -23,15 +27,17 @@ def test_premake_args():
                 premake.arguments = {"myarg": "myvalue"}
                 premake.configure()
                 """)
-    c.save({"conanfile.py": conanfile})
-    c.run("build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic")
-    assert "conanfile.py: Running premake5" in c.out
-    assert "conanfile.premake5.lua vs2022 --myarg=myvalue!!" in c.out
+    tc.save({"conanfile.py": conanfile})
+    tc.run("build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic")
+    assert "conanfile.py: Running premake5" in tc.out
+    assert "conanfile.premake5.lua vs2022 --myarg=myvalue!!" in tc.out
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
 def test_premake_full_compilation():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_lib -d name=dep -d version=1.0 -o dep")
+    tc = TestClient(path_with_spaces=False)
+    tc.run("new cmake_lib -d name=dep -d version=1.0 -o dep")
 
     consumer_source = textwrap.dedent("""
         #include <iostream>
@@ -91,15 +97,15 @@ def test_premake_full_compilation():
                 premake.build(workspace="Project", targets=["app"])
         """)
 
-    client.save({"consumer/conanfile.py": conanfile,
+    tc.save({"consumer/conanfile.py": conanfile,
                  "consumer/src/hello.cpp": consumer_source,
                  "consumer/src/premake5.lua": premake5,
                  })
 
-    client.run("create dep")
-    client.run("create consumer")
-    bin_folder = os.path.join(client.created_layout().build(), "build-release", "bin")
+    tc.run("create dep")
+    tc.run("create consumer")
+    bin_folder = os.path.join(tc.created_layout().build(), "build-release", "bin")
     exe_path = os.path.join(bin_folder, "app")
     assert os.path.exists(exe_path)
-    client.run_command(exe_path)
-    assert "dep/1.0: Hello World Release!" in client.out
+    tc.run_command(exe_path)
+    assert "dep/1.0: Hello World Release!" in tc.out
