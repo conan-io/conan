@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 
 import pytest
 
@@ -22,8 +23,47 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.tool("git")
 def test_compare_paths(old_args, new_args, formatter):
     tc = TestClient(light=True, default_server_user=True)
-    tc.save({"v1/conanfile.py": GenConanfile("pkg").with_build_msg("v1"),
-            "v2/conanfile.py": GenConanfile("pkg").with_build_msg("v2")})
+
+    patch_file = textwrap.dedent("""
+    diff --git a/foo.txt b/foo.txt
+    new file mode 100644
+    index 0000000..e311fbb
+    --- /dev/null
+    +++ b/foo.txt
+    @@ -0,0 +1 @@
+    +{version}
+    """)
+
+    conandata_yml = textwrap.dedent("""
+    patches:
+      "{version}":
+        - patch_file: "patches/patch.patch"
+    """)
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.files import apply_conandata_patches, export_conandata_patches, save
+
+    class TestConan(ConanFile):
+        name = "pkg"
+
+        def export_sources(self):
+            export_conandata_patches(self)
+
+        def source(self):
+            save(self, "myfile.txt", "{version}")
+            apply_conandata_patches(self)
+    """)
+
+    tc.save({
+        "v1/conanfile.py": conanfile.format(version="v1"),
+        "v1/conandata.yml": conandata_yml.format(version="1.0"),
+        "v1/patches/patch.patch": patch_file.format(version="1.0"),
+
+        "v2/conanfile.py": conanfile.format(version="v2"),
+        "v2/conandata.yml": conandata_yml.format(version="2.0"),
+        "v2/patches/patch.patch": patch_file.format(version="2.0"),
+    })
 
     tc.run("create v1 --version=1.0")
     v1_path = tc.exported_layout().export()
