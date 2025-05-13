@@ -21,7 +21,10 @@ PREMAKE_VS_VERSION = {
 
 class Premake:
     """
-    Premake cli wrapper
+    This class calls Premake commands when a package is being built. Notice that
+    this one should be used together with the ``PremakeToolchain`` generator.
+
+    This premake generator is only compatible with ``premake5``.
     """
 
     filename = "conanfile.premake5.lua"
@@ -36,10 +39,13 @@ class Premake:
     )
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
-        # Path to the root (premake5) lua file
+        #: Path to the root premake5 lua file (default is ``premake5.lua``)
         self.luafile = (Path(self._conanfile.source_folder) / "premake5.lua").as_posix()
-        # (key value pairs. Will translate to "--{key}={value}")
+        #: Key value pairs. Will translate to "--{key}={value}"
         self.arguments = {}  # https://premake.github.io/docs/Command-Line-Arguments/
 
         arch = str(self._conanfile.settings.arch)
@@ -60,6 +66,9 @@ class Premake:
         return " ".join([f"--{key}={value}" for key, value in args.items()])
 
     def configure(self):
+        """
+        Runs ``premake5 <action> [FILE]`` which will generate respective build scripts depending on the ``action``.
+        """
         premake_conan_toolchain = Path(self._conanfile.generators_folder) / PremakeToolchain.filename
         if not premake_conan_toolchain.exists():
             raise ConanException(
@@ -78,11 +87,29 @@ class Premake:
         premake_command = (
             f"premake5 {self._expand_args(premake_options)} {self.action} "
             f"{self._expand_args(self.arguments)}"
+            f" {self._premake_verbosity}"
         )
         self._conanfile.run(premake_command)
 
+    @property
+    def _premake_verbosity(self):
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return "--verbose" if verbosity == "verbose" else ""
+
+    @property
+    def _compilation_verbosity(self):
+        verbosity = self._conanfile.conf.get("tools.compilation:verbosity", choices=("quiet", "verbose"))
+        return "--debug" if verbosity == "verbose" else ""
 
     def build(self, workspace, targets=None):
+        """
+        Depending on the action, this method will run either ``msbuild`` or ``make`` with ``N_JOBS``.
+        You can specify ``N_JOBS`` through the configuration line ``tools.build:jobs=N_JOBS``
+        in your profile ``[conf]`` section.
+
+        :param workspace: ``str`` Specifies the solution to be compiled (only used by ``MSBuild``).
+        :param targets: ``List[str]`` Declare the projects to be built (None to build all projects).
+        """
         if self.action.startswith("vs"):
             msbuild = MSBuild(self._conanfile)
             msbuild.build(sln=f"{workspace}.sln", targets=targets)
@@ -90,4 +117,4 @@ class Premake:
             build_type = str(self._conanfile.settings.build_type)
             targets = "all" if targets is None else " ".join(targets)
             njobs = build_jobs(self._conanfile)
-            self._conanfile.run(f"make config={build_type.lower()} {targets} -j{njobs}")
+            self._conanfile.run(f"make config={build_type.lower()} {targets} -j{njobs} {self._compilation_verbosity}")

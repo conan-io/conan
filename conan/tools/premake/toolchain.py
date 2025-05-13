@@ -177,19 +177,38 @@ class PremakeToolchain:
 
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self._projects = {}
+        # Extra flags
+        #: List of extra ``CXX`` flags. Added to ``buildoptions``.
         self.extra_cxxflags = []
+        #: List of extra ``C`` flags. Added to ``buildoptions``.
         self.extra_cflags = []
+        #: List of extra linker flags. Added to ``linkoptions``.
         self.extra_ldflags = []
+        #: List of extra preprocessor definitions. Added to ``defines``.
         self.extra_defines = []
 
     def project(self, project_name):
+        """
+        The returned object will also have the same properties as the workspace but will only affect
+        the project with the name.
+        :param project_name: The name of the project inside the workspace to be updated.
+        :return: ``<PremakeProject>`` object which allow to set project specific flags.
+        """
         if project_name not in self._projects:
             self._projects[project_name] = _PremakeProject(project_name, self._conanfile)
         return self._projects[project_name]
 
     def generate(self):
+        """
+        Creates a ``conantoolchain.premake5.lua`` file which will properly configure build paths,
+        binary paths, configuration settings and compiler/linker flags based on toolchain
+        configuration.
+        """
         premake_conan_deps = Path(self._conanfile.generators_folder) / PREMAKE_ROOT_FILE
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         if cppstd:
