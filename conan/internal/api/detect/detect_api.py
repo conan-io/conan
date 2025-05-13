@@ -391,10 +391,6 @@ def default_cstd(compiler, compiler_version):
     return default
 
 
-def detect_cstd(compiler, compiler_version):
-    return default_cstd(compiler, compiler_version)
-
-
 def detect_default_compiler():
     """
         find the default compiler on the build machine
