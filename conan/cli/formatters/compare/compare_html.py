@@ -87,7 +87,7 @@ compare_html = r"""
                 <div><!--placeholder-->
                 {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
                     {%- if line.startswith('--- a') %}
-                        {%- set filename = line[5:].strip() %}
+                        {%- set filename = line["--- a"|length:].strip() %}
                         {%- set as_safe = safe_filename(filename) %}
                         <hr/>
                         </div>
