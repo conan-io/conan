@@ -441,9 +441,8 @@ class TestListGraphContext:
     def test_graph_list(self):
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile("lib", "1.0")})
-        tc.run("export .")
 
-        tc.run("graph info --requires=lib/1.0 -f json --build=never --no-remote --filter=context", redirect_stdout="graph_context.json")
+        tc.run("graph info . -f json --build=never --no-remote --filter=context", redirect_stdout="graph_context.json")
 
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)
