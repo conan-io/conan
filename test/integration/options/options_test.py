@@ -1,13 +1,11 @@
 import textwrap
-import unittest
-
 
 import pytest
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class OptionsTest(unittest.TestCase):
+class TestOptions:
 
     def test_general_scope_options_test_package(self):
         client = TestClient()
@@ -21,34 +19,34 @@ class OptionsTest(unittest.TestCase):
         test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=2")
         assert 'legacy: Unscoped option definition is ambiguous' in client.out
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 2" in client.out
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg*:shared=2")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 2" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
 
     def test_general_scope_options_test_package_notdefined(self):
         client = TestClient()
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
+        assert "pkg/0.1@user/testing: Forced build from source" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=False", assert_error=True)
-        self.assertIn("option 'shared' doesn't exist", client.out)
+        assert "option 'shared' doesn't exist" in client.out
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
-        self.assertIn("Testing the package: Building", client.out)
+        assert "pkg/0.1@user/testing: Forced build from source" in client.out
+        assert "Testing the package: Building" in client.out
 
     def test_general_scope_priorities(self):
         client = TestClient()
@@ -63,23 +61,23 @@ class OptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         # Consumer has priority
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o shared=2 -o p*:other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 4" in client.out
         # Consumer has priority over pattern, even if the pattern specifies the package name
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/*:shared=2 -o shared=3 -o p*:other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 3 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 3 OTHER: 4" in client.out
         client.run("create . --name=pkg --version=0.1 -o pkg/0.1:shared=2 -o p*:other=4 -o pk*:other=5")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 5", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 5" in client.out
 
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         # Sorted (longest, alphabetical) patterns, have priority
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/0.1:shared=2 -o other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 4" in client.out
         client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5")
-        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 5", client.out)
+        assert "pkg/0.1: BUILD SHARED: 1 OTHER: 5" in client.out
         client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5 -o *g*:other=6")
-        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 6", client.out)
+        assert "pkg/0.1: BUILD SHARED: 1 OTHER: 6" in client.out
 
     def test_parsing(self):
         client = TestClient()
@@ -104,7 +102,7 @@ equal/1.0.0@user/testing:opt=a=b
 '''
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertIn("OPTION a=b", client.out)
+        assert "OPTION a=b" in client.out
 
     def test_general_scope_options(self):
         # https://github.com/conan-io/conan/issues/2538
@@ -119,7 +117,7 @@ equal/1.0.0@user/testing:opt=a=b
                 """)
         client.save({"conanfile.py": conanfile_liba})
         client.run("create . --name=liba --version=0.1 --user=danimtb --channel=testing -o *:shared=True")
-        self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+        assert "liba/0.1@danimtb/testing: shared=True" in client.out
 
         conanfile_libb = textwrap.dedent("""
             from conan import ConanFile
@@ -141,16 +139,16 @@ equal/1.0.0@user/testing:opt=a=b
 
             # Test info
             client.run("graph info . -o *:shared=True")
-            self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "conanfile.py: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
             # Test create
             client.run("create . --name=libb --version=0.1 --user=danimtb --channel=testing -o *:shared=True")
-            self.assertIn("libb/0.1@danimtb/testing: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "libb/0.1@danimtb/testing: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
             # Test install
             client.run("install . -o *:shared=True")
-            self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "conanfile.py: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
 
     def test_define_nested_option_not_freeze(self):
         c = TestClient()
@@ -609,6 +607,46 @@ def test_options_no_user_channel_patterns():
     assert "dep1/0.1: MYOPTION: 3" in c.out
     assert "dep2/0.1@user: MYOPTION: 1" in c.out
     assert "dep3/0.1@user/channel: MYOPTION: 1" in c.out
+
+
+def test_package_options_negate_patterns():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            version = "0.1"
+            options = {"myoption": [1, 2, 3]}
+            def build(self):
+                self.output.info(f"MYOPTION={self.options.myoption}!!!")
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "pkg/conanfile.py": GenConanfile().with_requires("dep1/0.1", "dep2/0.1", "dep3/0.1")})
+    c.run("export dep --name=dep1")
+    c.run("export dep --name=dep2")
+    c.run("export dep --name=dep3")
+
+    c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=2!!!" in c.out
+
+    # Order does matter for options with *:myoption patter, evaluates last
+    c.run("install pkg --build=* -o ~dep1/*:myoption=2 -o *:myoption=1")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=1!!!" in c.out
+    assert "dep3/0.1: MYOPTION=1!!!" in c.out
+
+    # dep3 comes later, works
+    c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2 -o dep3/*:myoption=3")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=3!!!" in c.out
+
+    # dep3 comes first, then last !dep1 pattern prevails
+    c.run("install pkg --build=* -o *:myoption=1 -o dep3/*:myoption=3 -o ~dep1/*:myoption=2")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=2!!!" in c.out
 
 
 class TestTransitiveOptionsSharedInvisible:
