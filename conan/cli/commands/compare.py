@@ -7,7 +7,41 @@ from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command
 from conan.api.model import RecipeReference
+from conan.internal.conan_app import ConanApp
+from conan.internal.errors import conanfile_exception_formatter
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
+from conan.internal.source import retrieve_exports_sources, config_source
+from conan.internal.util.files import rmdir
 
+
+def _configure_source(conan_api, conanfile_path, ref, remotes):
+    app = ConanApp(conan_api)
+    conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=ref.version,
+                                         user=ref.user, channel=ref.channel, graph_lock=None,
+                                         remotes=remotes)
+    # This profile is empty, but with the conf from global.conf
+    profile = conan_api.profiles.get_profile([])
+    initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
+    # This is important, otherwise the ``conan source`` doesn't define layout and fails
+    if hasattr(conanfile, "layout"):
+        with conanfile_exception_formatter(conanfile, "layout"):
+            conanfile.layout()
+
+    recipe_layout = app.cache.recipe_layout(ref)
+    export_source_folder = recipe_layout.export_sources()
+    source_folder = recipe_layout.source()
+
+    # Remove the export_sources folder if it exists,
+    # we want to retrieve it again
+    if os.path.exists(export_source_folder):
+        rmdir(export_source_folder)
+    retrieve_exports_sources(app.remote_manager, recipe_layout, conanfile, ref, remotes)
+
+    conanfile.folders.set_base_source(source_folder)
+    conanfile.folders.set_base_export_sources(source_folder)
+    conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
+    config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
 
 # TODO: TESTING FOR ENCODING ISSUES
 def _execute_command(cmd, stderr=None, ignore_error=False):
@@ -110,8 +144,7 @@ def compare(conan_api: ConanAPI, parser, *args):
         else:
             export_ref, cache_path = _export_recipe_from_path(path_to_conanfile, reference)
         exported_path = conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
-        conan_api.local.source(exported_path, name=export_ref.name, version=str(export_ref.version), user=export_ref.user,
-                               channel=export_ref.channel, remotes=enabled_remotes)
+        _configure_source(conan_api, exported_path, export_ref, enabled_remotes)
         return export_ref, cache_path
 
     old_export_ref, old_cache_path = _source(args.old_path, args.old_reference)
@@ -122,6 +155,11 @@ def compare(conan_api: ConanAPI, parser, *args):
     diff = _execute_command(f'git diff --no-index "{old_cache_path}" "{new_cache_path}"',
                             # We ignore the errors because git diff returns 1 if there are differences
                             ignore_error=True)
+
+    if args.old_path:
+        conan_api.remove.recipe(old_export_ref)
+    if args.new_path:
+        conan_api.remove.recipe(new_export_ref)
 
     return {
         "conan_api": conan_api,
