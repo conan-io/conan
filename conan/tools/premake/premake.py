@@ -86,20 +86,19 @@ class Premake:
 
         premake_command = (
             f"premake5 {self._expand_args(premake_options)} {self.action} "
-            f"{self._expand_args(self.arguments)}"
-            f" {self._premake_verbosity}"
+            f"{self._expand_args(self.arguments)}{self._premake_verbosity}"
         )
         self._conanfile.run(premake_command)
 
     @property
     def _premake_verbosity(self):
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
-        return "--verbose" if verbosity == "verbose" else ""
+        return " --verbose" if verbosity == "verbose" else ""
 
     @property
     def _compilation_verbosity(self):
         verbosity = self._conanfile.conf.get("tools.compilation:verbosity", choices=("quiet", "verbose"))
-        return "--debug" if verbosity == "verbose" else ""
+        return " --debug" if verbosity == "verbose" else ""
 
     def build(self, workspace, targets=None):
         """
@@ -117,4 +116,4 @@ class Premake:
             build_type = str(self._conanfile.settings.build_type)
             targets = "all" if targets is None else " ".join(targets)
             njobs = build_jobs(self._conanfile)
-            self._conanfile.run(f"make config={build_type.lower()} {targets} -j{njobs} {self._compilation_verbosity}")
+            self._conanfile.run(f"make config={build_type.lower()} {targets} -j{njobs}{self._compilation_verbosity}")
