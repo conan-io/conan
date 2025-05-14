@@ -1,12 +1,13 @@
+import os
 import textwrap
-import unittest
 
 from parameterized import parameterized
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-class ConfigureOptionsTest(unittest.TestCase):
+class TestConfigureOptions:
     """
     Test config_options(), configure() and package_id() methods can manage shared, fPIC and
     header_only options automatically.
@@ -50,9 +51,9 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
-        self.assertIn(result, client.out)
+        assert result in client.out
         if header_only:
-            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created"in client.out
 
     @parameterized.expand([
         ["Linux", False, False, False, [False, False, False]],
@@ -102,9 +103,9 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
-        self.assertIn(result, client.out)
+        assert result in client.out
         if header_only:
-            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created"in client.out
 
     def test_header_package_type_pid(self):
         """
@@ -122,7 +123,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                 """)
         client.save({"conanfile.py": conanfile})
         client.run(f"create . --name=pkg --version=0.1")
-        self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+        assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in client.out
 
 
 def test_config_options_override_behaviour():
@@ -149,3 +150,30 @@ def test_config_options_override_behaviour():
 
     tc.run("create . -o=&:foo=3")
     assert "Foo: 3" in tc.out
+
+
+def test_configure_transitive_option():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("zlib", "0.1").with_shared_option(False)})
+    c.run("create . -o *:shared=True")
+
+    boost = textwrap.dedent("""
+        from conan import ConanFile
+
+        class BoostConan(ConanFile):
+            name = "boostdbg"
+            version = "1.0"
+            options = {"shared": [True, False]}
+            default_options ={"shared": False}
+            requires = "zlib/0.1"
+
+            def configure(self):
+                self.options["zlib/*"].shared = self.options.shared
+        """)
+
+    c.save({"conanfile.py": boost}, clean_first=True)
+    c.run("create .  -o boostdbg/*:shared=True")
+    # It doesn't fail due to missing binary, as it assigned dependency shared=True
+    pkg_folder = c.created_layout().package()
+    conaninfo = c.load(os.path.join(pkg_folder, "conaninfo.txt"))
+    assert "shared=True" in conaninfo
