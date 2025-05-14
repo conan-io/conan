@@ -95,7 +95,6 @@ def test_project_configuration():
     toolchain = tc.load(
         os.path.join("build-release", "conan", "conantoolchain.premake5.lua")
     )
-    print(toolchain)
 
     assert (
         """
