@@ -170,6 +170,17 @@ class ToolCopyTest(unittest.TestCase):
         copy(None, "*.txt", folder1, folder2, excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
 
+        folder1 = temp_folder()
+        src_dir = os.path.join(folder1, "src_dir")
+        dst_dir = os.path.join(folder1, "dst_dir")
+        os.makedirs(src_dir)
+        os.makedirs(dst_dir)
+        save(os.path.join(src_dir, "file"), "nothing")
+        save(os.path.join(dst_dir, "file"), "nothing")
+        copy(None, "*_dir*", folder1, folder2, excludes=["dst_dir", ])
+        self.assertTrue(os.path.exists(os.path.join(folder2, "src_dir")))
+        self.assertFalse(os.path.exists(os.path.join(folder2, "dst_dir")))
+
     def test_excludes_hidden_files(self):
         folder1 = temp_folder()
         save_files(folder1, {
@@ -218,12 +229,12 @@ class ToolCopyTest(unittest.TestCase):
         save(os.path.join(src_dir, "file"), "nothing")
         os.symlink(src_dir, os.path.join(root_folder, "link_dir"))
 
-        copied = copy(None, "*_dir*", root_folder, target_folder, excludes=["symlink_dir",])
+        copied = copy(None, "*_dir*", root_folder, target_folder, excludes=["link_dir",])
 
         assert os.path.exists(target_folder) and os.path.isdir(target_folder)
         assert os.path.exists(os.path.join(target_folder, "src_dir", "file"))
         assert not os.path.exists(os.path.join(target_folder, "link_dir"))
-        assert sorted(copied) == [os.path.join(target_folder, "link_dir"), os.path.join(target_folder, "src_dir", "file")]
+        assert sorted(copied) == [os.path.join(target_folder, "src_dir", "file"),]
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_excludes_symlink_file(self):
