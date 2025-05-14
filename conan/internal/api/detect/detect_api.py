@@ -372,7 +372,12 @@ def default_cstd(compiler, compiler_version):
         return None
 
     def _apple_clang_cstd_default(version):
-        return None
+        # Based on which LLVM/Clang versions these are based on
+        if version >= "12":
+            return "gnu17"
+        if version >= "10":
+            return "gnu11"
+        return "gnu99"
 
     def _intel_cstd_default(version):
         return None
