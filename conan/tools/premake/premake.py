@@ -12,11 +12,11 @@ from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
 
 # Source: https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170
 PREMAKE_VS_VERSION = {
-    "190": "2015",
-    "191": "2017",
-    "192": "2019",
-    "193": "2022",
-    "194": "2022",  # still 2022
+    '190': '2015',
+    '191': '2017',
+    '192': '2019',
+    '193': '2022',
+    '194': '2022',  # still 2022
 }
 
 class Premake:
@@ -54,10 +54,8 @@ class Premake:
         self.arguments["arch"] = CONAN_TO_PREMAKE_ARCH[arch]
 
         if "msvc" in self._conanfile.settings.compiler:
-            msvc_version = PREMAKE_VS_VERSION.get(
-                str(self._conanfile.settings.compiler.version)
-            )
-            self.action = f"vs{msvc_version}"
+            msvc_version = PREMAKE_VS_VERSION.get(str(self._conanfile.settings.compiler.version))
+            self.action = f'vs{msvc_version}'
         else:
             self.action = "gmake" # New generator (old gmakelegacy is deprecated)
 
