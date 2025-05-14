@@ -209,7 +209,7 @@ class ToolCopyTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
-    def test_excludes_symlink(self):
+    def test_excludes_symlink_folder(self):
         # https://github.com/conan-io/conan/issues/18296
         root_folder = temp_folder(path_with_spaces=False)
         target_folder = os.path.join(root_folder, "target_folder")
@@ -224,6 +224,21 @@ class ToolCopyTest(unittest.TestCase):
         assert os.path.exists(os.path.join(target_folder, "src_dir", "file"))
         assert not os.path.exists(os.path.join(target_folder, "link_dir"))
         assert sorted(copied) == [os.path.join(target_folder, "link_dir"), os.path.join(target_folder, "src_dir", "file")]
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
+    def test_excludes_symlink_file(self):
+        # https://github.com/conan-io/conan/issues/18296
+        root_folder = temp_folder(path_with_spaces=False)
+        target_folder = os.path.join(root_folder, "target_folder")
+        save(os.path.join(root_folder, "src_file"), "nothing")
+        os.symlink(os.path.join(root_folder, "src_file"), os.path.join(root_folder, "link_file"))
+
+        copied = copy(None, "*_file", root_folder, target_folder, excludes=["link_file", ])
+
+        assert os.path.exists(target_folder) and os.path.isdir(target_folder)
+        assert os.path.exists(os.path.join(target_folder, "src_file"))
+        assert not os.path.exists(os.path.join(target_folder, "link_file"))
+        assert copied == [os.path.join(target_folder, "src_file"),]
 
     def test_multifolder(self):
         src_folder1 = temp_folder()
