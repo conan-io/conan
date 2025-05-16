@@ -47,6 +47,12 @@ class PkgCache:
         return os.path.join(self._base_folder, "t")
 
     @property
+    def filelock_folder(self):
+        """ Folder reserved for file locks on parallel operations
+        """
+        return os.path.join(self._base_folder, "l")
+
+    @property
     def builds_folder(self):
         return os.path.join(self._base_folder, "b")
 

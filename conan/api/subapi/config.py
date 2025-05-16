@@ -22,7 +22,7 @@ from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.internal.hook_manager import HookManager
 from conan.internal.util.files import load, save, rmdir, remove
-from conan.internal.util.semaphore import interprocess_lock
+from conan.internal.util.semaphore import interprocess_write_lock
 
 
 class ConfigAPI:
@@ -36,18 +36,18 @@ class ConfigAPI:
     def home(self):
         return self.conan_api.cache_folder
 
-    @interprocess_lock()
     def install(self, path_or_url, verify_ssl, config_type=None, args=None,
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self.conan_api.cache_folder
         requester = self.conan_api.remotes.requester
-        configuration_install(cache_folder, requester, path_or_url, verify_ssl, config_type=config_type, args=args,
-                              source_folder=source_folder, target_folder=target_folder)
-        self.conan_api.reinit()
+        with interprocess_write_lock(self.conan_api):
+            configuration_install(cache_folder, requester, path_or_url, verify_ssl, config_type=config_type, args=args,
+                                  source_folder=source_folder, target_folder=target_folder)
+            self.conan_api.reinit()
 
-    @interprocess_lock()
+
     def install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
@@ -79,7 +79,8 @@ class ConfigAPI:
         # The computation of the "package_id" and the download of the package is done as usual
         # By default we allow all remotes, and build_mode=None, always updating
         conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+        with interprocess_write_lock(self.conan_api):
+            conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
         # We check if this specific version is already installed
         config_pref = pkg.pref.repr_notime()
@@ -100,14 +101,15 @@ class ConfigAPI:
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self.conan_api.cache_folder
         requester = self.conan_api.remotes.requester
-        configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
-                              config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
-        # We save the current package full reference in the file for future
-        # And for ``package_id`` computation
-        config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
-        config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
-        save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
-        self.conan_api.reinit()
+        with interprocess_write_lock(self.conan_api):
+            configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
+                                  config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
+            # We save the current package full reference in the file for future
+            # And for ``package_id`` computation
+            config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
+            config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
+            save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
+            self.conan_api.reinit()
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):
@@ -208,22 +210,22 @@ class ConfigAPI:
 
         return Settings(settings)
 
-    @interprocess_lock()
     def clean(self):
         contents = os.listdir(self.home())
         packages_folder = self.global_conf.get("core.cache:storage_path") or os.path.join(self.home(), "p")
-        for content in contents:
-            content_path = os.path.join(self.home(), content)
-            if content_path == packages_folder:
-                continue
-            ConanOutput().debug(f"Removing {content_path}")
-            if os.path.isdir(content_path):
-                rmdir(content_path)
-            else:
-                remove(content_path)
-        self.conan_api.reinit()
-        # CHECK: This also generates a remotes.json that is not there after a conan profile show?
-        self.conan_api.migrate()
+        with interprocess_write_lock(self.conan_api):
+            for content in contents:
+                content_path = os.path.join(self.home(), content)
+                if content_path == packages_folder:
+                    continue
+                ConanOutput().debug(f"Removing {content_path}")
+                if os.path.isdir(content_path):
+                    rmdir(content_path)
+                else:
+                    remove(content_path)
+            self.conan_api.reinit()
+            # CHECK: This also generates a remotes.json that is not there after a conan profile show?
+            self.conan_api.migrate()
 
     def set_core_confs(self, core_confs):
         confs = ConfDefinition()
@@ -233,8 +235,9 @@ class ConfigAPI:
         confs.loads("\n".join(core_confs))
         confs.validate()
         self._cli_core_confs = confs
-        # Last but not least, apply the new configuration
-        self.conan_api.reinit()
+        with interprocess_write_lock(self.conan_api):
+            # Last but not least, apply the new configuration
+            self.conan_api.reinit()
 
     def reinit(self):
         if self._new_config is not None:
