@@ -753,6 +753,40 @@ class TestGitBasicSCMFlow:
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
+    def test_grafted_commit(self):
+        # https://github.com/conan-io/conan/issues/18295
+        folder = os.path.join(temp_folder(), "myrepo")
+        conanfile = textwrap.dedent("""\
+           from conan import ConanFile
+           from conan.tools.scm import Git
+
+           class ConanRecipe(ConanFile):
+               name = "conan-grafted"
+               version = "1.2.3"
+
+               def export(self):
+                   git = Git(self, self.recipe_folder)
+                   git.coordinates_to_conandata(repository=True)
+           """)
+        url, commit = create_local_git_repo(files={"conanfile.py": conanfile}, folder=folder)
+
+        c = TestClient()
+        c.save({"README.txt": "my readme!"}, path=folder)
+        c.run_command("git checkout -b mybranch", cwd=folder)
+        orphan_commit = git_add_changes_commit(folder)
+        c.run_command("git checkout master", cwd=folder)
+        c.run_command("git branch -D mybranch", cwd=folder)
+        print("\nORPHAN COMMIT", orphan_commit)
+
+        c.run_command(f'git clone --depth=1 "file://{url}" . ')
+        c.run_command(f'git fetch origin {orphan_commit}')
+        c.run_command(f'git checkout {orphan_commit}')
+
+        c.run_command("git log")
+        c.run("export .")
+        c.run_command("git log")
+        print(c.out)
+
 
 @pytest.mark.tool("git")
 class TestGitBasicSCMFlowSubfolder:
