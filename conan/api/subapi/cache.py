@@ -18,6 +18,7 @@ from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, mkdir, remove
+from conan.internal.util.compression import tar_extract
 
 
 class CacheAPI:
@@ -133,6 +134,8 @@ class CacheAPI:
         mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        # compress_fn = self._load_compress_plugin()
+
         with open(tgz_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, fileobj=tgz_handle,
                                             compresslevel=compresslevel)
@@ -182,14 +185,10 @@ class CacheAPI:
 
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
-
-        with open(path, mode='rb') as file_handler:
-            the_tar = tarfile.open(fileobj=file_handler)
-            fileobj = the_tar.extractfile("pkglist.json")
-            pkglist = fileobj.read()
-            the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
-            the_tar.extractall(path=cache_folder)
-            the_tar.close()
+        tar_extract(self.conan_api.cache_folder, path, cache_folder)
+        # Retrieve the package list from the already extracted archive
+        with open(os.path.join(cache_folder, "pkglist.json")) as file_handler:
+            pkglist = file_handler.read()
 
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()

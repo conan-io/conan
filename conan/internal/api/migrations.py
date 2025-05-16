@@ -4,6 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.internal.default_settings import migrate_settings_file
+from conan.internal.util.compression import migrate_compression_plugin
 from conans.migrations import Migrator
 from conan.internal.util.dates import timestamp_now
 from conan.internal.util.files import load, save
@@ -51,6 +52,7 @@ class ClientMigrator(Migrator):
         # Update profile plugin
         from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
+        migrate_compression_plugin(self.cache_folder)
 
         if old_version and old_version < "2.0.14-":
             _migrate_pkg_db_lru(self.cache_folder, old_version)
