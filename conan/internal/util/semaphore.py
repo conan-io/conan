@@ -3,14 +3,6 @@
 
     It uses the fasteners library to create and manage locks across multiple processes. Thus, this
     module is a proxy in case the project need to use a different library in the future.
-
-    A timeout is defined to prevent deadlocks, and the lock files are stored in a temporary directory
-    in the conan cache folder. Still, the timeout is configured in seconds, using the configuration
-    `core.cache.parallel:timeout` in the conan.conf file.
-    The default value is 300 seconds (5 minutes).
-
-    The fasteners have context managers, but only acquire() method has a timeout
-    parameter, that's why we needed to extend sleep method to inject the timeout check.
 """
 import functools
 import os
@@ -22,21 +14,8 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.cache import PkgCache
 
 
-CONAN_SEMAPHORE_TIMEOUT = 300.0  # 5 minutes
 CONAN_SEMAPHORE_LOCKFILE = "conan_semaphore.lock"
 
-def _acquire_timeout(cache_folder) -> float:
-    """ Get the timeout value for acquiring locks.
-
-    Imported ConanAPI locally to avoid circular import issues.
-
-    :param cache_folder: Path to the Conan cache folder
-    :return: Timeout value in seconds
-    """
-    from conan.api.subapi.config import ConfigAPI
-    config = ConfigAPI.load_config(cache_folder)
-    timeout = config.get("core.cache.parallel:timeout", default=CONAN_SEMAPHORE_TIMEOUT, check_type=float)
-    return float(timeout)
 
 def _lockfile_path(conan_api) -> str:
     """ Get the path to the interprocess lock file.
@@ -66,20 +45,8 @@ def interprocess_lock():
         def wrapper(*args, **kwargs):
             from conan.api.conan_api import ConanAPI
             conan_api = ConanAPI()
-            acquire_timeout = _acquire_timeout(conan_api.cache_folder)
-            now = datetime.now()
-            def _sleep_timeout(interval: float) -> None:
-                time.sleep(interval)
-                if (datetime.now() - now).total_seconds() > acquire_timeout:
-                    raise ConanException(
-                        f"Conan could not acquire interprocess-lock within {acquire_timeout} seconds"
-                         " during parallel process execution. Please, update the conf"
-                        " 'core.cache.parallel:timeout' in conan.conf file to a higher value."
-                    )
-
             import fasteners
-            lock = fasteners.InterProcessLock(path=_lockfile_path(conan_api),
-                                              sleep_func=_sleep_timeout)
+            lock = fasteners.InterProcessLock(path=_lockfile_path(conan_api))
             ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore lock.")
             with lock:
                 ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been locked.")
@@ -102,20 +69,8 @@ def interprocess_write_lock():
         def wrapper(*args, **kwargs):
             from conan.api.conan_api import ConanAPI
             conan_api = ConanAPI()
-            acquire_timeout = _acquire_timeout(conan_api.cache_folder)
-            now = datetime.now()
-            def _sleep_timeout(interval: float) -> None:
-                time.sleep(interval)
-                if (datetime.now() - now).total_seconds() > acquire_timeout:
-                    raise ConanException(
-                        f"Conan could not acquire interprocess-lock within {acquire_timeout} seconds"
-                         " during parallel process execution. Please, update the conf"
-                        " 'core.cache.parallel:timeout' in conan.conf file to a higher value."
-                    )
-
             import fasteners
-            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api),
-                                              sleep_func=_sleep_timeout)
+            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api))
             ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring write semaphore lock.")
             with lock.write_lock():
                 ConanOutput().debug(f"{datetime.now()} [{pid}]: Write semaphore has been locked.")
@@ -138,20 +93,8 @@ def interprocess_read_lock():
         def wrapper(*args, **kwargs):
             from conan.api.conan_api import ConanAPI
             conan_api = ConanAPI()
-            acquire_timeout = _acquire_timeout(conan_api.cache_folder)
-            now = datetime.now()
-            def _sleep_timeout(interval: float) -> None:
-                time.sleep(interval)
-                if (datetime.now() - now).total_seconds() > acquire_timeout:
-                    raise ConanException(
-                        f"Conan could not acquire interprocess-lock within {acquire_timeout} seconds"
-                         " during parallel process execution. Please, update the conf"
-                        " 'core.cache.parallel:timeout' in conan.conf file to a higher value."
-                    )
-
             import fasteners
-            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api),
-                                              sleep_func=_sleep_timeout)
+            lock = fasteners.InterProcessReaderWriterLock(path=_lockfile_path(conan_api))
             ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring read semaphore lock.")
             with lock.read_lock():
                 ConanOutput().debug(f"{datetime.now()} [{pid}]: Read semaphore has been locked.")
