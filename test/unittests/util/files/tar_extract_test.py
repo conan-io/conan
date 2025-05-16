@@ -2,11 +2,12 @@ import os
 import platform
 import tarfile
 import unittest
+
 import pytest
 
-from conan.internal.util.compression import gzopen_without_timestamps, tar_extract
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.test.utils.test_files import temp_folder
-from conan.internal.util.files import save, gather_files, chdir
+from conan.internal.util.files import tar_extract, save, gather_files, chdir
 
 
 class TarExtractTest(unittest.TestCase):
@@ -49,11 +50,13 @@ class TarExtractTest(unittest.TestCase):
         with chdir(working_dir):
             # Unpack and check
             destination_dir = os.path.join(self.tmp_folder, "dest")
-            tar_extract(self.tgz_file, destination_dir)
+            with open(self.tgz_file, 'rb') as file_handler:
+                tar_extract(file_handler, destination_dir)
             check_files(destination_dir)
 
             # Unpack and check (now we have a symlinked local folder)
             os.symlink(temp_folder(), "folder")
             destination_dir = os.path.join(self.tmp_folder, "dest2")
-            tar_extract(self.tgz_file, destination_dir)
+            with open(self.tgz_file, 'rb') as file_handler:
+                tar_extract(file_handler, destination_dir)
             check_files(destination_dir)

@@ -15,10 +15,10 @@ from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.util.compression import load_compress_plugin
 from conan.internal.util.files import rmdir, human_size
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conan.internal.util.files import mkdir
-from conan.internal.util.compression import tar_extract
+from conan.internal.util.files import mkdir, tar_extract
 
 
 class RemoteManager:
@@ -289,7 +289,12 @@ def uncompress_file(src_path, dest_folder, scope=None, cache_folder=None):
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
-        tar_extract(src_path, dest_folder, cache_folder=cache_folder)
+
+        compression_plugin = load_compress_plugin(cache_folder)
+        if compression_plugin:
+            compression_plugin.tar_extract(src_path, dest_folder)
+        else:
+            tar_extract(src_path, dest_folder)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))

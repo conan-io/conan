@@ -10,7 +10,7 @@ from conan.api.output import ConanOutput
 from conan.internal.util.files import set_dirty_context_manager
 
 def tar_extract(src_path, destination_dir, cache_folder=None):
-    compress_plugin = _load_compress_plugin(cache_folder)
+    compress_plugin = load_compress_plugin(cache_folder)
     if compress_plugin:
        return compress_plugin.tar_extract(src_path, destination_dir)
 
@@ -25,7 +25,7 @@ def tar_extract(src_path, destination_dir, cache_folder=None):
 
 
 def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, cache_folder=None):
-    compress_plugin = _load_compress_plugin(cache_folder)
+    compress_plugin = load_compress_plugin(cache_folder)
     if compress_plugin:
         return compress_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
 
@@ -45,7 +45,7 @@ def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, cache_fold
     return tgz_path
 
 def tar_compressor(name, fileobj, compresslevel, cache_path=None):
-    compress_plugin = _load_compress_plugin(cache_path)
+    compress_plugin = load_compress_plugin(cache_path)
     if compress_plugin:
         return compress_plugin.TarCompressor(name, fileobj, compresslevel)
     else:
@@ -67,7 +67,7 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def _load_compress_plugin(cache_folder):
+def load_compress_plugin(cache_folder):
     if not cache_folder:
         return None
     compression_plugin_path = HomePaths(cache_folder).compression_plugin_path
