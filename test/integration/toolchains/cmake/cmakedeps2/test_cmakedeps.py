@@ -359,3 +359,23 @@ def test_cmake_find_mode_deprecated():
     args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
     tc.run(f"install --requires=dep/0.1 {args}")
     assert "CMakeConfigDeps does not support module find mode"
+
+
+def test_cmake_extra_dependencies():
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_dependencies", ["MyOpenMPI"])
+                self.cpp_info.set_property("cmake_extra_interface_libs", ["MyOpenMPILib"])
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+    tc.run(f"install --requires=dep/0.1 {args}")
+    dep = tc.load("dep-Targets-release.cmake")
+    assert "find_dependency(MyOpenMPI REQUIRED )" in dep
+    assert "target_link_libraries(dep::dep INTERFACE MyOpenMPILib)" in dep

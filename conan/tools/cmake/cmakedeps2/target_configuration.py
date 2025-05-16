@@ -180,7 +180,9 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
-        system_libs = " ".join(info.system_libs)
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  check_type=list) or []
+        system_libs = " ".join(info.system_libs + extra_libs)
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
@@ -276,6 +278,9 @@ class TargetConfigurationTemplate2:
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
+        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
+                                                  check_type=list)
+        ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
 
     @staticmethod
