@@ -271,7 +271,7 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
@@ -279,8 +279,8 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
-            # recursive is False in case it is a symlink to a folder
-            tgz.add(abs_path, filename, recursive=False)
+            # recursive is False by default in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
     duration = time.time() - t1
