@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tarfile
+import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
@@ -16,7 +17,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove
+from conan.internal.util.files import rmdir, mkdir, remove, save
 
 
 class CacheAPI:
@@ -145,10 +146,10 @@ class CacheAPI:
                     continue
                 path = os.path.join(cache_folder, recipe_folder, f)
                 if os.path.exists(path):
-                    tar_files.update({f"{recipe_folder}/{f}": path})
+                    tar_files[f"{recipe_folder}/{f}"] = path
             path = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
             if os.path.exists(path):
-                tar_files.update({f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}": path})
+                tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
 
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref_layout = cache.pkg_layout(pref)
@@ -157,19 +158,19 @@ class CacheAPI:
                 folder = folder.replace("\\", "/")  # make win paths portable
                 pref_bundle["package_folder"] = folder
                 out.info(f"Saving {pref}: {folder}")
-                tar_files.update({folder: os.path.join(cache_folder, folder)})
+                tar_files[folder] = os.path.join(cache_folder, folder)
 
                 if os.path.exists(pref_layout.metadata()):
                     metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
                     metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
                     pref_bundle["metadata_folder"] = metadata_folder
                     out.info(f"Saving {pref} metadata: {metadata_folder}")
-                    tar_files.update({metadata_folder: os.path.join(cache_folder, metadata_folder)})
+                    tar_files[metadata_folder] = os.path.join(cache_folder, metadata_folder)
 
+        # Create a temporary file in order to reuse compress_files functionality
         serialized = json.dumps(package_list.serialize(), indent=2)
-        pkglist_path = os.path.join(cache_folder, "pkglist.json")
-        with open(pkglist_path, "w") as file_handler:
-            file_handler.write(serialized)
+        pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
+        save(pkglist_path, serialized)
         tar_files.update({"pkglist.json": pkglist_path})
         compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel, recursive=True)
 
