@@ -1,8 +1,6 @@
 import json
 import os
 import shutil
-import tarfile
-from io import BytesIO
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
@@ -17,7 +15,7 @@ from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, mkdir, remove
-from conan.internal.util.compression import gzopen_without_timestamps, tar_extract
+from conan.internal.util.compression import tar_compressor, tar_extract
 
 
 class CacheAPI:
@@ -135,8 +133,8 @@ class CacheAPI:
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
 
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, fileobj=tgz_handle,
-                                            compresslevel=compresslevel)
+            tgz = tar_compressor(name, fileobj=tgz_handle, compresslevel=compresslevel,
+                                 cache_path=self.conan_api.cache_folder)
             for ref, ref_bundle in package_list.refs().items():
                 ref_layout = cache.recipe_layout(ref)
                 recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
@@ -170,11 +168,12 @@ class CacheAPI:
                         out.info(f"Saving {pref} metadata: {metadata_folder}")
                         tgz.add(os.path.join(cache_folder, metadata_folder), metadata_folder,
                                 recursive=True)
+            # Create pgklist.json to add it to the tgz
             serialized = json.dumps(package_list.serialize(), indent=2)
-            info = tarfile.TarInfo(name="pkglist.json")
-            data = serialized.encode('utf-8')
-            info.size = len(data)
-            tgz.addfile(tarinfo=info, fileobj=BytesIO(data))
+            pkglist_path = os.path.join(cache_folder, "pkglist.json")
+            with open(pkglist_path, "w") as file_handler:
+                file_handler.write(serialized)
+            tgz.add(pkglist_path, "pkglist.json", recursive=False)
             tgz.close()
 
     def restore(self, path):

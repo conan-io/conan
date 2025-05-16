@@ -44,6 +44,13 @@ def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, cache_fold
     ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path
 
+def tar_compressor(name, fileobj, compresslevel, cache_path=None):
+    compress_plugin = _load_compress_plugin(cache_path)
+    if compress_plugin:
+        return compress_plugin.TarCompressor(name, fileobj, compresslevel)
+    else:
+        return gzopen_without_timestamps(name, fileobj, compresslevel)
+
 
 def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
@@ -71,3 +78,14 @@ def _load_compress_plugin(cache_folder):
     if not hasattr(mod, "tar_extract") or not hasattr(mod, "tar_compress"):
         raise ConanException("The 'compression.py' plugin does not contain required `tar_extract` or `tar_compress` functions")
     return mod
+
+
+"""
+Plugin `compression.py` interface:
+
+    def tar_extract(src_path, destination_dir) -> None
+    def tar_compress(files, name, dest_dir, compresslevel=None, ref=None) -> str
+    class TarCompressor(name, fileobj, compresslevel)
+        def add(self, abs_path, filename, recursive=True) -> None
+        def close() -> None
+"""
