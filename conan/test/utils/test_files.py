@@ -8,7 +8,7 @@ import tempfile
 import time
 from io import BytesIO
 
-from conan.internal.api.uploader import gzopen_without_timestamps
+from conan.internal.util.compression import gzopen_without_timestamps
 from conan.tools.files.files import untargz
 from conan.internal.subsystems import get_cased_path
 from conan.errors import ConanException

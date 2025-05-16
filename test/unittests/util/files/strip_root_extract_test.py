@@ -3,7 +3,7 @@ import tarfile
 import unittest
 import zipfile
 
-from conan.internal.api.uploader import gzopen_without_timestamps
+from conan.internal.util.compression import gzopen_without_timestamps
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
 from conan.internal.model.manifest import gather_files

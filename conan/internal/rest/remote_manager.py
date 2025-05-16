@@ -82,7 +82,7 @@ class RemoteManager:
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
-            uncompress_file(self._home_folder, tgz_file, export_folder, scope=str(ref))
+            uncompress_file(tgz_file, export_folder, scope=str(ref), cache_folder=self._home_folder)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -124,7 +124,7 @@ class RemoteManager:
 
         self._signer.verify(ref, download_folder, files=zipped_files)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(self._home_folder, tgz_file, export_sources_folder, scope=str(ref))
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), cache_folder=self._home_folder)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -172,7 +172,7 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            uncompress_file(self._home_folder, tgz_file, package_folder, scope=str(pref.ref))
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), cache_folder=self._home_folder)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -282,14 +282,14 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(cache_folder, src_path, dest_folder, scope=None):
+def uncompress_file(src_path, dest_folder, scope=None, cache_folder=None):
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
-        tar_extract(cache_folder, src_path, dest_folder)
+        tar_extract(src_path, dest_folder, cache_folder=cache_folder)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))

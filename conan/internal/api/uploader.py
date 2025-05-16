@@ -12,9 +12,9 @@ from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conan.internal.util.compression import tar_compress
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
                                        mkdir, human_size)
+from conan.internal.util.compression import tar_compress
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -157,8 +157,8 @@ class PackagePreparator:
                 result[tgz_name] = tgz
             elif tgz_files:
                 compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-                tgz = tar_compress(self._app.cache_folder, tgz_files, tgz_name, download_export_folder,
-                                   compresslevel=compresslevel, ref=ref)
+                tgz = tar_compress(tgz_files, tgz_name, download_export_folder,
+                                   compresslevel=compresslevel, ref=ref, cache_folder=self._app.cache_folder)
                 result[tgz_name] = tgz
 
         add_tgz(EXPORT_TGZ_NAME, files)
@@ -204,8 +204,8 @@ class PackagePreparator:
         if not os.path.isfile(package_tgz):
             tgz_files = {f: path for f, path in files.items()}
             compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-            tgz_path = tar_compress(self._app.cache_folder, tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                    compresslevel=compresslevel, ref=pref)
+            tgz_path = tar_compress(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
+                                    compresslevel=compresslevel, ref=pref, cache_folder=self._app.cache_folder)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
 
@@ -255,21 +255,6 @@ class UploadExecutor:
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         output.debug(f"Upload {pref} in {duration} time")
-
-
-def gzopen_without_timestamps(name, fileobj, compresslevel=None):
-    """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
-        setted in Gzip file causing md5 to change. Not possible using the
-        previous tarfile open because arguments are not passed to GzipFile constructor
-    """
-    compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
-    fileobj = gzip.GzipFile(name, "w", compresslevel, fileobj, mtime=0)
-    # Format is forced because in Python3.8, it changed and it generates different tarfiles
-    # with different checksums, which break hashes of tgzs
-    # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
-    t = tarfile.TarFile.taropen(name, "w", fileobj, format=tarfile.PAX_FORMAT)
-    t._extfileobj = False
-    return t
 
 
 def _total_size(cache_files):

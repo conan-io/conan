@@ -2,12 +2,11 @@ import os
 import platform
 import tarfile
 import unittest
-
 import pytest
 
-from conan.internal.api.uploader import gzopen_without_timestamps
+from conan.internal.util.compression import gzopen_without_timestamps, tar_extract
 from conan.test.utils.test_files import temp_folder
-from conan.internal.util.files import tar_extract, save, gather_files, chdir
+from conan.internal.util.files import save, gather_files, chdir
 
 
 class TarExtractTest(unittest.TestCase):

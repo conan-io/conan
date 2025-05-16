@@ -6,6 +6,7 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
+from conan.internal.util.compression import gzopen_without_timestamps
 import pytest
 from mock import patch
 from requests import Response
@@ -13,7 +14,6 @@ from requests import Response
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
