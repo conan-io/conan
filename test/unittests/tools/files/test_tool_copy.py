@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import load, save, mkdir, save_files, chdir
+from conan.internal.util.files import load, save, mkdir, save_files, chdir
 
 
 class ToolCopyTest(unittest.TestCase):

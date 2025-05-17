@@ -644,7 +644,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
 
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
-        assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
+    assert "Please, specify a suitable value for os.sdk." in str(excinfo.value)
 
 
 def test_compilers_block(conanfile):

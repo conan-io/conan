@@ -2,8 +2,8 @@ import unittest
 
 from mock import Mock
 
-from conans.client.graph.graph import CONTEXT_HOST
-from conans.client.graph.graph_builder import DepsGraph, Node
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.graph_builder import DepsGraph, Node
 from conan.internal.model.conan_file import ConanFile
 from conan.api.model import RecipeReference
 

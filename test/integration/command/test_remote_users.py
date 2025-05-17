@@ -4,7 +4,6 @@ import time
 from collections import OrderedDict
 from datetime import timedelta
 
-import pytest
 from mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
@@ -18,12 +17,10 @@ class TestUser:
         """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
         client = TestClient()
-        with pytest.raises(Exception):
-            client.run("remote list-users")
+        client.run("remote list-users", assert_error=True)
         assert "ERROR: No remotes defined" in client.out
 
-        with pytest.raises(Exception):
-            client.run("remote login wrong_remote foo -p bar")
+        client.run("remote login wrong_remote foo -p bar", assert_error=True)
         assert "ERROR: Remote 'wrong_remote' can't be found or is disabled" in client.out
 
     def test_command_user_list(self):
@@ -35,8 +32,7 @@ class TestUser:
         client = TestClient(servers=servers)
 
         # Test with wrong remote right error is reported
-        with pytest.raises(Exception):
-            client.run("remote login Test_Wrong_Remote foo")
+        client.run("remote login Test_Wrong_Remote foo", assert_error=True)
         assert "ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled" in client.out
 
         # Test user list for all remotes is reported
@@ -97,6 +93,7 @@ class TestUser:
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.run(r'remote login default lasote -p="my \"password"')
+        assert "Connecting to remote" not in client.out
         assert "Changed user of remote 'default' from 'None' (anonymous) to 'lasote'" in client.out
         client.run('remote logout default')
         client.run(r'remote login default lasote -p "my \"password"')
@@ -367,7 +364,7 @@ class TestRemoteAuth:
         c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
                                                 "lasote", "mypass"])
 
-        with patch("conans.client.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
+        with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
             c.run("remote auth --force *")
             check_credentials_mock.assert_called_with(True)
 
@@ -378,7 +375,7 @@ class TestRemoteAuth:
         c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
                                                 "lasote", "mypass"])
 
-        with patch("conans.client.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
+        with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") as check_credentials_mock:
             c.run("remote auth *")
             check_credentials_mock.assert_called_with(False)
 

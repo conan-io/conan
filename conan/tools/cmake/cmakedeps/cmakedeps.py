@@ -137,7 +137,7 @@ class CMakeDeps(object):
         Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
         the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
         `cmake_find_mode`, `cmake_module_file_name`, `cmake_module_target_name`, `cmake_additional_variables_prefixes`,
-        `cmake_config_version_compat`, `system_package_version`, `cmake_set_interface_link_directories`,
+        `cmake_config_version_compat`, `system_package_version`,
         `cmake_build_modules`, `nosoname`, and `cmake_target_aliases`.
 
         :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For

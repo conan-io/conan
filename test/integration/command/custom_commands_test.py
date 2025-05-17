@@ -10,7 +10,7 @@ from conan.test.utils.tools import TestClient
 from conan.test.utils.env import environment_update
 
 
-class TestCustomCommands:
+class TestCustomCommandsErrors:
 
     def test_import_error_custom_command(self):
         mycommand = textwrap.dedent("""
@@ -48,6 +48,25 @@ class TestCustomCommands:
         client.run("config home")
         assert client.cache_folder in client.out
 
+    def test_import_error_bad_name(self):
+        mycommand = textwrap.dedent("""
+            from conan.cli.command import conan_command, conan_subcommand
+            @conan_command(group="custom commands")
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \""" custom \"""
+            @conan_subcommand()
+            def mysubcmd(conan_api, parser, *args, **kwargs):
+                \""" mysubcmd \"""
+            """)
+
+        c = TestClient()
+        c.save_home({"extensions/commands/cmd_mycommand.py": mycommand})
+        # Call to any other command, it will fail loading the custom command
+        c.run("list *")
+        assert "The name for the subcommand method should begin with the main command name" in c.out
+
+
+class TestCustomCommands:
     def test_simple_custom_command(self):
         mycommand = textwrap.dedent("""
             import json

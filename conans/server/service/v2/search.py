@@ -8,7 +8,7 @@ from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANINFO
 from conans.server.utils.files import list_folder_subdirs
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def _get_local_infos_min(server_store, ref):

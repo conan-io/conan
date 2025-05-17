@@ -686,3 +686,97 @@ def test_lock_error_create():
     assert lock["requires"] == []
     assert len(lock["build_requires"]) == 1
     assert "pkg/0.1#4e9dba5c3041ba4c87724486afdb7eb4" in lock["build_requires"][0]
+
+
+def test_lock_error():
+    # https://github.com/conan-io/conan/issues/17363
+    c = TestClient()
+    transitive_dep = textwrap.dedent("""
+        # recipes/transitive_dep/conanfile.py
+        from conan import ConanFile
+
+        class TransitiveDepConan(ConanFile):
+            name = "transitive_dep"
+            version = "2.0.0"
+            settings = "build_type"
+            """)
+    build_tool = textwrap.dedent("""
+        # recipes/build_tool/conanfile.py
+        from conan import ConanFile
+
+        class BuildToolConan(ConanFile):
+            name = "build_tool"
+            version = "1.0.0"
+            settings = "build_type"
+
+            def requirements(self):
+                self.requires("transitive_dep/2.0.0")
+        """)
+    build_tool_test = textwrap.dedent("""
+        # recipes/build_tool/test_package/conanfile.py
+        from conan import ConanFile
+
+        class TestPackageConan(ConanFile):
+            settings = "build_type"
+            test_type = "explicit"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+        """)
+    runtime_dep = textwrap.dedent("""
+        # recipes/runtime_dep/conanfile.py
+        from conan import ConanFile
+
+        class RuntimeDepConan(ConanFile):
+            name = "runtime_dep"
+            version = "1.2.3"
+            settings = "build_type"
+
+            def build_requirements(self):
+                self.tool_requires("build_tool/1.0.0")
+        """)
+    consumer = textwrap.dedent("""
+        # recipes/consumer/conanfile.py
+        from conan import ConanFile
+
+        class ConsumerConan(ConanFile):
+            name = "consumer"
+            version = "0.0.1"
+            settings = "build_type"
+
+            def requirements(self):
+                self.requires("runtime_dep/1.2.3")
+        """)
+    c.save({"recipes/transitive_dep/conanfile.py": transitive_dep,
+            "recipes/build_tool/conanfile.py": build_tool,
+            "recipes/build_tool/test_package/conanfile.py": build_tool_test,
+            "recipes/runtime_dep/conanfile.py": runtime_dep,
+            "recipes/consumer/conanfile.py": consumer,
+            })
+    c.run("export recipes/transitive_dep")
+    c.run("export recipes/build_tool")
+    c.run("export recipes/runtime_dep")
+
+    settings = "-s:b build_type=Release -s:h build_type=Debug"
+    c.run(f"lock create recipes/consumer --no-remote {settings}")
+
+    c.run(f"graph build-order recipes/consumer {settings} --build=missing --order-by=configuration "
+          "--reduce  --format=json", redirect_stdout="build_order.json")
+    assert "Using lockfile:" in c.out
+
+    ref = "transitive_dep/2.0.0"
+    c.run(f"install --tool-requires={ref} {settings} --build={ref} "
+          "--lockfile=recipes/consumer/conan.lock ")
+    # The test of ``trantisive_dep`` doesn't have the test_package
+
+    ref = "build_tool/1.0.0"
+    c.run(f"install --tool-requires={ref} {settings} --build={ref} "
+          "--lockfile=recipes/consumer/conan.lock ")
+
+    ref = "runtime_dep/1.2.3"
+    c.run(f"install --requires={ref} {settings} --build={ref} "
+          "--lockfile=recipes/consumer/conan.lock ")
+

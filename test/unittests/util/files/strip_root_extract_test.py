@@ -3,6 +3,7 @@ import tarfile
 import unittest
 import zipfile
 
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
 from conan.internal.model.manifest import gather_files
@@ -10,8 +11,8 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
-from conans.util.files import chdir, save
-from conans.util.files import gzopen_without_timestamps, rmdir
+from conan.internal.util.files import chdir, save
+from conan.internal.util.files import rmdir
 
 
 class ZipExtractPlainTest(unittest.TestCase):
@@ -110,7 +111,7 @@ class TarExtractPlainTest(unittest.TestCase):
         # Create a tar.gz file with the files in the folder and an additional TarInfo entry
         # for the folder_entry (the gather files doesn't return empty dirs)
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+            tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
             if folder_entry:
                 # Create an empty folder in the tgz file
                 t = tarfile.TarInfo(folder_entry)
@@ -131,7 +132,7 @@ class TarExtractPlainTest(unittest.TestCase):
         tgz_path = os.path.join(tmp_folder, "foo.tgz")
 
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+            tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
 
             # Regular file
             info = tarfile.TarInfo(name="common/foo.txt")
@@ -272,3 +273,44 @@ class TarExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         with self.assertRaisesRegex(ConanException, "Can't untar a tgz containing files in the root with strip_root enabled"):
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
+
+
+def _compress_root_folder(folder, tgz_path, root_folder_name="root"):
+    """
+    Compress the whole folder adding withing the tar file also the folders. For instance:
+
+    $ tar -tf '/tmp/folder/file.tar.gz'
+    root/
+    root/parent/
+    root/parent/bin/
+    root/parent/bin/file1
+    root/parent/bin/file2
+    """
+    with open(tgz_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
+        files, _ = gather_files(folder)
+        tgz.add(root_folder_name, arcname=os.path.basename(root_folder_name))
+        tgz.close()
+
+
+def test_decompressing_folders_with_different_modes():
+    """
+    When compressed folders come with restrictive permissions, untar() function should not
+    raise a PermissionError.
+
+    Issue related: https://github.com/conan-io/conan/issues/17987
+    """
+    tmp_folder = temp_folder()
+    tgz_folder = temp_folder()
+    tgz_file = os.path.join(tgz_folder, "file.tar.gz")
+    with chdir(tmp_folder):
+        save("root/parent/bin/file1", "contentsfile1")
+        save("root/parent/bin/file2", "contentsfile2")
+        os.chmod(os.path.join("root", "parent"), mode=0o555)
+        os.chmod(os.path.join("root", "parent", "bin"), mode=0o700)
+        _compress_root_folder(tmp_folder, tgz_file, root_folder_name="root")
+
+    # Tgz unzipped regularly
+    extract_folder = temp_folder()
+    # Do not raise any PermissionError
+    untargz(tgz_file, destination=extract_folder, strip_root=True)

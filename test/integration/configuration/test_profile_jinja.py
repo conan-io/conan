@@ -10,7 +10,9 @@ from conan.test.utils.env import environment_update
 
 def test_profile_template():
     client = TestClient()
-    tpl = textwrap.dedent("""
+    tpl = textwrap.dedent("""\
+        # This is just to check that subprocess is injected in the render and can be used
+        {% set check_output = subprocess.check_output %}
         [settings]
         os = {{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
         build_type = {{ os.getenv("MY_BUILD_TYPE") }}
@@ -266,9 +268,39 @@ class TestProfileDetectAPI:
 
 def test_profile_jinja_error():
     c = TestClient(light=True)
-    c.save({"profile1": "{% set kk = other() %}"})
+    profile = textwrap.dedent("""
+        {% set arr = [
+            {# comment that triggers the error #}
+            'smth'
+        ] %}""")
+    c.save({"profile1": profile,
+            "profile2": "include(profile1)",
+            "profile3": "include(profile2)",
+            "conanfile.txt": ""})
     c.run("profile show -pr=profile1", assert_error=True)
     assert "ERROR: Error while rendering the profile template file" in c.out
+    c.run("profile show -pr=profile2", assert_error=True)
+    assert "ERROR: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+    c.run("profile show -pr=profile3", assert_error=True)
+    assert "ERROR: Error reading 'profile3' profile: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+
+    # Also install messages
+    c.run("install . -pr=profile1", assert_error=True)
+    assert "ERROR: Error while rendering the profile template file" in c.out
+    assert "unexpected char '#' at 21" in c.out
+
+    c.run("install . -pr=profile2", assert_error=True)
+    assert "ERROR: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+    c.run("install . -pr=profile3", assert_error=True)
+    assert "ERROR: Error reading 'profile3' profile: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
 
 
 def test_profile_macro_per_package():

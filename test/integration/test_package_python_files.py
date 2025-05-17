@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.api.model import RecipeReference
-from conans.util.files import load
+from conan.internal.util.files import load
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 

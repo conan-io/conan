@@ -4,7 +4,7 @@ from textwrap import dedent
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class FullRevisionModeTest(unittest.TestCase):

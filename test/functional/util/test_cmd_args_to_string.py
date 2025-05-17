@@ -6,8 +6,8 @@ import pytest
 
 from conan.tools.build import cmd_args_to_string
 from conan.test.utils.tools import TestClient
-from conans.util.files import chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import chdir
+from conan.internal.util.runners import detect_runner
 
 
 @pytest.fixture(scope="module")

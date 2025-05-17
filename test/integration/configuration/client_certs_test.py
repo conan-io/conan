@@ -6,7 +6,7 @@ from requests import Response
 
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TestRequester
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 conanfile = textwrap.dedent("""

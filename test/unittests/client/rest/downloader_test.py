@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.client.downloaders.file_downloader import FileDownloader
+from conan.internal.rest.file_downloader import FileDownloader
 from conan.errors import ConanException
 
 

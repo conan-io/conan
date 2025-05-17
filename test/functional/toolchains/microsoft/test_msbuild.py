@@ -9,7 +9,7 @@ from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 sln_file = r"""
@@ -459,7 +459,7 @@ class TestWin:
         client.run(f"create . {settings_h} -c tools.microsoft.msbuild:vs_version={ide_version} -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
 
         assert "MSBUILD : error MSB1001: Unknown switch" not in client.out
-        assert "/verbosity:Detailed" in client.out
+        assert "-verbosity:Detailed" in client.out
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,

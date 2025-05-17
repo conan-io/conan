@@ -2,7 +2,7 @@ import unittest
 
 from conan.internal.paths import CONANFILE
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class ExitWithCodeTest(unittest.TestCase):

@@ -3,7 +3,7 @@ import unittest
 
 from conans.server.plugin_loader import load_authentication_plugin
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class AuthenticatorPluginTest(unittest.TestCase):

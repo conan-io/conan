@@ -7,7 +7,9 @@ import fnmatch
 from collections import OrderedDict
 
 from conan.errors import ConanException
+from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
+from conan.internal.model.settings import SettingsItem
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -28,6 +30,7 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -154,7 +157,7 @@ class _ConfVarPlaceHolder:
     pass
 
 
-class _ConfValue(object):
+class _ConfValue:
 
     def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
@@ -162,6 +165,8 @@ class _ConfValue(object):
         self._name = name
         self._value = value
         self._value_type = type(value)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
 
@@ -219,6 +224,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value.extend(value)
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.append(value)
 
     def prepend(self, value):
@@ -228,6 +235,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value = value + self._value
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.insert(0, value)
 
     def compose_conf_value(self, other):
@@ -254,6 +263,9 @@ class _ConfValue(object):
                 new_value = other._value.copy()
                 new_value.update(self._value)
                 self._value = new_value
+        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
+            # They might be different kind of numbers, so skip the check below
+            pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
@@ -609,18 +621,16 @@ class ConfDefinition:
         else:
             self._pattern_confs[pattern] = conf
 
-    def rebase_conf_definition(self, other):
+    def rebase_conf_definition(self, global_conf):
         """
         for taking the new global.conf and composing with the profile [conf]
-        :type other: ConfDefinition
+        :type global_conf: ConfDefinition
         """
-        for pattern, conf in other._pattern_confs.items():
-            new_conf = conf.filter_user_modules()  # Creates a copy, filtered
-            existing = self._pattern_confs.get(pattern)
-            if existing:
-                existing.compose_conf(new_conf)
-            else:
-                self._pattern_confs[pattern] = new_conf
+        result = ConfDefinition()
+        result._pattern_confs = global_conf._pattern_confs.copy()
+        result.update_conf_definition(self)
+        self._pattern_confs = result._pattern_confs
+        return
 
     def update(self, key, value, profile=False, method="define"):
         """

@@ -766,6 +766,22 @@ class TestBuildOrderReduce:
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Invalid configuration" in tc.out
         assert "IndexError: list index out of range" not in tc.out
 
+    def test_reduce_should_remove_recipe(self):
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os")})
+        tc.run("export dep")
+        tc.run("create dep -s os=Windows")
+        tc.run("graph build-order -s os=Windows --build=missing --order=recipe --requires=dep/1.0 "
+               "--format=json", redirect_stdout="windows.json")
+        tc.run("graph build-order -s os=Linux --build=missing --order=recipe --requires=dep/1.0 "
+               "--format=json", redirect_stdout="linux.json")
+        tc.run("graph build-order-merge --file=windows.json --file=linux.json --reduce "
+               "--format=json")
+        order = json.loads(tc.stdout)
+        assert order["order"][0][0]["ref"] == "dep/1.0#1674c18bb63f0c9778d2811c21f581a0"
+        assert len(order["order"][0][0]["packages"][0]) == 1
+        assert order["order"][0][0]["packages"][0][0]["binary"] == "Build"
+
 
 def test_multi_configuration_profile_args():
     c = TestClient()
@@ -788,9 +804,8 @@ def test_multi_configuration_profile_args():
 
 def test_build_order_space_in_options():
     tc = TestClient(light=True)
-    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
-                .with_option("flags", ["ANY", None])
-                .with_option("extras", ["ANY", None]),
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_option("flags", ["ANY", None])
+                                                           .with_option("extras", ["ANY", None]),
              "conanfile.txt": textwrap.dedent("""
              [requires]
              dep/1.0
@@ -864,3 +879,24 @@ def test_build_order_build_context_compatible():
         c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"]},
                                build=True)
 
+
+def test_info_build_order_editable():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("editable add dep")
+    c.run("export pkg")
+    
+    c.run("graph build-order consumer --build=missing --build=editable -f=json --order-by=recipe")
+    bo_json = json.loads(c.stdout)
+    pkg = bo_json["order"][0][0]["packages"][0][0]
+    assert pkg["binary"] == "EditableBuild"
+    assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"
+
+    c.run("graph build-order consumer --build=missing --build=editable -f=json "
+          "--order-by=configuration")
+    bo_json = json.loads(c.stdout)
+    pkg = bo_json["order"][0][0]
+    assert pkg["binary"] == "EditableBuild"
+    assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"

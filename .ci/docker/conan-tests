@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PY36=3.6.15 \
     PY38=3.8.6 \
     PY39=3.9.2 \
+    PY310=3.10.16 \
     PY312=3.12.3 \
     PY313=3.13.0 \
     CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
@@ -15,6 +16,7 @@ ENV PY36=3.6.15 \
     CMAKE_3_19=/usr/share/cmake-3.19.7/bin/cmake \
     CMAKE_3_23=/usr/share/cmake-3.23.5/bin/cmake \
     CMAKE_3_27=/usr/share/cmake-3.27.9/bin/cmake \
+    CMAKE_4_0=/usr/share/cmake-4.0.0-rc3/bin/cmake \
     GCC_9=/usr/bin/gcc-9 \
     GXX_9=/usr/bin/g++-9 \
     GCC_11=/usr/bin/gcc-11 \
@@ -95,6 +97,7 @@ RUN curl https://pyenv.run | bash && \
     pyenv install $PY36 && \
     pyenv install $PY38 && \
     pyenv install $PY39 && \
+    pyenv install $PY310 && \
     pyenv install $PY312 && \
     pyenv install $PY313 && \
     pyenv global $PY39 && \
@@ -118,12 +121,17 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
     wget https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-Linux-x86_64.tar.gz   && \
     tar -xvzf cmake-3.27.9-Linux-x86_64.tar.gz && mv cmake-3.27.9-linux-x86_64/ /usr/share/cmake-3.27.9 && \
+    wget https://cmake.org/files/v4.0/cmake-4.0.0-rc3-linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake-4.0.0-rc3-linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_0 70 && \
+    # set CMake 3.15 as default
+    update-alternatives --set cmake $CMAKE_3_15
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
@@ -152,6 +160,16 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
 RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-linux.tar.gz && \
     tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
     mv premake5 /usr/share/premake
+
+RUN cd /tmp && \
+    mkdir qbs && \
+    cd qbs && \
+    curl -L https://download.qt.io/official_releases/qbs/2.6.0/qbs-linux-x86_64-2.6.0.tar.gz > qbs-linux-x86_64-2.6.0.tar.gz && \
+    tar -xzf qbs-linux-x86_64-2.6.0.tar.gz && \
+    mv qbs-linux-x86_64-2.6.0 /usr/share/qbs && \
+    rm qbs-linux-x86_64-2.6.0.tar.gz
+
+RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
 
 USER conan
 WORKDIR $HOME

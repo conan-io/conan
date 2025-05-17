@@ -317,7 +317,6 @@ class PyRequiresExtendTest(unittest.TestCase):
                 author = "author@company.com"
                 exports = "*.txt"
                 exports_sources = "*.h"
-                short_paths = True
                 generators = "CMakeToolchain"
             """)
         client.save({"conanfile.py": conanfile,
@@ -334,7 +333,6 @@ class PyRequiresExtendTest(unittest.TestCase):
                 def build(self):
                     self.output.info("Exports sources! %s" % self.exports_sources)
                     self.output.info("HEADER CONTENT!: %s" % load(self, "header.h"))
-                    self.output.info("Short paths! %s" % self.short_paths)
                     self.output.info("License! %s" % self.license)
                     self.output.info("Author! %s" % self.author)
                     assert os.path.exists("conan_toolchain.cmake")
@@ -346,7 +344,6 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: Exports sources! *.h", client.out)
         self.assertIn("pkg/0.1@user/testing: Copied 1 '.txt' file: other.txt", client.out)
         self.assertIn("pkg/0.1@user/testing: Copied 1 '.h' file: header.h", client.out)
-        self.assertIn("pkg/0.1@user/testing: Short paths! True", client.out)
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
@@ -1080,6 +1077,8 @@ class TestTestPackagePythonRequire:
         """
 
         c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("mytool", "0.1")})
+        c.run("create .")
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             def mycommon():
@@ -1100,9 +1099,16 @@ class TestTestPackagePythonRequire:
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
         assert "common/0.1 (test package): 42!!!" in c.out
 
         c.run("test test_package common/0.1")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        # https://github.com/conan-io/conan/issues/18224
+        c.save({"myprofile": "[tool_requires]\nmytool/0.1"})
+        c.run("create . -pr=myprofile")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):

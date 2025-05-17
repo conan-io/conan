@@ -6,7 +6,6 @@ import pytest
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
 
 
 class TestCacheCompatibles:

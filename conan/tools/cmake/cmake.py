@@ -185,7 +185,7 @@ class CMake:
 
     def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None):
         """
-        Equivalent to run ``cmake --build . --target=install``
+        Equivalent to running ``cmake --install``
 
         :param component: The specific component to install, if any
         :param build_type: Use it only to override the value defined in the settings.build_type.

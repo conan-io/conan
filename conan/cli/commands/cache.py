@@ -71,6 +71,8 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     (.tgz store) ones.
     """
     subparser.add_argument("pattern", nargs="?", help="Selection pattern for references to clean")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                            help="Package list of packages to clean")
     subparser.add_argument("-s", "--source", action='store_true', default=False,
                            help="Clean source folders")
     subparser.add_argument("-b", "--build", action='store_true', default=False,
@@ -86,8 +88,17 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
 
-    ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
-    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    # If pattern is None, it will be replaced by "*"
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
                               download=args.download, temp=args.temp,
@@ -101,14 +112,27 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the integrity of the local cache for the given references
     """
-    subparser.add_argument("pattern", help="Selection pattern for references to check integrity for")
+    subparser.add_argument("pattern", nargs="?",
+                           help="Selection pattern for references to check integrity for")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                           help="Package list of packages to check integrity for")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
 
-    ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
-    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
     ConanOutput().success("Integrity check: ok")
 
@@ -125,6 +149,7 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
                                 "If revision is not specified, it is assumed latest one.")
     subparser.add_argument("-l", "--list", help="Package list of packages to save")
     subparser.add_argument('--file', help="Save to this tgz file")
+    subparser.add_argument("--no-source", action="store_true", help="Exclude the sources")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -140,7 +165,7 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
         ref_pattern = ListPattern(args.pattern)
         package_list = conan_api.list.select(ref_pattern)
     tgz_path = make_abs_path(args.file or "conan_cache_save.tgz")
-    conan_api.cache.save(package_list, tgz_path)
+    conan_api.cache.save(package_list, tgz_path, args.no_source)
     return {"results": {"Local Cache": package_list.serialize()}}
 
 

@@ -7,9 +7,17 @@ from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
-from conans.util.files import save
+from conan.internal.util.files import save
 
 CONAN_VCVARS = "conanvcvars"
+
+
+def msvc_platform_from_arch(arch):
+    return {"x86": "Win32",
+            "x86_64": "x64",
+            "armv7": "ARM",
+            "armv8": "ARM64",
+            "arm64ec": "ARM64EC"}.get(arch)
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -117,7 +125,7 @@ class VCVars:
         os_ = conanfile.settings.get_safe("os")
         build_os_ = conanfile.settings_build.get_safe("os")
 
-        if os_ != "Windows" or build_os_ != "Windows":
+        if (os_ != "Windows" and os_ != "WindowsStore") or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")

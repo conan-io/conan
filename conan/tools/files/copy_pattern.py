@@ -4,7 +4,7 @@ import os
 import shutil
 
 from conan.errors import ConanException
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,

@@ -6,7 +6,7 @@ from parameterized import parameterized
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class SetVersionNameTest(unittest.TestCase):

@@ -13,7 +13,7 @@ from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.env import environment_update
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestParamErrors:
@@ -60,6 +60,19 @@ class TestParamErrors:
         c.run("list --graph=graph.json", assert_error=True)
         assert "ERROR: Graph file broken" in c.out
 
+        # This can happen when using a pkg list file instead of a graph file
+        c.save({"conanfile.py": GenConanfile("lib")})
+        c.run("create . --version=1.0 --format=json", redirect_stdout="graph.json")
+        c.run("list --graph graph.json --format=json", redirect_stdout="pkglist.json")
+        c.run("list --graph pkglist.json", assert_error=True)
+        assert (
+            'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running'
+            in c.out
+        )
+        assert (
+            "conan [ graph-info | create | export-pkg | install | test ] --format=json > graph.json"
+            in c.out
+        )
 
 @pytest.fixture(scope="module")
 def client():
