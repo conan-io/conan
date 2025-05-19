@@ -109,6 +109,22 @@ def test_untargz():
     assert exists(join(dest_dir, "src", "bar.txt"))
 
 
+def test_untargz_output():
+    import io
+    from unittest.mock import patch
+
+    archive = create_example_tar(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    with patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+        dest_dir = temp_folder()
+        unzip(conanfile, archive, dest_dir)
+
+        stderr_output = mock_stderr.getvalue()
+        print(stderr_output)  # Optional: debug output
+        assert f"Uncompressing {archive} to {dest_dir}" in stderr_output
+
+
 def test_untargz_with_pattern():
     archive = create_example_tar(subfolder=True)
     conanfile = ConanFileMock({})
