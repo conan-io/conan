@@ -60,7 +60,6 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-@lru_cache(maxsize=1)
 def load_compress_plugin(cache_folder):
     if not cache_folder:
         return None
