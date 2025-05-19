@@ -17,7 +17,7 @@ from conan.internal.util.files import rmdir
 
 def _configure_source(conan_api, conanfile_path, ref, remotes):
     app = ConanApp(conan_api)
-    conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=ref.version,
+    conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
                                          user=ref.user, channel=ref.channel, graph_lock=None,
                                          remotes=remotes)
     # This profile is empty, but with the conf from global.conf
@@ -32,14 +32,8 @@ def _configure_source(conan_api, conanfile_path, ref, remotes):
     export_source_folder = recipe_layout.export_sources()
     source_folder = recipe_layout.source()
 
-    # Remove the export_sources folder if it exists,
-    # we want to retrieve it again
-    if os.path.exists(export_source_folder):
-        rmdir(export_source_folder)
-    retrieve_exports_sources(app.remote_manager, recipe_layout, conanfile, ref, remotes)
-
     conanfile.folders.set_base_source(source_folder)
-    conanfile.folders.set_base_export_sources(source_folder)
+    conanfile.folders.set_base_export_sources(export_source_folder)
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
     config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
 
@@ -131,7 +125,7 @@ def compare(conan_api: ConanAPI, parser, *args):
         path = conan_api.local.get_conanfile_path(path_to_conanfile, cwd, py=True)
         ref = RecipeReference.loads(reference)
         export_ref, conanfile = conan_api.export.export(path=path,
-                                                        name=ref.name, version=ref.version,
+                                                        name=ref.name, version=str(ref.version),
                                                         user=ref.user, channel=ref.channel,
                                                         lockfile=None,
                                                         remotes=enabled_remotes)
@@ -150,9 +144,12 @@ def compare(conan_api: ConanAPI, parser, *args):
     old_export_ref, old_cache_path = _source(args.old_path, args.old_reference)
     new_export_ref, new_cache_path = _source(args.new_path, args.new_reference)
 
+    old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir))
+    new_diff_path = os.path.abspath(os.path.join(new_cache_path, os.path.pardir))
+
     ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
-    diff = _execute_command(f'git diff --no-index "{old_cache_path}" "{new_cache_path}"',
+    diff = _execute_command(f'git diff --no-index "{old_diff_path}" "{new_diff_path}"',
                             # We ignore the errors because git diff returns 1 if there are differences
                             ignore_error=True)
 
@@ -166,6 +163,6 @@ def compare(conan_api: ConanAPI, parser, *args):
         "diff": diff,
         "old_export_ref": old_export_ref,
         "new_export_ref": new_export_ref,
-        "old_cache_path": old_cache_path,
-        "new_cache_path": new_cache_path,
+        "old_cache_path": old_diff_path,
+        "new_cache_path": new_diff_path,
     }

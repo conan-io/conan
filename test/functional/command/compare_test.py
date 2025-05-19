@@ -14,7 +14,7 @@ from conan.test.utils.tools import TestClient
 ])
 @pytest.mark.parametrize("new_args", [
     "-np=v2 -nr=pkg/2.0",
-    "-nr=pkg/2.0#f42dd964bbf38a73e38e2774579fa634",
+    "-nr=pkg/2.0#16fad934f9a90b1da6740cbac9590b53",
 ])
 @pytest.mark.parametrize("formatter", [
     "-f=json --out-file=output.json",
@@ -47,6 +47,8 @@ def test_compare_paths(old_args, new_args, formatter):
     class TestConan(ConanFile):
         name = "pkg"
 
+        exports = "{version}.txt"
+
         def export_sources(self):
             export_conandata_patches(self)
 
@@ -58,10 +60,12 @@ def test_compare_paths(old_args, new_args, formatter):
     tc.save({
         "v1/conanfile.py": conanfile.format(version="v1"),
         "v1/conandata.yml": conandata_yml.format(version="1.0"),
+        "v1/1.0.txt": "1.0",
         "v1/patches/patch.patch": patch_file.format(version="1.0"),
 
         "v2/conanfile.py": conanfile.format(version="v2"),
         "v2/conandata.yml": conandata_yml.format(version="2.0"),
+        "v2/2.0.txt": "2.0",
         "v2/patches/patch.patch": patch_file.format(version="2.0"),
     })
 
