@@ -86,6 +86,5 @@ def test_compare_paths(old_args, new_args, formatter):
 
     elif "html" in formatter:
         output_html = tc.load("output.html")
-        assert "self.output.warning(&#34;v1&#34;)" in output_html
-        assert "self.output.warning(&#34;v2&#34;)" in output_html
+        assert """<span class="context">--- a(pkg/1.0#147b6df93bdb64119aa4208cb4825184)/es/patches/patch.patch	</span>""" in output_html
 
