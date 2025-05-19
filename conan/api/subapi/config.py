@@ -79,8 +79,7 @@ class ConfigAPI:
         # The computation of the "package_id" and the download of the package is done as usual
         # By default we allow all remotes, and build_mode=None, always updating
         conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
-        with interprocess_write_lock(self.conan_api):
-            conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
         # We check if this specific version is already installed
         config_pref = pkg.pref.repr_notime()
