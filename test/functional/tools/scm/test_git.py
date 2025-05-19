@@ -774,18 +774,14 @@ class TestGitBasicSCMFlow:
         c.save({"README.txt": "my readme!"}, path=folder)
         c.run_command("git checkout -b mybranch", cwd=folder)
         orphan_commit = git_add_changes_commit(folder)
-        c.run_command("git checkout master", cwd=folder)
+        c.run_command(f"git checkout {orphan_commit}", cwd=folder)
         c.run_command("git branch -D mybranch", cwd=folder)
-        print("\nORPHAN COMMIT", orphan_commit)
 
+        # Now the client does the clone and export
         c.run_command(f'git clone --depth=1 "file://{url}" . ')
-        c.run_command(f'git fetch origin {orphan_commit}')
-        c.run_command(f'git checkout {orphan_commit}')
-
-        c.run_command("git log")
         c.run("export .")
-        c.run_command("git log")
-        print(c.out)
+        c.run_command("git --no-pager log --decorate")
+        assert "grafted" in c.out
 
 
 @pytest.mark.tool("git")

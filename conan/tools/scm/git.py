@@ -114,7 +114,7 @@ class Git:
 
         try:
             # This will raise if commit not present.
-            self.run(f"fetch {remote} --dry-run --depth=1 {commit}")
+            self.run(f"fetch {remote} --dry-run {commit}")
             return True
         except (Exception,):
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
