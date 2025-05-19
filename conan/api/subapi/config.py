@@ -235,9 +235,8 @@ class ConfigAPI:
         confs.loads("\n".join(core_confs))
         confs.validate()
         self._cli_core_confs = confs
-        with interprocess_write_lock(self.conan_api):
-            # Last but not least, apply the new configuration
-            self.conan_api.reinit()
+        # Last but not least, apply the new configuration
+        self.conan_api.reinit()
 
     def reinit(self):
         if self._new_config is not None:
