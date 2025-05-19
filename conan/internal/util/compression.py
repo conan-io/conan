@@ -1,3 +1,4 @@
+from functools import lru_cache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
 from conan.internal.errors import ConanException
@@ -24,7 +25,7 @@ def tar_extract(src_path, destination_dir, cache_folder=None):
         the_tar.close()
 
 
-def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, cache_folder=None):
+def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, cache_folder=None):
     compress_plugin = load_compress_plugin(cache_folder)
     if compress_plugin:
         return compress_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
@@ -37,20 +38,12 @@ def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, cache_fold
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
             # recursive is False in case it is a symlink to a folder
-            tgz.add(abs_path, filename, recursive=False)
+            tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
     duration = time.time() - t1
     ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path
-
-def tar_compressor(name, fileobj, compresslevel, cache_path=None):
-    compress_plugin = load_compress_plugin(cache_path)
-    if compress_plugin:
-        return compress_plugin.TarCompressor(name, fileobj, compresslevel)
-    else:
-        return gzopen_without_timestamps(name, fileobj, compresslevel)
-
 
 def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
@@ -67,6 +60,7 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
+@lru_cache(maxsize=1)
 def load_compress_plugin(cache_folder):
     if not cache_folder:
         return None
@@ -83,9 +77,6 @@ def load_compress_plugin(cache_folder):
 """
 Plugin `compression.py` interface:
 
-    def tar_extract(src_path, destination_dir) -> None
-    def tar_compress(files, name, dest_dir, compresslevel=None, ref=None) -> str
-    class TarCompressor(name, fileobj, compresslevel)
-        def add(self, abs_path, filename, recursive=True) -> None
-        def close() -> None
+    def tar_extract(src_path: str, destination_dir: str) -> None
+    def tar_compress(files: List[str], name: str, dest_dir: str, compresslevel=None, ref: str=None, cache_folder:str, recursive: bool = False) -> str
 """

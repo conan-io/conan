@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
@@ -14,8 +15,8 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove
-from conan.internal.util.compression import tar_compressor, tar_extract
+from conan.internal.util.files import rmdir, mkdir, remove, save
+from conan.internal.util.compression import tar_compress, tar_extract
 
 
 class CacheAPI:
@@ -129,52 +130,50 @@ class CacheAPI:
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
-        name = os.path.basename(tgz_path)
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        tar_files: dict[str,str] = {} # {path_in_tar: abs_path}
 
-        with open(tgz_path, "wb") as tgz_handle:
-            tgz = tar_compressor(name, fileobj=tgz_handle, compresslevel=compresslevel,
-                                 cache_path=self.conan_api.cache_folder)
-            for ref, ref_bundle in package_list.refs().items():
-                ref_layout = cache.recipe_layout(ref)
-                recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
-                recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
-                ref_bundle["recipe_folder"] = recipe_folder
-                out.info(f"Saving {ref}: {recipe_folder}")
-                # Package only selected folders, not DOWNLOAD one
-                for f in (EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER):
-                    if f == SRC_FOLDER and no_source:
-                        continue
-                    path = os.path.join(cache_folder, recipe_folder, f)
-                    if os.path.exists(path):
-                        tgz.add(path, f"{recipe_folder}/{f}", recursive=True)
-                path = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
+        for ref, ref_bundle in package_list.refs().items():
+            ref_layout = cache.recipe_layout(ref)
+            recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
+            recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
+            ref_bundle["recipe_folder"] = recipe_folder
+            out.info(f"Saving {ref}: {recipe_folder}")
+            # Package only selected folders, not DOWNLOAD one
+            for f in (EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER):
+                if f == SRC_FOLDER and no_source:
+                    continue
+                path = os.path.join(cache_folder, recipe_folder, f)
                 if os.path.exists(path):
-                    tgz.add(path, f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}",
-                            recursive=True)
+                    tar_files[f"{recipe_folder}/{f}"] = path
+            path = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
+            if os.path.exists(path):
+                tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
 
-                for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
-                    pref_layout = cache.pkg_layout(pref)
-                    pkg_folder = pref_layout.package()
-                    folder = os.path.relpath(pkg_folder, cache_folder)
-                    folder = folder.replace("\\", "/")  # make win paths portable
-                    pref_bundle["package_folder"] = folder
-                    out.info(f"Saving {pref}: {folder}")
-                    tgz.add(os.path.join(cache_folder, folder), folder, recursive=True)
-                    if os.path.exists(pref_layout.metadata()):
-                        metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
-                        metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
-                        pref_bundle["metadata_folder"] = metadata_folder
-                        out.info(f"Saving {pref} metadata: {metadata_folder}")
-                        tgz.add(os.path.join(cache_folder, metadata_folder), metadata_folder,
-                                recursive=True)
-            # Create pgklist.json to add it to the tgz
-            serialized = json.dumps(package_list.serialize(), indent=2)
-            pkglist_path = os.path.join(cache_folder, "pkglist.json")
-            with open(pkglist_path, "w") as file_handler:
-                file_handler.write(serialized)
-            tgz.add(pkglist_path, "pkglist.json", recursive=False)
-            tgz.close()
+            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+                pref_layout = cache.pkg_layout(pref)
+                pkg_folder = pref_layout.package()
+                folder = os.path.relpath(pkg_folder, cache_folder)
+                folder = folder.replace("\\", "/")  # make win paths portable
+                pref_bundle["package_folder"] = folder
+                out.info(f"Saving {pref}: {folder}")
+                tar_files[folder] = os.path.join(cache_folder, folder)
+
+                if os.path.exists(pref_layout.metadata()):
+                    metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
+                    metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
+                    pref_bundle["metadata_folder"] = metadata_folder
+                    out.info(f"Saving {pref} metadata: {metadata_folder}")
+                    tar_files[metadata_folder] = os.path.join(cache_folder, metadata_folder)
+
+        # Create a temporary file in order to reuse compress_files functionality
+        serialized = json.dumps(package_list.serialize(), indent=2)
+        pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
+        save(pkglist_path, serialized)
+        tar_files["pkglist.json"] = pkglist_path
+        tar_compress(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel,
+                    recursive=True, ref=None, cache_folder=self.conan_api.cache_folder)
+        remove(pkglist_path)
 
     def restore(self, path):
         if not os.path.isfile(path):
