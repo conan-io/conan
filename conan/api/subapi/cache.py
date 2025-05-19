@@ -171,7 +171,7 @@ class CacheAPI:
         serialized = json.dumps(package_list.serialize(), indent=2)
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
-        tar_files.update({"pkglist.json": pkglist_path})
+        tar_files["pkglist.json"] = pkglist_path
         compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel, recursive=True)
 
     def restore(self, path):
