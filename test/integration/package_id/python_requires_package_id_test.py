@@ -1,5 +1,4 @@
 import textwrap
-import unittest
 
 import pytest
 
@@ -11,9 +10,10 @@ PKG_ID_1 = "47b42eaf657374a3d040394f03961b66c53bda5e"
 PKG_ID_2 = "8b7006bf91e5b52cc1ac24a7a4d9c326ee954bb2"
 
 
-class PythonRequiresPackageIDTest(unittest.TestCase):
+class TestPythonRequiresPackageID:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def set_up(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=tool --version=1.1.1")
@@ -29,21 +29,20 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def test_default(self):
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.1", self.client2.out)
+        assert "tool/1.1.1" in self.client2.out
         pkg_id = "170e82ef3a6bf0bbcda5033467ab9d7805b11d0b"
-        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
-                                                       "Build")})
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id, "Build")})
 
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.2", self.client2.out)
+        assert "tool/1.1.2" in self.client2.out
         self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 
         # With a minor change, it fires a rebuild
         self.client.run("export . --name=tool --version=1.2.0")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.2.0", self.client2.out)
+        assert "tool/1.2.0" in self.client2.out
         self.client2.assert_listed_binary({"pkg/0.1": ("5eb1e7ea93fdd67fe3c3b166d240844648ba2b7a",
                                                        "Build")})
 
@@ -51,33 +50,29 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         # change the policy in conan.conf
         save(self.client2.paths.new_config_path, "core.package_id:default_python_mode=patch_mode")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1,
-                                                       "Build")})
+        assert "tool/1.1.1" in self.client2.out
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1, "Build")})
 
         # with a patch change, new ID
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,
-                                                       "Build")})
+        assert "tool/1.1.2" in self.client2.out
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,"Build")})
 
     def test_unrelated_conf(self):
         # change the policy in conan.conf
         save(self.client2.paths.new_config_path,
              "core.package_id:default_python_mode=unrelated_mode")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.1", self.client2.out)
+        assert "tool/1.1.1" in self.client2.out
         pkg_id = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
-                                                       "Build")})
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id, "Build")})
 
         # with any change the package id doesn't change
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1 --build missing")
-        self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
-                                                       "Cache")})
+        assert "tool/1.1.2" in self.client2.out
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id, "Cache")})
 
     def test_change_mode_package_id(self):
         # change the policy in package_id
@@ -90,52 +85,39 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
             """)
         self.client2.save({"conanfile.py": conanfile})
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1,
-                                                       "Build")})
+        assert "tool/1.1.1" in self.client2.out
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1, "Build")})
 
         # with a patch change, new ID
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
-        self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,
-                                                       "Build")})
+        assert "tool/1.1.2" in self.client2.out
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2, "Build")})
 
 
-class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
+def test_python_requires_for_build_requires():
+    client = TestClient()
+    save(client.paths.new_config_path, "core.package_id:default_python_mode=full_version_mode")
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name=tool --version=1.1.1")
 
-    def test(self):
-        client = TestClient()
-        save(client.paths.new_config_path, "core.package_id:default_python_mode=full_version_mode")
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=tool --version=1.1.1")
+    client2 = TestClient(cache_folder=client.cache_folder)
+    client2.save({"conanfile.py": GenConanfile().with_python_requires("tool/[>=0.0]"),
+                 "myprofile": "[tool_requires]\ntool/[>=0.0]\n"})
 
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                python_requires ="tool/[>=0.0]"
-            """)
+    client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    assert "tool/1.1.1" in client2.out
+    assert f"pkg/0.1: Package '{PKG_ID_1}' created" in client2.out
 
-        client2 = TestClient(cache_folder=client.cache_folder)
-        client2.save({"conanfile.py": conanfile,
-                     "myprofile": "[tool_requires]\ntool/[>=0.0]\n"})
+    client.run("create . --name=tool --version=1.1.2")
+    client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
+    assert f"ERROR: Missing binary: pkg/0.1:{PKG_ID_2}" in client2.out
+    assert "tool/1.1.2" in client2.out
+    assert "tool/1.1.1" not in client2.out
 
-        client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
-        self.assertIn("tool/1.1.1", client2.out)
-        self.assertIn(f"pkg/0.1: Package '{PKG_ID_1}' created",
-                      client2.out)
-
-        client.run("create . --name=tool --version=1.1.2")
-        client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
-        self.assertIn(f"ERROR: Missing binary: pkg/0.1:{PKG_ID_2}",
-                      client2.out)
-        self.assertIn("tool/1.1.2", client2.out)
-        self.assertNotIn("tool/1.1.1", client2.out)
-
-        client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
-        # self.assertIn("pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
-        self.assertIn(f"pkg/0.1: Package '{PKG_ID_2}' created",
-                      client2.out)
+    client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    # assert "pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
+    assert f"pkg/0.1: Package '{PKG_ID_2}' created" in client2.out
 
 
 class TestPythonRequiresHeaderOnly:

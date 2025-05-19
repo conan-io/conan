@@ -445,8 +445,12 @@ def test_cpp_info_link_objects():
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(MyObject)
+        project(MyObject C CXX)
         file(GLOB HEADERS *.h)
         add_library(myobject OBJECT myobject.cpp)
         if( WIN32 )
@@ -463,8 +467,10 @@ def test_cpp_info_link_objects():
 
     test_package_cpp = gen_function_cpp(name="main", includes=["myobject"], calls=["myobject"])
     test_package_cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(example)
+        project(example CXX)
         find_package(myobject REQUIRED)
         add_executable(example example.cpp)
         target_link_libraries(example myobject::myobject)
@@ -566,8 +572,10 @@ def test_error_missing_build_type(matrix_client):
     """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(app)
+        project(app CXX)
         find_package(matrix REQUIRED)
         add_executable(app)
         target_link_libraries(app matrix::matrix)
@@ -620,8 +628,10 @@ def test_map_imported_config(transitive_libraries):
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(app)
+        project(app CXX)
         set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
         find_package(engine REQUIRED)
         add_executable(app main.cpp)
@@ -658,6 +668,8 @@ def test_cmake_target_runtime_dlls(transitive_libraries):
 
     client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=engine/1.0 -f")
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(foo CXX)
     find_package(engine CONFIG REQUIRED)
