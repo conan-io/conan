@@ -275,7 +275,8 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref)).info(f"Compressing {name}")
+    if ref:
+        ConanOutput(scope=str(ref)).info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
