@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import platform
 import tarfile
@@ -7,8 +5,9 @@ import unittest
 
 import pytest
 
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.test.utils.test_files import temp_folder
-from conan.internal.util.files import tar_extract, gzopen_without_timestamps, save, gather_files, chdir
+from conan.internal.util.files import tar_extract, save, gather_files, chdir
 
 
 class TarExtractTest(unittest.TestCase):
@@ -26,7 +25,7 @@ class TarExtractTest(unittest.TestCase):
             # Create a tar.gz file with the above files
             self.tgz_file = os.path.join(self.tmp_folder, "file.tar.gz")
             with open(self.tgz_file, "wb") as tgz_handle:
-                tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+                tgz = gzopen_without_timestamps("name", fileobj=tgz_handle)
 
                 files, _ = gather_files(ori_files_dir)
                 for filename, abs_path in files.items():

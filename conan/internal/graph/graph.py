@@ -342,7 +342,9 @@ class Overrides:
         return self._overrides.items()
 
     def serialize(self):
-        return {k.repr_notime(): [e.repr_notime() if e else None for e in v]
+        return {k.repr_notime():
+                    sorted([e.repr_notime() if e else None for e in v],
+                           key= lambda e: "" if e is None else e)
                 for k, v in self._overrides.items()}
 
     @staticmethod

@@ -122,7 +122,7 @@ def test_create_universal_binary_ninja():
 
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.23)
-        project(ninjatest CXX)
+        project(ninjatest NONE)
 
         find_package(mylibrary CONFIG REQUIRED)
         """)

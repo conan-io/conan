@@ -20,6 +20,8 @@ def test_osx_frameworks(shared):
     client.run("new cmake_lib -d name=dep -d version=1.0")
     client.run(f"create . -tf='' -o '&:shared={shared}'")
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(MyFramework CXX)
 
@@ -142,6 +144,8 @@ def test_osx_frameworks(shared):
                 self.run(cmd, env="conanrun")
     """)
     test_cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(PackageTest CXX)
     find_package(frame CONFIG REQUIRED)

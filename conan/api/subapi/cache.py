@@ -6,7 +6,10 @@ from io import BytesIO
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.internal.cache.cache import PkgCache
+from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
+    METADATA, DOWNLOAD_EXPORT_FOLDER
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conan.internal.rest.download_cache import DownloadCache
@@ -14,7 +17,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
+from conan.internal.util.files import rmdir, mkdir, remove
 
 
 class CacheAPI:
@@ -122,7 +125,7 @@ class CacheAPI:
                 if download:
                     rmdir(pref_layout.download_package())
 
-    def save(self, package_list, tgz_path):
+    def save(self, package_list, tgz_path, no_source=False):
         global_conf = self.conan_api.config.global_conf
         cache = PkgCache(self.conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
@@ -131,7 +134,7 @@ class CacheAPI:
         name = os.path.basename(tgz_path)
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
+            tgz = gzopen_without_timestamps(name, fileobj=tgz_handle,
                                             compresslevel=compresslevel)
             for ref, ref_bundle in package_list.refs().items():
                 ref_layout = cache.recipe_layout(ref)
@@ -139,7 +142,18 @@ class CacheAPI:
                 recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
                 ref_bundle["recipe_folder"] = recipe_folder
                 out.info(f"Saving {ref}: {recipe_folder}")
-                tgz.add(os.path.join(cache_folder, recipe_folder), recipe_folder, recursive=True)
+                # Package only selected folders, not DOWNLOAD one
+                for f in (EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER):
+                    if f == SRC_FOLDER and no_source:
+                        continue
+                    path = os.path.join(cache_folder, recipe_folder, f)
+                    if os.path.exists(path):
+                        tgz.add(path, f"{recipe_folder}/{f}", recursive=True)
+                path = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
+                if os.path.exists(path):
+                    tgz.add(path, f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}",
+                            recursive=True)
+
                 for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                     pref_layout = cache.pkg_layout(pref)
                     pkg_folder = pref_layout.package()

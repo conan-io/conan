@@ -94,6 +94,10 @@ class MultiPackagesList:
             return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
+        except KeyError as e:
+            raise ConanException(f'Graph file {graphfile} is missing the required "{e}" key in its contents.\n'
+                                 "Note that the graph file should not be filtered "
+                                 "if you expect to use it with the list command.")
         except ConanException as e:
             raise e
         except Exception as e:

@@ -263,6 +263,9 @@ class _ConfValue:
                 new_value = other._value.copy()
                 new_value.update(self._value)
                 self._value = new_value
+        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
+            # They might be different kind of numbers, so skip the check below
+            pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
