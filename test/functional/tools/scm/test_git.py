@@ -779,6 +779,8 @@ class TestGitBasicSCMFlow:
 
         # Now the client does the clone and export
         c.run_command(f'git clone --depth=1 "file://{url}" . ')
+        c.run_command("git --no-pager log --decorate")
+        assert "grafted" in c.out
         c.run("export .")
         c.run_command("git --no-pager log --decorate")
         assert "grafted" in c.out
