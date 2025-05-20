@@ -12,7 +12,7 @@ from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conan.internal.util.compression import load_compress_plugin
+from conan.internal.util.compression import load_compression_plugin
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
                                        set_dirty_context_manager, mkdir, human_size)
 
@@ -158,7 +158,8 @@ class PackagePreparator:
             elif tgz_files:
                 compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
-                                     compresslevel=compresslevel, ref=ref, cache_folder=self._app.cache_folder)
+                                     compresslevel=compresslevel, ref=ref,
+                                     compress_plugin=self._app.conan_api.config.compress_plugin)
                 result[tgz_name] = tgz
 
         add_tgz(EXPORT_TGZ_NAME, files)
@@ -205,7 +206,8 @@ class PackagePreparator:
             tgz_files = {f: path for f, path in files.items()}
             compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                      compresslevel=compresslevel, ref=pref, cache_folder=self._app.cache_folder)
+                                      compresslevel=compresslevel, ref=pref,
+                                      compress_plugin=self._app.conan_api.config.compress_plugin)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
 
@@ -272,8 +274,8 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, cache_folder=None):
-    compress_plugin = load_compress_plugin(cache_folder)
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False,
+                   compress_plugin=None):
     if compress_plugin:
         return compress_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
 

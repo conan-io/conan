@@ -1,3 +1,4 @@
+from gzip import compress
 import os
 import shutil
 from typing import List
@@ -15,7 +16,7 @@ from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.util.compression import load_compress_plugin
+from conan.internal.util.compression import load_compression_plugin
 from conan.internal.util.files import rmdir, human_size
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.internal.util.files import mkdir, tar_extract
@@ -28,6 +29,7 @@ class RemoteManager:
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache, home_folder)
         self._home_folder = home_folder
+        self._compression_plugin = load_compression_plugin(home_folder) # TODO: should use the instantiated one in ConfigAPI
 
     def _local_folder_remote(self, remote):
         if remote.remote_type == LOCAL_RECIPES_INDEX:
@@ -82,7 +84,7 @@ class RemoteManager:
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, scope=str(ref), cache_folder=self._home_folder)
+            uncompress_file(tgz_file, export_folder, scope=str(ref), compression_plugin=self._compression_plugin)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -124,7 +126,7 @@ class RemoteManager:
 
         self._signer.verify(ref, download_folder, files=zipped_files)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), cache_folder=self._home_folder)
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), compression_plugin=self._compression_plugin)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -172,7 +174,7 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), cache_folder=self._home_folder)
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), compression_plugin=self._compression_plugin)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -282,7 +284,7 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder, scope=None, cache_folder=None):
+def uncompress_file(src_path, dest_folder, scope=None, compression_plugin=None):
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
@@ -290,7 +292,6 @@ def uncompress_file(src_path, dest_folder, scope=None, cache_folder=None):
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
 
-        compression_plugin = load_compress_plugin(cache_folder)
         if compression_plugin:
             compression_plugin.tar_extract(src_path, dest_folder)
         else:

@@ -3,7 +3,7 @@ import os
 import platform
 import textwrap
 import yaml
-from conan.internal.util.compression import load_compress_plugin
+from conan.internal.util.compression import load_compression_plugin
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
@@ -32,7 +32,7 @@ class ConfigAPI:
         self._new_config = None
         self._cli_core_confs = None
         self.hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
-        self.compress_plugin = load_compress_plugin(conan_api.cache_folder)
+        self._compress_plugin = None
 
     def home(self):
         return self.conan_api.cache_folder
@@ -238,4 +238,11 @@ class ConfigAPI:
         if self._new_config is not None:
             self._new_config.clear()
             self._populate_global_conf()
+            self._compress_plugin = None
         self.hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
+
+    @property
+    def compression_plugin(self):
+        if not self._compress_plugin:
+            self._compress_plugin = load_compression_plugin(self.conan_api.cache_folder)
+        return self._compress_plugin

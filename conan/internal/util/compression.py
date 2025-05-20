@@ -10,8 +10,7 @@ import tarfile
 from conan.api.output import ConanOutput
 from conan.internal.util.files import set_dirty_context_manager
 
-def tar_extract(src_path, destination_dir, cache_folder=None):
-    compress_plugin = load_compress_plugin(cache_folder)
+def tar_extract(src_path, destination_dir, compress_plugin=None):
     if compress_plugin:
        return compress_plugin.tar_extract(src_path, destination_dir)
 
@@ -25,15 +24,14 @@ def tar_extract(src_path, destination_dir, cache_folder=None):
         the_tar.close()
 
 
-def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, cache_folder=None):
-    compress_plugin = load_compress_plugin(cache_folder)
+def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, compress_plugin=None):
     if compress_plugin:
         return compress_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
 
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref)).info(f"Compressing {name}")
+    ConanOutput(scope=str(ref) if ref else "").info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
@@ -60,7 +58,7 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def load_compress_plugin(cache_folder):
+def load_compression_plugin(cache_folder):
     if not cache_folder:
         return None
     compression_plugin_path = HomePaths(cache_folder).compression_plugin_path
