@@ -172,7 +172,7 @@ class CacheAPI:
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
         tar_compress(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel,
-                    recursive=True, ref=None, compress_plugin=self.conan_api.config.compress_plugin)
+                    recursive=True, ref=None, compression_plugin=self.conan_api.config.compression_plugin)
         remove(pkglist_path)
 
     def restore(self, path):
@@ -181,7 +181,7 @@ class CacheAPI:
 
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
-        tar_extract(path, cache_folder, compress_plugin=self.conan_api.config.compress_plugin)
+        tar_extract(path, cache_folder, compression_plugin=self.conan_api.config.compression_plugin)
         # Retrieve the package list from the already extracted archive
         with open(os.path.join(cache_folder, "pkglist.json")) as file_handler:
             pkglist = file_handler.read()

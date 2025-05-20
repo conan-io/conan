@@ -52,7 +52,7 @@ class ConanBasicApp:
         localdb = LocalDB(cache_folder)
         auth_manager = ConanApiAuthManager(conan_api.remotes.requester, cache_folder, localdb, global_conf)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
+        self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder, self.conan_api.config)
         global_editables = conan_api.local.editable_packages
         ws_editables = conan_api.workspace.editable_packages
         self.editable_packages = global_editables.update_copy(ws_editables)
@@ -81,10 +81,10 @@ class LocalRecipesIndexApp:
     - loader (for the export phase of local-recipes-index)
     The others are internally use by other collaborators
     """
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, config_api):
         self.global_conf = ConfDefinition()
         self.cache = PkgCache(cache_folder, self.global_conf)
-        self.remote_manager = RemoteManager(self.cache, auth_manager=None, home_folder=cache_folder)
+        self.remote_manager = RemoteManager(self.cache, auth_manager=None, home_folder=cache_folder, config_api=config_api)
         editable_packages = EditablePackages()
         self.proxy = ConanProxy(self, editable_packages)
         self.range_resolver = RangeResolver(self, self.global_conf, editable_packages)

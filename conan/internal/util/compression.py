@@ -10,9 +10,9 @@ import tarfile
 from conan.api.output import ConanOutput
 from conan.internal.util.files import set_dirty_context_manager
 
-def tar_extract(src_path, destination_dir, compress_plugin=None):
-    if compress_plugin:
-       return compress_plugin.tar_extract(src_path, destination_dir)
+def tar_extract(src_path, destination_dir, compression_plugin=None):
+    if compression_plugin:
+       return compression_plugin.tar_extract(src_path, destination_dir)
 
     with open(src_path, mode='rb') as file_handler:
         the_tar = tarfile.open(fileobj=file_handler)
@@ -24,9 +24,9 @@ def tar_extract(src_path, destination_dir, compress_plugin=None):
         the_tar.close()
 
 
-def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, compress_plugin=None):
-    if compress_plugin:
-        return compress_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
+def tar_compress(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, compression_plugin=None):
+    if compression_plugin:
+        return compression_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
 
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory

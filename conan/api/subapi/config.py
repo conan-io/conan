@@ -32,7 +32,7 @@ class ConfigAPI:
         self._new_config = None
         self._cli_core_confs = None
         self.hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
-        self._compress_plugin = None
+        self._compression_plugin = None
 
     def home(self):
         return self.conan_api.cache_folder
@@ -238,11 +238,11 @@ class ConfigAPI:
         if self._new_config is not None:
             self._new_config.clear()
             self._populate_global_conf()
-            self._compress_plugin = None
+            self._compression_plugin = None
         self.hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
 
     @property
     def compression_plugin(self):
-        if not self._compress_plugin:
-            self._compress_plugin = load_compression_plugin(self.conan_api.cache_folder)
-        return self._compress_plugin
+        if not self._compression_plugin:
+            self._compression_plugin = load_compression_plugin(self.conan_api.cache_folder)
+        return self._compression_plugin
