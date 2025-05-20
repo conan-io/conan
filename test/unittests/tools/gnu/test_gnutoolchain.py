@@ -235,3 +235,17 @@ def test_crossbuild_to_android(build_env_mock):
     assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
     assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
     assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
+
+
+def test_gnu_toolchain_conf_extra_configure_args():
+    """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
+        building with GnuToolchain.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.gnu:extra_configure_args", ["--foo", "--bar"])
+
+    tc = GnuToolchain(conanfile)
+    assert tc.configure_args["--foo"] is None
+    assert tc.configure_args["--bar"] is None
