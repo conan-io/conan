@@ -105,7 +105,7 @@ def test_cmake_user_presets_load(existing_user_presets):
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
-        project(PackageTest CXX)
+        project(PackageTest NONE)
         find_package(mylib REQUIRED CONFIG)
         """)
 
@@ -311,9 +311,7 @@ def test_cmaketoolchain_no_warnings():
         """)
     consumer = textwrap.dedent("""
        cmake_minimum_required(VERSION 3.15)
-       set(CMAKE_CXX_COMPILER_WORKS 1)
-       set(CMAKE_CXX_ABI_COMPILED 1)
-       project(MyHello CXX)
+       project(MyHello NONE)
 
        find_package(dep CONFIG REQUIRED)
        """)
@@ -442,6 +440,8 @@ def test_cmake_toolchain_definitions_complex_strings():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         set(CMAKE_CXX_STANDARD 11)
@@ -917,8 +917,7 @@ def test_cmaketoolchain_sysroot():
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        project(app CXX)
+        project(app NONE)
         message("sysroot: '${CMAKE_SYSROOT}'")
         message("osx_sysroot: '${CMAKE_OSX_SYSROOT}'")
         """)
@@ -1062,8 +1061,7 @@ def test_resdirs_cmake_install():
 
     cmake = """
     cmake_minimum_required(VERSION 3.15)
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    project(foo)
+    project(foo NONE)
     if(NOT CMAKE_INSTALL_DATAROOTDIR)
         message(FATAL_ERROR "Cannot install stuff")
     endif()
@@ -1107,8 +1105,7 @@ def test_resdirs_none_cmake_install():
 
     cmake = """
     cmake_minimum_required(VERSION 3.15)
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    project(foo)
+    project(foo NONE)
     if(NOT CMAKE_INSTALL_DATAROOTDIR)
         message(FATAL_ERROR "Cannot install stuff")
     endif()
@@ -1334,7 +1331,7 @@ def test_cmaketoolchain_and_pkg_config_path():
     """)
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
-    project(pkg CXX)
+    project(pkg NONE)
 
     find_package(PkgConfig REQUIRED)
     # We should have PKG_CONFIG_PATH created in the current environment
@@ -1581,8 +1578,10 @@ class TestEnvironmentInPresets:
         """)
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(MyProject)
+            project(MyProject CXX)
 
             if(WIN32)
                 set(MYTOOL_SCRIPT "mytool.bat")
@@ -1788,6 +1787,8 @@ def test_cmake_toolchain_cxxflags_multi_config():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         add_executable(example src/main.cpp)
@@ -1883,6 +1884,8 @@ def test_cmake_toolchain_ninja_multi_config():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         add_executable(example src/main.cpp)
@@ -2000,7 +2003,7 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
 
     cmake = textwrap.dedent(f"""
         cmake_minimum_required(VERSION 3.23)
-        project(sdk VERSION ${{SDK_VERSION}}.0)
+        project(sdk VERSION ${{SDK_VERSION}}.0 LANGUAGES NONE)
         message("sdk: ${{SDK_VERSION}}.0")
     """)
 
@@ -2041,7 +2044,7 @@ def test_cmake_toolchain_language_c():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(pkg C)
+        project(pkg NONE)
         """)
 
     client.save(

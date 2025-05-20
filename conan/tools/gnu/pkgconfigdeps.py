@@ -202,7 +202,8 @@ class _PCFilesDeps:
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = self._get_name(req_conanfile, pkg_ref_name, comp_ref_name)
-            ret.append(comp_name)
+            if comp_name not in ret:
+                ret.append(comp_name)
         return ret
 
     def items(self):
@@ -261,7 +262,7 @@ class _PCFilesDeps:
         if pkg_name not in pc_files:
             cpp_info = self._dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
-            # Note: If DEP has components,, they'll be the requirements == pc_files.keys()
+            # Note: If DEP has components, they'll be the requirements == pc_files.keys()
             requires = list(pc_files.keys()) or self._get_component_requirement_names(cpp_info)
             # If we have found some component requirements it would be enough
             if not requires:

@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import textwrap
 
 import pytest
@@ -127,8 +128,12 @@ class TestBasicLocalFlows:
     def test_save_restore_cache(self, client):
         # Not created in the cache, just exported, nothing breaks because there is not even a package there
         client.run("cache save *:*")
+        # Check pkglist.json has not been created inside conan cache folder
+        assert not any(Path(client.cache_folder).rglob("pgklist.json"))
         client.run("remove * -c")
         client.run("cache restore conan_cache_save.tgz")
+        # Check the extracted pkglist does not persist in the cache after restore
+        assert not any(Path(client.cache_folder).rglob("pgklist.json"))
 
         # Now create the package and then save/restore
         client.run("create dep")
