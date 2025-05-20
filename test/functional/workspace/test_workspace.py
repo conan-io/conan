@@ -47,3 +47,21 @@ def test_metabuild():
     assert "Adding project app1" in c.out
     c.run_command("cmake --build --preset conan-release")
     # it doesn't fail
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_relative_paths():
+    # This is using the meta-project
+    c = TestClient()
+    c.run("new cmake_lib -d name=liba --output=liba")
+    c.run("new cmake_lib -d name=liba --output=other/libb")
+    c.run("workspace init mywks")
+    c.run("workspace init otherwks")
+    # cd mywks
+    with os.chdir("mywks"):
+        c.run("workspace add ../liba")
+        c.run("workspace install")
+    # cd otherwks
+    with os.chdir("otherwks"):
+        c.run("workspace add ../other/libb")
+        c.run("workspace install")
