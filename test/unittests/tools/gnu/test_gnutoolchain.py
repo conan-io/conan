@@ -240,6 +240,7 @@ def test_crossbuild_to_android(build_env_mock):
 def test_gnu_toolchain_conf_extra_configure_args():
     """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
         building with GnuToolchain.
+        The configure args should be passed as a list-like object.
     """
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
@@ -249,3 +250,9 @@ def test_gnu_toolchain_conf_extra_configure_args():
     tc = GnuToolchain(conanfile)
     assert tc.configure_args["--foo"] is None
     assert tc.configure_args["--bar"] is None
+
+    conanfile.conf.define("tools.gnu:extra_configure_args", "--foo --bar")
+    with pytest.raises(ConanException) as expected:
+        GnuToolchain(conanfile)
+    assert "[conf] tools.gnu:extra_configure_args must be a list-like object. " \
+           "The value '--foo --bar' introduced is a str object" in str(expected)

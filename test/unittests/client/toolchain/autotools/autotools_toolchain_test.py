@@ -608,7 +608,9 @@ def test_conf_compiler_executable():
 
 
 def test_autotools_toolchain_conf_extra_configure_args():
-    """Validate that tools.gnu:extra_configure_args are passed to configure command only
+    """Validate that tools.gnu:extra_configure_args are passed to configure command only.
+
+       The configure args should be passed as list only.
     """
     f = temp_folder()
     os.chdir(f)
@@ -623,3 +625,9 @@ def test_autotools_toolchain_conf_extra_configure_args():
     assert "--foo --bar" in obj["configure_args"]
     # make sure it does not forward to make
     assert "--foo" not in obj["make_args"]
+
+    conanfile.conf.define("tools.gnu:extra_configure_args", "--foo --bar")
+    with pytest.raises(ConanException) as expected:
+        AutotoolsToolchain(conanfile)
+    assert "[conf] tools.gnu:extra_configure_args must be a list-like object. "\
+           "The value '--foo --bar' introduced is a str object" in str(expected)
