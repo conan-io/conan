@@ -607,8 +607,8 @@ def test_conf_compiler_executable():
     assert "/c/my/path/myg++" == env["CXX"]
 
 
-def test_autotools_toolchain_conf_configure_args():
-    """Validate that tools.gnu:configure_args are passed to configure command only.
+def test_autotools_toolchain_conf_extra_configure_args():
+    """Validate that tools.gnu:extra_configure_args are passed to configure command only.
 
        The configure args should be passed as list only.
     """
@@ -617,7 +617,7 @@ def test_autotools_toolchain_conf_configure_args():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.conf = Conf()
-    conanfile.conf.define("tools.gnu:configure_args", ["--foo", "--bar"])
+    conanfile.conf.define("tools.gnu:extra_configure_args", ["--foo", "--bar"])
 
     be = AutotoolsToolchain(conanfile)
     be.generate_args()
@@ -626,8 +626,8 @@ def test_autotools_toolchain_conf_configure_args():
     # make sure it does not forward to make
     assert "--foo" not in obj["make_args"]
 
-    conanfile.conf.define("tools.gnu:configure_args", "--foo --bar")
+    conanfile.conf.define("tools.gnu:extra_configure_args", "--foo --bar")
     with pytest.raises(ConanException) as expected:
         AutotoolsToolchain(conanfile)
-    assert "[conf] tools.gnu:configure_args must be a list-like object. "\
+    assert "[conf] tools.gnu:extra_configure_args must be a list-like object. "\
            "The value '--foo --bar' introduced is a str object" in str(expected)
