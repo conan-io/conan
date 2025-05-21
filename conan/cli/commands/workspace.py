@@ -234,7 +234,7 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
                         help="Path to a folder where the workspace will be initialized. "
                              "If  does not exist")
     args = parser.parse_args(*args)
-    conan_api.workspace.initialize(args.path)
+    conan_api.workspace.init(args.path)
 
 
 @conan_command(group="Consumer")

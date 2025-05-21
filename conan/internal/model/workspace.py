@@ -5,8 +5,11 @@ import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conan.internal.paths import WORKSPACE_YML
 from conan.internal.util.files import load, save
+
+# Related files
+WORKSPACE_YML = "conanws.yml"
+WORKSPACE_PY = "conanws.py"
 
 
 class Workspace:

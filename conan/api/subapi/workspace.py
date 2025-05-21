@@ -10,8 +10,7 @@ from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
-from conan.internal.model.workspace import Workspace
-from conan.internal.paths import WORKSPACE_YML, WORKSPACE_PY
+from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY
 from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
     RECIPE_CONSUMER
@@ -204,7 +203,7 @@ class WorkspaceAPI:
         return ref
 
     @staticmethod
-    def initialize(path):
+    def init(path):
         abs_path = make_abs_path(path)
         os.makedirs(abs_path, exist_ok=True)
         ws_yml_file = Path(abs_path, WORKSPACE_YML)
@@ -213,33 +212,18 @@ class WorkspaceAPI:
             ConanOutput().success(f"Created empty {WORKSPACE_YML} in {path}")
             save(ws_yml_file, "")
         if not ws_py_file.exists():
-            ConanOutput().success(f"Created basic {WORKSPACE_PY} in {path}")
-            save(ws_py_file, textwrap.dedent('''\
+            ConanOutput().success(f"Created minimal {WORKSPACE_PY} in {path}")
+            ws_name = os.path.basename(abs_path)
+            save(ws_py_file, textwrap.dedent(f'''\
             from conan import Workspace
-            from conan import ConanFile
-            from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
-
-            class MyWs(ConanFile):
-                """ This is a special conanfile, used only for workspace definition of layout
-                and generators. It shouldn't have requirements, tool_requirements. It shouldn't have
-                build() or package() methods
-                """
-                settings = "os", "compiler", "build_type", "arch"
-
-                def generate(self):
-                    deps = CMakeDeps(self)
-                    deps.generate()
-                    tc = CMakeToolchain(self)
-                    tc.generate()
-
-                def layout(self):
-                    cmake_layout(self)
-
-
-            class Ws(Workspace):
-                def root_conanfile(self):
-                    return MyWs
+            class MyWorkspace(Workspace):
+               """
+               Minimal Workspace class definition.
+               More info: https://docs.conan.io/2/incubating.html#workspaces
+               """
+               def name(self):
+                  return "{ws_name}"
             '''))
 
     def remove(self, path):

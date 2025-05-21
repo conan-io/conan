@@ -49,6 +49,7 @@ def test_metabuild():
     # it doesn't fail
 
 
+@pytest.mark.tool("cmake", "3.27")
 def test_relative_paths():
     # This is using the meta-project
     c = TestClient()
@@ -59,13 +60,13 @@ def test_relative_paths():
     c.run("workspace init mywks")
     c.run("workspace init otherwks")
     # cd mywks
-    with chdir(os.path.join(c.current_folder, "mywks")):
+    with c.chdir("mywks"):
         c.run("workspace add ../liba")
         c.run("workspace add ../app1 --product")
         c.run("workspace build")
         assert "[100%] Built target app1" in c.out
     # cd otherwks
-    with chdir(os.path.join(c.current_folder, "otherwks")):
+    with c.chdir("otherwks"):
         c.run("workspace add ../other/libb")
         c.run("workspace add ../other/app2 --product")
         c.run("workspace build")
