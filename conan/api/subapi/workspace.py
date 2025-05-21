@@ -213,7 +213,7 @@ class WorkspaceAPI:
             ConanOutput().success(f"Created empty {WORKSPACE_YML} in {path}")
             save(ws_yml_file, "")
         if not ws_py_file.exists():
-            ConanOutput().success(f"Created empty {WORKSPACE_PY} in {path}")
+            ConanOutput().success(f"Created basic {WORKSPACE_PY} in {path}")
             save(ws_py_file, textwrap.dedent('''\
             from conan import Workspace
             from conan import ConanFile

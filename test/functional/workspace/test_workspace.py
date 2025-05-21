@@ -60,7 +60,6 @@ def test_relative_paths():
     c.run("workspace init otherwks")
     # cd mywks
     with chdir(os.path.join(c.current_folder, "mywks")):
-        breakpoint()
         c.run("workspace add ../liba")
         c.run("workspace add ../app1 --product")
         c.run("workspace build")
