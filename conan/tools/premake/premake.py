@@ -107,10 +107,7 @@ class Premake:
         :param targets: ``List[str]`` Declare the projects to be built (None to build all projects).
         """
         if not self._premake_conan_toolchain.exists():
-            raise ConanException(
-                f"Premake.build() method requires PrmakeToolchain, which does not exist in "
-                f"{self._premake_conan_toolchain}\nUse PremakeToolchain to generate it."
-            )
+            raise ConanException(f"Premake.build() method requires PrmakeToolchain to work properly")
         if self.action.startswith("vs"):
             msbuild = MSBuild(self._conanfile)
             msbuild.build(sln=f"{workspace}.sln", targets=targets)

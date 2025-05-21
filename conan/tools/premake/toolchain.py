@@ -2,17 +2,16 @@ import os
 import textwrap
 from pathlib import Path
 
-from jinja2 import Environment
+from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
 from conan.tools.files import save
 from conan.tools.microsoft.visual import VCVars
 from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
 
-_jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
 
 def _generate_flags(self, conanfile):
-    template = _jinja_env.from_string(textwrap.dedent(
+    template = textwrap.dedent(
         """\
         -- Workspace flags
 
@@ -36,13 +35,14 @@ def _generate_flags(self, conanfile):
         -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
         defines { {{ extra_defines }} }
         {% endif %}
-    """))
+    """
+    )
 
     def format_list(items):
         return ", ".join(f'"{item}"' for item in items) if items else None
 
-
     build_env = self._conanfile.buildenv.vars(self._conanfile)
+
     def _get_env_list(env):
         v = build_env.get(env, [])
         return v.strip().split() if not isinstance(v, list) else v
@@ -69,16 +69,20 @@ def _generate_flags(self, conanfile):
         + self.extra_ldflags
     )
 
-    return template.render(
-        extra_defines=extra_defines,
-        extra_cflags=extra_c_flags,
-        extra_cxxflags=extra_cxx_flags,
-        extra_ldflags=extra_ld_flags,
-    ).strip()
+    return (
+        Template(template, trim_blocks=True, lstrip_blocks=True)
+        .render(
+            extra_defines=extra_defines,
+            extra_cflags=extra_c_flags,
+            extra_cxxflags=extra_cxx_flags,
+            extra_ldflags=extra_ld_flags,
+        )
+        .strip()
+    )
 
 
 class _PremakeProject:
-    _premake_project_template = _jinja_env.from_string(textwrap.dedent(
+    _premake_project_template = textwrap.dedent(
         """\
     project "{{ name }}"
         {% if kind %}
@@ -88,7 +92,8 @@ class _PremakeProject:
         -- Project flags {{ "(global)" if is_global else "(specific)"}}
     {{ flags | indent(indent_level, first=True) }}
         {% endif %}
-    """))
+    """
+    )
 
     def __init__(self, name, conanfile) -> None:
         self.name = name
@@ -102,8 +107,12 @@ class _PremakeProject:
 
     def _generate(self):
         """Generates project block"""
-        flags_content = _generate_flags(self, self._conanfile) # Generate flags specific to this project
-        return self._premake_project_template.render(
+        flags_content = _generate_flags(
+            self, self._conanfile
+        )  # Generate flags specific to this project
+        return Template(
+            self._premake_project_template, trim_blocks=True, lstrip_blocks=True
+        ).render(
             name=self.name,
             kind="None" if self.disable else self.kind,
             flags=flags_content,
@@ -173,8 +182,8 @@ class PremakeToolchain:
 
     {{ project._generate() }}
         {% endfor %}
-    """)
-
+    """
+    )
 
     def __init__(self, conanfile):
         """
@@ -200,7 +209,9 @@ class PremakeToolchain:
         :return: ``<PremakeProject>`` object which allow to set project specific flags.
         """
         if project_name not in self._projects:
-            self._projects[project_name] = _PremakeProject(project_name, self._conanfile)
+            self._projects[project_name] = _PremakeProject(
+                project_name, self._conanfile
+            )
         return self._projects[project_name]
 
     def generate(self):
@@ -219,12 +230,17 @@ class PremakeToolchain:
                 cppstd = f"c++{cppstd}"
 
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
-        cross_build_arch = self._conanfile.settings.arch if cross_building(self._conanfile) else None
+        cross_build_arch = (
+            self._conanfile.settings.arch if cross_building(self._conanfile) else None
+        )
 
-        flags_content = _generate_flags(self, self._conanfile) # Generate flags specific to this workspace
+        flags_content = _generate_flags(
+            self, self._conanfile
+        )  # Generate flags specific to this workspace
 
-        template = _jinja_env.from_string(self._premake_file_template)
-        content = template.render(
+        content = Template(
+            self._premake_file_template, trim_blocks=True, lstrip_blocks=True
+        ).render(
             # Pass posix path for better cross-platform compatibility in Lua
             build_folder=Path(self._conanfile.build_folder).as_posix(),
             has_conan_deps=premake_conan_deps.exists(),
