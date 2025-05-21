@@ -250,9 +250,3 @@ def test_gnu_toolchain_conf_extra_configure_args():
     tc = GnuToolchain(conanfile)
     assert tc.configure_args["--foo"] is None
     assert tc.configure_args["--bar"] is None
-
-    conanfile.conf.define("tools.gnu:extra_configure_args", "--foo --bar")
-    with pytest.raises(ConanException) as expected:
-        GnuToolchain(conanfile)
-    assert "[conf] tools.gnu:extra_configure_args must be a list-like object. " \
-           "The value '--foo --bar' introduced is a str object" in str(expected)

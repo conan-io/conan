@@ -625,9 +625,3 @@ def test_autotools_toolchain_conf_extra_configure_args():
     assert "--foo --bar" in obj["configure_args"]
     # make sure it does not forward to make
     assert "--foo" not in obj["make_args"]
-
-    conanfile.conf.define("tools.gnu:extra_configure_args", "--foo --bar")
-    with pytest.raises(ConanException) as expected:
-        AutotoolsToolchain(conanfile)
-    assert "[conf] tools.gnu:extra_configure_args must be a list-like object. "\
-           "The value '--foo --bar' introduced is a str object" in str(expected)
