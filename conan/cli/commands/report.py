@@ -5,7 +5,7 @@ from conan.cli.formatters.compare.compare import format_compare_html, format_com
     format_compare_json
 from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
-from conan.cli.command import conan_command
+from conan.cli.command import conan_command, conan_subcommand
 from conan.api.model import RecipeReference
 from conan.internal.conan_app import ConanApp
 from conan.internal.errors import conanfile_exception_formatter
@@ -68,21 +68,41 @@ def _execute_command(cmd, stderr=None, ignore_error=False):
         return output
 
 
-@conan_command(group="Security", formatters={"text": format_compare_txt,
-                                             "json": format_compare_json,
-                                             "html": format_compare_html})
-def compare(conan_api: ConanAPI, parser, *args):
+@conan_command(group="Security")
+def report(conan_api: ConanAPI, parser, *args):
     """
-    Command to get the diff between versions
+    Gets information about the recipe and its sources.
     """
 
-    parser.add_argument("-op", "--old-path", help="Path to the old recipe")
-    parser.add_argument("-or", "--old-reference", help='Old reference "mylib/1.0"')
 
-    parser.add_argument("-np", "--new-path", help="Path to the new recipe")
-    parser.add_argument("-nr", "--new-reference", help='New reference "mylib/1.0"')
 
-    parser.add_argument("-r", "--remote", action="append", default=None,
+@conan_subcommand(formatters={"text": format_compare_txt,
+                              "json": format_compare_json,
+                              "html": format_compare_html})
+def report_diff(conan_api, parser, subparser, *args):
+    """
+    Get the difference between two recipes with their sources.
+    It can be used to compare two different versions of the same recipe, or two different recipe revisions.
+
+    Each old/new recipe can be specified by a path to a conanfile.py and a companion reference,
+    or by a reference only.
+
+    If only a reference is specified, it will be searched in the local cache,
+    or downloaded from the specified remotes. If no revision is specified, the latest revision will be used.
+    """
+
+    ref_help = ("{type} reference, e.g. 'mylib/1.0'. "
+                "If used on its own, it can contain a revision, which will be resolved to the latest one if not provided, "
+                "but it will be ignored if a path is specified. "
+                "If used with a path, it will be used to create the reference for the recipe to be compared.")
+
+    subparser.add_argument("-op", "--old-path", help="Path to the old recipe if comparing a local recipe is desired")
+    subparser.add_argument("-or", "--old-reference", help=ref_help.format(type="Old"), required=True)
+
+    subparser.add_argument("-np", "--new-path", help="Path to the new recipe if comparing a local recipe is desired")
+    subparser.add_argument("-nr", "--new-reference", help=ref_help.format(type="New"), required=True)
+
+    subparser.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
 
     args = parser.parse_args(*args)

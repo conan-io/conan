@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -84,7 +83,7 @@ def test_compare_paths(old_args, new_args, formatter):
 
     new_args = new_args.format(revision=v2_revision)
 
-    tc.run(f'compare {old_args} {new_args} {formatter}')
+    tc.run(f'report diff {old_args} {new_args} {formatter}')
 
     if "json" in formatter:
         output_json = json.loads(tc.load("output.json"))
