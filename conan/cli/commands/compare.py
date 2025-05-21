@@ -144,10 +144,11 @@ def compare(conan_api: ConanAPI, parser, *args):
     old_export_ref, old_cache_path = _source(args.old_path, args.old_reference)
     new_export_ref, new_cache_path = _source(args.new_path, args.new_reference)
 
-    old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir))
-    new_diff_path = os.path.abspath(os.path.join(new_cache_path, os.path.pardir))
+    old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir)).replace("\\", "/")
+    new_diff_path = os.path.abspath(os.path.join(new_cache_path, os.path.pardir)).replace("\\", "/")
 
     ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
+    ConanOutput().info(f'git diff --no-index "{old_diff_path}" "{new_diff_path}"')
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
     diff = _execute_command(f'git diff --no-index "{old_diff_path}" "{new_diff_path}"',
                             # We ignore the errors because git diff returns 1 if there are differences

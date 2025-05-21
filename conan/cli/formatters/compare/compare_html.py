@@ -85,7 +85,8 @@ compare_html = r"""
             </div>
             <div class='content'>
                 <div><!--placeholder-->
-                {%- for line in diff_text.splitlines() if not line.startswith("index") and not line.startswith("diff --git") -%}
+                {% set ns = namespace(buffer = [], skip_lines = False) %}
+                {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
                     {%- if line.startswith('--- a') %}
                         {%- set filename = line["--- a"|length:].strip() %}
                         {%- set as_safe = safe_filename(filename) %}
@@ -93,8 +94,19 @@ compare_html = r"""
                         </div>
                         <div id="diff_{{- as_safe -}}">
                         <h1 id="{{- as_safe -}}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
+
+                        {%- set ns.skip_lines = False %}
+                        {%- for buffered_line in ns.buffer -%}
+                            <span class="context">{{ buffered_line }}</span>
+                            <br/>
+                        {%- endfor %}
+                        {%- set ns.buffer = [] %}
+
                         <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
                         <br/>
+                    {%- elif line.startswith("diff --git") or ns.skip_lines %}
+                        {%- set ns.skip_lines = True %}
+                        {%- set _ = ns.buffer.append(line) %}
                     {%- elif line.startswith('---') %}
                         <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
                         <br/>

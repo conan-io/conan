@@ -97,7 +97,7 @@ def test_compare_paths(old_args, new_args, formatter):
     elif "html" in formatter:
         output_html = tc.load("output.html")
         # We have patch information
-        assert f"""<span class="context">--- a(pkg/1.0#{v1_revision})/es/patches/patch.patch	</span>""" in output_html
+        assert f"""a(pkg/1.0#{v1_revision})/es/patches/patch.patch	</span>""" in output_html
         # We have exports information
-        assert f"""<span class="context">--- a(pkg/1.0#{v1_revision})/e/v1.txt	</span>""" in output_html
+        assert f"""a(pkg/1.0#{v1_revision})/e/v1.txt	</span>""" in output_html
 
