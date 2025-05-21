@@ -146,10 +146,6 @@ class PremakeDeps:
             save(generator_file, content)
 
     def _config_suffix(self):
-        # props = [("Configuration", self.configuration),
-        #          ("Platform", self.architecture)]
-        # name = "".join("_%s" % v for _, v in props)
-        # return name.lower()
         return f"{self.configuration}_{CONAN_TO_PREMAKE_ARCH[str(self.architecture)]}".lower()
 
     def _output_lua_file(self, filename, content):
