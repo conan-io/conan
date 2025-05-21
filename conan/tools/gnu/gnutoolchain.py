@@ -62,7 +62,7 @@ class GnuToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
-        extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
+        extra_configure_args = self._conanfile.conf.get("tools.gnu:configure_args",
                                                         check_type=list,
                                                         default=[])
         extra_configure_args = {it: None for it in extra_configure_args}
