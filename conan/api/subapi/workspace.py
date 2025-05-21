@@ -1,6 +1,7 @@
 import inspect
 import os
 import shutil
+import textwrap
 from pathlib import Path
 
 from conan import ConanFile
@@ -209,11 +210,37 @@ class WorkspaceAPI:
         ws_yml_file = Path(abs_path, WORKSPACE_YML)
         ws_py_file = Path(abs_path, WORKSPACE_PY)
         if not ws_yml_file.exists():
-            ConanOutput().info(f"Created empty {ws_yml_file}")
+            ConanOutput().success(f"Created empty {WORKSPACE_YML} in {path}")
             save(ws_yml_file, "")
         if not ws_py_file.exists():
-            ConanOutput().info(f"Created empty {ws_py_file}")
-            save(ws_py_file, "")
+            ConanOutput().success(f"Created empty {WORKSPACE_PY} in {path}")
+            save(ws_py_file, textwrap.dedent('''\
+            from conan import Workspace
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+
+
+            class MyWs(ConanFile):
+                """ This is a special conanfile, used only for workspace definition of layout
+                and generators. It shouldn't have requirements, tool_requirements. It shouldn't have
+                build() or package() methods
+                """
+                settings = "os", "compiler", "build_type", "arch"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.generate()
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def layout(self):
+                    cmake_layout(self)
+
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            '''))
 
     def remove(self, path):
         self._check_ws()

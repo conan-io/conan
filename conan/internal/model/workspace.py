@@ -81,9 +81,6 @@ class Workspace:
         if not os.path.isabs(path):
             raise ConanException(f"Editable path must be absolute: {path}")
         path = os.path.relpath(path, self.folder)
-        if path.startswith(".."):
-            raise ConanException(f"Editable path must be inside the workspace folder: "
-                                 f"{self.folder}")
         return path.replace("\\", "/")  # Normalize to unix path
 
     def editables(self):
