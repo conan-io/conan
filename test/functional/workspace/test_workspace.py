@@ -50,7 +50,7 @@ def test_metabuild():
     # it doesn't fail
 
 
-# @pytest.mark.tool("cmake", "3.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_relative_paths():
     # This is using the meta-project
     c = TestClient()
