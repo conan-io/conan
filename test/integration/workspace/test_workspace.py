@@ -484,7 +484,7 @@ class TestMeta:
         c.run("workspace add liba")
         c.run("workspace add libb")
         c.run("workspace install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
-        assert "Workspace conanfilews.py not found in the workspace folder, using default" in c.out
+        assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
         assert "dep1-config.cmake" in files
