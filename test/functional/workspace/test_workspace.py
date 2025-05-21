@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
@@ -49,7 +50,7 @@ def test_metabuild():
     # it doesn't fail
 
 
-@pytest.mark.tool("cmake", "3.27")
+# @pytest.mark.tool("cmake", "3.27")
 def test_relative_paths():
     # This is using the meta-project
     c = TestClient()
@@ -64,10 +65,32 @@ def test_relative_paths():
         c.run("workspace add ../liba")
         c.run("workspace add ../app1 --product")
         c.run("workspace build")
-        assert "[100%] Built target app1" in c.out
+        conanws_yml = textwrap.dedent("""\
+        editables:
+          app1/0.1:
+            path: ../app1
+          liba/0.1:
+            path: ../liba
+        products:
+        - ../app1
+        """)
+        assert conanws_yml == c.load("conanws.yml")
     # cd otherwks
     with c.chdir("otherwks"):
         c.run("workspace add ../other/libb")
         c.run("workspace add ../other/app2 --product")
         c.run("workspace build")
-        assert "[100%] Built target app2" in c.out
+        conanws_yml = textwrap.dedent("""\
+        editables:
+          app2/0.1:
+            path: ../other/app2
+          libb/0.1:
+            path: ../other/libb
+        products:
+        - ../other/app2
+        """)
+        assert conanws_yml == c.load("conanws.yml")
+
+    ext = ".exe" if platform.system() == "Windows" else ""
+    assert os.path.exists(os.path.join(c.current_folder, "app1", "build", "Release", f"app1{ext}"))
+    assert os.path.exists(os.path.join(c.current_folder, "other", "app2", "build", "Release", f"app2{ext}"))
