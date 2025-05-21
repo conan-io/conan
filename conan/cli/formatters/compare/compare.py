@@ -83,7 +83,7 @@ def format_compare_json(result):
             filename = line[len("--- a"):].strip()
             result.setdefault(filename, {})["new_name"] = diff_splited_lines[i+1][len("+++ b"):].strip()
             skip_lines = False
-            result[filename].update(buffer)
+            result[filename].setdefault("diff", []).extend(buffer)
             buffer = []
         elif line.startswith("diff --git") or skip_lines:
             skip_lines = True
