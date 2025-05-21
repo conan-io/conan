@@ -75,7 +75,7 @@ def format_compare_json(result):
     diff_text = result["diff"]
     result = {}
     filename = None
-    skip_lines = False
+    skip_lines = True
     diff_splited_lines = diff_text.splitlines()
     buffer = []
     for i, line in enumerate(diff_splited_lines):
