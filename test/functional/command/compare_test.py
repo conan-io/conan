@@ -54,6 +54,8 @@ def test_compare_paths(old_args, new_args, formatter):
 
         def source(self):
             save(self, "myfile.txt", "{version}")
+            if self.version == "2.0":
+                save(self, "new-file-for-v2.txt", "a new file for the new version")
             apply_conandata_patches(self)
     """)
 
@@ -86,18 +88,22 @@ def test_compare_paths(old_args, new_args, formatter):
 
     if "json" in formatter:
         output_json = json.loads(tc.load("output.json"))
-        assert output_json[os.path.join(v1_path, "conanfile.py")]
-        assert output_json[os.path.join(v1_path, "conanmanifest.txt")]
+        assert any(os.path.join(v1_path, "conanfile.py").replace("\\", "/") in k for k in output_json.keys())
+        assert any(os.path.join(v1_path, "conanmanifest.txt").replace("\\", "/") in k for k in output_json.keys())
         # We have patch information
-        assert output_json[os.path.abspath(os.path.join(v1_path, "..", "es", "patches", "patch.patch"))]
+        assert any(os.path.abspath(os.path.join(v1_path, "..", "es", "patches", "patch.patch")).replace("\\", "/") in k for k in output_json.keys())
         # '/private/var/folders/lw/6bflvp3s3t5b56n2p_bj_vx80000gn/T/tmptcto18wfconans/path with spaces/.conan2/p/pkg8fd97e4b9cf55/es/patches/patch.patch'
         # We have exports information
-        assert output_json[os.path.abspath(os.path.join(v1_path, "..", "e", "v1.txt"))]
+        assert any(os.path.abspath(os.path.join(v1_path, "..", "e", "v1.txt")).replace("\\", "/") in k for k in output_json.keys())
+        # New files
+        assert any("new-file-for-v2.txt" in k for k in output_json.keys())
 
     elif "html" in formatter:
         output_html = tc.load("output.html")
         # We have patch information
-        assert f"""a(pkg/1.0#{v1_revision})/es/patches/patch.patch	</span>""" in output_html
+        assert f"""(pkg/1.0#{v1_revision})/es/patches/patch.patch""" in output_html
         # We have exports information
-        assert f"""a(pkg/1.0#{v1_revision})/e/v1.txt	</span>""" in output_html
+        assert f"""(pkg/1.0#{v1_revision})/e/v1.txt""" in output_html
+        # New files
+        assert "(new)/s/new-file-for-v2.txt" in output_html
 

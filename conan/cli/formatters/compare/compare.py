@@ -79,9 +79,10 @@ def format_compare_json(result):
     diff_splited_lines = diff_text.splitlines()
     buffer = []
     for i, line in enumerate(diff_splited_lines):
-        if line.startswith("--- a"):
+        if line.startswith("--- a") or (line.startswith("+++ b") and skip_lines):
             filename = line[len("--- a"):].strip()
-            result.setdefault(filename, {})["new_name"] = diff_splited_lines[i+1][len("+++ b"):].strip()
+            result.setdefault(filename, {})["new_name"] = line[len("+++ b"):].strip() \
+                if line.startswith("+++ b") else diff_splited_lines[i+1][len("+++ b"):].strip()
             skip_lines = False
             result[filename].setdefault("diff", []).extend(buffer)
             buffer = []

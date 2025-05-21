@@ -87,7 +87,7 @@ compare_html = r"""
                 <div><!--placeholder-->
                 {% set ns = namespace(buffer = [], skip_lines = False) %}
                 {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
-                    {%- if line.startswith('--- a') %}
+                    {%- if line.startswith('--- a') or (line.startswith('+++ b') and ns.skip_lines) -%}
                         {%- set filename = line["--- a"|length:].strip() %}
                         {%- set as_safe = safe_filename(filename) %}
                         <hr/>
