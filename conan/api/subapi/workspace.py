@@ -10,7 +10,7 @@ from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
-from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY
+from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
 from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
     RECIPE_CONSUMER
@@ -23,7 +23,12 @@ from conan.internal.util.files import merge_directories, save
 
 def _find_ws_folder():
     path = Path(os.getcwd())
-    while path.is_dir() and len(path.parts) > 1:  # finish at '/'
+    while path.is_dir() and len(path.parts) > 1:  # finish at '/' or 'conanws/'
+        if path.name == WORKSPACE_FOLDER:
+            if not (path / WORKSPACE_YML).is_file() and not (path / WORKSPACE_PY).is_file():
+                raise ConanException("Within the 'conanws/' folder, there should be at least one of "
+                                     f"these files: {WORKSPACE_YML} and/or {WORKSPACE_PY}")
+            return str(path)
         if (path / WORKSPACE_YML).is_file() or (path / WORKSPACE_PY).is_file():
             return str(path)
         else:

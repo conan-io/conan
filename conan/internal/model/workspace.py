@@ -7,6 +7,8 @@ from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.util.files import load, save
 
+# Related folder
+WORKSPACE_FOLDER = "conanws"
 # Related files
 WORKSPACE_YML = "conanws.yml"
 WORKSPACE_PY = "conanws.py"
