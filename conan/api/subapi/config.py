@@ -3,7 +3,7 @@ import os
 import platform
 import textwrap
 import yaml
-from conan.internal.util.compression import load_compression_plugin
+from conan.internal.loader import load_python_file
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
@@ -243,6 +243,15 @@ class ConfigAPI:
 
     @property
     def compression_plugin(self):
+        def load_compression_plugin():
+            compression_plugin_path = HomePaths(self.conan_api.home_folder).compression_plugin_path
+            if not os.path.exists(compression_plugin_path):
+                return None
+            mod, _ = load_python_file(compression_plugin_path)
+            if not hasattr(mod, "tar_extract") or not hasattr(mod, "tar_compress"):
+                raise ConanException("The 'compression.py' plugin does not contain required `tar_extract` or `tar_compress` functions")
+            return mod
         if not self._compression_plugin:
-            self._compression_plugin = load_compression_plugin(self.conan_api.cache_folder)
+            self._compression_plugin = load_compression_plugin()
         return self._compression_plugin
+

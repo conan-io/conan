@@ -275,12 +275,12 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False, compression_plugin=None):
     if compression_plugin:
-        return compression_plugin.tar_compress(files, name, dest_dir, compresslevel, ref)
+        return compression_plugin.tar_compress(files, name, dest_dir, compresslevel, ref, recursive)
 
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref) if ref else "").info(f"Compressing {name}")
+    ConanOutput(scope=str(ref or "")).info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):

@@ -5,6 +5,7 @@ import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
+from conan.internal.api.uploader import compress_files
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
     METADATA, DOWNLOAD_EXPORT_FOLDER
@@ -15,8 +16,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove, save
-from conan.internal.util.compression import tar_compress, tar_extract
+from conan.internal.util.files import rmdir, mkdir, remove, save, tar_extract
 
 
 class CacheAPI:
@@ -171,8 +171,9 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        tar_compress(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel,
-                    recursive=True, ref=None, compression_plugin=self.conan_api.config.compression_plugin)
+        print(tar_files)
+        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel,
+                       recursive=True, ref=None, compression_plugin=self.conan_api.config.compression_plugin)
         remove(pkglist_path)
 
     def restore(self, path):
@@ -181,7 +182,14 @@ class CacheAPI:
 
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
-        tar_extract(path, cache_folder, compression_plugin=self.conan_api.config.compression_plugin)
+
+        compression_plugin = self.conan_api.config.compression_plugin
+        if compression_plugin:
+            compression_plugin.tar_extract(path, cache_folder)
+        else:
+            with open(path, mode='rb') as file_handler:
+                tar_extract(file_handler, cache_folder)
+
         # Retrieve the package list from the already extracted archive
         with open(os.path.join(cache_folder, "pkglist.json")) as file_handler:
             pkglist = file_handler.read()
