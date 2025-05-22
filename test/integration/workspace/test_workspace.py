@@ -15,30 +15,7 @@ from conan.internal.util.files import save, save_files
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
-class TestHomeRoot:
-    def test_workspace_home_yml(self):
-        folder = temp_folder()
-        cwd = os.path.join(folder, "sub1", "sub2")
-        save(os.path.join(folder, f"conanws.yml"), "home_folder: myhome")
-        c = TestClient(current_folder=cwd, light=True)
-        c.run("config home")
-        assert os.path.join(folder, "myhome") in c.stdout
-
-    def test_workspace_home_user_py(self):
-        folder = temp_folder()
-        cwd = os.path.join(folder, "sub1", "sub2")
-        conanwspy = textwrap.dedent("""
-            from conan import Workspace
-
-            class MyWs(Workspace):
-                def home_folder(self):
-                    return "new" + self.conan_data["home_folder"]
-            """)
-        save(os.path.join(folder, f"conanws.py"), conanwspy)
-        save(os.path.join(folder, "conanws.yml"), "home_folder: myhome")
-        c = TestClient(current_folder=cwd, light=True)
-        c.run("config home")
-        assert os.path.join(folder, "newmyhome") in c.stdout
+class TestWorkspaceRoot:
 
     def test_workspace_root(self):
         c = TestClient(light=True)
@@ -576,7 +553,7 @@ def test_workspace_with_local_recipes_index():
                                 "zlib/all/conandata.yml": ""})
 
     c = TestClient(light=True)
-    c.save({"conanws.yml": 'home_folder: "deps"'})
+    c.save({".conanrc": 'conan_home=deps\n'})
     c.run(f'remote add local "{c3i_folder}"')
 
     c.run("list zlib/1.2.11#* -r=local")
