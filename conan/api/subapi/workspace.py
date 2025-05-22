@@ -87,17 +87,6 @@ class WorkspaceAPI:
         self._check_ws()
         return self._ws.name()
 
-    def home_folder(self):
-        """
-        @return: The custom defined Conan home/cache folder if defined, else None
-        """
-        if not self._folder:
-            return
-        folder = self._ws.home_folder()
-        if folder is None or os.path.isabs(folder):
-            return folder
-        return os.path.normpath(os.path.join(self._folder, folder))
-
     def folder(self):
         """
         @return: the current workspace folder where the conanws.yml or conanws.py is located

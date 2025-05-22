@@ -36,9 +36,6 @@ class Workspace:
             raise ConanException("Invalid yml format at {}: {}".format(WORKSPACE_YML, e))
         return data or {}
 
-    def home_folder(self):
-        return self.conan_data.get("home_folder")
-
     def add(self, ref, path, output_folder, product=False):
         assert os.path.isfile(path)
         path = self._conan_rel_path(os.path.dirname(path))
