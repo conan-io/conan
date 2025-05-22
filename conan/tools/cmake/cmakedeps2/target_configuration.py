@@ -113,6 +113,7 @@ class TargetConfigurationTemplate2:
             libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
+        sources = self._get_sources(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
 
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
@@ -138,6 +139,7 @@ class TargetConfigurationTemplate2:
                 "pkg_folder_var": pkg_folder_var,
                 "config": config,
                 "exes": exes,
+                "sources": sources,
                 "libs": libs,
                 "context": self._conanfile.context,
                 # Extra global variables
@@ -268,6 +270,28 @@ class TargetConfigurationTemplate2:
                 exes[target] = exe_location
 
         return exes
+
+    def _get_sources(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
+        sources = {}
+
+        if cpp_info.has_components:
+            # FIXME: NOT IMPLEMENTED
+            for name, comp in cpp_info.components.items():
+                if comp.exe or comp.type is PackageType.APP:
+                    target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
+                                                               name)
+                    target = target_name or f"{pkg_name}::{name}"
+                    exe_location = self._path(comp.location, pkg_folder, pkg_folder_var)
+                    sources[target] = exe_location
+        else:
+            if cpp_info.sources:
+                target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+                target = target_name or f"{pkg_name}::{pkg_name}"
+                sources[target] = []
+                for source in cpp_info.sources:
+                    sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
+                sources[target] = ";".join(sources[target])
+        return sources
 
     def _get_dependencies(self):
         """ transitive dependencies Filenames for find_dependency()
@@ -456,4 +480,13 @@ class TargetConfigurationTemplate2:
         set_target_properties({{exe}} PROPERTIES IMPORTED_LOCATION_{{config}} "{{location}}")
         set_property(TARGET {{exe}} PROPERTY CONAN_CONTEXT "{{context}}")
         {% endfor %}
+
+         {% if sources %}
+        ################# Sources information ##############
+        {% for target, srcs in sources.items() %}
+        #################### {{target}} ####################
+        set_property(TARGET {{target}} APPEND PROPERTY INTERFACE_SOURCES
+                     {{config_wrapper(config, srcs)}})
+        {% endfor %}
+        {% endif %}
         """)

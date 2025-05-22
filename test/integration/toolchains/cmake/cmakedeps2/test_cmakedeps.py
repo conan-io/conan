@@ -211,6 +211,65 @@ def test_cmakeconfigdeps_recipe():
     assert "WARN: Using the new CMakeConfigDeps generator" in c.out
 
 
+def test_cpp_info_sources():
+    c = TestClient()
+    c.run("new cmake_lib -d name=hello -d version=1.0")
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(hello CXX)
+
+        add_library(hello INTERFACE)
+        target_include_directories(hello INTERFACE include)
+        set_target_properties(hello PROPERTIES PUBLIC_HEADER "include/hello.h")
+        target_sources(hello INTERFACE
+                       "include/hello.h"
+                       "src/hello.cpp")
+
+        install(TARGETS hello)
+        install(FILES src/hello.cpp DESTINATION src)
+    """)
+    conanfile = textwrap.dedent("""
+        import os
+        from conan.tools.cmake import CMake, CMakeToolchain
+        from conan.tools.files import copy
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.generate()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+
+            def package_info(self):
+                self.cpp_info.sources = ["include/hello.h", "src/hello.cpp"]
+    """)
+    c.save({
+        "CMakeLists.txt": cmakelists,
+        "conanfile.py": conanfile
+    })
+    c.run(f"create . -s compiler.version=193 -c tools.cmake.cmakedeps:new={new_value}")
+    print(c.out)
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps -s=compiler.version=193 "
+          f"-c tools.cmake.cmakedeps:new={new_value}")
+    cmake = c.load("hello-Targets-release.cmake")
+    print(cmake)
+    assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+
 def test_system_wrappers():
     c = TestClient()
     conanfile = textwrap.dedent("""
