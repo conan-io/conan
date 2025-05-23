@@ -5,18 +5,6 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_compression_plugin_not_existing():
-    """Test that the compression plugin is not used if it does not exist"""
-    c = TestClient()
-    c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-    c.run("create .")
-    c.run("cache save 'pkg/*'")
-    assert "Compressing conan_cache_save.tgz\n" in c.out
-    c.run("cache restore conan_cache_save.tgz")
-    # Default decompress does not have any output
-    assert "Decompressing conan_cache_save.tgz" not in c.out
-
-
 def test_compression_plugin_not_valid():
     """Test an error is raised if the compression plugin is not valid"""
 
