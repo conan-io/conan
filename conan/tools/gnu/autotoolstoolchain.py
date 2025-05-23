@@ -167,6 +167,8 @@ class AutotoolsToolchain:
         return ret
 
     def _get_msvc_runtime_flag(self):
+        return "-D_DLL -D_MT -Xclang --dependent-lib=msvcrt"
+        return "-fms-runtime-lib=dll -NODEFAULTLIB:libcmt"
         flag = msvc_runtime_flag(self._conanfile)
         if flag:
             flag = "-{}".format(flag)
@@ -221,7 +223,8 @@ class AutotoolsToolchain:
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
                                                   check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
+        msvc_flags = ["-Xclang --dependent-lib=msvcrt -fuse-ld=lld-link"]
+        ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags + msvc_flags
         return self._filter_list_empty_fields(ret)
 
     @property

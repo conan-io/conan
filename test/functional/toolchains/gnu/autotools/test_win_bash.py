@@ -8,7 +8,7 @@ from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
-from test.functional.utils import check_exe_run
+from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save
 
@@ -71,7 +71,11 @@ def test_autotools_bash_complete():
 def test_autotools_bash_complete_clang():
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
-    clang_path = tools_locations["clang"]["18"]["path"]["Windows"]
+    clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
+    c, cpp = "clang", "clang++"
+    runtime = "dynamic"
+    comps = (f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}'
+             f'{"ld": "lld-link}')
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
@@ -81,10 +85,10 @@ def test_autotools_bash_complete_clang():
         compiler.version=18
         compiler.cppstd=14
         compiler.runtime_version=v144
-        compiler.runtime=dynamic
+        compiler.runtime={runtime}
 
         [conf]
-        tools.build:compiler_executables={{"cpp": "{clang_path}/clang-cl", "c": "{clang_path}/clang-cl", "rc": "{clang_path}/clang-cl"}}
+        tools.build:compiler_executables={comps}
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
         """)
@@ -132,6 +136,9 @@ def test_autotools_bash_complete_clang():
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
+
+    static_runtime = runtime == "static"
+    check_vs_runtime("main.exe", client, "17", build_type="Release", static_runtime=static_runtime)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")

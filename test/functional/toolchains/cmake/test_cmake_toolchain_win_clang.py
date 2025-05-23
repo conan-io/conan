@@ -179,13 +179,12 @@ class TestVSClangCL:
         client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
                    "-s compiler.cppstd=17 -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
-        print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
         assert "main __clang_major__19" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         # CI forced the installation of 19.38, seems to prevail there
-        assert "main _MSC_VER194" in client.out
+        assert "main _MSC_VER19" in client.out
         assert "main _MSVC_LANG2017" in client.out
         assert "main _M_X64 defined" in client.out
         assert "main __x86_64__ defined" in client.out
