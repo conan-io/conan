@@ -283,7 +283,6 @@ class TargetConfigurationTemplate2:
                     sources[target] = []
                     for source in comp.sources:
                         sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
-                    sources[target] = ";".join(sources[target])
         else:
             if cpp_info.sources:
                 target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
@@ -291,7 +290,6 @@ class TargetConfigurationTemplate2:
                 sources[target] = []
                 for source in cpp_info.sources:
                     sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
-                sources[target] = ";".join(sources[target])
         return sources
 
     def _get_dependencies(self):
@@ -487,7 +485,7 @@ class TargetConfigurationTemplate2:
         {% for target, srcs in sources.items() %}
         #################### {{target}} ####################
         set_property(TARGET {{target}} APPEND PROPERTY INTERFACE_SOURCES
-                     {{config_wrapper(config, srcs)}})
+                     {{config_wrapper(config, srcs | join(';') )}})
         {% endfor %}
         {% endif %}
         """)
