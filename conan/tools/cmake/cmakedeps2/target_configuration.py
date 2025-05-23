@@ -275,14 +275,15 @@ class TargetConfigurationTemplate2:
         sources = {}
 
         if cpp_info.has_components:
-            # FIXME: NOT IMPLEMENTED
             for name, comp in cpp_info.components.items():
-                if comp.exe or comp.type is PackageType.APP:
+                if comp.sources:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                name)
                     target = target_name or f"{pkg_name}::{name}"
-                    exe_location = self._path(comp.location, pkg_folder, pkg_folder_var)
-                    sources[target] = exe_location
+                    sources[target] = []
+                    for source in comp.sources:
+                        sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
+                    sources[target] = ";".join(sources[target])
         else:
             if cpp_info.sources:
                 target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
