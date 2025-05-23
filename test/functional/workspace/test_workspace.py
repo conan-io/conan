@@ -73,6 +73,8 @@ def test_relative_paths():
                 path: ../liba
             """)
         assert expected in c.out
+        c.run("graph info --requires=app1/0.1")
+        c.assert_listed_require({"app1/0.1": "Editable", "liba/0.1": "Editable"})
     # cd otherwks
     with c.chdir("otherwks"):
         c.run("workspace add ../other/libb")
@@ -88,3 +90,5 @@ def test_relative_paths():
                 path: ../other/libb
             """)
         assert expected in c.out
+        c.run("graph info --requires=app2/0.1")
+        c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
