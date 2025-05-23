@@ -1,6 +1,7 @@
 import os
 import re
 import textwrap
+import platform
 
 import pytest
 from conan.test.utils.mocks import ConanFileMock
@@ -214,6 +215,7 @@ def test_cmakeconfigdeps_recipe():
     assert "WARN: Using the new CMakeConfigDeps generator" in c.out
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_cpp_info_sources():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=1.0")
@@ -264,16 +266,16 @@ def test_cpp_info_sources():
         "conanfile.py": conanfile
     })
     c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
-    print(c.out)
     c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
           f"-c tools.cmake.cmakedeps:new={new_value}")
     cmake = c.load("hello-Targets-release.cmake")
-    print(cmake)
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
-           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;" \
+           "${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_cpp_info_sources_with_component():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=1.0")
@@ -331,15 +333,14 @@ def test_cpp_info_sources_with_component():
     assert "target_link_libraries(example hello::my_comp)" in test_package_cmakelists_content
 
     c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
-    print(c.out)
     c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
           f"-c tools.cmake.cmakedeps:new={new_value}")
     cmake = c.load("hello-Targets-release.cmake")
-    print(cmake)
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "add_library(hello::my_comp INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
-           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;" \
+           "${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
 
 
 def test_system_wrappers():
