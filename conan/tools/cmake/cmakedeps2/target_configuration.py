@@ -272,24 +272,20 @@ class TargetConfigurationTemplate2:
         return exes
 
     def _get_sources(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
-        sources = {}
+        def _fill_sources(info, comp_name=None):
+            if info.sources:
+                target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
+                                                           comp_name=comp_name, check_type=list)
+                target = target_name or f"{pkg_name}::{name}"
+                sources[target].extend([self._path(source, pkg_folder, pkg_folder_var)
+                                        for source in info.sources])
 
+        sources = {}
         if cpp_info.has_components:
             for name, comp in cpp_info.components.items():
-                if comp.sources:
-                    target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
-                                                               name)
-                    target = target_name or f"{pkg_name}::{name}"
-                    sources[target] = []
-                    for source in comp.sources:
-                        sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
+                _fill_sources(comp, comp_name=name)
         else:
-            if cpp_info.sources:
-                target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-                target = target_name or f"{pkg_name}::{pkg_name}"
-                sources[target] = []
-                for source in cpp_info.sources:
-                    sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
+            _fill_sources(cpp_info)
         return sources
 
     def _get_dependencies(self):
