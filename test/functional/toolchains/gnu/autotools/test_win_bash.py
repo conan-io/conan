@@ -74,8 +74,7 @@ def test_autotools_bash_complete_clang():
     clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
     c, cpp = "clang", "clang++"
     runtime = "dynamic"
-    comps = (f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}'
-             f'{"ld": "lld-link}')
+    comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows

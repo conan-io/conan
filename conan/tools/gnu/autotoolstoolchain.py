@@ -7,7 +7,7 @@ from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extr
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
-    build_type_link_flags, libcxx_flags, cstd_flag
+    build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, msvc_runtime_library
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
@@ -56,6 +56,9 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
+        self.msvc_runtime_link_flags = []
+        if llvm_clang_front(self._conanfile) == "clang":
+            self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
@@ -167,8 +170,10 @@ class AutotoolsToolchain:
         return ret
 
     def _get_msvc_runtime_flag(self):
-        return "-D_DLL -D_MT -Xclang --dependent-lib=msvcrt"
-        return "-fms-runtime-lib=dll -NODEFAULTLIB:libcmt"
+        if llvm_clang_front(self._conanfile) == "clang":
+            library = msvc_runtime_library(self._conanfile)
+            return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+
         flag = msvc_runtime_flag(self._conanfile)
         if flag:
             flag = "-{}".format(flag)
@@ -223,8 +228,8 @@ class AutotoolsToolchain:
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
                                                   check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        msvc_flags = ["-Xclang --dependent-lib=msvcrt -fuse-ld=lld-link"]
-        ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags + msvc_flags
+        ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
+        ret = ret + self.msvc_runtime_link_flags
         return self._filter_list_empty_fields(ret)
 
     @property

@@ -7,7 +7,7 @@ from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, \
-    libcxx_flags
+    libcxx_flags, llvm_clang_front, llvm_clang_runtime_flags, msvc_runtime_library
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
@@ -62,6 +62,9 @@ class GnuToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
+        self.msvc_runtime_link_flags = []
+        if llvm_clang_front(self._conanfile) == "clang":
+            self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
         extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
                                                         check_type=list,
                                                         default=[])
@@ -233,6 +236,10 @@ class GnuToolchain:
             self.extra_env.define(env_var, env_value)
 
     def _get_msvc_runtime_flag(self):
+        if llvm_clang_front(self._conanfile) == "clang":
+            library = msvc_runtime_library(self._conanfile)
+            return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+
         flag = msvc_runtime_flag(self._conanfile)
         return f"-{flag}" if flag else ""
 
@@ -289,6 +296,7 @@ class GnuToolchain:
                                                   check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
+        ret = ret + self.msvc_runtime_link_flags
         return self._filter_list_empty_fields(ret)
 
     @property
