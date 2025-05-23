@@ -10,7 +10,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save, save_files
+from conan.internal.util.files import save_files
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -609,3 +609,48 @@ class TestClean:
         c.save({"conanws.py": conanfilews})
         c.run("workspace clean")
         assert "my_workspace: MY CLEAN!!!" in c.out
+
+
+def test_relative_paths():
+    # This is using the meta-project
+    c = TestClient()
+    c.run("new cmake_lib -d name=liba --output=liba")
+    c.run("new cmake_exe -d name=app1 -d requires=liba/0.1 --output=app1")
+    c.run("new cmake_lib -d name=libb --output=other/libb")
+    c.run("new cmake_exe -d name=app2 -d requires=libb/0.1 --output=other/app2")
+    c.run("workspace init mywks")
+    c.run("workspace init otherwks")
+    # cd mywks
+    with c.chdir("mywks"):
+        c.run("workspace add ../liba")
+        c.run("workspace add ../app1 --product")
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../app1
+            editables
+              app1/0.1
+                path: ../app1
+              liba/0.1
+                path: ../liba
+            """)
+        assert expected in c.out
+        c.run("graph info --requires=app1/0.1")
+        c.assert_listed_require({"app1/0.1": "Editable", "liba/0.1": "Editable"})
+    # cd otherwks
+    with c.chdir("otherwks"):
+        c.run("workspace add ../other/libb")
+        c.run("workspace add ../other/app2 --product")
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../other/app2
+            editables
+              app2/0.1
+                path: ../other/app2
+              libb/0.1
+                path: ../other/libb
+            """)
+        assert expected in c.out
+        c.run("graph info --requires=app2/0.1")
+        c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
