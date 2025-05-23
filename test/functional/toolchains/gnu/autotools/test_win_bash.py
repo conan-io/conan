@@ -68,12 +68,14 @@ def test_autotools_bash_complete():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("clang", "18")
 @pytest.mark.tool("msys2")
-def test_autotools_bash_complete_clang():
+@pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
+@pytest.mark.parametrize("runtime", ("static", "dynamic"))
+def test_autotools_bash_complete_clang(frontend, runtime):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
     clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
-    c, cpp = "clang", "clang++"
-    runtime = "dynamic"
+    # compilers
+    c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
     comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
     profile_win = textwrap.dedent(f"""
         [settings]
@@ -126,9 +128,7 @@ def test_autotools_bash_complete_clang():
                  "main.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
-    print(client.out)
     client.run_command("main.exe")
-    print(client.out)
     assert "__GNUC__" not in client.out
     assert "main __clang_major__18" in client.out
     check_exe_run(client.out, "main", "clang", None, "Release", "x86_64", None)

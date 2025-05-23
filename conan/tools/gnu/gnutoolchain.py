@@ -7,11 +7,10 @@ from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, \
-    libcxx_flags, llvm_clang_front, llvm_clang_runtime_flags, msvc_runtime_library
+    libcxx_flags, llvm_clang_front
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 
 
@@ -237,8 +236,11 @@ class GnuToolchain:
 
     def _get_msvc_runtime_flag(self):
         if llvm_clang_front(self._conanfile) == "clang":
-            library = msvc_runtime_library(self._conanfile)
-            return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+            if self._conanfile.settings.compiler.runtime == "dynamic":
+                runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+                library = "msvcrtd" if runtime_type == "Debug" else "msvcrt"
+                return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+            return ""  # By default it already link statically
 
         flag = msvc_runtime_flag(self._conanfile)
         return f"-{flag}" if flag else ""

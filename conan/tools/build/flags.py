@@ -190,15 +190,6 @@ def llvm_clang_front(conanfile):
     return "clang" # The GNU-compatible front
 
 
-def msvc_runtime_library(conanfile):
-    runtime = conanfile.settings.compiler.runtime
-    runtime_type = conanfile.settings.get_safe("compiler.runtime_type")
-    if runtime == "static":
-        return "libcmtd" if runtime_type == "Debug" else "libcmt"
-    assert runtime == "dynamic"
-    return "msvcrtd" if runtime_type == "Debug" else "msvcrt"
-
-
 def cppstd_flag(conanfile) -> str:
     """
     Returns flags specific to the C++ standard based on the ``conanfile.settings.compiler``,
