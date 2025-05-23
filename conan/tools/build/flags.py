@@ -199,6 +199,12 @@ def cppstd_flag(conanfile) -> str:
     if not compiler or not compiler_version or not cppstd:
         return ""
 
+    if compiler == "clang":
+        compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
+        if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
+            flag = _cppstd_clang(Version(compiler_version), str(cppstd))
+            return flag.replace("=", ":") if flag else None
+
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
