@@ -179,6 +179,7 @@ class TestVSClangCL:
         client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
                    "-s compiler.cppstd=17 -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
+        print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
         assert "main __clang_major__19" in client.out
