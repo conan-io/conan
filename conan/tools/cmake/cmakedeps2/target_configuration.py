@@ -482,7 +482,7 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{exe}} PROPERTY CONAN_CONTEXT "{{context}}")
         {% endfor %}
 
-         {% if sources %}
+        {% if sources %}
         ################# Sources information ##############
         {% for target, srcs in sources.items() %}
         #################### {{target}} ####################
