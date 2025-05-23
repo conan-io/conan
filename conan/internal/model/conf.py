@@ -101,6 +101,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
