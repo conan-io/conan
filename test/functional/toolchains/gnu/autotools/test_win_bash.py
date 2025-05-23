@@ -66,11 +66,13 @@ def test_autotools_bash_complete():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("clang")
+@pytest.mark.tool("clang", "18")
 @pytest.mark.tool("msys2")
 def test_autotools_bash_complete_clang():
     client = TestClient(path_with_spaces=False)
-    profile_win = textwrap.dedent("""
+    # Problem is that msys2 also has clang in the path, so we need to make it explicit
+    clang_path = tools_locations["clang"]["18"]["path"]["Windows"]
+    profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
         arch=x86_64
@@ -82,7 +84,7 @@ def test_autotools_bash_complete_clang():
         compiler.runtime=dynamic
 
         [conf]
-        tools.build:compiler_executables={"cpp": "C:/ws/LLVM/18.1/bin/clang++", "c": "C:/ws/LLVM/18.1/bin/clang", "rc": "C:/ws/LLVM/18.1/bin/clang"}
+        tools.build:compiler_executables={{"cpp": "{clang_path}/clang-cl", "c": "{clang_path}/clang-cl", "rc": "{clang_path}/clang-cl"}}
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
         """)
@@ -123,8 +125,10 @@ def test_autotools_bash_complete_clang():
     client.run("build . -pr=profile_win")
     print(client.out)
     client.run_command("main.exe")
-    print( client.out)
-    check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
+    print(client.out)
+    assert "__GNUC__" not in client.out
+    assert "main __clang_major__18" in client.out
+    check_exe_run(client.out, "main", "clang", None, "Release", "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
