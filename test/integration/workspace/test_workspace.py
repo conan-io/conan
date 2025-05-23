@@ -27,8 +27,7 @@ class TestWorkspaceRoot:
         c.save({"conanws/test.txt": ""})
         with c.chdir("conanws"):
             c.run("workspace root", assert_error=True)
-            assert ("ERROR: Within the 'conanws/' folder, there should be at least one of these "
-                    "files: conanws.yml and/or conanws.py") in c.out
+            assert "ERROR: No workspace defined, conanws.py file not found" in c.out
             c.save({"conanws.yml": ""})
             c.run("workspace root")
             assert c.current_folder in c.stdout
