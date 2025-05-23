@@ -190,8 +190,11 @@ class CacheAPI:
                 tar_extract(file_handler, cache_folder)
 
         # Retrieve the package list from the already extracted archive
-        with open(os.path.join(cache_folder, "pkglist.json")) as file_handler:
+        pkglist_path = os.path.join(cache_folder, "pkglist.json")
+        with open(pkglist_path) as file_handler:
             pkglist = file_handler.read()
+        # Delete the pkglist.json file to keep cache clean
+        remove(pkglist_path)
 
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
