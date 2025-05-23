@@ -263,9 +263,9 @@ def test_cpp_info_sources():
         "CMakeLists.txt": cmakelists,
         "conanfile.py": conanfile
     })
-    c.run(f"create . -s compiler.version=193 -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
     print(c.out)
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps -s=compiler.version=193 "
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
           f"-c tools.cmake.cmakedeps:new={new_value}")
     cmake = c.load("hello-Targets-release.cmake")
     print(cmake)
@@ -330,9 +330,9 @@ def test_cpp_info_sources_with_component():
     test_package_cmakelists_content = c.load(test_package_cmakelists_path)
     assert "target_link_libraries(example hello::my_comp)" in test_package_cmakelists_content
 
-    c.run(f"create . -s compiler.version=193 -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
     print(c.out)
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps -s=compiler.version=193 "
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
           f"-c tools.cmake.cmakedeps:new={new_value}")
     cmake = c.load("hello-Targets-release.cmake")
     print(cmake)
