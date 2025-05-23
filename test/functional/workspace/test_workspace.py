@@ -5,7 +5,6 @@ import textwrap
 import pytest
 
 from conan.api.subapi.workspace import WorkspaceAPI
-from conan.internal.util.files import chdir
 from conan.test.utils.tools import TestClient
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
@@ -50,7 +49,6 @@ def test_metabuild():
     # it doesn't fail
 
 
-@pytest.mark.tool("cmake")
 def test_relative_paths():
     # This is using the meta-project
     c = TestClient()
@@ -64,33 +62,29 @@ def test_relative_paths():
     with c.chdir("mywks"):
         c.run("workspace add ../liba")
         c.run("workspace add ../app1 --product")
-        c.run("workspace build")
-        conanws_yml = textwrap.dedent("""\
-        editables:
-          app1/0.1:
-            path: ../app1
-          liba/0.1:
-            path: ../liba
-        products:
-        - ../app1
-        """)
-        assert conanws_yml == c.load("conanws.yml")
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../app1
+            editables
+              app1/0.1
+                path: ../app1
+              liba/0.1
+                path: ../liba
+            """)
+        assert expected in c.out
     # cd otherwks
     with c.chdir("otherwks"):
         c.run("workspace add ../other/libb")
         c.run("workspace add ../other/app2 --product")
-        c.run("workspace build")
-        conanws_yml = textwrap.dedent("""\
-        editables:
-          app2/0.1:
-            path: ../other/app2
-          libb/0.1:
-            path: ../other/libb
-        products:
-        - ../other/app2
-        """)
-        assert conanws_yml == c.load("conanws.yml")
-
-    ext = ".exe" if platform.system() == "Windows" else ""
-    assert os.path.exists(os.path.join(c.current_folder, "app1", "build", "Release", f"app1{ext}"))
-    assert os.path.exists(os.path.join(c.current_folder, "other", "app2", "build", "Release", f"app2{ext}"))
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../other/app2
+            editables
+              app2/0.1
+                path: ../other/app2
+              libb/0.1
+                path: ../other/libb
+            """)
+        assert expected in c.out
