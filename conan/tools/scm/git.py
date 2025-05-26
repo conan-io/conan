@@ -24,7 +24,7 @@ class Git:
         self._conanfile = conanfile
         self.folder = folder
         self._excluded = excluded
-        global_conf = conanfile._conan_helpers.global_conf
+        global_conf = conanfile._conan_helpers.global_conf  # noqa _conan_helpers
         conf_excluded = global_conf.get("core.scm:excluded", check_type=list)
         if conf_excluded:
             if excluded:
@@ -114,9 +114,9 @@ class Git:
 
         try:
             # This will raise if commit not present.
-            self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
+            self.run(f"fetch {remote} --refetch --dry-run {commit}")
             return True
-        except Exception:
+        except (Exception,):
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
             return False
 

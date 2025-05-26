@@ -45,8 +45,7 @@ class ConanAPI:
             raise ConanException("cache_folder has to be an absolute path")
 
         init_colorama(sys.stderr)
-        self.workspace = WorkspaceAPI(self)
-        self.cache_folder = self.workspace.home_folder() or cache_folder or get_conan_user_home()
+        self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
         self.migrate()
 
@@ -71,6 +70,8 @@ class ConanAPI:
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
         self.audit = AuditAPI(self)
+        # Now, lazy loading of editables
+        self.workspace = WorkspaceAPI(self)
 
         _check_conan_version(self)
 
