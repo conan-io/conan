@@ -653,3 +653,37 @@ def test_relative_paths():
         assert expected in c.out
         c.run("graph info --requires=app2/0.1")
         c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
+
+
+def test_host_build_require():
+    c = TestClient()
+    protobuf = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Protobuf(ConanFile):
+            name = "protobuf"
+            version = "0.1"
+            settings = "os"
+
+            def layout(self):
+                self.folders.build = f"mybuild_folder_{self.settings.os}"
+
+            def build(self):
+                save(self, "myprotobuf.txt", f"MYOS={self.settings.os}!!!")
+        """)
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        class Protobuf(ConanFile):
+            name = "app"
+            version = "0.1"
+            requires = "protobuf/0.1"
+            tool_requires = "protobuf/0.1"
+        """)
+    c.save({"protobuf/conanfile.py": protobuf,
+            "app/conanfile.py": app})
+    c.run("workspace init .")
+    c.run("workspace add protobuf")
+    c.run("install app --build=editable -s:b os=Linux -s:h os=Windows")
+
+    assert c.load("protobuf/mybuild_folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
+    assert c.load("protobuf/mybuild_folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"
