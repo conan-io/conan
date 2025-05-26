@@ -90,7 +90,7 @@ class ConanCenterProvider:
                 # Now link them to where we try to sell them the product
                 output.write("Visit our website to learn more about JFrog's DevSecOps solution: ",
                              fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://jfrog.com/devops-native-security/", newline=True,
+                output.write("https://audit.conan.io/limit", newline=True,
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
 
