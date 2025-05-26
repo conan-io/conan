@@ -133,6 +133,26 @@ class TestCyclonedx:
         content = json.loads(tc.load(cyclone_path))
         assert len(content["components"][0]["licenses"]) == n
 
+    @pytest.mark.parametrize("l, keys", [('"Mit"', ["id"]), ('"custom_license name"', ["name"]), ('("mIT", "custom")', ["id", "name"])])
+    def test_license_spdx_valid(self, hook_setup_post_package, l, keys):
+        tc = hook_setup_post_package
+        conanfile = textwrap.dedent(f"""
+                from conan import ConanFile
+                class HelloConan(ConanFile):
+                    name = 'foo'
+                    version = '1.0'
+                    license = {l}
+            """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create .")
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content = json.loads(tc.load(cyclone_path))
+        for i, l in enumerate(content["components"][0]["licenses"]):
+            assert next(iter(l["license"])) == keys[i]
+
+
+
     def test_sbom_generation_no_tool_requires(self, hook_setup_post_package_no_tool_requires):
         tc = hook_setup_post_package_no_tool_requires
         tc.save({"app/conanfile.py": GenConanfile("app", "1.0")
