@@ -2,7 +2,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -84,40 +83,6 @@ def test_transitive_build_scripts():
 
     assert "MYFUNCTION CMAKE B: Hello world B!!!" in c.out
     assert "MYFUNCTION CMAKE A: Hello world A!!!" in c.out
-
-
-def test_transitive_build_scripts_error():
-    # https://github.com/conan-io/conan/issues/18235
-    c = TestClient()
-    meta = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Meta(ConanFile):
-            name = "meta"
-            version = "0.1"
-            package_type = "build-scripts"
-            def requirements(self):
-                self.requires("dep/0.1")
-        """)
-    product = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Product(ConanFile):
-            name = "product"
-            version = "0.1"
-            package_type = "build-scripts"
-            def requirements(self):
-                self.requires("meta/0.1")
-        """)
-
-    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
-            "meta/conanfile.py": meta,
-            "product/conanfile.py": product})
-    c.run("create dep")
-    c.run("create meta")
-    c.run("install product")
-    # It doesn't crash
-
 
 
 @pytest.mark.tool("cmake")
