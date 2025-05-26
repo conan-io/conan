@@ -1,5 +1,4 @@
 from conan import conan_version
-from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
 
 def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
     """
@@ -185,6 +184,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
 
 
 def _calculate_licenses(component):
+    from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
     licenses = component.conanfile.license
 
     if isinstance(licenses, str): # Just one license

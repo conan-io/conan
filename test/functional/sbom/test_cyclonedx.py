@@ -2,7 +2,6 @@ import textwrap
 import json
 
 import pytest
-from cachetools import keys
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
