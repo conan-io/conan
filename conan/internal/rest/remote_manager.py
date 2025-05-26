@@ -1,4 +1,3 @@
-from gzip import compress
 import os
 import shutil
 from typing import List
