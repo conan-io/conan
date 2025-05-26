@@ -87,7 +87,6 @@ class ConanCenterProvider:
                         f"minute{'s'if reset_in_minutes > 1 else ''}.\n",
                         fg=Color.BRIGHT_WHITE,
                     )
-                # Now link them to where we try to sell them the product
                 output.write("Visit our website to learn more about JFrog's DevSecOps solution: ",
                              fg=Color.BRIGHT_WHITE, newline=False)
                 output.write("https://audit.conan.io/limit", newline=True,
