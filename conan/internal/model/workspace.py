@@ -44,7 +44,7 @@ class Workspace:
         editable = {"path": path}
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
-        self.conan_data.setdefault("editables", {})[str(ref)] = editable
+        self.conan_data.setdefault("packages", {})[str(ref)] = editable
         if product:
             self.conan_data.setdefault("products", []).append(path)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
@@ -52,13 +52,13 @@ class Workspace:
     def remove(self, path):
         found_ref = None
         path = self._conan_rel_path(path)
-        for ref, info in self.conan_data.get("editables", {}).items():
+        for ref, info in self.conan_data.get("packages", {}).items():
             if info["path"].replace("\\", "/") == path:
                 found_ref = ref
                 break
         if not found_ref:
             raise ConanException(f"No editable package to remove from this path: {path}")
-        self.conan_data["editables"].pop(found_ref)
+        self.conan_data["packages"].pop(found_ref)
         if path in self.conan_data.get("products", []):
             self.conan_data["products"].remove(path)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
@@ -66,7 +66,7 @@ class Workspace:
 
     def clean(self):
         self.output.info("Default workspace clean: Removing the output-folder of each editable")
-        for ref, info in self.conan_data.get("editables", {}).items():
+        for ref, info in self.conan_data.get("packages", {}).items():
             if not info.get("output_folder"):
                 self.output.info(f"Editable {ref} doesn't have an output_folder defined")
                 continue
@@ -85,8 +85,8 @@ class Workspace:
         path = os.path.relpath(path, self.folder)
         return path.replace("\\", "/")  # Normalize to unix path
 
-    def editables(self):
-        return self.conan_data.get("editables", {})
+    def packages(self):
+        return self.conan_data.get("packages", {})
 
     def products(self):
         return self.conan_data.get("products", [])

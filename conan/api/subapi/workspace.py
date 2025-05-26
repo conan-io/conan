@@ -103,7 +103,7 @@ class WorkspaceAPI:
         """
         if not self._folder:
             return
-        editables = self._ws.editables()
+        editables = self._ws.packages()
         editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
         for v in editables.values():
             path = os.path.normpath(os.path.join(self._folder, v["path"], "conanfile.py"))
@@ -231,10 +231,10 @@ class WorkspaceAPI:
         return {"name": self.name,
                 "folder": self._folder,
                 "products": self.products,
-                "editables": self._ws.editables()}
+                "packages": self._ws.packages()}
 
     def editable_from_path(self, path):
-        editables = self._ws.editables()
+        editables = self._ws.packages()
         for ref, info in editables.items():
             if info["path"].replace("\\", "/") == path:
                 return RecipeReference.loads(ref)

@@ -136,7 +136,7 @@ class TestAddRemove:
                 from conan import Workspace
 
                 class MyWorkspace(Workspace):
-                    def editables(self):
+                    def packages(self):
                         result = {}
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
@@ -153,7 +153,7 @@ class TestAddRemove:
                 from conan import Workspace
 
                 class MyWorkspace(Workspace):
-                    def editables(self):
+                    def packages(self):
                         result = {}
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
@@ -168,12 +168,12 @@ class TestAddRemove:
                 "dep1/version.txt": "2.1"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
         c.save({"dep1/name.txt": "other",
                 "dep1/version.txt": "14.5"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"other/14.5": {"path": "dep1"}}
+        assert info["packages"] == {"other/14.5": {"path": "dep1"}}
         c.run("install --requires=other/14.5")
         # Doesn't fail
         assert "other/14.5 - Editable" in c.out
@@ -201,7 +201,7 @@ class TestAddRemove:
             from conan import Workspace
 
             class MyWorkspace(Workspace):
-                def editables(self):
+                def packages(self):
                     conanfile = self.load_conanfile("dep1")
                     return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1"}}
             """)
@@ -210,7 +210,7 @@ class TestAddRemove:
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
         c.run("install --requires=pkg/2.1")
         # it will not fail
 
@@ -627,7 +627,7 @@ def test_relative_paths():
         expected = textwrap.dedent("""\
             products
               ../app1
-            editables
+            packages
               app1/0.1
                 path: ../app1
               liba/0.1
@@ -644,7 +644,7 @@ def test_relative_paths():
         expected = textwrap.dedent("""\
             products
               ../other/app2
-            editables
+            packages
               app2/0.1
                 path: ../other/app2
               libb/0.1
