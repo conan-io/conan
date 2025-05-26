@@ -101,8 +101,8 @@ def text_vuln_formatter(result):
                       fg=Color.BRIGHT_YELLOW)
 
     if total_vulns > 0 or not "error" in result:
-        cli_out_write("\nVulnerability information provided by JFrog Advanced Security. Please check "
-                      "https://jfrog.com/advanced-security/ for more information.\n",
+        cli_out_write("\nVulnerability information provided by JFrog Catalog. Check "
+                      "https://audit.conan.io/jfrogcuration for more information.\n",
                       fg=Color.BRIGHT_GREEN)
         cli_out_write("You can send questions and report issues about "
                       "the returned vulnerabilities to conan-research@jfrog.com.\n",
