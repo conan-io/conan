@@ -25,10 +25,8 @@ def _find_ws_folder():
     path = Path(os.getcwd())
     while path.is_dir() and len(path.parts) > 1:  # finish at '/' or 'conanws/'
         if path.name == WORKSPACE_FOLDER:
-            if not (path / WORKSPACE_YML).is_file() and not (path / WORKSPACE_PY).is_file():
-                raise ConanException("Within the 'conanws/' folder, there should be at least one of "
-                                     f"these files: {WORKSPACE_YML} and/or {WORKSPACE_PY}")
-            return str(path)
+            if (path / WORKSPACE_YML).is_file() or (path / WORKSPACE_PY).is_file():
+                return str(path)
         if (path / WORKSPACE_YML).is_file() or (path / WORKSPACE_PY).is_file():
             return str(path)
         else:
