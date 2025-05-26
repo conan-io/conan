@@ -257,13 +257,18 @@ def mkdir(path):
 
 
 def tar_extract(fileobj, destination_dir):
-    the_tar = tarfile.open(fileobj=fileobj)
-    # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
-    # "could not change modification time", with time=0
-    # the_tar.errorlevel = 2  # raise exception if any error
-    the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
-    the_tar.extractall(path=destination_dir)
-    the_tar.close()
+    try:
+        the_tar = tarfile.open(fileobj=fileobj)
+        # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
+        # "could not change modification time", with time=0
+        # the_tar.errorlevel = 2  # raise exception if any error
+        the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
+        the_tar.extractall(path=destination_dir)
+        the_tar.close()
+    except tarfile.ReadError:
+        raise ConanException(f"Error while extracting {os.path.basename(fileobj.name)}. The file compression is not recogniced.\n"
+                             "This file could have been compressed using a `compression` plugin.\n"
+                             "If your organization uses this plugin, ensure it is correctly installed on your environment.")
 
 
 def merge_directories(src, dst):

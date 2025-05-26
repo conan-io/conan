@@ -282,7 +282,7 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder, scope=None, compression_plugin=None):
+def uncompress_file(src_path, dest_folder, scope="", compression_plugin=None):
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
