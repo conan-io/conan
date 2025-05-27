@@ -184,7 +184,8 @@ class CacheAPI:
 
         compression_plugin = self.conan_api.config.compression_plugin
         if compression_plugin:
-            compression_plugin.tar_extract(path, cache_folder)
+            compression_plugin.tar_extract(archive_path=path, dest_dir=cache_folder,
+                                           config=self.conan_api.config.global_conf)
         else:
             with open(path, mode='rb') as file_handler:
                 tar_extract(file_handler, cache_folder)

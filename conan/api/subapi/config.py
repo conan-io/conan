@@ -247,10 +247,9 @@ class ConfigAPI:
             compression_plugin_path = HomePaths(self.conan_api.home_folder).compression_plugin_path
             if not os.path.exists(compression_plugin_path):
                 self._compression_plugin = False # Avoid FS re-check
-                return False
+                return None
             mod, _ = load_python_file(compression_plugin_path)
             if not hasattr(mod, "tar_extract") or not hasattr(mod, "tar_compress"):
                 raise ConanException("The 'compression.py' plugin does not contain required `tar_extract` or `tar_compress` functions")
             self._compression_plugin = mod
-        return self._compression_plugin
-
+        return self._compression_plugin or None

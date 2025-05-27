@@ -82,7 +82,7 @@ class RemoteManager:
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, scope=str(ref), compression_plugin=self._config_api.compression_plugin)
+            uncompress_file(tgz_file, export_folder, scope=str(ref), config_api=self._config_api)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -124,7 +124,7 @@ class RemoteManager:
 
         self._signer.verify(ref, download_folder, files=zipped_files)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), compression_plugin=self._config_api.compression_plugin)
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), config_api=self._config_api)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -172,7 +172,7 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), compression_plugin=self._config_api.compression_plugin)
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), config_api=self._config_api)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -282,7 +282,7 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder, scope="", compression_plugin=None):
+def uncompress_file(src_path, dest_folder, scope="", config_api=None):
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
@@ -290,8 +290,9 @@ def uncompress_file(src_path, dest_folder, scope="", compression_plugin=None):
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
 
-        if compression_plugin:
-            compression_plugin.tar_extract(src_path, dest_folder)
+        if config_api and config_api.compression_plugin:
+            config_api.compression_plugin.tar_extract(archive_path=src_path, dest_dir=dest_folder,
+                                                      config=config_api.global_conf)
         else:
             with open(src_path, mode='rb') as file_handler:
                 tar_extract(file_handler, dest_folder)
