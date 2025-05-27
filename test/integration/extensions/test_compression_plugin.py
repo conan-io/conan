@@ -47,9 +47,9 @@ def test_compression_plugin_correctly_load():
         from conan.api.output import ConanOutput
 
         # xz compression
-        def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
+        def tar_compress(archive_path, files, recursive, conf=None, ref=None, *args, **kwargs):
             name = os.path.basename(archive_path)
-            ConanOutput().info(f"Compressing {name} using compression plugin (xz)")
+            ConanOutput(scope=ref).info(f"Compressing {name} using compression plugin (xz)")
             compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
             kwargs = {"preset": compresslevel} if compresslevel else {}
             with tarfile.open(archive_path, f"w:xz", **kwargs) as tgz:

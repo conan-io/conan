@@ -60,5 +60,3 @@ class TarExtractTest(unittest.TestCase):
             with open(self.tgz_file, 'rb') as file_handler:
                 tar_extract(file_handler, destination_dir)
             check_files(destination_dir)
-
-
