@@ -170,7 +170,7 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), config=self.conan_api.config,
+        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), conf=self.conan_api.config,
                        recursive=True, ref=None, compression_plugin=self.conan_api.config.compression_plugin)
         remove(pkglist_path)
 
@@ -184,7 +184,7 @@ class CacheAPI:
         compression_plugin = self.conan_api.config.compression_plugin
         if compression_plugin:
             compression_plugin.tar_extract(archive_path=path, dest_dir=cache_folder,
-                                           config=self.conan_api.config.global_conf)
+                                           conf=self.conan_api.config.global_conf)
         else:
             with open(path, mode='rb') as file_handler:
                 tar_extract(file_handler, cache_folder)

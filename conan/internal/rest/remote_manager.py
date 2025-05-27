@@ -292,7 +292,7 @@ def uncompress_file(src_path, dest_folder, scope="", config_api=None):
 
         if config_api and config_api.compression_plugin:
             config_api.compression_plugin.tar_extract(archive_path=src_path, dest_dir=dest_folder,
-                                                      config=config_api.global_conf)
+                                                      conf=config_api.global_conf)
         else:
             with open(src_path, mode='rb') as file_handler:
                 tar_extract(file_handler, dest_folder)

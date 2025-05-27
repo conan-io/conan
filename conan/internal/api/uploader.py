@@ -156,7 +156,7 @@ class PackagePreparator:
                 result[tgz_name] = tgz
             elif tgz_files:
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
-                                     config=self._global_conf, ref=ref,
+                                     conf=self._global_conf, ref=ref,
                                      compression_plugin=self._app.conan_api.config.compression_plugin)
                 result[tgz_name] = tgz
 
@@ -203,7 +203,7 @@ class PackagePreparator:
         if not os.path.isfile(package_tgz):
             tgz_files = {f: path for f, path in files.items()}
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                      config=self._global_conf, ref=pref,
+                                      conf=self._global_conf, ref=pref,
                                       compression_plugin=self._app.conan_api.config.compression_plugin)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
@@ -271,14 +271,14 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, config=None, ref=None, recursive=False, compression_plugin=None):
+def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False, compression_plugin=None):
     tgz_path = os.path.join(dest_dir, name)
     if compression_plugin:
         compression_plugin.tar_compress(
             archive_path=tgz_path,
             files=files,
             recursive=recursive,
-            config=config,
+            conf=conf,
             ref=ref,
         )
         return tgz_path
@@ -287,7 +287,7 @@ def compress_files(files, name, dest_dir, config=None, ref=None, recursive=False
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     ConanOutput(scope=str(ref or "")).info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-        compresslevel = config.get("core.gzip:compresslevel", check_type=int) if config else None
+        compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
             # recursive is False by default in case it is a symlink to a folder
