@@ -188,7 +188,7 @@ class ConanOutput:
             if self._color:
                 ret = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
             else:
-                ret = "{}: ".format(self._scope)
+                ret = "{}: ".format(str(self._scope))
 
         if self._color:
             ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
