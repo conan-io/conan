@@ -4,7 +4,7 @@ from conan.internal.api.new.cmake_lib import cmake_lib_files
 
 
 conanws_yml = """\
-editables:
+packages:
   liba/0.1:
     path: liba
   libb/0.1:
