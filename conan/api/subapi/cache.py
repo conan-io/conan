@@ -130,7 +130,6 @@ class CacheAPI:
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
-        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         tar_files: dict[str,str] = {} # {path_in_tar: abs_path}
 
         for ref, ref_bundle in package_list.refs().items():
@@ -171,7 +170,7 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel,
+        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), config=self.conan_api.config,
                        recursive=True, ref=None, compression_plugin=self.conan_api.config.compression_plugin)
         remove(pkglist_path)
 
