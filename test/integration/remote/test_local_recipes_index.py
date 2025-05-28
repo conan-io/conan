@@ -247,7 +247,7 @@ class TestInstall:
             from conan import ConanFile
             from conan.tools.files import export_conandata_patches, apply_conandata_patches
             class Zlib(ConanFile):
-                name = "zlib"
+                name = "{name}"
                 exports_sources = "*.cpp"
                 def export_sources(self):
                     export_conandata_patches(self)
@@ -270,13 +270,22 @@ class TestInstall:
             """)
         save_files(recipes_folder,
                    {"zlib/config.yml": zlib_config,
-                    "zlib/all/conanfile.py": zlib,
+                    "zlib/all/conanfile.py": zlib.format(name="zlib"),
                     "zlib/all/conandata.yml": conandata_yml,
                     "zlib/all/patches/patch1": patch,
-                    "zlib/all/main.cpp": "\n"})
-        client = TestClient(light=True)
-        client.run(f"remote add local '{folder}'")
-        client.run("install --requires=zlib/0.1 --build=missing -vv")
+                    "zlib/all/main.cpp": "\n",
+                    "zlib-ng/config.yml": zlib_config,
+                    "zlib-ng/all/conanfile.py": zlib.format(name="zlib-ng"),
+                    "zlib-ng/all/conandata.yml": conandata_yml,
+                    "zlib-ng/all/patches/patch1": patch,
+                    "zlib-ng/all/main.cpp": "\n"}
+                   )
+        client = TestClient(default_server_user=True, light=True)
+        client.run(f"create '{os.path.join(recipes_folder, "zlib-ng", "all")}' --version=0.1")
+        client.run("upload zlib-ng/0.1:* -r=default -c")
+        client.run("remove zlib-ng/0.1 -c")
+        client.run(f"remote add local '{folder}' --index 0")
+        client.run("install --output-folder=. --requires=zlib-ng/0.1 --requires=zlib/0.1 --build=missing -vv")
         assert "zlib/0.1: Copied 1 file: patch1" in client.out
         assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
 
