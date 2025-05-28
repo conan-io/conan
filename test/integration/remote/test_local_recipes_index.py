@@ -281,7 +281,8 @@ class TestInstall:
                     "zlib-ng/all/main.cpp": "\n"}
                    )
         client = TestClient(default_server_user=True, light=True)
-        client.run(f"create '{os.path.join(recipes_folder, "zlib-ng", "all")}' --version=0.1")
+        zlib_ng_path = os.path.join(recipes_folder, "zlib-ng", "all")
+        client.run(f'create "{zlib_ng_path}" --version=0.1')
         client.run("upload zlib-ng/0.1:* -r=default -c")
         client.run("remove zlib-ng/0.1 -c")
         client.run(f"remote add local '{folder}' --index 0")
