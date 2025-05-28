@@ -20,7 +20,6 @@ def _generate_json(result):
             ret[current_filename] = [line]
         else:
             ret[current_filename].append(line)
-
     return ret
 
 def _get_filenames(line, src_prefix, dst_prefix):

@@ -91,9 +91,10 @@ diff_html = r"""
                 {%- for filename, lines in content.items() -%}
                     </div>
                     <div id="diff_{{ safe_filename(filename) }}">
-                    <h3 class="filename">{{ line }}</h3>
                     {%- for line in lines -%}
-                        {%- if line.startswith('+') %}
+                        {%- if loop.index == 1 -%}
+                            <h3 class="filename">{{ line }}</h3>
+                        {%- elif line.startswith('+') %}
                             <span class="add">{{ line }}</span>
                             <br/>
                         {%- elif line.startswith('-') %}
