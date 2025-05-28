@@ -81,29 +81,29 @@ diff_html = r"""
                 <h2>File list:</h2>
                 <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
                 <ul>
-                    {%- for filename in file_names %}
+                    {%- for filename in content.keys() %}
                         <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
             <div class='content'>
                 <div><!--placeholder-->
-                {%- for line in diff_text.splitlines() -%}
-                    {%- if line.startswith('diff --git') %}
-                        </div>
-                        {%- set filename = get_diff_filename(line) -%}
-                        <div id="diff_{{ safe_filename(filename) }}">
-                        <h3 class="filename">{{ line }}</h3>
-                    {%- elif line.startswith('+') %}
-                        <span class="add">{{ line }}</span>
-                        <br/>
-                    {%- elif line.startswith('-') %}
-                        <span class="del">{{ line }}</span>
-                        <br/>
-                    {%- else %}
-                        <span class="context">{{ line }}</span>
-                        <br/>
-                    {%- endif %}
+                {%- for filename, lines in content.items() -%}
+                    </div>
+                    <div id="diff_{{ safe_filename(filename) }}">
+                    <h3 class="filename">{{ line }}</h3>
+                    {%- for line in lines -%}
+                        {%- if line.startswith('+') %}
+                            <span class="add">{{ line }}</span>
+                            <br/>
+                        {%- elif line.startswith('-') %}
+                            <span class="del">{{ line }}</span>
+                            <br/>
+                        {%- else %}
+                            <span class="context">{{ line }}</span>
+                            <br/>
+                        {%- endif %}
+                    {%- endfor -%}
                 {%- endfor -%}
                 <hr/>
                 </div>

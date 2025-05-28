@@ -7,6 +7,21 @@ from jinja2 import Template
 from conan.api.output import cli_out_write
 from conan.cli.formatters.report.diff_html import diff_html
 
+def _generate_json(result):
+    diff_text = result["diff"]
+    src_prefix = result["src_prefix"]
+    dst_prefix = result["dst_prefix"]
+    ret = {}
+    current_filename = None
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            src_filename, dst_filename = _get_filenames(line, src_prefix, dst_prefix)
+            current_filename = src_filename
+            ret[current_filename] = [line]
+        else:
+            ret[current_filename].append(line)
+
+    return ret
 
 def _get_filenames(line, src_prefix, dst_prefix):
     """
@@ -23,7 +38,7 @@ def _get_filenames(line, src_prefix, dst_prefix):
 
     return src_filename, dst_filename
 
-def _render_diff(diff_text, template, template_folder, **kwargs):
+def _render_diff(content, template, template_folder, **kwargs):
     from conan import __version__
     template = Template(template, autoescape=True)
     def _safe_filename(filename):
@@ -37,7 +52,7 @@ def _render_diff(diff_text, template, template_folder, **kwargs):
     def _get_diff_filename(line):
         return _get_filenames(line, kwargs["src_prefix"], kwargs["dst_prefix"])[0]
 
-    return template.render(diff_text=diff_text,
+    return template.render(content=content,
                            base_template_path=template_folder, version=__version__,
                            safe_filename=_safe_filename,
                            replace_path_with_ref=_replace_path_with_ref,
@@ -46,7 +61,6 @@ def _render_diff(diff_text, template, template_folder, **kwargs):
 
 def format_diff_html(result):
     conan_api = result["conan_api"]
-    diff_text = result["diff"]
     src_prefix = result["src_prefix"]
     dst_prefix = result["dst_prefix"]
 
@@ -57,25 +71,15 @@ def format_diff_html(result):
         with open(user_template, 'r', encoding="utf-8", newline="") as handle:
             template = handle.read()
 
-    prefix = "diff --git "
-    prefix_len = len(prefix)
-    context_paths = [line[prefix_len:].strip() for line in diff_text.splitlines()
-                    if line.startswith(prefix)]
-    file_names = list()
-    for line in context_paths:
-        src_filename, dst_filename = _get_filenames(line, src_prefix, dst_prefix)
+    content = _generate_json(result)
 
-        if src_filename not in file_names:
-            file_names.append(src_filename)
-
-    cli_out_write(_render_diff(diff_text, template, template_folder,
+    cli_out_write(_render_diff(content, template, template_folder,
                                old_reference=result["old_export_ref"],
                                new_reference=result["new_export_ref"],
                                old_cache_path=result["old_cache_path"],
                                new_cache_path=result["new_cache_path"],
                                src_prefix=src_prefix,
-                               dst_prefix=dst_prefix,
-                               file_names=list(file_names)))
+                               dst_prefix=dst_prefix))
 
 
 def format_diff_txt(result):
@@ -84,41 +88,4 @@ def format_diff_txt(result):
 
 
 def format_diff_json(result):
-    '''
-        Example of how the diff appears for each file::
-        -----------------------------------------
-
-        diff --git a/path with spaces/.conan2/p/pkg1/e/conanfile.py b/path with spaces/.conan2/p/pkg2/e/conanfile.py
-        index aabbccdd..eeffgghh 123456
-        --- a/path with spaces/.conan2/p/pkg1/e/conanfile.py
-        +++ b/path with spaces/.conan2/p/pkg2/e/conanfile.py
-        @@ -3,5 +3,5 @@ class HelloConan(ConanFile):
-             name = 'pkg'
-             ...
-
-        diff --git a/old/foo.txt b/new/buzz.txt
-        similarity index 100%
-        rename from old/foo.txt
-        rename to new/buzz.txt
-    '''
-    diff_text = result["diff"]
-    result = {}
-    filename = None
-    skip_lines = True
-    diff_splited_lines = diff_text.splitlines()
-    buffer = []
-    for i, line in enumerate(diff_splited_lines):
-        if line.startswith("--- a") or (line.startswith("+++ b") and skip_lines):
-            filename = line[len("--- a"):].strip()
-            result.setdefault(filename, {})["new_name"] = line[len("+++ b"):].strip() \
-                if line.startswith("+++ b") else diff_splited_lines[i+1][len("+++ b"):].strip()
-            skip_lines = False
-            result[filename].setdefault("diff", []).extend(buffer)
-            buffer = []
-        elif line.startswith("diff --git") or skip_lines:
-            skip_lines = True
-            buffer.append(line)
-        else:
-            result[filename].setdefault("diff", []).append(line)
-
-    cli_out_write(json.dumps(result, indent=2))
+    cli_out_write(json.dumps(_generate_json(result), indent=2))
