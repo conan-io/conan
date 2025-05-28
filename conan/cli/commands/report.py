@@ -1,8 +1,8 @@
+import base64
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.formatters.compare.compare import format_compare_html, format_compare_txt, \
-    format_compare_json
+from conan.cli.formatters.report import format_diff_html, format_diff_txt, format_diff_json
 from conan.errors import ConanException
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command, conan_subcommand
@@ -11,8 +11,7 @@ from conan.internal.conan_app import ConanApp
 from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
-from conan.internal.source import retrieve_exports_sources, config_source
-from conan.internal.util.files import rmdir
+from conan.internal.source import config_source
 
 
 def _configure_source(conan_api, conanfile_path, ref, remotes):
@@ -76,9 +75,9 @@ def report(conan_api: ConanAPI, parser, *args):
 
 
 
-@conan_subcommand(formatters={"text": format_compare_txt,
-                              "json": format_compare_json,
-                              "html": format_compare_html})
+@conan_subcommand(formatters={"text": format_diff_txt,
+                              "json": format_diff_json,
+                              "html": format_diff_html})
 def report_diff(conan_api, parser, subparser, *args):
     """
     Get the difference between two recipes with their sources.
@@ -167,12 +166,18 @@ def report_diff(conan_api, parser, subparser, *args):
     old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir)).replace("\\", "/")
     new_diff_path = os.path.abspath(os.path.join(new_cache_path, os.path.pardir)).replace("\\", "/")
 
+    src_prefix = base64.b64encode(str(new_export_ref).encode()).decode() + "/"
+    dst_prefix = base64.b64encode(str(old_export_ref).encode()).decode() + "/"
+
+    command = (f'git diff --no-index --src-prefix {src_prefix} --dst-prefix {dst_prefix} '
+               f'"{old_diff_path}" "{new_diff_path}"')
+
     ConanOutput().info(f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
-    ConanOutput().info(f'git diff --no-index "{old_diff_path}" "{new_diff_path}"')
+    ConanOutput().info(command)
+
     # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
-    diff = _execute_command(f'git diff --no-index "{old_diff_path}" "{new_diff_path}"',
-                            # We ignore the errors because git diff returns 1 if there are differences
-                            ignore_error=True)
+    # We ignore the errors because git diff returns 1 if there are differences
+    diff = _execute_command(command, ignore_error=True)
 
     if args.old_path:
         conan_api.remove.recipe(old_export_ref)
@@ -186,4 +191,6 @@ def report_diff(conan_api, parser, subparser, *args):
         "new_export_ref": new_export_ref,
         "old_cache_path": old_diff_path,
         "new_cache_path": new_diff_path,
+        "src_prefix": src_prefix,
+        "dst_prefix": dst_prefix,
     }

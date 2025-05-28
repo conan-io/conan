@@ -1,4 +1,4 @@
-compare_html = r"""
+diff_html = r"""
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -77,42 +77,24 @@ compare_html = r"""
                 </div>
                 <h2>File list:</h2>
                 <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
+                Old cache path: <code>{{ old_cache_path }}</code><br/>
+                New cache path: <code>{{ new_cache_path }}</code>
                 <ul>
                     {%- for filename in file_names %}
-                        <li><a href="#{{- safe_filename(filename) -}}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
+                        <!-- {{ filename }} -->
+                        <li><a href="#diff_{{- safe_filename(filename) -}}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
             <div class='content'>
                 <div><!--placeholder-->
-                {% set ns = namespace(buffer = [], skip_lines = False) %}
-                {%- for line in diff_text.splitlines() if not line.startswith("index") -%}
-                    {%- if line.startswith('--- a') or (line.startswith('+++ b') and ns.skip_lines) -%}
-                        {%- set filename = line["--- a"|length:].strip() %}
-                        {%- set as_safe = safe_filename(filename) %}
-                        <hr/>
+                {%- for line in diff_text.splitlines() -%}
+                    {%- if line.startswith('diff --git') %}
                         </div>
-                        <div id="diff_{{- as_safe -}}">
-                        <h1 id="{{- as_safe -}}" class="filename">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</h1>
-
-                        {%- set ns.skip_lines = False %}
-                        {%- for buffered_line in ns.buffer -%}
-                            <span class="context">{{ buffered_line }}</span>
-                            <br/>
-                        {%- endfor %}
-                        {%- set ns.buffer = [] %}
-
-                        <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
-                        <br/>
-                    {%- elif line.startswith("diff --git") or ns.skip_lines %}
-                        {%- set ns.skip_lines = True %}
-                        {%- set _ = ns.buffer.append(line) %}
-                    {%- elif line.startswith('---') %}
-                        <span class="context">{{ replace_path_with_ref(old_cache_path, old_reference, line) }}</span>
-                        <br/>
-                    {%- elif line.startswith('+++') %}
-                        <span class="context">{{ replace_path_with_ref(new_cache_path, new_reference, line) }}</span>
-                        <br/>
+                        {%- set filename = get_diff_filename(line) -%}
+                        <!-- {{ filename }} -->
+                        <div id="diff_{{ safe_filename(filename) }}">
+                        <h3 class="filename">{{ line }}</h3>
                     {%- elif line.startswith('+') %}
                         <span class="add">{{ line }}</span>
                         <br/>

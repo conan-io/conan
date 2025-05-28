@@ -103,6 +103,6 @@ def test_compare_paths(old_args, new_args, formatter):
         assert f"""(pkg/1.0#{v1_revision})/es/patches/patch.patch""" in output_html
         # We have exports information
         assert f"""(pkg/1.0#{v1_revision})/e/v1.txt""" in output_html
-        # New files
-        assert "(new)/s/new-file-for-v2.txt" in output_html
+        # New files appear both in the menu and in the diff
+        assert output_html.count("(new)/s/new-file-for-v2.txt") == 2
 
