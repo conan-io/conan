@@ -17,11 +17,6 @@ def test_extra_flags_via_conf():
         compiler.libcxx=libstdc++
         build_type=Release
 
-        [buildenv]
-        CFLAGS=-flag00 -other=val0
-        CXXFLAGS=-flag01 -other=val1
-        LDFLAGS=-flag02 -other=val2
-
         [conf]
         tools.build:cxxflags=["-flag1", "-flag2"]
         tools.build:cflags=["-flag3", "-flag4"]
@@ -40,7 +35,7 @@ def test_extra_flags_via_conf():
     assert (
         """
         filter {"files:**.c"}
-            buildoptions { "-flag00", "-other=val0", "-flag3", "-flag4" }
+            buildoptions { "-flag3", "-flag4" }
         filter {}
         """
         in content
@@ -49,13 +44,13 @@ def test_extra_flags_via_conf():
     assert (
         """
         filter {"files:**.cpp", "**.cxx", "**.cc"}
-            buildoptions { "-flag01", "-other=val1", "-flag1", "-flag2" }
+            buildoptions { "-flag1", "-flag2" }
         filter {}
         """
         in content
     )
 
-    assert 'linkoptions { "-flag02", "-other=val2", "-flag5", "-flag6" }' in content
+    assert 'linkoptions { "-flag5", "-flag6" }' in content
     assert 'defines { "define1=0" }' in content
 
 
@@ -92,9 +87,7 @@ def test_project_configuration():
     tc.save({"conanfile.py": conanfile})
     tc.run("install .")
 
-    toolchain = tc.load(
-        os.path.join("build-release", "conan", "conantoolchain.premake5.lua")
-    )
+    toolchain = tc.load("build-release/conan/conantoolchain.premake5.lua")
 
     assert (
         """

@@ -41,30 +41,20 @@ def _generate_flags(self, conanfile):
     def format_list(items):
         return ", ".join(f'"{item}"' for item in items) if items else None
 
-    build_env = self._conanfile.buildenv.vars(self._conanfile)
-
-    def _get_env_list(env):
-        v = build_env.get(env, [])
-        return v.strip().split() if not isinstance(v, list) else v
-
     extra_defines = format_list(
-        _get_env_list("DEFINES")
-        + conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         + self.extra_defines
     )
     extra_c_flags = format_list(
-        _get_env_list("CFLAGS")
-        + conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         + self.extra_cflags
     )
     extra_cxx_flags = format_list(
-        _get_env_list("CXXFLAGS")
-        + conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         + self.extra_cxxflags
     )
     extra_ld_flags = format_list(
-        _get_env_list("LDFLAGS")
-        + conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         + conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         + self.extra_ldflags
     )
