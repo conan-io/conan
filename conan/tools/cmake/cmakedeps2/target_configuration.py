@@ -345,13 +345,13 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
         {% endif %}
 
         {% if lib_info.get("link_languages") %}
