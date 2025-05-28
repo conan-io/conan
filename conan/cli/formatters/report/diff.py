@@ -67,8 +67,6 @@ def format_diff_html(result):
 
         if src_filename not in file_names:
             file_names.append(src_filename)
-        if dst_filename not in file_names:
-            file_names.append(dst_filename)
 
     cli_out_write(_render_diff(diff_text, template, template_folder,
                                old_reference=result["old_export_ref"],

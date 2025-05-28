@@ -27,6 +27,9 @@ diff_html = r"""
             .del { background-color: #fdb9c1; }
             .context { background-color: #f8f8f8; }
             .filename { background-color: #ceffff; }
+            a:visited {
+                color: blue;
+            }
         </style>
         <script>
             async function onSearchInput(event) {
@@ -77,12 +80,9 @@ diff_html = r"""
                 </div>
                 <h2>File list:</h2>
                 <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
-                Old cache path: <code>{{ old_cache_path }}</code><br/>
-                New cache path: <code>{{ new_cache_path }}</code>
                 <ul>
                     {%- for filename in file_names %}
-                        <!-- {{ filename }} -->
-                        <li><a href="#diff_{{- safe_filename(filename) -}}">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
+                        <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
@@ -92,7 +92,6 @@ diff_html = r"""
                     {%- if line.startswith('diff --git') %}
                         </div>
                         {%- set filename = get_diff_filename(line) -%}
-                        <!-- {{ filename }} -->
                         <div id="diff_{{ safe_filename(filename) }}">
                         <h3 class="filename">{{ line }}</h3>
                     {%- elif line.startswith('+') %}
