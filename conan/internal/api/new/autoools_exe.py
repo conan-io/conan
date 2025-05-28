@@ -1,7 +1,7 @@
-from conan.internal.api.new.autotools_lib import configure_ac, makefile_am
+from conan.internal.api.new.autotools_lib import makefile_am
 from conan.internal.api.new.cmake_lib import source_cpp, test_main, source_h
 
-conanfile_exe = """
+conanfile_exe = """\
 import os
 
 from conan import ConanFile
@@ -55,12 +55,12 @@ class {{package_name}}Conan(ConanFile):
         autotools = Autotools(self)
         autotools.install()
 """
-makefile_am_exe = """
+makefile_am_exe = """\
 bin_PROGRAMS = {{name}}
 {{name}}_SOURCES = main.cpp {{name}}.cpp
 """
 
-test_conanfile_exe_v2 = """
+test_conanfile_exe_v2 = """\
 import os
 from conan import ConanFile
 from conan.tools.build import can_run
@@ -79,6 +79,17 @@ class {{package_name}}TestConan(ConanFile):
     def test(self):
         if can_run(self):
             self.run("{{name}}", env="conanrun")
+"""
+
+
+configure_ac = """\
+AC_INIT([{{name}}], [{{version}}], [])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PROG_CXX
+AC_PROG_RANLIB
+AM_PROG_AR
+AC_CONFIG_FILES([Makefile src/Makefile])
+AC_OUTPUT
 """
 
 
