@@ -73,7 +73,6 @@ def test_compare_paths(old_args, new_args, formatter):
     tc.run("create v1 --version=1.0")
     v1_layout = tc.exported_layout()
     v1_path = v1_layout.export()
-    v1_revision = v1_layout.reference.revision
 
     tc.run("create v2 --version=2.0")
     v2_revision = tc.exported_layout().reference.revision
@@ -100,9 +99,9 @@ def test_compare_paths(old_args, new_args, formatter):
     elif "html" in formatter:
         output_html = tc.load("output.html")
         # We have patch information
-        assert f"""(pkg/1.0#{v1_revision})/es/patches/patch.patch""" in output_html
+        assert f"""(new)/es/patches/patch.patch""" in output_html
         # We have exports information
-        assert f"""(pkg/1.0#{v1_revision})/e/v1.txt""" in output_html
+        assert f"""(old)/e/v1.txt""" in output_html
         # New files appear both in the menu and in the diff
         assert output_html.count("(new)/s/new-file-for-v2.txt") == 2
 

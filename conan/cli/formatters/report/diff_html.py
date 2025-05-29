@@ -25,8 +25,8 @@ diff_html = r"""
             }
             .add { background-color: #76ffbb; }
             .del { background-color: #fdb9c1; }
-            .context { background-color: #f8f8f8; }
-            .filename { background-color: #ceffff; }
+            .context, .diff-content { background-color: #f8f8f8; }
+            .filename { background-color: #ffffff; }
             a:visited {
                 color: blue;
             }
@@ -90,10 +90,16 @@ diff_html = r"""
                 <div><!--placeholder-->
                 {%- for filename, lines in content.items() -%}
                     </div>
-                    <div id="diff_{{ safe_filename(filename) }}">
+                    <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
                     {%- for line in lines -%}
                         {%- if loop.first -%}
-                            <h3 class="filename">{{ line }}</h3>
+                            <h3 class="filename">{{ remove_prefixes(line) }}</h3>
+                        {%- elif line.startswith('+++') %}
+                            <span class="add">{{ replace_paths(line) }}</span>
+                            <br/>
+                        {%- elif line.startswith('---') %}
+                            <span class="del">{{ replace_paths(line) }}</span>
+                            <br/>
                         {%- elif line.startswith('+') %}
                             <span class="add">{{ line }}</span>
                             <br/>
