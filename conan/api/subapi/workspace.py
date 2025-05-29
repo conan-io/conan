@@ -8,8 +8,10 @@ from conan import ConanFile
 from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
+from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
+from conan.internal.graph.install_graph import ProfileArgs
 from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
 from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
@@ -74,6 +76,7 @@ class WorkspaceAPI:
     TEST_ENABLED = False
 
     def __init__(self, conan_api):
+        self._enabled = True
         self._conan_api = conan_api
         self._folder = _find_ws_folder()
         if self._folder:
@@ -84,6 +87,9 @@ class WorkspaceAPI:
             else:
                 ConanOutput().warning(f"Workspace is a dev-only feature, exclusively for testing")
                 self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
+
+    def enable(self, value):
+        self._enabled = value
 
     @property
     def name(self):
@@ -101,7 +107,7 @@ class WorkspaceAPI:
         """
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
         """
-        if not self._folder:
+        if not self._folder or not self._enabled:
             return
         editables = self._ws.packages()
         editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
@@ -282,3 +288,49 @@ class WorkspaceAPI:
             result.add_edge(root, t.node, r)
 
         return result
+
+    def export(self, lockfile=None, remotes=None):
+        self._check_ws()
+        exported = []
+        for ref, info in self.editable_packages.items():
+            exported_ref = self._conan_api.export.export(info["path"], None, None, None, None,
+                                                         lockfile=lockfile, remotes=remotes)
+            ref, _ = exported_ref
+            exported.append(ref)
+        return exported
+
+
+    def build_order(self, products, profile_host, profile_build, build_mode, lockfile, remotes, args,
+                    update=False):
+        ConanOutput().title(f"Computing dependency graph for each product")
+        conan_api = self._conan_api
+        from conan.internal.graph.install_graph import InstallGraph
+        install_order = InstallGraph(None)
+        conan_api.workspace.enable(False)
+        products = self.products if products is None else products
+        if not products:
+            raise ConanException("There are no products defined in the workspace, can't build\n"
+                                 "You can use 'conan build <path> --build=editable' to build")
+
+        for product in products:
+            ConanOutput().info(f"Computing the dependency graph for product: {product}")
+
+            product_ref = conan_api.workspace.editable_from_path(product)
+            if product_ref is None:
+                raise ConanException(f"Product '{product}' not defined in the workspace as editable")
+
+            deps_graph = conan_api.graph.load_graph_requires([product_ref], None,
+                                                             profile_host, profile_build, lockfile,
+                                                             remotes, update)
+            deps_graph.report_graph_error()
+            print_graph_basic(deps_graph)
+            conan_api.graph.analyze_binaries(deps_graph, build_mode, remotes=remotes, update=update,
+                                             lockfile=lockfile)
+            print_graph_packages(deps_graph)
+
+            ConanOutput().info(f"Aggregating build-order for product: {product}")
+            install_graph = InstallGraph(deps_graph, order_by="recipe",
+                                         profile_args=ProfileArgs.from_args(args))
+            install_order.merge(install_graph)
+
+        return install_order

@@ -242,49 +242,53 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     """
     Build the current workspace, starting from the "products"
     """
-    subparser.add_argument("path", nargs="?",
+    subparser.add_argument("path", nargs="*",
                            help='Path to a package folder in the user workspace')
-    if args.path:
-        products = [args.path]
-    else:  # all products
-        products = conan_api.workspace.products
-        if not products:
-            raise ConanException("There are no products defined in the workspace, can't build\n"
-                                 "You can use 'conan build <path> --build=editable' to build")
-        ConanOutput().title(f"Building workspace products {products}")
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    # Basic collaborators: remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None,
+                                               partial=args.lockfile_partial, overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    products = args.path if args.path else None
+
+    ConanOutput().title(f"Exporting workspace packages recipes to Conan cache")
+    exported_refs = conan_api.workspace.export()
 
     editables = conan_api.workspace.editable_packages
-    from conan.internal.graph.install_graph import InstallGraph
-    install_order = InstallGraph(None)
-    # TODO: This has to be improved to avoid repetition when there are multiple products
-    for product in products:
-        ConanOutput().subtitle(f"Building workspace product: {product}")
-        product_ref = conan_api.workspace.editable_from_path(product)
-        if product_ref is None:
-            raise ConanException(f"Product '{product}' not defined in the workspace as editable")
-        editable = editables[product_ref]
-        editable_path = editable["path"]
-        deps_graph = conan_api.graph.load_graph_consumer(editable_path, None, None, None, None,
-                                                         profile_host, profile_build, lockfile,
-                                                         remotes, args.update)
-        deps_graph.report_graph_error()
-        print_graph_basic(deps_graph)
-        conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
-                                         lockfile=lockfile)
-        print_graph_packages(deps_graph)
-        install_graph = InstallGraph(deps_graph, order_by="recipe",
-                                     profile_args=ProfileArgs.from_args(args))
-        # TODO: MERGE them
-        install_order.merge(install_graph)
 
-    install_order_serialized = install_order.install_build_order()
-    print(json.dumps(install_order_serialized, indent=4))
-    for level in install_order_serialized["order"]:
+    build_mode = args.build if args.build else []
+    build_mode.extend(f"missing:{r}" for r in exported_refs)
+    install_order = conan_api.workspace.build_order(products, profile_host, profile_build, build_mode,
+                                                    lockfile, remotes, args, update=args.update)
+
+    ConanOutput().title(f"Building binary packages")
+    ConanOutput().info(f"EDUTABLES!!: {editables}")
+    print(json.dumps(install_order.install_build_order(), indent=2))
+    order = install_order.install_order()
+
+    profile_args = install_order.install_build_order()["profiles"][None]["args"]
+    profile_args = profile_args.replace("\"", "")  # FIXME: Hack 
+    for level in order:
         for elem in level:
-            # Filter editables
-            ConanOutput().subtitle(f"Creating {elem['ref']}")
+            ConanOutput().info(f"ELEM {elem.ref}")
+            path = editables[elem.ref]["path"]
+            ConanOutput().info(f"Editable {path}")
             # Compute args to forward to the create command
-            # conan_api.command.run(f"create {path} --build=missing:{ref} {args}")
+            for package_level in elem._install_order():  # noqa
+                for package in package_level:
+
+                    cmd = f"install {package._build_args()} {profile_args}"
+                    ConanOutput().info(f"Installing: {cmd}")
+                    conan_api.command.run(cmd)
 
 
 @conan_command(group="Consumer")

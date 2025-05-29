@@ -695,13 +695,51 @@ class TestCreate:
         c.save({"conanws.yml": ""})
 
         c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+                "pkga/test_package/conanfile.py": GenConanfile().with_test("pass"),
                 "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
                .with_requires("pkga/0.1"),
+                "pkgb/test_package/conanfile.py": GenConanfile().with_test("pass"),
                 "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_build_msg("BUILD PKGC!")
-               .with_requires("pkgb/0.1")
+               .with_requires("pkgb/0.1"),
+                "pkgc/test_package/conanfile.py": GenConanfile().with_test("pass"),
                 })
         c.run("workspace add pkga")
         c.run("workspace add pkgb")
         c.run("workspace add pkgc --product")
         c.run("workspace create")
         print(c.out)
+        assert "pkga/0.1 (test package): Running test()" in c.out
+        assert "pkgb/0.1 (test package): Running test()" in c.out
+        assert "pkgc/0.1 (test package): Running test()" in c.out
+
+    def test_host_build_require(self):
+        c = TestClient()
+        protobuf = textwrap.dedent("""\
+            from conan import ConanFile
+            class Protobuf(ConanFile):
+                name = "protobuf"
+                version = "0.1"
+                settings = "os"
+
+                def build(self):
+                    self.output.info(f"Building for: {self.settings.os}!!!")
+            """)
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            class Protobuf(ConanFile):
+                name = "app"
+                version = "0.1"
+                requires = "protobuf/0.1"
+                tool_requires = "protobuf/0.1"
+            """)
+        c.save({"protobuf/conanfile.py": protobuf,
+                "app/conanfile.py": app})
+        c.run("workspace init .")
+        c.run("workspace add protobuf")
+        c.run("workspace add app --product")
+
+        c.run("workspace create -s:b os=Linux -s:h os=Windows")
+
+        print(c.out)
+        assert "protobuf/0.1: Building for: Windows!!!" in c.out
+        assert "protobuf/0.1: Building for: Linux!!!" in c.out
