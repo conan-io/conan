@@ -96,7 +96,7 @@ class ProfileLoader:
         result.compose_profile(args_profile)
         return result
 
-    def load_profile(self, profile_name, cwd=None, context="host"):
+    def load_profile(self, profile_name, cwd=None, context=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
         profile = self._load_profile(profile_name, cwd, context)
