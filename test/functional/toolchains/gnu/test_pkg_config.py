@@ -148,6 +148,8 @@ def test_windows_pkg_config_path():
         The test creates a dummy .pc file and checks if pkg-config can find it. It should work
         for unix path style or forward slashes in Windows only. Mixing backslashes and forward slashes
         in the same path is not supported by pkg-config.
+
+        https://www.msys2.org/docs/pkgconfig/#syntax-paths-escaping
     """
 
     try:
@@ -206,6 +208,19 @@ def test_windows_pkg_config_path():
                  "profile": profile})
     client.run("export .")
 
+    # Test using unix path style for PKG_CONFIG_PATH
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:/c/msys64/usr/lib/pkgconfig
     with environment_update({"PKG_CONFIG_PATH": "/c/msys64/usr/lib/pkgconfig"}):
         client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing")
         assert "PROVIDES: libfoo = 0.1.0" in str(client.out)
+
+    # Test using forward slashes in PKG_CONFIG_PATH
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:C:/msys64/usr/lib/pkgconfig
+    with environment_update({"PKG_CONFIG_PATH": "C:/msys64/usr/lib/pkgconfig"}):
+        client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing")
+        assert "PROVIDES: libfoo = 0.1.0" in str(client.out)
+
+    # Test using mixed path styles (should fail)
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:C:\msys64\usr\lib\pkgconfig
+    with environment_update({"PKG_CONFIG_PATH": r"C:\msys64\usr\lib\pkgconfig"}):
+        client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing", assert_error=True)
