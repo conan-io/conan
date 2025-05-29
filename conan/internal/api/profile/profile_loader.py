@@ -117,7 +117,7 @@ class ProfileLoader:
         # All profiles will be now rendered with jinja2 as first pass
         base_path = os.path.dirname(profile_path)
         file_path = os.path.basename(profile_path)
-        context = {"platform": platform,
+        renderc = {"platform": platform,
                    "os": os,
                    "subprocess": subprocess,
                    "profile_dir": base_path,
@@ -132,7 +132,7 @@ class ProfileLoader:
 
         try:
             rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
-            text = rtemplate.render(context)
+            text = rtemplate.render(renderc)
         except Exception as e:
             raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
                                  f"Check your Jinja2 syntax: {str(e)}")
