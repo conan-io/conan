@@ -9,8 +9,8 @@ from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.tools import TestClient, redirect_output
 from conan.test.utils.env import environment_update
-from conans.util.files import save
-from conans.util.runners import detect_runner
+from conan.internal.util.files import save
+from conan.internal.util.runners import detect_runner
 from conan.tools.microsoft.visual import vcvars_command
 
 
@@ -102,10 +102,9 @@ class DetectCompilersTest(unittest.TestCase):
         # See: https://github.com/conan-io/conan/issues/2231
         _, output = detect_runner("gcc --version")
 
-        if "clang" not in output:
-            # Not test scenario gcc should display clang in output
-            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
-            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
+        assert "clang" in output, "Apple gcc doesn't point to clang with gcc frontend anymore!"
+        # Not test scenario gcc should display clang in output
+        # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
 
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):

@@ -5,7 +5,7 @@ import textwrap
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_dependencies_order_matches_requires():
@@ -160,7 +160,7 @@ def test_create_package_requires():
     client.save({"conanfile.py": conanfile,
                  "test_package/conanfile.py": test_conanfile})
 
-    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -vv")
 
     assert "pkg/0.1@lasote/testing (test package): build() " \
            "Requires: other/1.0@user/channel" in client.out
@@ -169,6 +169,10 @@ def test_create_package_requires():
     assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: other" in client.out
     assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: dep" in client.out
     assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: pkg" in client.out
+
+    # Check that the additional info shows up when creating pkg
+    # Graph info, package creation, and test package graph info
+    assert client.out.count("requires: dep/0.1@user/channel") == 3
 
 
 def test_package_folder_build_error():
@@ -471,10 +475,9 @@ def test_create_format_json():
             consumer_info = n
         elif ref == hello_pkg_ref:
             hello_pkg_info = n
-        elif ref == pkg_pkg_ref:
-            pkg_pkg_info = n
         else:
-            raise Exception("Ref not found. Review the revisions hash.")
+            assert ref == pkg_pkg_ref
+            pkg_pkg_info = n
 
     # Consumer information
     assert consumer_info["recipe"] == "Cli"
@@ -775,7 +778,6 @@ def test_create_both_host_build_require():
             "test_package/conanfile.py": GenConanfile().with_build_requires("protobuf/0.1")
                                                        .with_test("pass")})
     c.run("create . -s:b build_type=Release -s:h build_type=Debug", assert_error=True)
-    print(c.out)
     # The main "host" Debug binary will be correctly build
     c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
     # But test_package will fail because of the missing "tool_require" in Release

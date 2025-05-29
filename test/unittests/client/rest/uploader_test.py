@@ -2,20 +2,17 @@ import tempfile
 import unittest
 from collections import namedtuple
 
-from conans.client.rest.file_uploader import FileUploader
+from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import InternalErrorException, AuthenticationException, ForbiddenException
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class _ConfigMock:
-    def __getitem__(self, item):
-        return None
-
     def get(self, name, default=None, check_type=None):
         return default
 
 
-class MockRequester(object):
+class MockRequester:
     retry = 0
     retry_wait = 0
 

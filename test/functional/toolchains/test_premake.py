@@ -6,7 +6,7 @@ import pytest
 from conan.test.assets.sources import gen_function_cpp
 
 
-@pytest.mark.skipif(platform.system() == "Darwin", reason="Not for MacOS")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
 @pytest.mark.tool("premake")
 def test_premake(matrix_client):
     c = matrix_client

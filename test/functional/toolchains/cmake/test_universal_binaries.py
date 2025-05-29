@@ -5,7 +5,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
@@ -122,7 +122,7 @@ def test_create_universal_binary_ninja():
 
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.23)
-        project(ninjatest CXX)
+        project(ninjatest NONE)
 
         find_package(mylibrary CONFIG REQUIRED)
         """)

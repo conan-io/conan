@@ -20,11 +20,11 @@ class IntegrityChecker:
     def __init__(self, cache):
         self._cache = cache
 
-    def check(self, upload_data):
+    def check(self, pkg_list):
         corrupted = False
-        for ref, recipe_bundle in upload_data.refs().items():
+        for ref, recipe_bundle in pkg_list.refs().items():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref, prev_bundle in upload_data.prefs(ref, recipe_bundle).items():
+            for pref, prev_bundle in pkg_list.prefs(ref, recipe_bundle).items():
                 corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")

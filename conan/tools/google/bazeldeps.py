@@ -9,7 +9,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.model.pkg_type import PackageType
-from conans.util.files import save
+from conan.internal.util.files import save
 
 _BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'ref_name', 'requires', 'cpp_info'])
 
@@ -498,7 +498,7 @@ class _InfoGenerator:
         self._is_build_require = require.build
         self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
 
-    def _get_cpp_info_requires_names(self, cpp_info):
+    def _get_component_requirement_names(self, cpp_info):
         """
         Get all the valid names from the requirements ones given a CppInfo object.
 
@@ -534,7 +534,9 @@ class _InfoGenerator:
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = _get_component_name(req_conanfile, comp_ref_name)
-            ret.append(f"{prefix}{comp_name}")
+            dep_name = f"{prefix}{comp_name}"
+            if dep_name not in ret:
+                ret.append(dep_name)
         return ret
 
     @property
@@ -551,7 +553,7 @@ class _InfoGenerator:
         # Loop through all the package's components
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
-            comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
+            comp_requires_names = self._get_component_requirement_names(cpp_info)
             comp_name = _get_component_name(self._dep, comp_ref_name)
             # Save each component information
             components_info.append(_BazelTargetInfo(None, comp_name, comp_ref_name,
@@ -568,7 +570,7 @@ class _InfoGenerator:
         repository_name = _get_repository_name(self._dep, is_build_require=self._is_build_require)
         pkg_name = _get_target_name(self._dep)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
-        requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
+        requires = self._get_component_requirement_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,

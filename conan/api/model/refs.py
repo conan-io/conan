@@ -5,7 +5,7 @@ from functools import total_ordering
 
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conans.util.dates import timestamp_to_str
+from conan.internal.util.dates import timestamp_to_str
 
 
 @total_ordering
@@ -42,12 +42,6 @@ class RecipeReference:
         result = self.__str__()
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        return result
-
-    def repr_reduced(self):
-        result = self.__str__()
-        if self.revision is not None:
-            result += "#{}".format(self.revision[0:4])
         return result
 
     def repr_humantime(self):
@@ -234,16 +228,6 @@ class PkgReference:
             result += ":{}".format(self.package_id)
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        return result
-
-    def repr_reduced(self):
-        if self.ref is None:
-            return ""
-        result = self.ref.repr_reduced()
-        if self.package_id:
-            result += ":{}".format(self.package_id[0:4])
-        if self.revision is not None:
-            result += "#{}".format(self.revision[0:4])
         return result
 
     def repr_humantime(self):

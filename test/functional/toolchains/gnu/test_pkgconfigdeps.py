@@ -129,4 +129,4 @@ def test_pkgconfigdeps_component_matches_package_name():
     client.run("export-pkg .")
     client.run("install --requires=hello/0.1 -g PkgConfigDeps")
     content = client.load("hello.pc")
-    assert "Conan component: hello-hello" in content
+    assert "Conan component: hello" in content

@@ -9,9 +9,9 @@ from conan import conan_version
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.client.migrations import ClientMigrator
+from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version import Version
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def _drop_lru_column(db_folder):
@@ -82,7 +82,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # Trigger the migrations
     t2.run("list")
     assert "WARN: Running 2.0.14 Cache DB migration to add LRU column" in t2.out
-    assert f"Migration: Successfully updated" not in t2.out
+    assert "Migration: Successfully updated" not in t2.out
     contents = load(profile_plugin_path2)
     # Our Changes are kept!
     assert "This file is from ACME corp, " in contents

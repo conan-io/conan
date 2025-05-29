@@ -6,7 +6,7 @@ import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def get_requires_from_content(content):
@@ -491,7 +491,7 @@ def test_pkg_config_name_full_aliases():
 
     pc_content = client.load("compo1.pc")
     prefix = pc_content.splitlines()[0]
-    assert "Description: Conan component: pkg_other_name-compo1" in pc_content
+    assert "Description: Conan component: compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
@@ -1201,4 +1201,30 @@ def test_pkg_config_deps_set_property():
     other_mycomp1 = c.load("app/new_other_comp.pc")
     assert 'Name: new_other_comp' in other_mycomp1
     assert other.split("\n")[0] == other_mycomp1.split("\n")[0]
+
+
+def test_pkg_with_duplicated_component_requires():
+    """
+    Testing that even having duplicated component requires, the PC does not include them.
+    Issue: https://github.com/conan-io/conan/issues/18283
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].libs = []
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+                # Duplicate one
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g PkgConfigDeps")
+    pc_content = client.load("mylib-myfirstcomp.pc")
+    assert "Requires: mylib-mycomponent" == get_requires_from_content(pc_content)
 

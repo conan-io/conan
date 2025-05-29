@@ -4,7 +4,7 @@ import unittest
 from jinja2 import Template
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestPackageTestCase(unittest.TestCase):

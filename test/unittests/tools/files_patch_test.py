@@ -4,10 +4,10 @@ from textwrap import dedent
 
 from parameterized.parameterized import parameterized
 
-from conans.client.loader import ConanFileLoader
+from conan.internal.loader import ConanFileLoader
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 base_conanfile = '''
 from conan import ConanFile
@@ -90,7 +90,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             class PatchConan(ConanFile):
                 def source(self):
                     patch(self, self.source_folder, "example.patch", strip=1)""")
-        patch = dedent("""
+        patch = dedent(r"""
             --- a\src\oldfile
             +++ b/dev/null
             @@ -0,1 +0,0 @@

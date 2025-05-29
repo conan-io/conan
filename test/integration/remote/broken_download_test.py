@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestRequester, TestServer
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestBrokenDownload:

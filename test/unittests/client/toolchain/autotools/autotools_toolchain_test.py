@@ -605,3 +605,23 @@ def test_conf_compiler_executable():
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert "/c/my/path/myg++" == env["CXX"]
+
+
+def test_autotools_toolchain_conf_extra_configure_args():
+    """Validate that tools.gnu:extra_configure_args are passed to configure command only.
+
+       The configure args should be passed as list only.
+    """
+    f = temp_folder()
+    os.chdir(f)
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.gnu:extra_configure_args", ["--foo", "--bar"])
+
+    be = AutotoolsToolchain(conanfile)
+    be.generate_args()
+    obj = load_toolchain_args()
+    assert "--foo --bar" in obj["configure_args"]
+    # make sure it does not forward to make
+    assert "--foo" not in obj["make_args"]

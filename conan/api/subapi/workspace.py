@@ -1,25 +1,33 @@
 import inspect
 import os
 import shutil
+import textwrap
 from pathlib import Path
 
+from conan import ConanFile
+from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
-from conan.internal.conan_app import ConanApp
-from conan.internal.model.workspace import Workspace
-from conan.tools.scm import Git
 from conan.errors import ConanException
-from conans.client.graph.graph import RECIPE_EDITABLE
-from conans.client.loader import load_python_file
-from conans.client.source import retrieve_exports_sources
-from conan.api.model import RecipeReference
-from conans.util.files import merge_directories
+from conan.internal.conan_app import ConanApp
+from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
+from conan.tools.scm import Git
+from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
+    RECIPE_CONSUMER
+from conan.internal.graph.graph import TransitiveRequirement
+from conan.internal.graph.profile_node_definer import consumer_definer
+from conan.internal.loader import load_python_file
+from conan.internal.source import retrieve_exports_sources
+from conan.internal.util.files import merge_directories, save
 
 
 def _find_ws_folder():
     path = Path(os.getcwd())
-    while path.is_dir() and len(path.parts) > 1:  # finish at '/'
-        if (path / "conanws.yml").is_file() or (path / "conanws.py").is_file():
+    while path.is_dir() and len(path.parts) > 1:  # finish at '/' or 'conanws/'
+        if path.name == WORKSPACE_FOLDER:
+            if (path / WORKSPACE_YML).is_file() or (path / WORKSPACE_PY).is_file():
+                return str(path)
+        if (path / WORKSPACE_YML).is_file() or (path / WORKSPACE_PY).is_file():
             return str(path)
         else:
             path = path.parent
@@ -28,10 +36,10 @@ def _find_ws_folder():
 def _load_workspace(ws_folder, conan_api):
     """ loads a conanfile basic object without evaluating anything, returns the module too
     """
-    wspy = os.path.join(ws_folder, "conanws.py")
+    wspy = os.path.join(ws_folder, WORKSPACE_PY)
     if not os.path.isfile(wspy):
-        ConanOutput().info(f"conanws.py doesn't exist in {ws_folder}, using default behavior")
-        assert os.path.exists(os.path.join(ws_folder, "conanws.yml"))
+        ConanOutput().info(f"{WORKSPACE_PY} doesn't exist in {ws_folder}, using default behavior")
+        assert os.path.exists(os.path.join(ws_folder, WORKSPACE_YML))
         ws = Workspace(ws_folder, conan_api)
     else:
         try:
@@ -39,7 +47,7 @@ def _load_workspace(ws_folder, conan_api):
             ws = _parse_module(module, module_id)
             ws = ws(ws_folder, conan_api)
         except ConanException as e:
-            raise ConanException(f"Error loading conanws.py at '{wspy}': {e}")
+            raise ConanException(f"Error loading {WORKSPACE_PY} at '{wspy}': {e}")
     return ws
 
 
@@ -82,17 +90,6 @@ class WorkspaceAPI:
         self._check_ws()
         return self._ws.name()
 
-    def home_folder(self):
-        """
-        @return: The custom defined Conan home/cache folder if defined, else None
-        """
-        if not self._folder:
-            return
-        folder = self._ws.home_folder()
-        if folder is None or os.path.isabs(folder):
-            return folder
-        return os.path.normpath(os.path.join(self._folder, folder))
-
     def folder(self):
         """
         @return: the current workspace folder where the conanws.yml or conanws.py is located
@@ -106,7 +103,7 @@ class WorkspaceAPI:
         """
         if not self._folder:
             return
-        editables = self._ws.editables()
+        editables = self._ws.packages()
         editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
         for v in editables.values():
             path = os.path.normpath(os.path.join(self._folder, v["path"], "conanfile.py"))
@@ -117,6 +114,16 @@ class WorkspaceAPI:
                 v["output_folder"] = os.path.normpath(os.path.join(self._folder,
                                                                    v["output_folder"]))
         return editables
+
+    def select_editables(self, paths):
+        filtered_refs = [self.editable_from_path(p) for p in paths or []]
+        editables = self.editable_packages
+        requires = [ref for ref in editables]
+        if filtered_refs:
+            ConanOutput().info(f"Filtering and installing only selected editable packages")
+            requires = [ref for ref in requires if ref in filtered_refs]
+            ConanOutput().info(f"Filtered references: {requires}")
+        return requires
 
     @property
     def products(self):
@@ -156,8 +163,8 @@ class WorkspaceAPI:
 
     def _check_ws(self):
         if not self._folder:
-            raise ConanException("Workspace not defined, please create a "
-                                 "'conanws.py' or 'conanws.yml' file")
+            raise ConanException(f"Workspace not defined, please create a "
+                                 f"'{WORKSPACE_PY}' or '{WORKSPACE_YML}' file")
 
     def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
             output_folder=None, remotes=None, product=False):
@@ -187,19 +194,91 @@ class WorkspaceAPI:
         self._ws.add(ref, full_path, output_folder, product)
         return ref
 
+    @staticmethod
+    def init(path):
+        abs_path = make_abs_path(path)
+        os.makedirs(abs_path, exist_ok=True)
+        ws_yml_file = Path(abs_path, WORKSPACE_YML)
+        ws_py_file = Path(abs_path, WORKSPACE_PY)
+        if not ws_yml_file.exists():
+            ConanOutput().success(f"Created empty {WORKSPACE_YML} in {path}")
+            save(ws_yml_file, "")
+        if not ws_py_file.exists():
+            ConanOutput().success(f"Created minimal {WORKSPACE_PY} in {path}")
+            ws_name = os.path.basename(abs_path)
+            save(ws_py_file, textwrap.dedent(f'''\
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+               """
+               Minimal Workspace class definition.
+               More info: https://docs.conan.io/2/incubating.html#workspaces
+               """
+               def name(self):
+                  return "{ws_name}"
+            '''))
+
     def remove(self, path):
         self._check_ws()
         return self._ws.remove(path)
+
+    def clean(self):
+        self._check_ws()
+        return self._ws.clean()
 
     def info(self):
         self._check_ws()
         return {"name": self.name,
                 "folder": self._folder,
                 "products": self.products,
-                "editables": self._ws.editables()}
+                "packages": self._ws.packages()}
 
     def editable_from_path(self, path):
-        editables = self._ws.editables()
+        editables = self._ws.packages()
         for ref, info in editables.items():
             if info["path"].replace("\\", "/") == path:
                 return RecipeReference.loads(ref)
+
+    def collapse_editables(self, deps_graph, profile_host, profile_build):
+        ConanOutput().title("Collapsing workspace editables")
+
+        root_class = self._ws.root_conanfile()
+        if root_class is not None:
+            conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
+            consumer_definer(conanfile, profile_host, profile_build)
+            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                        path=self._folder)  # path lets use the conanws.py folder
+            root.should_build = True  # It is a consumer, this is something we are building
+            for field in ("requires", "build_requires", "test_requires", "requirements", "build",
+                          "source", "package"):
+                if getattr(conanfile, field, None):
+                    raise ConanException(f"Conanfile in conanws.py shouldn't have '{field}'")
+        else:
+            ConanOutput().info(f"Workspace {WORKSPACE_PY} not found in the workspace folder, "
+                               "using default behavior")
+            conanfile = ConanFile(display_name="cli")
+            consumer_definer(conanfile, profile_host, profile_build)
+            root = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+
+        result = DepsGraph()  # TODO: We might need to copy more information from the original graph
+        result.add_node(root)
+        for node in deps_graph.nodes[1:]:  # Exclude the current root
+            if node.recipe != RECIPE_EDITABLE:
+                result.add_node(node)
+                continue
+            for r, t in node.transitive_deps.items():
+                if t.node.recipe == RECIPE_EDITABLE:
+                    continue
+                existing = root.transitive_deps.pop(r, None)
+                if existing is None:
+                    root.transitive_deps[r] = t
+                else:
+                    require = existing.require
+                    require.aggregate(r)
+                    root.transitive_deps[require] = TransitiveRequirement(require, t.node)
+
+        # The graph edges must be defined too
+        for r, t in root.transitive_deps.items():
+            result.add_edge(root, t.node, r)
+
+        return result

@@ -3,11 +3,12 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
+from conan.internal.api.upload import add_urls
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker, \
     gather_metadata
-from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.client.rest.file_uploader import FileUploader
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
+from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.errors import ConanException
 
@@ -99,6 +100,7 @@ class UploadAPI:
             thread_pool.join()
         elapsed = time.time() - t
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
+        add_urls(package_list, remote)
 
     def upload_backup_sources(self, files):
         config = self.conan_api.config.global_conf

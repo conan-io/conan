@@ -116,85 +116,6 @@ def test_wrong_component(top_conanfile, from_component):
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_unused_requirement(top_conanfile):
-    """ Requires should include all listed requirements
-        This error is known when creating the package if the requirement is consumed.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version", "top2/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create top.py --name=top2 --version=version')
-    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: Required package 'top2' not in component 'requires" in t.out
-
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_unused_tool_requirement(top_conanfile):
-    """ Requires should include all listed requirements
-        This error is known when creating the package if the requirement is consumed.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version"
-            tool_requires = "top2/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create top.py --name=top2 --version=version')
-    t.run('create consumer.py --name=wrong --version=version')
-    # This runs without crashing, because it is not chcking that top::other doesn't exist
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_wrong_requirement(top_conanfile):
-    """ If we require a wrong requirement, we get a meaninful error.
-        This error is known when creating the package if the requirement is not there.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::cmp1", "other::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: required component package 'other::' not in dependencies" in t.out
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_missing_internal():
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            def package_info(self):
-                self.cpp_info.components["cmp1"].requires = ["other"]
-    """)
-    t = TestClient()
-    t.save({'conanfile.py': consumer})
-    t.run('create . --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: Internal components not found: ['other']" in t.out
-
-
 @pytest.mark.tool("cmake")
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
@@ -232,7 +153,7 @@ def test_components_system_libs():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
 
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
@@ -293,7 +214,7 @@ def test_components_exelinkflags():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -347,7 +268,7 @@ def test_components_sharedlinkflags():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -405,7 +326,7 @@ def test_cmake_add_subdirectory():
 
     cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(hello CXX)
+            project(hello NONE)
             find_package(Boost CONFIG)
             add_subdirectory(src)
 
