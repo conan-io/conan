@@ -32,41 +32,56 @@ diff_html = r"""
             }
         </style>
         <script>
+            let includeSearchQuery = "";
+            let excludeSearchQuery = "";
+
+            async function onExcludeSearchInput(event) {
+                excludeSearchQuery = event.currentTarget.value.toLowerCase();
+                onSearchInput(event);
+            }
+
+            async function onIncludeSearchInput(event) {
+                includeSearchQuery = event.currentTarget.value.toLowerCase();
+                onSearchInput(event);
+            }
+
             async function onSearchInput(event) {
-                const searchInput = event.currentTarget;
                 const sidebar = document.querySelectorAll(".sidebar li");
-                const content = document.querySelectorAll(".content .filename");
-                const query = searchInput.value.toLowerCase();
+                const content = document.querySelectorAll(".content .diff-content");
 
-                if (query.length === 0) {
-                    sidebar.forEach(async function(item) {
-                        item.style.display = "list-item";
-                    });
-                    content.forEach(async function(item) {
-                        const associated_diff = document.getElementById("diff_" + item.id);
-                        associated_diff.style.display = "block";
-                    });
-                    return;
-                } else {
-                    sidebar.forEach(async function(item) {
-                        const text = item.textContent.toLowerCase();
-                        if (text.includes(query)) {
-                            item.style.display = "list-item";
-                        } else {
+                sidebar.forEach(async function(item) {
+                    const text = item.textContent.toLowerCase();
+                    const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
+                    const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+
+                    if (shouldInclude) {
+                        if (shouldExclude) {
                             item.style.display = "none";
-                        }
-                    });
-
-                    content.forEach(async function(item) {
-                        const text = item.textContent.toLowerCase();
-                        const associated_diff = document.getElementById("diff_" + item.id);
-                        if (text.includes(query)) {
-                            associated_diff.style.display = "block";
                         } else {
-                            associated_diff.style.display = "none";
+                            item.style.display = "list-item";
                         }
-                    });
-                }
+                    } else {
+                        item.style.display = "none";
+                    }
+
+                });
+
+                content.forEach(async function(item) {
+                    const filename = document.getElementById(item.id + "_filename");
+                    const text = filename.textContent.toLowerCase();
+                    const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
+                    const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+
+                    if (shouldInclude) {
+                        if (shouldExclude) {
+                            item.style.display = "none";
+                        } else {
+                            item.style.display = "block";
+                        }
+                    } else {
+                        item.style.display = "none";
+                    }
+                });
             }
         </script>
     </head>
@@ -79,10 +94,11 @@ diff_html = r"""
                     <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
                 </div>
                 <h2>File list:</h2>
-                <input type="text" id="search" placeholder="Search..." oninput="onSearchInput(event)" />
+                <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
                 <ul>
                     {%- for filename in content.keys() %}
-                        <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
+                        <li><a href="#diff_{{- safe_filename(filename) -}}_sidebar" class="side-link">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
@@ -93,7 +109,7 @@ diff_html = r"""
                     <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
                     {%- for line in lines -%}
                         {%- if loop.first -%}
-                            <h3 class="filename">{{ remove_prefixes(line) }}</h3>
+                            <h3 id="diff_{{ safe_filename(filename) }}_filename" "filename">{{ remove_prefixes(line) }}</h3>
                         {%- elif line.startswith('+++') %}
                             <span class="add">{{ replace_paths(line) }}</span>
                             <br/>
