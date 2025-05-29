@@ -68,7 +68,7 @@ diff_html = r"""
 
                 content.forEach(async function(item) {
                     const filename = document.getElementById(item.id + "_filename");
-                    const text = filename.textContent.toLowerCase();
+                    const text = filename.dataset.replacedPaths.toLowerCase();
                     const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
                     const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
 
@@ -98,7 +98,7 @@ diff_html = r"""
                 <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
                 <ul>
                     {%- for filename in content.keys() %}
-                        <li><a href="#diff_{{- safe_filename(filename) -}}_sidebar" class="side-link">{{ filename.replace(old_cache_path, "(old)").replace(new_cache_path, "(new)") }}</a></li>
+                        <li><a href="#diff_{{- safe_filename(filename) -}}_sidebar" class="side-link">{{ replace_cache_paths(filename) }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
@@ -109,7 +109,7 @@ diff_html = r"""
                     <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
                     {%- for line in lines -%}
                         {%- if loop.first -%}
-                            <h3 id="diff_{{ safe_filename(filename) }}_filename" "filename">{{ remove_prefixes(line) }}</h3>
+                            <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(line) }}">{{ remove_prefixes(line) }}</h3>
                         {%- elif line.startswith('+++') %}
                             <span class="add">{{ replace_paths(line) }}</span>
                             <br/>

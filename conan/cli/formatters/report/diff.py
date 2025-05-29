@@ -50,6 +50,9 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _remove_prefixes(line):
         return line.replace(kwargs["src_prefix"][:-1], "").replace(kwargs["dst_prefix"][:-1], "")
 
+    def _replace_cache_paths(line):
+        return line.replace(kwargs["old_cache_path"], "(old)").replace(kwargs["new_cache_path"], "(new)")
+
     def _replace_paths(line):
         src_path = kwargs["src_prefix"][:-1] + kwargs["old_cache_path"]
         dst_path = kwargs["dst_prefix"][:-1] + kwargs["new_cache_path"]
@@ -59,6 +62,7 @@ def _render_diff(content, template, template_folder, **kwargs):
                            base_template_path=template_folder, version=__version__,
                            safe_filename=_safe_filename,
                            replace_paths=_replace_paths,
+                           replace_cache_paths=_replace_cache_paths,
                            remove_prefixes=_remove_prefixes,
                            get_diff_filename=_get_diff_filename,
                            **kwargs)
