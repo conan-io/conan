@@ -200,3 +200,32 @@ class TestHooks:
         c.run("create . --name=foo --version=0.1.0")
         assert f"foo/0.1.0: [HOOK - testing/hook_complete.py] pre_validate(): Hello" in c.out
         assert f"foo/0.1.0: [HOOK - testing/hook_complete.py] post_validate(): Hello" in c.out
+
+
+def test_pre_validate_invalid_configuration():
+    """ When raising ConanInvalidConfiguration in the pre_validate hook,
+        it should be forwarded and preserve the same exception type.
+    """
+    hook = textwrap.dedent("""
+        from conan.errors import ConanInvalidConfiguration
+        def pre_validate(conanfile):
+            raise ConanInvalidConfiguration("Invalid configuration in pre_validate hook")
+    """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.errors import ConanException
+
+        class Pkg(ConanFile):
+            def validate(self):
+                raise ConanException("Should not reach this point")
+    """)
+
+    client = TestClient()
+    hook_path = os.path.join(client.paths.hooks_path, "custom_hooks", "hook_pre_validate.py")
+    client.save({"conanfile.py": conanfile,
+                 hook_path: hook})
+
+    client.run("build . ", assert_error=True)
+    assert "ERROR: conanfile.py: Invalid ID: Invalid: Invalid configuration in pre_validate hook" in client.out
+    assert "Should not reach this point" not in client.out

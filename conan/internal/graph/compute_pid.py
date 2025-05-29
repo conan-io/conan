@@ -73,10 +73,10 @@ def run_validate_package_id(conanfile, hook_manager=None):
 
     if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
-            if hook_manager:
-                hook_manager.execute("pre_validate", conanfile=conanfile)
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
+                    if hook_manager:
+                        hook_manager.execute("pre_validate", conanfile=conanfile)
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
