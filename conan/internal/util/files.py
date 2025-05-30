@@ -137,9 +137,9 @@ def save_files(path, files, encoding="utf-8"):
         save(os.path.join(path, name), content, encoding=encoding)
 
 
-def load(path, encoding="utf-8"):
+def load(path, encoding="utf-8", ignore_encoding_error=False):
     """ Loads a file content """
-    with open(path, 'r', encoding=encoding, newline="") as handle:
+    with open(path, 'r', encoding=encoding, newline="", errors="ignore" if ignore_encoding_error else None) as handle:
         tmp = handle.read()
     return tmp
 

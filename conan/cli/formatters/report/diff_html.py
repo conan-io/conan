@@ -26,7 +26,7 @@ diff_html = r"""
             .add { background-color: #76ffbb; }
             .del { background-color: #fdb9c1; }
             .context, .diff-content { background-color: #f8f8f8; }
-            .filename { background-color: #ffffff; }
+            .filename { background-color: #f0f0f0; }
             a:visited {
                 color: blue;
             }
@@ -109,6 +109,7 @@ diff_html = r"""
                     <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
                     {%- for line in lines -%}
                         {%- if loop.first -%}
+                            <hr/>
                             <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(line) }}">{{ remove_prefixes(line) }}</h3>
                         {%- elif line.startswith('+++') %}
                             <span class="add">{{ replace_paths(line) }}</span>
