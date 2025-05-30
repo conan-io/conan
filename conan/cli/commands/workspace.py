@@ -129,21 +129,19 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, args.build,
                                                     lockfile, remotes, args, update=args.update)
 
-    print(json.dumps(install_order.install_build_order(), indent=4))
-
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
     profile_args = profile_args.replace("\"", "")  # FIXME: Hack
     for level in order:
         for elem in level:
-            ConanOutput().info(f"ELEM {elem.ref}")
+            if elem.node.recipe != "Editable":  # FIXME: Filter
+                continue
             path = all_editables[elem.ref]["path"]
             ConanOutput().info(f"Editable {path}")
             # Compute args to forward to the create command
             for package_level in elem._install_order():  # noqa
                 for package in package_level:
-                    ConanOutput().info(f"*********************  BUILDING {package.ref} *********************************")
                     cmd = f'build "{path}" {package._build_args() or ""} {profile_args}'
                     ConanOutput().info(f"Building: {cmd}")
                     conan_api.command.run(cmd)
@@ -257,16 +255,13 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                                                     lockfile, remotes, args, update=args.update)
 
     ConanOutput().title(f"Building binary packages")
-    print(json.dumps(install_order.install_build_order(), indent=2))
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
     profile_args = profile_args.replace("\"", "")  # FIXME: Hack
     for level in order:
         for elem in level:
-            ConanOutput().info(f"ELEM {elem.ref}")
             path = packages[elem.ref]["path"]
-            ConanOutput().info(f"Editable {path}")
             # Compute args to forward to the create command
             for package_level in elem._install_order():  # noqa
                 for package in package_level:

@@ -20,7 +20,7 @@ def test_build():
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
     c.run("workspace build")
-    assert "Calling build() for the product app1/0.1" in c.out
+    assert "conanfile.py (app1/0.1): Calling build()" in c.out
     assert "conanfile.py (app1/0.1): Running CMake.build()" in c.out
     # it works without failing
 
