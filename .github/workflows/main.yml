@@ -34,6 +34,20 @@ jobs:
             echo "python_versions_macos=['3.10']" >> $GITHUB_OUTPUT
           fi
 
+  linux_suite:
+    needs: set_python_versions
+    uses: ./.github/workflows/linux-tests.yml
+    name: Linux test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
+
+  osx_suite:
+    needs: set_python_versions
+    uses: ./.github/workflows/osx-tests.yml
+    name: OSX test suite
+    with:
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
+
   windows_suite:
     needs: set_python_versions
     uses: ./.github/workflows/win-tests.yml
@@ -45,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Code coverage
     if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
-    needs: [windows_suite]
+    needs: [linux_suite, osx_suite, windows_suite]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
-    needs: [windows_suite]
+    needs: [linux_suite, osx_suite, windows_suite]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -1,4 +1,3 @@
-import os
 import textwrap
 from io import StringIO
 
@@ -29,14 +28,10 @@ class PkgConfig:
 
         env = Environment()
         if self._pkg_config_path:
-            envvars = env.vars(self._conanfile, "build")
             env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
-            self._conanfile.output.info("self._pkg_config_path: {}".format(self._pkg_config_path))
-            self._conanfile.output.info("PKG_CONFIG_PATH: {}".format(envvars.get("PKG_CONFIG_PATH", None)))
         with env.vars(self._conanfile).apply():
             # This way we get the environment from ConanFile, from profile (default buildenv)
             output, err = StringIO(), StringIO()
-            self._conanfile.output.info("PKG_CONFIG_PATH env: {}".format(os.getenv("PKG_CONFIG_PATH", None)))
             ret = self._conanfile.run(command, stdout=output, stderr=err, quiet=True,
                                       ignore_errors=True)
             if ret != 0:
