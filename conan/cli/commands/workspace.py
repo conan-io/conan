@@ -126,9 +126,11 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
 
     all_editables = conan_api.workspace.editable_packages
     packages = conan_api.workspace.select_packages(args.pkg)
+    ConanOutput().box("Workspace computing the build order")
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, args.build,
                                                     lockfile, remotes, args, update=args.update)
 
+    ConanOutput().box("Workspace building each package")
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
@@ -138,12 +140,12 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
             if elem.node.recipe != "Editable":  # FIXME: Filter
                 continue
             path = all_editables[elem.ref]["path"]
-            ConanOutput().info(f"Editable {path}")
             # Compute args to forward to the create command
             for package_level in elem._install_order():  # noqa
                 for package in package_level:
                     cmd = f'build "{path}" {package._build_args() or ""} {profile_args}'
-                    ConanOutput().info(f"Building: {cmd}")
+                    ConanOutput().box(f"Workspace building {elem.ref}")
+                    ConanOutput().info(f"Build command: {cmd}\n")
                     conan_api.command.run(cmd)
 
 
@@ -241,7 +243,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    ConanOutput().title(f"Exporting workspace packages recipes to Conan cache")
+    ConanOutput().box("Exporting workspace packages recipes to Conan cache")
     exported_refs = conan_api.workspace.export()
 
 
@@ -254,7 +256,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, build_mode,
                                                     lockfile, remotes, args, update=args.update)
 
-    ConanOutput().title(f"Building binary packages")
+    ConanOutput().box("Building binary packages")
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
@@ -267,7 +269,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                 for package in package_level:
                     build = "--build-require" if package.context == "build" else ""
                     cmd = f'create "{path}" {profile_args} {build}'
-                    ConanOutput().info(f"Installing: {cmd}")
+                    ConanOutput().box(f"Workspace create {cmd}")
                     conan_api.command.run(cmd)
 
 

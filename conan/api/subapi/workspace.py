@@ -122,6 +122,7 @@ class WorkspaceAPI:
         return editables
 
     def select_editables(self, paths):
+        # FIXME: Almost repeated to select-packages below
         filtered_refs = [self.editable_from_path(p) for p in paths or []]
         editables = self.editable_packages
         requires = [ref for ref in editables]
