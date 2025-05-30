@@ -58,7 +58,6 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
                        help='Look in the specified remote or remotes server')
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
-    subparser.add_argument("--product", action="store_true", help="Add the package as a product")
     args = parser.parse_args(*args)
     if args.path and args.ref:
         raise ConanException("Do not use both 'path' and '--ref' argument")
@@ -70,7 +69,7 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
         path = conan_api.workspace.open(args.ref, remotes, cwd=cwd)
     ref = conan_api.workspace.add(path,
                                   args.name, args.version, args.user, args.channel,
-                                  cwd, args.output_folder, remotes=remotes, product=args.product)
+                                  cwd, args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' added to workspace".format(ref))
 
 
@@ -109,7 +108,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     """
     Build the current workspace, starting from the "products"
     """
-    subparser.add_argument("path", nargs="?",
+    subparser.add_argument("--pkg", action="append",
                            help='Path to a package folder in the user workspace')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
@@ -125,43 +124,29 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    build_mode = args.build or []
-    if "editable" not in build_mode:
-        ConanOutput().info("Adding '--build=editable' as build mode")
-        build_mode.append("editable")
+    all_editables = conan_api.workspace.editable_packages
+    packages = conan_api.workspace.select_packages(args.pkg)
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, args.build,
+                                                    lockfile, remotes, args, update=args.update)
 
-    if args.path:
-        products = [args.path]
-    else:  # all products
-        products = conan_api.workspace.products
-        if not products:
-            raise ConanException("There are no products defined in the workspace, can't build\n"
-                                 "You can use 'conan build <path> --build=editable' to build")
-        ConanOutput().title(f"Building workspace products {products}")
+    print(json.dumps(install_order.install_build_order(), indent=4))
 
-    editables = conan_api.workspace.editable_packages
-    # TODO: This has to be improved to avoid repetition when there are multiple products
-    for product in products:
-        ConanOutput().subtitle(f"Building workspace product: {product}")
-        product_ref = conan_api.workspace.editable_from_path(product)
-        if product_ref is None:
-            raise ConanException(f"Product '{product}' not defined in the workspace as editable")
-        editable = editables[product_ref]
-        editable_path = editable["path"]
-        deps_graph = conan_api.graph.load_graph_consumer(editable_path, None, None, None, None,
-                                                         profile_host, profile_build, lockfile,
-                                                         remotes, args.update)
-        deps_graph.report_graph_error()
-        print_graph_basic(deps_graph)
-        conan_api.graph.analyze_binaries(deps_graph, build_mode, remotes=remotes, update=args.update,
-                                         lockfile=lockfile)
-        print_graph_packages(deps_graph)
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-        conan_api.install.install_consumer(deps_graph, None, os.path.dirname(editable_path),
-                                           editable.get("output_folder"))
-        ConanOutput().title(f"Calling build() for the product {product_ref}")
-        conanfile = deps_graph.root.conanfile
-        conan_api.local.build(conanfile)
+    order = install_order.install_order()
+
+    profile_args = install_order.install_build_order()["profiles"][None]["args"]
+    profile_args = profile_args.replace("\"", "")  # FIXME: Hack
+    for level in order:
+        for elem in level:
+            ConanOutput().info(f"ELEM {elem.ref}")
+            path = all_editables[elem.ref]["path"]
+            ConanOutput().info(f"Editable {path}")
+            # Compute args to forward to the create command
+            for package_level in elem._install_order():  # noqa
+                for package in package_level:
+                    ConanOutput().info(f"*********************  BUILDING {package.ref} *********************************")
+                    cmd = f'build "{path}" {package._build_args() or ""} {profile_args}'
+                    ConanOutput().info(f"Building: {cmd}")
+                    conan_api.command.run(cmd)
 
 
 @conan_subcommand()
@@ -170,8 +155,8 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     Install the workspace as a monolith, installing only external dependencies to the workspace,
     generating a single result (generators, etc) for the whole workspace.
     """
-    subparser.add_argument("path", nargs="*",
-                           help="Install only these editable packages, not all")
+    subparser.add_argument("--pkg", action="append",
+                           help='Path to a package folder in the user workspace')
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -193,7 +178,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 
     conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
-    requires = conan_api.workspace.select_editables(args.path)
+    requires = conan_api.workspace.select_editables(args.pkg)
     if not requires:
         raise ConanException("This workspace cannot be installed, it doesn't have any editable")
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
@@ -242,7 +227,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     """
     Build the current workspace, starting from the "products"
     """
-    subparser.add_argument("path", nargs="*",
+    subparser.add_argument("--pkg", action="append",
                            help='Path to a package folder in the user workspace')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
@@ -258,35 +243,35 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    products = args.path if args.path else None
-
     ConanOutput().title(f"Exporting workspace packages recipes to Conan cache")
     exported_refs = conan_api.workspace.export()
 
-    editables = conan_api.workspace.editable_packages
 
     build_mode = args.build if args.build else []
     build_mode.extend(f"missing:{r}" for r in exported_refs)
-    install_order = conan_api.workspace.build_order(products, profile_host, profile_build, build_mode,
+
+    packages = conan_api.workspace.select_packages(args.pkg)
+    conan_api.workspace.enable(False)
+
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, build_mode,
                                                     lockfile, remotes, args, update=args.update)
 
     ConanOutput().title(f"Building binary packages")
-    ConanOutput().info(f"EDUTABLES!!: {editables}")
     print(json.dumps(install_order.install_build_order(), indent=2))
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
-    profile_args = profile_args.replace("\"", "")  # FIXME: Hack 
+    profile_args = profile_args.replace("\"", "")  # FIXME: Hack
     for level in order:
         for elem in level:
             ConanOutput().info(f"ELEM {elem.ref}")
-            path = editables[elem.ref]["path"]
+            path = packages[elem.ref]["path"]
             ConanOutput().info(f"Editable {path}")
             # Compute args to forward to the create command
             for package_level in elem._install_order():  # noqa
                 for package in package_level:
-
-                    cmd = f"install {package._build_args()} {profile_args}"
+                    build = "--build-require" if package.context == "build" else ""
+                    cmd = f'create "{path}" {profile_args} {build}'
                     ConanOutput().info(f"Installing: {cmd}")
                     conan_api.command.run(cmd)
 

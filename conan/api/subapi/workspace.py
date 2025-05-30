@@ -131,11 +131,6 @@ class WorkspaceAPI:
             ConanOutput().info(f"Filtered references: {requires}")
         return requires
 
-    @property
-    def products(self):
-        self._check_ws()
-        return self._ws.products()
-
     def open(self, require, remotes, cwd=None):
         app = ConanApp(self._conan_api)
         ref = RecipeReference.loads(require)
@@ -173,7 +168,7 @@ class WorkspaceAPI:
                                  f"'{WORKSPACE_PY}' or '{WORKSPACE_YML}' file")
 
     def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-            output_folder=None, remotes=None, product=False):
+            output_folder=None, remotes=None):
         """
         Add a new editable package to the current workspace (the current workspace must exist)
         @param path: The path to the folder containing the conanfile.py that defines the package
@@ -184,7 +179,6 @@ class WorkspaceAPI:
         @param cwd:
         @param output_folder:
         @param remotes:
-        @param product:
         @return: The reference of the added package
         """
         self._check_ws()
@@ -197,7 +191,7 @@ class WorkspaceAPI:
         ref.validate_ref()
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self._ws.add(ref, full_path, output_folder, product)
+        self._ws.add(ref, full_path, output_folder)
         return ref
 
     @staticmethod
@@ -236,7 +230,6 @@ class WorkspaceAPI:
         self._check_ws()
         return {"name": self.name,
                 "folder": self._folder,
-                "products": self.products,
                 "packages": self._ws.packages()}
 
     def editable_from_path(self, path):
@@ -300,26 +293,30 @@ class WorkspaceAPI:
         return exported
 
 
-    def build_order(self, products, profile_host, profile_build, build_mode, lockfile, remotes, args,
+    def select_packages(self, packages):
+        editable = self.editable_packages
+        packages = packages or []
+        selected_editables = {}
+        for ref, info in editable.items():
+            if packages and not any(ref.matches(p, False) for p in packages):
+                continue
+            selected_editables[ref] = info
+        if not selected_editables:
+            raise ConanException("There are no selected packages defined in the workspace")
+
+        return selected_editables
+
+    def build_order(self, packages, profile_host, profile_build, build_mode, lockfile, remotes, args,
                     update=False):
-        ConanOutput().title(f"Computing dependency graph for each product")
+        ConanOutput().title(f"Computing dependency graph for each pkgs")
         conan_api = self._conan_api
         from conan.internal.graph.install_graph import InstallGraph
         install_order = InstallGraph(None)
-        conan_api.workspace.enable(False)
-        products = self.products if products is None else products
-        if not products:
-            raise ConanException("There are no products defined in the workspace, can't build\n"
-                                 "You can use 'conan build <path> --build=editable' to build")
 
-        for product in products:
-            ConanOutput().info(f"Computing the dependency graph for product: {product}")
+        for ref, info in packages.items():
+            ConanOutput().info(f"Computing the dependency graph for package: {ref}")
 
-            product_ref = conan_api.workspace.editable_from_path(product)
-            if product_ref is None:
-                raise ConanException(f"Product '{product}' not defined in the workspace as editable")
-
-            deps_graph = conan_api.graph.load_graph_requires([product_ref], None,
+            deps_graph = conan_api.graph.load_graph_requires([ref], None,
                                                              profile_host, profile_build, lockfile,
                                                              remotes, update)
             deps_graph.report_graph_error()
@@ -328,7 +325,7 @@ class WorkspaceAPI:
                                              lockfile=lockfile)
             print_graph_packages(deps_graph)
 
-            ConanOutput().info(f"Aggregating build-order for product: {product}")
+            ConanOutput().info(f"Aggregating build-order for package: {ref}")
             install_graph = InstallGraph(deps_graph, order_by="recipe",
                                          profile_args=ProfileArgs.from_args(args))
             install_order.merge(install_graph)

@@ -236,7 +236,7 @@ class TestAddRemove:
         c = TestClient(light=True)
         c.save({"conanws.yml": "",
                 "mydeppkg/conanfile.py": GenConanfile("mydeppkg", "0.1")})
-        c.run("workspace add mydeppkg --product")
+        c.run("workspace add mydeppkg")
         c.run("workspace remove mydeppkg")
         c.run("workspace info")
         assert "mydeppkg" not in c.out
@@ -368,31 +368,6 @@ class TestOpenAdd:
 
 
 class TestWorkspaceBuild:
-    def test_dynamic_products(self):
-        c = TestClient(light=True)
-
-        workspace = textwrap.dedent("""\
-            import os
-            from conan import Workspace
-
-            class MyWorkspace(Workspace):
-                def products(self):
-                    result = []
-                    for f in os.listdir(self.folder):
-                        if os.path.isdir(os.path.join(self.folder, f)):
-                            if f.startswith("product"):
-                                result.append(f)
-                    return result
-            """)
-
-        c.save({"conanws.py": workspace,
-                "lib1/conanfile.py": GenConanfile("lib1", "0.1"),
-                "product_app1/conanfile.py": GenConanfile("app1", "0.1")})
-        c.run("workspace add lib1")
-        c.run("workspace add product_app1")
-        c.run("workspace info --format=json")
-        info = json.loads(c.stdout)
-        assert info["products"] == ["product_app1"]
 
     def test_build(self):
         c = TestClient(light=True)
@@ -402,27 +377,25 @@ class TestWorkspaceBuild:
                 "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
                .with_requires("pkga/0.1")})
         c.run("workspace add pkga")
-        c.run("workspace add pkgb --product")
-        c.run("workspace info --format=json")
-        assert json.loads(c.stdout)["products"] == ["pkgb"]
+        c.run("workspace add pkgb")
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                                             "EditableBuild")})
-        assert "pkga/0.1: WARN: BUILD PKGA!" in c.out
+                                             "Editable")})
+        assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
         assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
 
         # It is also possible to build a specific package by path
         # equivalent to ``conan build <path> --build=editable``
         # This can be done even if it is not a product
-        c.run("workspace build pkgc", assert_error=True)
-        assert "ERROR: Product 'pkgc' not defined in the workspace as editable" in c.out
-        c.run("workspace build pkgb")
+        c.run("workspace build --pkg=pkgc/*", assert_error=True)
+        assert "ERROR: There are no selected packages defined in the workspace" in c.out
+        c.run("workspace build --pkg=pkgb/*")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                                             "EditableBuild")})
-        assert "pkga/0.1: WARN: BUILD PKGA!" in c.out
+                                             "Editable")})
+        assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
         assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
 
-        c.run("workspace build pkga")
+        c.run("workspace build --pkg=pkga/*")
         assert "conanfile.py (pkga/0.1): Calling build()" in c.out
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
 
@@ -430,7 +403,7 @@ class TestWorkspaceBuild:
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
         c.run("workspace build", assert_error=True)
-        assert "There are no products defined in the workspace, can't build" in c.out
+        assert "ERROR: There are no selected packages defined in the workspace" in c.out
 
 
 class TestNew:
@@ -539,7 +512,7 @@ class TestMeta:
         c.run("workspace add liba")
         c.run("workspace add libb")
         c.run("workspace add libc")
-        for arg in ("libb", "libb liba"):
+        for arg in ("--pkg=libb", "--pkg=libb --pkg=liba"):
             c.run(f"workspace install {arg} -g CMakeDeps -of=build")
             assert "dep1/0.1" in c.out
             assert "dep2/0.1" not in c.out
@@ -580,9 +553,9 @@ class TestClean:
         pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
         c.save({"pkga/conanfile.py": pkga ,
                 "pkgb/conanfile.py": pkgb,
-                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1")})
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")})
         c.run("workspace add pkga -of=build/pkga")
-        c.run("workspace add pkgb -of=build/pkgb --product")
+        c.run("workspace add pkgb -of=build/pkgb")
         c.run("workspace add pkgc")
         c.run("workspace build")
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
@@ -622,11 +595,9 @@ def test_relative_paths():
     # cd mywks
     with c.chdir("mywks"):
         c.run("workspace add ../liba")
-        c.run("workspace add ../app1 --product")
+        c.run("workspace add ../app1")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            products
-              ../app1
             packages
               app1/0.1
                 path: ../app1
@@ -639,11 +610,9 @@ def test_relative_paths():
     # cd otherwks
     with c.chdir("otherwks"):
         c.run("workspace add ../other/libb")
-        c.run("workspace add ../other/app2 --product")
+        c.run("workspace add ../other/app2")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            products
-              ../other/app2
             packages
               app2/0.1
                 path: ../other/app2
@@ -705,7 +674,7 @@ class TestCreate:
                 })
         c.run("workspace add pkga")
         c.run("workspace add pkgb")
-        c.run("workspace add pkgc --product")
+        c.run("workspace add pkgc")
         c.run("workspace create")
         print(c.out)
         assert "pkga/0.1 (test package): Running test()" in c.out
@@ -736,7 +705,7 @@ class TestCreate:
                 "app/conanfile.py": app})
         c.run("workspace init .")
         c.run("workspace add protobuf")
-        c.run("workspace add app --product")
+        c.run("workspace add app")
 
         c.run("workspace create -s:b os=Linux -s:h os=Windows")
 
