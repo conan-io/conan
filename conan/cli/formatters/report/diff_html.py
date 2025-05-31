@@ -98,7 +98,7 @@ diff_html = r"""
                 <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
                 <ul>
                     {%- for filename in content.keys() %}
-                        <li><a href="#diff_{{- safe_filename(filename) -}}_sidebar" class="side-link">{{ replace_cache_paths(filename) }}</a></li>
+                        <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ replace_cache_paths(filename) }}</a></li>
                     {%- endfor %}
                 </ul>
             </div>
