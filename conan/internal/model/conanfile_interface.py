@@ -18,6 +18,10 @@ class ConanFileInterface:
         The conanfile is a different entity per node, and conanfile equality is identity
         :type other: ConanFileInterface
         """
+        if self._conanfile.pref is not None and other._conanfile.pref is not None:
+            return self._conanfile.pref == other._conanfile.pref
+        if self._conanfile.ref is not None and other._conanfile.ref is not None:
+            return self._conanfile.ref == other._conanfile.ref
         return self._conanfile == other._conanfile
 
     def __hash__(self):
