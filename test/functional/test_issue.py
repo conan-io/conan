@@ -39,10 +39,10 @@ def test_issue():
              "pkg1/src/pkg1.cpp": pkg1_source,
              "consumer/conanfile.py": GenConanfile("consumer").with_requires("pkg3/1.1", "pkg1/1.0")})
 
-    tc.run("create pkg4")
-    tc.run("create pkg3_0")
-    tc.run("create pkg3_1")
-    tc.run("create pkg2")
+    tc.run("create pkg4 -tf=''")
+    tc.run("create pkg3_0 -tf=''")
+    tc.run("create pkg3_1 -tf=''")
+    tc.run("create pkg2 -tf=''")
     tc.run("export pkg1")
     # This used to crash
     tc.run("install consumer --build=missing")
