@@ -5,13 +5,13 @@ import textwrap
 
 from conan.api.output import ConanOutput, Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars
-from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
+from conan.tools.cmake.toolchain.blocks import GenericSystemBlock, CompilersBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
-from conans.client.graph.graph import RECIPE_CONSUMER
+from conan.internal.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
@@ -157,6 +157,18 @@ class _CMakePresets:
                     "value": arch,
                     "strategy": "external"
                 }
+
+        # Second attempt at https://github.com/conan-io/conan/issues/13136
+        # for cmake-tools to activate environment. Similar to CompilersBlock
+        # Only for cl/clang-cl, other compilers such clang can be breaking (Android)
+        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={})
+        compiler = conanfile.settings.get_safe("compiler")
+        default_cl = "cl" if compiler == "msvc" and "Ninja" in str(generator) else None
+        for lang in ("c", "cpp"):
+            comp = compilers_by_conf.get(lang, default_cl)
+            if comp and os.path.basename(comp) in ("cl", "cl.exe", "clang-cl", "clang-cl.exe"):
+                lang = {"c": "C", "cpp": "CXX"}[lang]
+                ret["cacheVariables"][f"CMAKE_{lang}_COMPILER"] = comp.replace("\\", "/")
 
         ret["toolchainFile"] = toolchain_file
         if conanfile.build_folder:

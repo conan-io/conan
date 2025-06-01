@@ -34,21 +34,25 @@ else:
 DEFAULT_CONAN_HOME = ".conan2"
 
 
-def get_conan_user_home():
+def find_file_walk_up(start, filename, end=None):
+    path = Path(start)
+    end = Path(end) if end else None
+    while True:
+        file = path / filename
+        if file.is_file():
+            return file
+        if len(path.parts) == 1:  # finish at '/'
+            break
+        if end and path == end:
+            break
+        path = path.parent
+    return None
 
-    def _find_conanrc_file():
-        path = Path(os.getcwd())
-        while True:
-            conanrc_file = path / ".conanrc"
-            if conanrc_file.is_file():
-                return conanrc_file
-            if len(path.parts) == 1:  # finish at '/'
-                break
-            path = path.parent
+def get_conan_user_home():
 
     def _user_home_from_conanrc_file():
         try:
-            conanrc_path = _find_conanrc_file()
+            conanrc_path = find_file_walk_up(os.getcwd(), ".conanrc")
 
             with open(conanrc_path) as conanrc_file:
                 values = {k: str(v) for k, v in

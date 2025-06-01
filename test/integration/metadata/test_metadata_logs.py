@@ -5,7 +5,7 @@ import pytest
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 class TestRecipeMetadataLogs:

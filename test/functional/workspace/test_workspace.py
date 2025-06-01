@@ -1,11 +1,11 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.utils.tools import TestClient
-
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 

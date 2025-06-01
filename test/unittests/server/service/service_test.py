@@ -14,7 +14,7 @@ from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, save_files
+from conan.internal.util.files import save, save_files
 
 
 DEFAULT_REVISION = "1234"

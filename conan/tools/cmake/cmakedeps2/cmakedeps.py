@@ -4,7 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.api.output import Color
+from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
@@ -14,7 +14,7 @@ from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
 from conan.tools.files import save
-from conans.util.files import load
+from conan.internal.util.files import load
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
@@ -59,6 +59,12 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
+            if cmake_find_mode == FIND_MODE_MODULE:
+                ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
+                                                         f"module find mode in {dep}.\n"
+                                                         f"Config mode will be used regardless.",
+                                                         # Should this be risk?
+                                                         warn_tag="deprecated")
 
             if require.direct:
                 direct_deps.append((require, dep))
@@ -174,6 +180,7 @@ class _PathGenerator:
             "libdirs": "CMAKE_LIBRARY_PATH",
             "includedirs": "CMAKE_INCLUDE_PATH",
             "frameworkdirs": "CMAKE_FRAMEWORK_PATH",
+            "builddirs": "CMAKE_MODULE_PATH"
         }
         for req, dep in requirements:
             cppinfo = dep.cpp_info.aggregated_components()
@@ -210,6 +217,10 @@ class _PathGenerator:
         {% if cmake_framework_path %}
         list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
         {% endif %}
+        # Definition of CMAKE_MODULE_PATH to be able to include(module)
+        {% if cmake_module_path %}
+        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
+        {% endif %}
         """)
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.direct_build
@@ -239,7 +250,8 @@ class _PathGenerator:
                     f = self._cmakedeps.get_cmake_filename(dep)
                     for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = pkg_folder
+                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
+                                                                  "${CMAKE_CURRENT_LIST_DIR}")
                 continue
 
             # If CMakeDeps generated, the folder is this one
@@ -251,13 +263,15 @@ class _PathGenerator:
         cmake_library_path = self._get_cmake_paths(host_test_reqs, "libdirs")
         cmake_include_path = self._get_cmake_paths(host_test_reqs, "includedirs")
         cmake_framework_path = self._get_cmake_paths(host_test_reqs, "frameworkdirs")
+        cmake_module_path = self._get_cmake_paths(all_reqs, "builddirs")
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
                    "cmake_program_path": _join_paths(self._conanfile, cmake_program_path),
                    "cmake_library_path": _join_paths(self._conanfile, cmake_library_path),
                    "cmake_include_path": _join_paths(self._conanfile, cmake_include_path),
                    "cmake_framework_path": _join_paths(self._conanfile, cmake_framework_path),
-        }
+                   "cmake_module_path": _join_paths(self._conanfile, cmake_module_path)
+                   }
         content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 
@@ -285,6 +299,7 @@ class _PathGenerator:
             runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
             for d in runtime_dirs:
                 d = d.replace("\\", "/")
+                d = relativize_path(d, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                 existing = host_runtime_dirs.setdefault(config, [])
                 if d not in existing:
                     existing.append(d)

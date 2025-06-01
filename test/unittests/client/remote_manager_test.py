@@ -4,7 +4,7 @@ import unittest
 from conan.internal.api.uploader import compress_files
 from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class RemoteManagerTest(unittest.TestCase):

@@ -224,6 +224,8 @@ def _matrix_c_interface_client():
         """)
     # Having here the config.cmake code to be able to manually check what CMake generates
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(matrix C CXX)
         add_library(matrix STATIC src/matrix.cpp)

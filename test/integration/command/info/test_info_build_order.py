@@ -804,9 +804,8 @@ def test_multi_configuration_profile_args():
 
 def test_build_order_space_in_options():
     tc = TestClient(light=True)
-    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
-                .with_option("flags", ["ANY", None])
-                .with_option("extras", ["ANY", None]),
+    tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_option("flags", ["ANY", None])
+                                                           .with_option("extras", ["ANY", None]),
              "conanfile.txt": textwrap.dedent("""
              [requires]
              dep/1.0
@@ -879,3 +878,25 @@ def test_build_order_build_context_compatible():
                                 "bar/1.0": ["5e4ffcc1ff33697a4ee96f66f0d2228ec458f25c", "Build"]})
         c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"]},
                                build=True)
+
+
+def test_info_build_order_editable():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("editable add dep")
+    c.run("export pkg")
+    
+    c.run("graph build-order consumer --build=missing --build=editable -f=json --order-by=recipe")
+    bo_json = json.loads(c.stdout)
+    pkg = bo_json["order"][0][0]["packages"][0][0]
+    assert pkg["binary"] == "EditableBuild"
+    assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"
+
+    c.run("graph build-order consumer --build=missing --build=editable -f=json "
+          "--order-by=configuration")
+    bo_json = json.loads(c.stdout)
+    pkg = bo_json["order"][0][0]
+    assert pkg["binary"] == "EditableBuild"
+    assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"

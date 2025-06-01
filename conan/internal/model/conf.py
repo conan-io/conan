@@ -7,7 +7,9 @@ import fnmatch
 from collections import OrderedDict
 
 from conan.errors import ConanException
+from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
+from conan.internal.model.settings import SettingsItem
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -99,6 +101,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
@@ -155,7 +158,7 @@ class _ConfVarPlaceHolder:
     pass
 
 
-class _ConfValue(object):
+class _ConfValue:
 
     def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
@@ -163,6 +166,8 @@ class _ConfValue(object):
         self._name = name
         self._value = value
         self._value_type = type(value)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
 
@@ -220,6 +225,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value.extend(value)
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.append(value)
 
     def prepend(self, value):
@@ -229,6 +236,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value = value + self._value
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.insert(0, value)
 
     def compose_conf_value(self, other):
@@ -255,6 +264,9 @@ class _ConfValue(object):
                 new_value = other._value.copy()
                 new_value.update(self._value)
                 self._value = new_value
+        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
+            # They might be different kind of numbers, so skip the check below
+            pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type

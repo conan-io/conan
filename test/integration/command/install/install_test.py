@@ -8,7 +8,7 @@ import pytest
 
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, save
+from conan.internal.util.files import mkdir, save
 
 
 @pytest.fixture()

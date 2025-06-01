@@ -9,7 +9,7 @@ from conan.errors import ConanException
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
 from conan.internal.paths import DATA_YML
-from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
+from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
 def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, user, channel,

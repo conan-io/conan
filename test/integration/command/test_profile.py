@@ -2,6 +2,9 @@ import json
 import os
 import textwrap
 
+import pytest
+
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -151,3 +154,18 @@ def test_profile_show_json():
     # Check that tool_requires are properly serialized in json format
     # https://github.com/conan-io/conan/issues/15183
     assert profile["build"]["tool_requires"] == {'mytool/*': ["mytool/1.0"]}
+
+
+@pytest.mark.parametrize("new_global", [None, 0, 1, True, False, ""])
+def test_settings_serialize(new_global):
+    tc = TestClient(light=True)
+    settings_user = "new_global: [null, 0, 1, True, False, '']"
+    tc.save_home({"settings_user.yml": settings_user})
+    tc.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("new_global")})
+
+    s = f"-s new_global={new_global}" if new_global is not None else ""
+    tc.run(f"create . {s}")
+    if new_global is None:
+        assert "settings: new_global=" not in tc.out
+    else:
+        assert f"settings: new_global={new_global}" in tc.out

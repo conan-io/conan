@@ -45,6 +45,7 @@ class Cli:
             Cli._builtin_commands = self._commands.copy()
         else:
             self._commands = Cli._builtin_commands.copy()
+            self._groups = defaultdict(list)
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 

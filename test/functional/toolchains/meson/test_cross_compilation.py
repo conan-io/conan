@@ -9,7 +9,7 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.conftest import tools_locations
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
-from conans.util.runners import conan_run
+from conan.internal.util.runners import conan_run
 
 _conanfile_py = textwrap.dedent("""
 from conan import ConanFile
@@ -64,6 +64,8 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', None, None),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', '10.11', None),
+    ('armv8', 'visionOS', '1.0', 'xros'),
+    ('armv8', 'visionOS', '1.0', 'xrsimulator')
 ])
 def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     profile = textwrap.dedent("""

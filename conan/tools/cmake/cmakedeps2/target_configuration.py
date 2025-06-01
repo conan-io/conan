@@ -5,8 +5,9 @@ import jinja2
 from jinja2 import Template
 
 from conan.errors import ConanException
+from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
-from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 
 class TargetConfigurationTemplate2:
@@ -80,7 +81,7 @@ class TargetConfigurationTemplate2:
                         assert required_pkg == required_comp
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
-                        link = pkg_type is not PackageType.SHARED 
+                        link = pkg_type is not PackageType.SHARED
                     else:
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
@@ -120,13 +121,17 @@ class TargetConfigurationTemplate2:
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake and relativization
-            include_dirs = ";".join(i.replace("\\", "/") for i in aggregated_cppinfo.includedirs)
+            # FIXME: Proper escaping of paths for CMake
+            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
+            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in incdirs]
+            include_dirs = ";".join(incdirs)
             definitions = ""
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
-        # TODO: Missing find_modes
+        pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
+                                     "${CMAKE_CURRENT_LIST_DIR}")
         dependencies = self._get_dependencies()
         return {"dependencies": dependencies,
                 "pkg_folder": pkg_folder,
@@ -340,13 +345,13 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
         {% endif %}
 
         {% if lib_info.get("link_languages") %}
@@ -364,6 +369,8 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
                               "{{lib_info["location"]}}")
+        {% elif lib_info.get("type") == "INTERFACE" %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         {% endif %}
         {% if lib_info.get("link_location") %}
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}

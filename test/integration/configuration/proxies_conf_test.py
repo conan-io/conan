@@ -5,7 +5,7 @@ from requests import Response
 
 from conan.test.utils.tools import TestClient, TestRequester
 from conan.test.utils.env import environment_update
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestProxiesConfTest:

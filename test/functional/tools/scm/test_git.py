@@ -10,7 +10,7 @@ from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir, save_files, save
+from conan.internal.util.files import rmdir, save_files, save
 
 
 @pytest.mark.tool("git")
@@ -726,6 +726,64 @@ class TestGitBasicSCMFlow:
         c2.run("install --requires=pkg/0.1@ --build=pkg*")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
+
+    def test_fetch_commit(self):
+        """ Testing fetch commit
+        """
+        url = git_create_bare_repo()
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone "file://{}" .'.format(url))
+        c.save({"conanfile.py": self.conanfile_scm,
+                "src/myfile.h": "myheader!",
+                "CMakeLists.txt": "mycmake"})
+        c.run_command("git checkout -b mybranch")
+        git_add_changes_commit(folder=c.current_folder)
+        c.run_command("git push --set-upstream origin mybranch")
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+        c.run("upload * -c -r=default")
+        # Create an orphan commit by removing the branch
+        c.run_command("git push origin --delete mybranch")
+        rmdir(c.current_folder)  # Remove current folder to make sure things are not used from here
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install --requires=pkg/0.1@ --build=pkg*")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
+        assert "pkg/0.1: MYFILE: myheader!" in c2.out
+
+    def test_grafted_commit(self):
+        # https://github.com/conan-io/conan/issues/18295
+        folder = os.path.join(temp_folder(), "myrepo")
+        conanfile = textwrap.dedent("""\
+           from conan import ConanFile
+           from conan.tools.scm import Git
+
+           class ConanRecipe(ConanFile):
+               name = "conan-grafted"
+               version = "1.2.3"
+
+               def export(self):
+                   git = Git(self, self.recipe_folder)
+                   git.coordinates_to_conandata(repository=True)
+           """)
+        url, commit = create_local_git_repo(files={"conanfile.py": conanfile}, folder=folder)
+
+        c = TestClient()
+        c.save({"README.txt": "my readme!"}, path=folder)
+        c.run_command("git checkout -b mybranch", cwd=folder)
+        orphan_commit = git_add_changes_commit(folder)
+        c.run_command(f"git checkout {orphan_commit}", cwd=folder)
+        c.run_command("git branch -D mybranch", cwd=folder)
+
+        # Now the client does the clone and export
+        c.run_command(f'git clone "file://{url}" . ')
+        c.run_command("git --no-pager log --decorate")
+        assert "grafted" not in c.out
+        c.run("export .")
+        c.run_command("git --no-pager log --decorate")
+        assert "grafted" not in c.out
 
 
 @pytest.mark.tool("git")

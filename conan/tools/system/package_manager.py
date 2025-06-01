@@ -1,7 +1,7 @@
 import platform
 
 from conan.tools.build import cross_building
-from conans.client.graph.graph import CONTEXT_BUILD
+from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
 
 

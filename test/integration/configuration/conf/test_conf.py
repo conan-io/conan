@@ -9,7 +9,7 @@ from conan import conan_version
 from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 from conan.test.utils.tools import TestClient
 
 

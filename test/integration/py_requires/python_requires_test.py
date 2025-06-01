@@ -669,6 +669,54 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("mypkg/myversion: Pkg1 build: mypkg:myversion", client.out)
         self.assertIn("mypkg/myversion: Pkg1 package: mypkg:myversion", client.out)
 
+
+    def test_reuse_name_version_override(self):
+        client = TestClient(light=True)
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import load
+            import os
+
+            class Source(object):
+                def set_name(self):
+                    self.name = load(self, "name.txt")
+
+                def set_version(self):
+                    self.version = load(self, "version.txt")
+
+            class MyConanfileBase(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class MyConanfileBase(ConanFile):
+                python_requires = "tool/0.1@user/channel"
+                python_requires_extend = "tool.Source"
+
+                def set_version(self):
+                    super().set_version()
+                    self.version = self.version + "2"
+
+                def source(self):
+                    self.output.info("Pkg1 source: %s:%s" % (self.name, self.version))
+                def build(self):
+                    self.output.info("Pkg1 build: %s:%s" % (self.name, self.version))
+                def package(self):
+                    self.output.info("Pkg1 package: %s:%s" % (self.name, self.version))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "name.txt": "mypkg",
+                     "version.txt": "myversion"})
+        client.run("export .")
+        self.assertIn("mypkg/myversion2: Exported", client.out)
+        client.run("create .")
+        self.assertIn("mypkg/myversion2: Pkg1 source: mypkg:myversion2", client.out)
+        self.assertIn("mypkg/myversion2: Pkg1 build: mypkg:myversion2", client.out)
+        self.assertIn("mypkg/myversion2: Pkg1 package: mypkg:myversion2", client.out)
+
     def test_reuse_export_sources(self):
         client = TestClient(light=True)
         conanfile = textwrap.dedent("""
@@ -1077,6 +1125,8 @@ class TestTestPackagePythonRequire:
         """
 
         c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("mytool", "0.1")})
+        c.run("create .")
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             def mycommon():
@@ -1097,9 +1147,16 @@ class TestTestPackagePythonRequire:
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
         assert "common/0.1 (test package): 42!!!" in c.out
 
         c.run("test test_package common/0.1")
+        assert "WARN: deprecated: test_package/conanfile.py" not in c.out
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        # https://github.com/conan-io/conan/issues/18224
+        c.save({"myprofile": "[tool_requires]\nmytool/0.1"})
+        c.run("create . -pr=myprofile")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):

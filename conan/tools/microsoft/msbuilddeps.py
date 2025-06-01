@@ -10,7 +10,8 @@ from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
-from conans.util.files import load, save
+from conan.tools.microsoft.visual import msvc_platform_from_arch
+from conan.internal.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
@@ -94,18 +95,17 @@ class MSBuildDeps:
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        #: Defines the build type. By default, ``settings.build_type``.
+        #: Defines the build type. By default, the value of ``settings.build_type``.
         self.configuration = conanfile.settings.build_type
-        #: Defines the configuration key used to conditionate on which property sheet to import.
+        #: Defines the configuration key used to conditionally select which property sheet to
+        #: import (defaults to ``"Configuration"``).
         self.configuration_key = "Configuration"
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
         #: Platform name, e.g., ``Win32`` if ``settings.arch == "x86"``.
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
-        #: Defines the platform key used to conditionate on which property sheet to import.
+        self.platform = msvc_platform_from_arch(str(conanfile.settings.arch))
+        #: Defines the platform key used to conditionally select which property sheet to
+        #: import (defaults to ``"Platform"``).
         self.platform_key = "Platform"
         ca_exclude = "tools.microsoft.msbuilddeps:exclude_code_analysis"
         #: List of packages names patterns to add Visual Studio ``CAExcludePath`` property

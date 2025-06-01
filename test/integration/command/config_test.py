@@ -163,6 +163,24 @@ def test_config_install_conanignore_ignore_all_allow_specific_workflow():
     _assert_config_exists("important_file")
 
 
+@pytest.mark.parametrize("has_conanignore", [True, False])
+@pytest.mark.parametrize("folder", [None, "myfolder", "myfolder/subfolder"])
+def test_config_install_conanignore_walk_directories(has_conanignore, folder):
+    tc = TestClient(light=True)
+    if has_conanignore:
+        conanignore = "*"
+        tc.save({"config_folder/.conanignore": conanignore})
+    tc.save({"config_folder/myfolder/subfolder/item.py": ""})
+
+    folder_arg = f"-sf {folder} -tf {folder}" if folder else ""
+
+    tc.run(f"config install config_folder {folder_arg}")
+    if has_conanignore:
+        assert not os.path.exists(os.path.join(tc.cache_folder, "myfolder", "subfolder", "item.py"))
+    else:
+        assert os.path.exists(os.path.join(tc.cache_folder, "myfolder", "subfolder", "item.py"))
+
+
 def test_config_show():
     globalconf = textwrap.dedent("""
     tools.build:jobs=42

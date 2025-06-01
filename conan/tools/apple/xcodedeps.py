@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.model.dependencies import get_transitive_requires
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\

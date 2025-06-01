@@ -10,7 +10,7 @@ from mock import mock
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir, load
+from conan.internal.util.files import rmdir, load
 
 
 def test_cross_build():
@@ -1747,3 +1747,27 @@ def test_declared_stdlib_and_passed():
     client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
     tc = client.load("conan_toolchain.cmake")
     assert 'string(APPEND CONAN_CXX_FLAGS " -library=stdcxx4")' in tc
+
+
+def test_cmake_presets_compiler():
+    profile = textwrap.dedent(r"""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=dynamic
+        [conf]
+        tools.build:compiler_executables={"c": "cl", "cpp": "cl.exe"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    # https://github.com/microsoft/vscode-cmake-tools/blob/a1ceda25ea93fc0060324de15970a8baa69addf6/src/presets/preset.ts#L1095C23-L1095C35
+    assert cache_variables["CMAKE_C_COMPILER"] == "cl"
+    assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
