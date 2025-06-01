@@ -1,5 +1,4 @@
-from conan.internal import REVISIONS, FIND_PACKAGEIDS
-from conan.internal.errors import NotCapableException
+from conan.internal import REVISIONS
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
 
@@ -33,7 +32,7 @@ class RestApiClient:
         revisions = self._capable(REVISIONS)
 
         if not revisions:
-            raise NotCapableException("The remote doesn't support revisions. "
+            raise ConanException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
@@ -69,8 +68,8 @@ class RestApiClient:
     def search(self, pattern=None, ignorecase=True):
         return self._get_api().search(pattern, ignorecase)
 
-    def search_packages(self, reference, list_only=False):
-        return self._get_api().search_packages(reference, list_only)
+    def search_packages(self, reference):
+        return self._get_api().search_packages(reference)
 
     def remove_recipe(self, ref):
         return self._get_api().remove_recipe(ref)
