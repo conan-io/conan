@@ -15,7 +15,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
 from conans.client.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, \
     NotFoundException, \
-    PackageNotFoundException, NotCapableException
+    PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import PkgReference

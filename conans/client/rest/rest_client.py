@@ -98,10 +98,3 @@ class RestApiClient:
 
     def get_package_revision_reference(self, pref):
         return self._get_api().get_package_revision_reference(pref)
-
-    def find_matching_package_ids(self, ref, collected_ids):
-        findable = self._capable(FIND_PACKAGEIDS)
-        if not findable:
-            raise NotCapableException("The remote doesn't support finding package ids.")
-        else:
-            return self._get_api().find_matching_package_ids(ref, collected_ids)
