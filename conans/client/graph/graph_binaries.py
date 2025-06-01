@@ -13,8 +13,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
-from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, \
-    NotFoundException, \
+from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
