@@ -68,8 +68,8 @@ class RestApiClient:
     def search(self, pattern=None, ignorecase=True):
         return self._get_api().search(pattern, ignorecase)
 
-    def search_packages(self, reference):
-        return self._get_api().search_packages(reference)
+    def search_packages(self, reference, list_only=False):
+        return self._get_api().search_packages(reference, list_only)
 
     def remove_recipe(self, ref):
         return self._get_api().remove_recipe(ref)
