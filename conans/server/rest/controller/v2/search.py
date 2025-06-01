@@ -29,6 +29,8 @@ class SearchControllerV2(object):
         def search_packages(name, version, username, channel, auth_user, revision=None):
             # query is no longer server side
             list_only = request.params.get("list_only", False)
+            if isinstance(list_only, str):
+                list_only = False if 'false' == list_only.lower() else True
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
             ref = RecipeReference(name, version, username, channel, revision)
             info = search_service.search_packages(ref, list_only)
