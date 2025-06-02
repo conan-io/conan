@@ -68,8 +68,8 @@ class TestConflictDiamondTest:
             c.assert_listed_require({f"math/{v}": "Cache"})
 
         c.run("install --requires=engine/1.0  --requires=ai/1.0", assert_error=True)
-        assert "Conflict between math/1.0.1 and math/1.0 in the graph"
-        assert "Conflict originates from ai/1.0"
+        assert "Conflict between math/1.0.1 and math/1.0 in the graph" in c.out
+        assert "Conflict originates from ai/1.0" in c.out
 
 
 @pytest.mark.parametrize("version_range", [True, False])
