@@ -103,16 +103,13 @@ def test_conflict_user_order():
 
 def test_header_only_conflict_when_not_visible():
     tc = TestClient(light=True)
-    tc.save({"pkg3/conanfile.py": GenConanfile("pkg3")
-                .with_package_type("header-library"),
+    tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
              # pkg existence is necessary, without it a conflict is found
              "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
-                .with_package_type("header-library")
                 # Both this and the requires in the info need to be 1.1 not to trigger the conflict
                 # Using 3.0 in both generates a disconnected graph
                 .with_requirement("pkg3/1.1"),
              "pkg1/conanfile.py": GenConanfile("pkg1", "1.0")
-                .with_package_type("static-library")
                 # The order here is important, conan reports a conflict with the inverse order
                 # The visible=False here is also important, otherwise the conflict is detected
                 .with_requirement("pkg3/1.0", visible=False)
@@ -122,5 +119,5 @@ def test_header_only_conflict_when_not_visible():
     tc.run("export pkg2")
     # Creating this pkg1 does generate a conflict
     tc.run("export pkg1")
-    tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 -f=html", assert_error=True)
+    tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0", assert_error=True)
     assert "Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
