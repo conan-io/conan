@@ -451,7 +451,7 @@ class GraphBinariesAnalyzer:
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     # Ensure that same prefs means same conanfile
-                    n.conanfile = pref_nodes[0].conanfile
+                    # n.conanfile = pref_nodes[0].conanfile
                     _evaluate_single(n)
 
         # Last level is always necessarily a consumer or a virtual
