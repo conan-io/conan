@@ -144,8 +144,6 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     for level in order["order"]:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
-
-            # Compute args to forward to the create command
             for package_level in elem["packages"]:
                 for package in package_level:
                     if package["binary"] == "Build":  # Build external to Workspace
@@ -153,16 +151,13 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
                         ConanOutput().box(f"Workspace building external {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
                         conan_api.command.run(cmd)
-                        continue
-
-                    if package["binary"] != "EditableBuild":
-                        continue
-                    path = all_editables[ref]["path"]
-                    # TODO: Missing --lockfile-overrides arg here
-                    cmd = f'build "{path}" {profile_args}'
-                    ConanOutput().box(f"Workspace building {ref}")
-                    ConanOutput().info(f"Build command: {cmd}\n")
-                    conan_api.command.run(cmd)
+                    elif package["binary"] == "EditableBuild":
+                        path = all_editables[ref]["path"]
+                        # TODO: Missing --lockfile-overrides arg here
+                        cmd = f'build "{path}" {profile_args}'
+                        ConanOutput().box(f"Workspace building {ref}")
+                        ConanOutput().info(f"Build command: {cmd}\n")
+                        conan_api.command.run(cmd)
 
 
 @conan_subcommand()
@@ -259,30 +254,41 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().box("Exporting workspace packages recipes to Conan cache")
     exported_refs = conan_api.workspace.export()
 
-
     build_mode = args.build if args.build else []
     build_mode.extend(f"missing:{r}" for r in exported_refs)
 
+    all_packages = conan_api.workspace.editable_packages
     packages = conan_api.workspace.select_packages(args.pkg)
     conan_api.workspace.enable(False)
 
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, build_mode,
                                                     lockfile, remotes, args, update=args.update)
 
-    ConanOutput().box("Building binary packages")
-    order = install_order.install_order()
+    ConanOutput().box("Workspace creating each package")
+    order = install_order.install_build_order()
 
-    profile_args = install_order.install_build_order()["profiles"][None]["args"]
-    for level in order:
+    profile_args = ProfileArgs.from_args(args)
+    for level in order["order"]:
         for elem in level:
-            path = packages[elem.ref]["path"]
-            # Compute args to forward to the create command
-            for package_level in elem._install_order():  # noqa
+            ref = RecipeReference.loads(elem["ref"])
+            for package_level in elem["packages"]:
                 for package in package_level:
-                    build = "--build-require" if package.context == "build" else ""
-                    cmd = f'create "{path}" {profile_args} {build}'
-                    ConanOutput().box(f"Workspace create {cmd}")
-                    conan_api.command.run(cmd)
+                    if package["binary"] != "Build":
+                        continue
+
+                    if ref not in all_packages:
+                        # Build external to Workspace
+                        cmd = f'install {package["build_args"]} {profile_args}'
+                        ConanOutput().box(f"Workspace building external {ref}")
+                        ConanOutput().info(f"Build command: {cmd}\n")
+                        conan_api.command.run(cmd)
+                    else:  # Package in workspace
+                        path = packages[ref]["path"]
+                        # TODO: Missing --lockfile-overrides arg here
+                        build = "--build-require" if package["context"] == "build" else ""
+                        cmd = f'create "{path}" {profile_args} {build}'
+                        ConanOutput().box(f"Workspace create {cmd}")
+                        conan_api.command.run(cmd)
 
 
 @conan_command(group="Consumer")
