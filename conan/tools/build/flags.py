@@ -66,6 +66,10 @@ def architecture_flag(conanfile):
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
+
+    if the_os == "Emscripten" and arch == "wasm64":
+        return "-sMEMORY64=1"
+
     return ""
 
 
