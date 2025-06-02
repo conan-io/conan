@@ -453,15 +453,17 @@ class TestClient:
             return None
 
     def open(self, filename):
-        # CI is set in our GitHub Actions, so we don't open files there
-        if not os.environ.get("CI", False):
-            current_path = os.path.join(self.current_folder, filename)
-            if platform.system() == "Windows":
-                os.startfile(os.path.normpath(current_path))
-            elif platform.system() == "Darwin":
-                subprocess.call(["open", current_path])
-            else:
-                subprocess.call(["xdg-open", current_path])
+        # CI is set by default by GitHub Actions
+        if os.environ.get("CI", False):
+            assert False, "TestClient::open should not be used in CI"
+
+        current_path = os.path.join(self.current_folder, filename)
+        if platform.system() == "Windows":
+            os.startfile(os.path.normpath(current_path))
+        elif platform.system() == "Darwin":
+            subprocess.call(["open", current_path])
+        else:
+            subprocess.call(["xdg-open", current_path])
 
     def open_home(self, filename):
         return self.open(os.path.join(self.cache_folder, filename))
