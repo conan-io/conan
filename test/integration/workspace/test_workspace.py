@@ -380,7 +380,7 @@ class TestWorkspaceBuild:
         c.run("workspace add pkgb")
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                                             "Editable")})
+                                             "EditableBuild")})
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
         assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
 
@@ -391,7 +391,7 @@ class TestWorkspaceBuild:
         assert "ERROR: There are no selected packages defined in the workspace" in c.out
         c.run("workspace build --pkg=pkgb/*")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                                             "Editable")})
+                                             "EditableBuild")})
         assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
         assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
 
@@ -417,8 +417,11 @@ class TestWorkspaceBuild:
         c.run("export mymath")
         c.run("workspace add pkga")
         c.run("workspace add pkgb")
-        c.run("workspace build")
+        c.run("workspace build", assert_error=True)
+        assert "ERROR: Missing prebuilt package for 'mymath/0.1'" in c.out
+        c.run("workspace build --build=missing")
         print(c.out)
+        assert "fsfs" in c.out
 
 
 class TestNew:
