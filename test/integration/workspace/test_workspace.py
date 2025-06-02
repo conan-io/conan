@@ -645,34 +645,66 @@ def test_host_build_require():
     c = TestClient()
     protobuf = textwrap.dedent("""\
         from conan import ConanFile
-        from conan.tools.files import save
+        from conan.tools.files import save, copy
         class Protobuf(ConanFile):
             name = "protobuf"
             version = "0.1"
             settings = "os"
 
             def layout(self):
-                self.folders.build = f"mybuild_folder_{self.settings.os}"
+                self.folders.build = f"mybuild/folder_{self.settings.os}"
+                self.cpp.build.bindirs = ["."]
 
             def build(self):
                 save(self, "myprotobuf.txt", f"MYOS={self.settings.os}!!!")
+
+            def package(self):
+                copy(self, "myprotobuf.txt", src=self.build_folder, dst=self.package_folder)
+
+            def package_info(self):
+                self.cpp_info.bindirs = ["."]
         """)
     app = textwrap.dedent("""\
+        import os
         from conan import ConanFile
+        from conan.tools.files import load
         class Protobuf(ConanFile):
             name = "app"
             version = "0.1"
             requires = "protobuf/0.1"
             tool_requires = "protobuf/0.1"
+
+            def build(self):
+                binhost = self.dependencies.host["protobuf"].cpp_info.bindir
+                binbuild = self.dependencies.build["protobuf"].cpp_info.bindir
+                host = load(self, os.path.join(binhost, "myprotobuf.txt"))
+                build = load(self, os.path.join(binbuild, "myprotobuf.txt"))
+                self.output.info(f"BUILDING WITH BINHOST: {host}")
+                self.output.info(f"BUILDING WITH BINBUILD: {build}")
         """)
     c.save({"protobuf/conanfile.py": protobuf,
             "app/conanfile.py": app})
     c.run("workspace init .")
     c.run("workspace add protobuf")
+    c.run("workspace add app")
     c.run("install app --build=editable -s:b os=Linux -s:h os=Windows")
 
-    assert c.load("protobuf/mybuild_folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
-    assert c.load("protobuf/mybuild_folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"
+    assert c.load("protobuf/mybuild/folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
+    assert c.load("protobuf/mybuild/folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"
+
+    shutil.rmtree(os.path.join(c.current_folder, "protobuf", "mybuild"))
+    assert not os.path.exists(os.path.join(c.current_folder, "protobuf", "mybuild"))
+    c.run("workspace build -s:b os=Linux -s:h os=Windows")
+    assert "conanfile.py (app/0.1): BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
+    assert "conanfile.py (app/0.1): BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
+    assert c.load("protobuf/mybuild/folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
+    assert c.load("protobuf/mybuild/folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"
+
+    shutil.rmtree(os.path.join(c.current_folder, "protobuf", "mybuild"))
+    assert not os.path.exists(os.path.join(c.current_folder, "protobuf", "mybuild"))
+    c.run("workspace create -s:b os=Linux -s:h os=Windows")
+    assert "app/0.1: BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
+    assert "app/0.1: BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
 
 
 class TestCreate:

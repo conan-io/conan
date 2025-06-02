@@ -153,8 +153,9 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
                         conan_api.command.run(cmd)
                     elif package["binary"] == "EditableBuild":
                         path = all_editables[ref]["path"]
+                        build = "--build-require" if package["context"] == "build" else ""
                         # TODO: Missing --lockfile-overrides arg here
-                        cmd = f'build "{path}" {profile_args}'
+                        cmd = f'build "{path}" {profile_args} {build}'
                         ConanOutput().box(f"Workspace building {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
                         conan_api.command.run(cmd)
@@ -287,7 +288,8 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         # TODO: Missing --lockfile-overrides arg here
                         build = "--build-require" if package["context"] == "build" else ""
                         cmd = f'create "{path}" {profile_args} {build}'
-                        ConanOutput().box(f"Workspace create {cmd}")
+                        ConanOutput().box(f"Workspace create {ref}")
+                        ConanOutput().info(f"Conan create command: {cmd}\n")
                         conan_api.command.run(cmd)
 
 
