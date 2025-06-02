@@ -405,6 +405,21 @@ class TestWorkspaceBuild:
         c.run("workspace build", assert_error=True)
         assert "ERROR: There are no selected packages defined in the workspace" in c.out
 
+    def test_build_external_missing(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({"mymath/conanfile.py": GenConanfile("mymath", "0.1").with_build_msg("MyMATH!!"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!")
+                                                                .with_requires("mymath/0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
+               .with_requires("pkga/0.1")})
+        c.run("export mymath")
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace build")
+        print(c.out)
+
 
 class TestNew:
     def test_new(self):
@@ -492,7 +507,7 @@ class TestMeta:
                 "dep/conanfile.py": GenConanfile("dep", "0.1"),
                 "conanws.py": conanfilews})
         c.run("workspace install", assert_error=True)
-        assert "ERROR: This workspace cannot be installed, it doesn't have any editable" in c.out
+        assert "ERROR: There are no selected packages defined in the workspace" in c.out
         c.run("workspace add dep")
         c.run("workspace install", assert_error=True)
         assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out
@@ -512,7 +527,7 @@ class TestMeta:
         c.run("workspace add liba")
         c.run("workspace add libb")
         c.run("workspace add libc")
-        for arg in ("--pkg=libb", "--pkg=libb --pkg=liba"):
+        for arg in ("--pkg=libb/*", "--pkg=libb/* --pkg=liba/*"):
             c.run(f"workspace install {arg} -g CMakeDeps -of=build")
             assert "dep1/0.1" in c.out
             assert "dep2/0.1" not in c.out

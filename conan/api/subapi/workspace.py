@@ -121,17 +121,6 @@ class WorkspaceAPI:
                                                                    v["output_folder"]))
         return editables
 
-    def select_editables(self, paths):
-        # FIXME: Almost repeated to select-packages below
-        filtered_refs = [self.editable_from_path(p) for p in paths or []]
-        editables = self.editable_packages
-        requires = [ref for ref in editables]
-        if filtered_refs:
-            ConanOutput().info(f"Filtering and installing only selected editable packages")
-            requires = [ref for ref in requires if ref in filtered_refs]
-            ConanOutput().info(f"Filtered references: {requires}")
-        return requires
-
     def open(self, require, remotes, cwd=None):
         app = ConanApp(self._conan_api)
         ref = RecipeReference.loads(require)
@@ -233,12 +222,6 @@ class WorkspaceAPI:
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 
-    def editable_from_path(self, path):
-        editables = self._ws.packages()
-        for ref, info in editables.items():
-            if info["path"].replace("\\", "/") == path:
-                return RecipeReference.loads(ref)
-
     def collapse_editables(self, deps_graph, profile_host, profile_build):
         ConanOutput().title("Collapsing workspace editables")
 
@@ -295,6 +278,7 @@ class WorkspaceAPI:
 
 
     def select_packages(self, packages):
+        self._check_ws()
         editable = self.editable_packages
         packages = packages or []
         selected_editables = {}

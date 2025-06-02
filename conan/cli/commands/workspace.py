@@ -2,6 +2,7 @@ import json
 import os
 
 from conan.api.conan_api import ConanAPI
+from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
@@ -11,6 +12,7 @@ from conan.cli.commands.list import print_serial
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conan.internal.graph.install_graph import ProfileArgs
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
@@ -119,32 +121,49 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None,
-                                               partial=args.lockfile_partial, overrides=overrides)
+                                               cwd=None, partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
+
+    buildmode = args.build or []
+    if "editable" not in buildmode:
+        ConanOutput().info("Adding '--build=editable' as build mode")
+    buildmode.append("editable")
 
     all_editables = conan_api.workspace.editable_packages
     packages = conan_api.workspace.select_packages(args.pkg)
     ConanOutput().box("Workspace computing the build order")
-    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, args.build,
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, buildmode,
                                                     lockfile, remotes, args, update=args.update)
 
     ConanOutput().box("Workspace building each package")
-    order = install_order.install_order()
+    order = install_order.install_build_order()
+    print(json.dumps(order, indent=4))
 
-    profile_args = install_order.install_build_order()["profiles"][None]["args"]
-    profile_args = profile_args.replace("\"", "")  # FIXME: Hack
-    for level in order:
+    profile_args = ProfileArgs.from_args(args)
+    for level in order["order"]:
         for elem in level:
-            if elem.node.recipe != "Editable":  # FIXME: Filter
-                continue
-            path = all_editables[elem.ref]["path"]
+            ref = elem["ref"]
+            print("ELEM!!!!!!!!!!!!", ref, elem, type(elem))
+            print(json.dumps(elem, indent=4))
+
             # Compute args to forward to the create command
-            for package_level in elem._install_order():  # noqa
+            for package_level in elem["packages"]:
                 for package in package_level:
-                    cmd = f'build "{path}" {package._build_args() or ""} {profile_args}'
-                    ConanOutput().box(f"Workspace building {elem.ref}")
+                    if package["binary"] == "Build":  # Build external to Workspace
+                        cmd = f'install {package["build_args"]}'
+                        ConanOutput().box(f"Workspace installing external {ref}")
+                        ConanOutput().info(f"Build command: {cmd}\n")
+                        conan_api.command.run(cmd)
+                        continue
+
+                    if package["binary"] != "EditableBuild":
+                        continue
+                    path = all_editables[RecipeReference.loads(ref)]["path"]  # FIXME
+                    # TODO: Missing --lockfile-overrides arg here
+                    cmd = f'build "{path}" {profile_args}'
+                    ConanOutput().box(f"Workspace building {ref}")
                     ConanOutput().info(f"Build command: {cmd}\n")
                     conan_api.command.run(cmd)
 
@@ -176,11 +195,8 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
-    requires = conan_api.workspace.select_editables(args.pkg)
-    if not requires:
-        raise ConanException("This workspace cannot be installed, it doesn't have any editable")
+    requires = conan_api.workspace.select_packages(args.pkg)
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
                                                      profile_host, profile_build, lockfile,
                                                      remotes, args.build, args.update)
@@ -202,7 +218,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand()
-def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Clean the temporary build folders when possible
     """
@@ -260,7 +276,6 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     order = install_order.install_order()
 
     profile_args = install_order.install_build_order()["profiles"][None]["args"]
-    profile_args = profile_args.replace("\"", "")  # FIXME: Hack
     for level in order:
         for elem in level:
             path = packages[elem.ref]["path"]
