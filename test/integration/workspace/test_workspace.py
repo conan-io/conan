@@ -420,8 +420,7 @@ class TestWorkspaceBuild:
         c.run("workspace build", assert_error=True)
         assert "ERROR: Missing prebuilt package for 'mymath/0.1'" in c.out
         c.run("workspace build --build=missing")
-        print(c.out)
-        assert "fsfs" in c.out
+        assert "Workspace building external mymath/0.1" in c.out
 
 
 class TestNew:

@@ -139,28 +139,25 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
 
     ConanOutput().box("Workspace building each package")
     order = install_order.install_build_order()
-    print(json.dumps(order, indent=4))
 
     profile_args = ProfileArgs.from_args(args)
     for level in order["order"]:
         for elem in level:
-            ref = elem["ref"]
-            print("ELEM!!!!!!!!!!!!", ref, elem, type(elem))
-            print(json.dumps(elem, indent=4))
+            ref = RecipeReference.loads(elem["ref"])
 
             # Compute args to forward to the create command
             for package_level in elem["packages"]:
                 for package in package_level:
                     if package["binary"] == "Build":  # Build external to Workspace
-                        cmd = f'install {package["build_args"]}'
-                        ConanOutput().box(f"Workspace installing external {ref}")
+                        cmd = f'install {package["build_args"]} {profile_args}'
+                        ConanOutput().box(f"Workspace building external {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
                         conan_api.command.run(cmd)
                         continue
 
                     if package["binary"] != "EditableBuild":
                         continue
-                    path = all_editables[RecipeReference.loads(ref)]["path"]  # FIXME
+                    path = all_editables[ref]["path"]
                     # TODO: Missing --lockfile-overrides arg here
                     cmd = f'build "{path}" {profile_args}'
                     ConanOutput().box(f"Workspace building {ref}")
