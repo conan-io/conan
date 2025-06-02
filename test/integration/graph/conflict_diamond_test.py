@@ -117,10 +117,10 @@ def test_header_only_conflict_when_not_visible():
                 # The visible=False here is also important, otherwise the conflict is detected
                 .with_requirement("pkg3/1.0", visible=False)
                 .with_requirement("pkg2/1.0")})
-    tc.run("create pkg3 --version=1.0")
-    tc.run("create pkg3 --version=1.1")
-    tc.run("create pkg2")
+    tc.run("export pkg3 --version=1.0")
+    tc.run("export pkg3 --version=1.1")
+    tc.run("export pkg2")
     # Creating this pkg1 does generate a conflict
     tc.run("export pkg1")
-    tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --build=missing", assert_error=True)
+    tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 -f=html", assert_error=True)
     assert "Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
