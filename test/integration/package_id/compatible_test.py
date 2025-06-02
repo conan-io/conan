@@ -725,3 +725,51 @@ def test_compatibility_new_setting_forwards_compat():
     tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
     assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
            f"libc_version=2" in tc.out
+
+
+class TestRemoteCompatibility:
+
+    def test_remote_compatible_package(self):
+        tc = TestClient(default_server_user=True)
+        compiler_settings = textwrap.dedent("""
+        compiler:
+            foo:
+                version: [1]
+                cppstd: [11, 14, 17, 20]""")
+        tc.run("version")
+        compiler_args = "-s compiler=foo -s compiler.version=1"
+        tc.save_home({"settings_user.yml": compiler_settings})
+        compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+        compat = compat.replace("cppstd_possible_values = supported_cppstd(conanfile)",
+                                "cppstd_possible_values = ['11', '14', '17', '20']")
+        tc.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=14")
+        std14_id = tc.created_layout().reference.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
+        std17_id = tc.created_layout().reference.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=20")
+        std20_id = tc.created_layout().reference.package_id
+
+        tc.run(f"upload pkg/0.1:{std20_id} -r=default -c")
+        tc.run(f"upload pkg/0.1:{std14_id} -r=default -c")
+        tc.run(f"upload pkg/0.1:{std17_id} -r=default -c")
+
+        tc.run("remove * -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11")
+        assert f"Found compatible package '{std14_id}'" in tc.out
+
+        tc.run("remove * -c")
+        tc.run(f"remove pkg/0.1:{std17_id} -r=default -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17")
+        assert f"Found compatible package '{std14_id}'" in tc.out
+
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=11")
+        std11_layout = tc.created_layout()
+        std11_id = tc.created_layout().reference.package_id
+        tc.run(f"upload pkg/0.1:{std11_id} -r=default -c")
+        tc.run("remove * -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 -vvv")
+        assert f"Found compatible package '{std11_id}'" in tc.out
+        # A HTTP request is made to the server to search for compatible packages
+        assert f"{std11_layout.reference.ref.revision}/search?list_only=True"

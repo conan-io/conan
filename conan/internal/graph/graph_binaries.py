@@ -168,11 +168,10 @@ class GraphBinariesAnalyzer:
                 return
         if not should_update_reference(conanfile.ref, update):
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
-            collected_ids = list(compatibles.keys())
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
-            found_compatible = self._find_matching_package_ids(node, collected_ids, remotes, update)
+            found_compatible = self._find_matching_package_ids(node, compatibles, remotes, update)
             if found_compatible:
                 node._package_id = found_compatible[0]
                 node.binary = BINARY_DOWNLOAD
@@ -210,9 +209,14 @@ class GraphBinariesAnalyzer:
         if not remotes and should_update_reference(node.ref, update):
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
+        if not results:
+            return None
+
+        id_orders = list(collected_ids.keys())
+        ordered_results = [(id_orders.index(result[0]), result) for result in results]
         # TODO: How to order this, how to handle update. More?
-        results = sorted(results, key=lambda result: collected_ids.index(result[0]))
-        return results[0] if results else None
+        ordered_pair_results = sorted(ordered_results, key=lambda pair: pair[0])
+        return ordered_pair_results[0][1]
 
     def _find_build_compatible_binary(self, node, compatibles):
         original_binary = node.binary
