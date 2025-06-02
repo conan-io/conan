@@ -18,6 +18,25 @@ def test_private_skip():
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
+def test_private_skip_header_only_diamond_no_visible():
+    tc = TestClient(light=True)
+    tc.save({"pkg3/conanfile.py": GenConanfile("pkg3", "1.0"),
+             # pkg existence is necessary, without it a conflict is found
+             "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
+                # Both this and the requires in the info need to be 1.1 not to trigger the conflict
+                # Using 3.0 in both generates a disconnected graph
+                .with_requirement("pkg3/1.0"),
+             "pkg1/conanfile.py": GenConanfile("pkg1", "1.0")
+                # The order here is important
+                .with_requirement("pkg3/1.0", visible=False)
+                .with_requirement("pkg2/1.0")
+             })
+    tc.run("export pkg3")
+    tc.run("export pkg2")
+    # Creating this pkg1 does generate a conflict
+    tc.run("export pkg1")
+    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0 -f=html", redirect_stdout="graph.html")
+    tc.open("graph.html")
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
