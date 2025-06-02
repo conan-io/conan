@@ -422,6 +422,33 @@ class TestWorkspaceBuild:
         c.run("workspace build --build=missing")
         assert "Workspace building external mymath/0.1" in c.out
 
+    def test_build_dynamic_name_version(self):
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class MyConan(ConanFile):
+                def build(self):
+                    self.output.info(f"Building {self.name} AND {self.version}!!!")
+            """)
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    result = {}
+                    for f in os.listdir(self.folder):
+                        if os.path.isdir(os.path.join(self.folder, f)):
+                            result[f"{f}/0.1"] = {"path": f}
+                    return result
+           """)
+        c = TestClient(light=True)
+        c.save({"conanws.py": workspace,
+                "pkga/conanfile.py": conanfile})
+        c.run("workspace info")
+        assert "pkga/0.1" in c.out
+        c.run("workspace build")
+        assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
+
 
 class TestNew:
     def test_new(self):

@@ -154,8 +154,11 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
                     elif package["binary"] == "EditableBuild":
                         path = all_editables[ref]["path"]
                         build = "--build-require" if package["context"] == "build" else ""
+                        ref_args = " ".join(f"--{k}={getattr(ref, k)}"
+                                            for k in ("name", "version", "user", "channel")
+                                            if getattr(ref, k, None))
                         # TODO: Missing --lockfile-overrides arg here
-                        cmd = f'build "{path}" {profile_args} {build}'
+                        cmd = f'build "{path}" {profile_args} {build} {ref_args}'
                         ConanOutput().box(f"Workspace building {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
                         conan_api.command.run(cmd)
