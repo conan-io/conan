@@ -453,7 +453,7 @@ class TestClient:
             return None
 
     def open(self, filename):
-        """ Opens a file in the current folder """
+        # CI is set in our GitHub Actions, so we don't open files there
         if not os.environ.get("CI", False):
             current_path = os.path.join(self.current_folder, filename)
             if platform.system() == "Windows":
