@@ -21,10 +21,7 @@ def test_private_skip():
 def test_private_skip_header_only_diamond_no_visible():
     tc = TestClient(light=True)
     tc.save({"pkg3/conanfile.py": GenConanfile("pkg3", "1.0"),
-             # pkg existence is necessary, without it a conflict is found
              "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
-                # Both this and the requires in the info need to be 1.1 not to trigger the conflict
-                # Using 3.0 in both generates a disconnected graph
                 .with_requirement("pkg3/1.0"),
              "pkg1/conanfile.py": GenConanfile("pkg1", "1.0")
                 # The order here is important
