@@ -100,3 +100,31 @@ def test_conflict_user_order():
     c.run("create pkg --user=user1")
     c.run("install app", assert_error=True)
     assert "ERROR: Version conflict: Conflict between dep/1.0@user1 and dep/[>=1.0]@user2" in c.out
+
+def test_header_only_conflict_when_not_visible():
+    tc = TestClient(light=True)
+    tc.save({"pkg4/conanfile.py": GenConanfile("pkg4", "1.0")
+                .with_package_type("header-library"),
+             "pkg3/conanfile.py": GenConanfile("pkg3")
+                .with_package_type("header-library")
+                .with_requires("pkg4/1.0"),
+             # pkg existence is necessary, without it a conflict is found
+             "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
+                .with_package_type("header-library")
+                # Both this and the requires in the info need to be 1.1 not to trigger the conflict
+                # Using 3.0 in both generates a disconnected graph
+                .with_requirement("pkg3/1.1"),
+             "pkg1/conanfile.py": GenConanfile("pkg1", "1.0")
+                .with_package_type("static-library")
+                # The order here is important, conan reports a conflict with the inverse order
+                # The visible=False here is also important, otherwise the conflict is detected
+                .with_requirement("pkg3/1.0", visible=False)
+                .with_requirement("pkg2/1.0")})
+    tc.run("create pkg4")
+    tc.run("create pkg3 --version=1.0")
+    tc.run("create pkg3 --version=1.1")
+    tc.run("create pkg2")
+    # Creating this pkg1 does generate a conflict
+    tc.run("export pkg1")
+    tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --build=missing", assert_error=True)
+    assert "Conflict between pkg3/1.1 and pkg3/1.0" in tc.out

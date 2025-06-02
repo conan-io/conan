@@ -173,8 +173,10 @@ class Node:
         result = None
         if prev and (prev.require is not require or prev.node is not None):
             result = prev.require, prev.node, self
-            # Do not return yet, keep checking downstream, because downstream overrides or forces
-            # have priority
+            if not prev.require.visible:
+                return result
+            # Do not return yet if we're visible, keep checking downstream, because downstream overrides or forces
+            # have priority and can see us
 
         # Check if need to propagate downstream
         # Then propagate downstream
