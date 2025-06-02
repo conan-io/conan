@@ -287,7 +287,10 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         path = packages[ref]["path"]
                         # TODO: Missing --lockfile-overrides arg here
                         build = "--build-require" if package["context"] == "build" else ""
-                        cmd = f'create "{path}" {profile_args} {build}'
+                        ref_args = " ".join(f"--{k}={getattr(ref, k)}"
+                                            for k in ("name", "version", "user", "channel")
+                                            if getattr(ref, k, None))
+                        cmd = f'create "{path}" {profile_args} {build} {ref_args}'
                         ConanOutput().box(f"Workspace create {ref}")
                         ConanOutput().info(f"Conan create command: {cmd}\n")
                         conan_api.command.run(cmd)

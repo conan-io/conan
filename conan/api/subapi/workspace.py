@@ -270,7 +270,8 @@ class WorkspaceAPI:
         self._check_ws()
         exported = []
         for ref, info in self.editable_packages.items():
-            exported_ref = self._conan_api.export.export(info["path"], None, None, None, None,
+            exported_ref = self._conan_api.export.export(info["path"], ref.name, str(ref.version),
+                                                         ref.user, ref.channel,
                                                          lockfile=lockfile, remotes=remotes)
             ref, _ = exported_ref
             exported.append(ref)

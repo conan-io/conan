@@ -725,10 +725,31 @@ class TestCreate:
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
         c.run("workspace create")
-        print(c.out)
         assert "pkga/0.1 (test package): Running test()" in c.out
         assert "pkgb/0.1 (test package): Running test()" in c.out
         assert "pkgc/0.1 (test package): Running test()" in c.out
+
+    def test_create_dynamic_name(self):
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    result = {}
+                    for f in os.listdir(self.folder):
+                        if os.path.isdir(os.path.join(self.folder, f)):
+                            result[f"{f}/0.1"] = {"path": f}
+                    return result
+           """)
+        c = TestClient(light=True)
+        c.save({"conanws.py": workspace,
+                "pkga/conanfile.py": GenConanfile()})
+        c.run("workspace info")
+        assert "pkga/0.1" in c.out
+        c.run("workspace create")
+        assert "Workspace create pkga/0.1" in c.out
+
 
     def test_host_build_require(self):
         c = TestClient()
