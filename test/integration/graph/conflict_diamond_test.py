@@ -103,11 +103,8 @@ def test_conflict_user_order():
 
 def test_header_only_conflict_when_not_visible():
     tc = TestClient(light=True)
-    tc.save({"pkg4/conanfile.py": GenConanfile("pkg4", "1.0")
+    tc.save({"pkg3/conanfile.py": GenConanfile("pkg3")
                 .with_package_type("header-library"),
-             "pkg3/conanfile.py": GenConanfile("pkg3")
-                .with_package_type("header-library")
-                .with_requires("pkg4/1.0"),
              # pkg existence is necessary, without it a conflict is found
              "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
                 .with_package_type("header-library")
@@ -120,7 +117,6 @@ def test_header_only_conflict_when_not_visible():
                 # The visible=False here is also important, otherwise the conflict is detected
                 .with_requirement("pkg3/1.0", visible=False)
                 .with_requirement("pkg2/1.0")})
-    tc.run("create pkg4")
     tc.run("create pkg3 --version=1.0")
     tc.run("create pkg3 --version=1.1")
     tc.run("create pkg2")
