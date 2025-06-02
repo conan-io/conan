@@ -35,8 +35,8 @@ def test_private_skip_header_only_diamond_no_visible():
     tc.run("export pkg2")
     # Creating this pkg1 does generate a conflict
     tc.run("export pkg1")
-    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0 -f=html", redirect_stdout="graph.html")
-    tc.open("graph.html")
+    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0")
+    # Ensure no orphan packages
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
