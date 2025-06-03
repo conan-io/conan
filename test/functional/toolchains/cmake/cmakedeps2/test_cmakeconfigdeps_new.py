@@ -1518,8 +1518,19 @@ class TestCppInfoChecks:
 
 
 
-def test_libs(matrix_client):
-    c = matrix_client
+def test_multiple_find_package_subfolder():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class TestPackage(ConanFile):
+        name = "matrix"
+        version = "1.0"
+        def package_info(self):
+            self.cpp_info.system_libs = ["mysystemlib"]
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(app NONE)
@@ -1528,6 +1539,7 @@ def test_libs(matrix_client):
         add_subdirectory(subdir)
         """)
     subcmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(subdir NONE)
 
         find_package(matrix CONFIG REQUIRED)
@@ -1545,9 +1557,9 @@ def test_libs(matrix_client):
         """)
     c.save({"conanfile.py": conanfile,
             "CMakeLists.txt": cmake,
-            "subdir/CMakeLists.txt": subcmake})
+            "subdir/CMakeLists.txt": subcmake}, clean_first=True)
 
     c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
-    assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
+    assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
