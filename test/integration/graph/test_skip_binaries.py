@@ -1,3 +1,4 @@
+import json
 import re
 import textwrap
 
@@ -18,7 +19,7 @@ def test_private_skip():
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
-def test_private_skip_header_only_diamond_no_visible():
+def test_private_diamond_no_visible_orphan_node():
     tc = TestClient(light=True)
     tc.save({"pkg3/conanfile.py": GenConanfile("pkg3", "1.0"),
              "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
@@ -32,8 +33,16 @@ def test_private_skip_header_only_diamond_no_visible():
     tc.run("export pkg2")
     # Creating this pkg1 does generate a conflict
     tc.run("export pkg1")
-    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0")
+    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0 -f=json", redirect_stdout="graph.json")
+    graph = json.loads(tc.load("graph.json"))
+    seen_nodes = set()
+    deps = {"0"}
+    for node_id, node in graph["graph"]["nodes"].items():
+        seen_nodes.add(node_id)
+        for dep in node["dependencies"].keys():
+            deps.add(dep)
     # Ensure no orphan packages
+    assert len(seen_nodes - deps) == 0
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
