@@ -235,7 +235,7 @@ def test_system_wrappers():
     cmake = c.load("lib-Targets-release.cmake")
     assert "add_library(lib::lib INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET lib::lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
-           '             "$<$<CONFIG:RELEASE>:my_system_cool_lib>")' in cmake
+           '             $<$<CONFIG:RELEASE>:my_system_cool_lib>)' in cmake
 
 
 def test_autolink_pragma():
