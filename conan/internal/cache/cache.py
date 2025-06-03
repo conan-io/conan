@@ -4,12 +4,13 @@ import re
 import shutil
 import uuid
 from fnmatch import translate
-from typing import List
+from typing import List, Optional
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
+from conan.internal.cache.package_path_validator import PackagePathValidator
 from conan.internal.errors import ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
 from conan.api.model import PkgReference
@@ -26,6 +27,14 @@ class PkgCache:
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \
                              os.path.join(cache_folder, "p")
+        
+        # Get the package path template if configured
+        self._package_path_template = global_conf.get("core.cache:package_path_template")
+        
+        # Validate path template configuration and warn if changed
+        if self._package_path_template:
+            validator = PackagePathValidator(cache_folder)
+            validator.validate_path_config(self._package_path_template)
 
         try:
             mkdir(self._store_folder)
@@ -77,9 +86,31 @@ class PkgCache:
     def _get_path(ref):
         return ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
 
-    @staticmethod
-    def _get_path_pref(pref):
-        return pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime())
+    def _get_path_pref(self, pref):
+        base_path = pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime())
+        
+        # If the package_path_template is defined, use it to structure the path
+        if self._package_path_template:
+            try:
+                # Create path variables
+                pkgname = pref.ref.name
+                version = str(pref.ref.version) if pref.ref.version else ""
+                
+                # Apply template
+                package_folder = self._package_path_template.format(
+                    pkgname=pkgname,
+                    version=version
+                )
+                
+                # Return the formatted path with the subfolder
+                return os.path.join(base_path, package_folder)
+            except (KeyError, ValueError) as e:
+                # If template formatting fails, log warning and fallback to default
+                from conan.api.output import ConanOutput
+                ConanOutput().warning(f"Error applying package_path_template: {e}. Falling back to default path.")
+        
+        # Default behavior - return the base path only
+        return base_path
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         """  This is a temporary layout while exporting a new recipe, because the revision is not

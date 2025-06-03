@@ -83,6 +83,8 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                            help="Clean temporary folders")
     subparser.add_argument("-bs", "--backup-sources", action='store_true', default=False,
                            help="Clean backup sources")
+    subparser.add_argument("-o", "--output", action='store_true', default=False,
+                           help="Clean the output folders (packages) - use when changing package path template")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Remove only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -99,10 +101,10 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    if args.build or args.source or args.download or args.temp or args.backup_sources:
+    if args.build or args.source or args.download or args.temp or args.backup_sources or args.output:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
                               download=args.download, temp=args.temp,
-                              backup_sources=args.backup_sources)
+                              backup_sources=args.backup_sources, output=args.output)
     else:
         conan_api.cache.clean(package_list)
 

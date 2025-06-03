@@ -76,7 +76,7 @@ class CacheAPI:
         checker.check(package_list)
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
-              backup_sources=False):
+              backup_sources=False, output=False):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
@@ -86,6 +86,7 @@ class CacheAPI:
         :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
         :param backup_sources: boolean, remove the "source" folder if True
+        :param output: boolean, remove the "package" folder if True (needed when changing package path template)
         :return:
         """
 
@@ -124,6 +125,11 @@ class CacheAPI:
                     cache.remove_build_id(pref)
                 if download:
                     rmdir(pref_layout.download_package())
+                if output:
+                    ConanOutput(pref).info("Removing package folder")
+                    rmdir(pref_layout.package())
+                    # We've removed the package, remove it from the database too
+                    cache.remove_package_layout(pref_layout)
 
     def save(self, package_list, tgz_path, no_source=False):
         global_conf = self.conan_api.config.global_conf
