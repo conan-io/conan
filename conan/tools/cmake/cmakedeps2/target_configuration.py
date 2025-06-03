@@ -385,7 +385,7 @@ class TargetConfigurationTemplate2:
         {% if link %}
         # set property allows to append, and lib_info[requires] will iterate
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-                     {{config_wrapper(config, require_target)}})
+                     "{{config_wrapper(config, require_target)}}")
         {% else %}
         if(${CMAKE_VERSION} VERSION_LESS "3.27")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.27")
@@ -400,13 +400,12 @@ class TargetConfigurationTemplate2:
         {% endif %}
 
         {% if lib_info.get("system_libs") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-                     {{config_wrapper(config, lib_info["system_libs"])}})
+                     "{{config_wrapper(config, lib_info["system_libs"])}}")
         {% endif %}
         {% if lib_info.get("frameworks") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-                     {{config_wrapper(config, lib_info["frameworks"])}})
+                     "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
         set_target_properties({{lib}} PROPERTIES
