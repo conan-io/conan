@@ -10,35 +10,12 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save, save_files
+from conan.internal.util.files import save_files
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
-class TestHomeRoot:
-    def test_workspace_home_yml(self):
-        folder = temp_folder()
-        cwd = os.path.join(folder, "sub1", "sub2")
-        save(os.path.join(folder, f"conanws.yml"), "home_folder: myhome")
-        c = TestClient(current_folder=cwd, light=True)
-        c.run("config home")
-        assert os.path.join(folder, "myhome") in c.stdout
-
-    def test_workspace_home_user_py(self):
-        folder = temp_folder()
-        cwd = os.path.join(folder, "sub1", "sub2")
-        conanwspy = textwrap.dedent("""
-            from conan import Workspace
-
-            class MyWs(Workspace):
-                def home_folder(self):
-                    return "new" + self.conan_data["home_folder"]
-            """)
-        save(os.path.join(folder, f"conanws.py"), conanwspy)
-        save(os.path.join(folder, "conanws.yml"), "home_folder: myhome")
-        c = TestClient(current_folder=cwd, light=True)
-        c.run("config home")
-        assert os.path.join(folder, "newmyhome") in c.stdout
+class TestWorkspaceRoot:
 
     def test_workspace_root(self):
         c = TestClient(light=True)
@@ -46,8 +23,17 @@ class TestHomeRoot:
         c.run("workspace root", assert_error=True)
         assert "ERROR: No workspace defined, conanws.py file not found" in c.out
 
+        # error, conanws/ folder does not contain conanws.[py | yml]
+        c.save({"conanws/test.txt": ""})
+        with c.chdir("conanws"):
+            c.run("workspace root", assert_error=True)
+            assert "ERROR: No workspace defined, conanws.py file not found" in c.out
+            c.save({"conanws.yml": ""})
+            c.run("workspace root")
+            assert c.current_folder in c.stdout
+
         # error, empty .py
-        c.save({"conanws.py": ""})
+        c.save({"conanws.py": ""}, clean_first=True)
         c.run("workspace root", assert_error=True)
         assert "Error loading conanws.py" in c.out
         assert "No subclass of Workspace" in c.out
@@ -150,7 +136,7 @@ class TestAddRemove:
                 from conan import Workspace
 
                 class MyWorkspace(Workspace):
-                    def editables(self):
+                    def packages(self):
                         result = {}
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
@@ -167,7 +153,7 @@ class TestAddRemove:
                 from conan import Workspace
 
                 class MyWorkspace(Workspace):
-                    def editables(self):
+                    def packages(self):
                         result = {}
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
@@ -182,12 +168,12 @@ class TestAddRemove:
                 "dep1/version.txt": "2.1"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
         c.save({"dep1/name.txt": "other",
                 "dep1/version.txt": "14.5"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"other/14.5": {"path": "dep1"}}
+        assert info["packages"] == {"other/14.5": {"path": "dep1"}}
         c.run("install --requires=other/14.5")
         # Doesn't fail
         assert "other/14.5 - Editable" in c.out
@@ -215,7 +201,7 @@ class TestAddRemove:
             from conan import Workspace
 
             class MyWorkspace(Workspace):
-                def editables(self):
+                def packages(self):
                     conanfile = self.load_conanfile("dep1")
                     return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1"}}
             """)
@@ -224,7 +210,7 @@ class TestAddRemove:
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["editables"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
         c.run("install --requires=pkg/2.1")
         # it will not fail
 
@@ -484,7 +470,7 @@ class TestMeta:
         c.run("workspace add liba")
         c.run("workspace add libb")
         c.run("workspace install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
-        assert "Workspace conanfilews.py not found in the workspace folder, using default" in c.out
+        assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
         assert "dep1-config.cmake" in files
@@ -576,7 +562,7 @@ def test_workspace_with_local_recipes_index():
                                 "zlib/all/conandata.yml": ""})
 
     c = TestClient(light=True)
-    c.save({"conanws.yml": 'home_folder: "deps"'})
+    c.save({".conanrc": 'conan_home=deps\n'})
     c.run(f'remote add local "{c3i_folder}"')
 
     c.run("list zlib/1.2.11#* -r=local")
@@ -622,3 +608,82 @@ class TestClean:
         c.save({"conanws.py": conanfilews})
         c.run("workspace clean")
         assert "my_workspace: MY CLEAN!!!" in c.out
+
+
+def test_relative_paths():
+    # This is using the meta-project
+    c = TestClient()
+    c.run("new cmake_lib -d name=liba --output=liba")
+    c.run("new cmake_exe -d name=app1 -d requires=liba/0.1 --output=app1")
+    c.run("new cmake_lib -d name=libb --output=other/libb")
+    c.run("new cmake_exe -d name=app2 -d requires=libb/0.1 --output=other/app2")
+    c.run("workspace init mywks")
+    c.run("workspace init otherwks")
+    # cd mywks
+    with c.chdir("mywks"):
+        c.run("workspace add ../liba")
+        c.run("workspace add ../app1 --product")
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../app1
+            packages
+              app1/0.1
+                path: ../app1
+              liba/0.1
+                path: ../liba
+            """)
+        assert expected in c.out
+        c.run("graph info --requires=app1/0.1")
+        c.assert_listed_require({"app1/0.1": "Editable", "liba/0.1": "Editable"})
+    # cd otherwks
+    with c.chdir("otherwks"):
+        c.run("workspace add ../other/libb")
+        c.run("workspace add ../other/app2 --product")
+        c.run("workspace info")
+        expected = textwrap.dedent("""\
+            products
+              ../other/app2
+            packages
+              app2/0.1
+                path: ../other/app2
+              libb/0.1
+                path: ../other/libb
+            """)
+        assert expected in c.out
+        c.run("graph info --requires=app2/0.1")
+        c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
+
+
+def test_host_build_require():
+    c = TestClient()
+    protobuf = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Protobuf(ConanFile):
+            name = "protobuf"
+            version = "0.1"
+            settings = "os"
+
+            def layout(self):
+                self.folders.build = f"mybuild_folder_{self.settings.os}"
+
+            def build(self):
+                save(self, "myprotobuf.txt", f"MYOS={self.settings.os}!!!")
+        """)
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        class Protobuf(ConanFile):
+            name = "app"
+            version = "0.1"
+            requires = "protobuf/0.1"
+            tool_requires = "protobuf/0.1"
+        """)
+    c.save({"protobuf/conanfile.py": protobuf,
+            "app/conanfile.py": app})
+    c.run("workspace init .")
+    c.run("workspace add protobuf")
+    c.run("install app --build=editable -s:b os=Linux -s:h os=Windows")
+
+    assert c.load("protobuf/mybuild_folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
+    assert c.load("protobuf/mybuild_folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"

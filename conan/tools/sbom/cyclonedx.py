@@ -52,15 +52,6 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
 
-    def _calculate_licenses(component):
-        if isinstance(component.conanfile.license, str): # Just one license
-            return [{"license": {
-                        "id": component.conanfile.license
-                    }}]
-        return [{"license": {
-                    "id": l
-                }} for l in component.conanfile.license]
-
     sbom_cyclonedx_1_4 = {
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
@@ -152,15 +143,6 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
 
-    def _calculate_licenses(component):
-        if isinstance(component.conanfile.license, str): # Just one license
-            return [{"license": {
-                        "id": component.conanfile.license
-                    }}]
-        return [{"license": {
-                    "id": l
-                }} for l in component.conanfile.license]
-
     sbom_cyclonedx_1_6 = {
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
@@ -199,3 +181,21 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         "version": 1,
     }
     return sbom_cyclonedx_1_6
+
+
+def _calculate_licenses(component):
+    from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
+    licenses = component.conanfile.license
+
+    if isinstance(licenses, str): # Just one license
+        field = "id" if licenses.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name"
+        return [{"license":{ field: licenses }}]
+
+    return [ # More than one license
+        {"license": {
+            "id" if l.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name": l
+        }}
+        for l in licenses
+    ]
+
+

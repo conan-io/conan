@@ -387,3 +387,26 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
             if threshold is None:
                 threshold = "9.0"
             assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
+
+def test_parse_error_crash_when_no_edges():
+    from conan.cli.commands.audit import _parse_error_threshold
+
+    scan_result = {
+        "data": {
+            # this used to crash because dav1d not having vulnerabilities field
+            "dav1d/1.4.3": {"error": {"details": "Package 'dav1d/1.4.3' not scanned: Not found."}},
+            "zlib/1.2.11": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {"node": {"cvss": {"preferredBaseScore": 7.0}}}
+                    ]
+                }
+            }
+        }
+    }
+
+    _parse_error_threshold(scan_result, error_level=5.0)
+    assert "conan_error" in scan_result
+    assert "zlib/1.2.11" in scan_result["conan_error"]
+    assert "7.0" in scan_result["conan_error"]

@@ -1,6 +1,7 @@
 import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
+from conan.internal.api.detect.detect_api import default_cstd as default_cstd_
 from conan.internal.model.version import Version
 
 
@@ -73,6 +74,21 @@ def valid_max_cstd(conanfile, cstd, gnu_extensions=False):
         return False
     return True
 
+def default_cstd(conanfile, compiler=None, compiler_version=None):
+    """
+    Get the default ``compiler.cstd`` for the "conanfile.settings.compiler" and "conanfile
+    settings.compiler_version" or for the parameters "compiler" and "compiler_version" if specified.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param compiler: Name of the compiler e.g. gcc
+    :param compiler_version: Version of the compiler e.g. 12
+    :return: The default ``compiler.cstd`` for the specified compiler
+    """
+    compiler = compiler or conanfile.settings.get_safe("compiler")
+    compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
+    if not compiler or not compiler_version:
+        raise ConanException("Called default_cppstd with no compiler or no compiler.version")
+    return default_cstd_(compiler, Version(compiler_version))
 
 def supported_cstd(conanfile, compiler=None, compiler_version=None):
     """

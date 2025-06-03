@@ -178,6 +178,18 @@ def build_type_flags(conanfile):
     return []
 
 
+def llvm_clang_front(conanfile):
+    # Only Windows clang with MSVC backend (LLVM/Clang, not MSYS2 clang)
+    if (conanfile.settings.get_safe("os") != "Windows" or
+            conanfile.settings.get_safe("compiler") != "clang" or
+            not conanfile.settings.get_safe("compiler.runtime")):
+        return
+    compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
+    if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
+        return "clang-cl"  # The MSVC-compatible front
+    return "clang" # The GNU-compatible front
+
+
 def cppstd_flag(conanfile) -> str:
     """
     Returns flags specific to the C++ standard based on the ``conanfile.settings.compiler``,
@@ -208,6 +220,8 @@ def cppstd_flag(conanfile) -> str:
     flag = None
     if func:
         flag = func(Version(compiler_version), str(cppstd))
+    if flag and llvm_clang_front(conanfile) == "clang-cl":
+        flag = flag.replace("=", ":")
     return flag
 
 

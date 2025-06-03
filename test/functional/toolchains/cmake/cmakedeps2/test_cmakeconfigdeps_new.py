@@ -842,8 +842,8 @@ class TestHeaders:
                         self.cpp_info.system_libs = ["m", "dl"]
                         # Just to verify CMake don't break
                     if self.settings.compiler == "gcc":
-                        self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
-                        self.cpp_info.exelinkflags = ["-z now", "-z relro"]
+                        self.cpp_info.sharedlinkflags = ["-z lazy", "-s"]
+                        self.cpp_info.exelinkflags = ["-z lazy", "-s"]
              """)
         engine_h = textwrap.dedent("""
             #pragma once

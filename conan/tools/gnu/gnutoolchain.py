@@ -7,11 +7,10 @@ from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, \
-    libcxx_flags
+    libcxx_flags, llvm_clang_front
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 
 
@@ -62,6 +61,13 @@ class GnuToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
+        self.msvc_runtime_link_flags = []
+        if llvm_clang_front(self._conanfile) == "clang":
+            self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
+        extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
+                                                        check_type=list,
+                                                        default=[])
+        extra_configure_args = {it: None for it in extra_configure_args}
 
         # Host/Build triplets
         self.triplets_info = {
@@ -92,6 +98,7 @@ class GnuToolchain:
         self.configure_args.update(self._get_default_configure_shared_flags())
         self.configure_args.update(self._get_default_configure_install_flags())
         self.configure_args.update(self._get_default_triplets())
+        self.configure_args.update(extra_configure_args)
         # Apple stuff
         is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
@@ -228,6 +235,13 @@ class GnuToolchain:
             self.extra_env.define(env_var, env_value)
 
     def _get_msvc_runtime_flag(self):
+        if llvm_clang_front(self._conanfile) == "clang":
+            if self._conanfile.settings.compiler.runtime == "dynamic":
+                runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+                library = "msvcrtd" if runtime_type == "Debug" else "msvcrt"
+                return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+            return ""  # By default it already link statically
+
         flag = msvc_runtime_flag(self._conanfile)
         return f"-{flag}" if flag else ""
 
@@ -284,6 +298,7 @@ class GnuToolchain:
                                                   check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
+        ret = ret + self.msvc_runtime_link_flags
         return self._filter_list_empty_fields(ret)
 
     @property

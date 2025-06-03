@@ -31,6 +31,8 @@ def _parse_error_threshold(result: dict, error_level: float) -> None:
     """
     if "conan_error" not in result:
         for ref in result["data"]:
+            if "vulnerabilities" not in result["data"][ref]:
+                continue
             for edge in result["data"][ref]["vulnerabilities"]["edges"]:
                 preferred_base_score = float(edge["node"]["cvss"].get("preferredBaseScore", 0.0))
                 if preferred_base_score >= error_level:
