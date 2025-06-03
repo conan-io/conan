@@ -1,6 +1,7 @@
+import copy
 from collections import OrderedDict
 
-from conan.internal.graph.graph_error import GraphError
+from conan.internal.graph.graph_error import GraphError, GraphConflictError, GraphLoopError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -435,3 +436,68 @@ class DepsGraph:
         result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
         result["error"] = self.error.serialize() if isinstance(self.error, GraphError) else None
         return result
+
+
+def check_conflict(prev_require, prev_node, base_previous, node, require, resolve_prereleases):
+    # print("  Existing previous requirements from ", base_previous, "=>", prev_require)
+
+    if prev_require is None:
+        raise GraphLoopError(node, require, prev_node)
+
+    prev_ref = prev_node.ref if prev_node else prev_require.ref
+    if prev_require.force or prev_require.override:  # override
+        if prev_require.defining_require is not require:
+            require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
+            # require.override_ref can be !=None if lockfile-overrides defined
+            require.override_ref = (require.override_ref or prev_require.override_ref
+                                    or prev_require.ref.copy())  # New one
+            require.defining_require = prev_require.defining_require  # The overrider
+        require.ref = prev_ref  # New one, maybe resolved with revision
+    else:
+        _conflicting_version(require, node, prev_require, prev_node,
+                             prev_ref, base_previous, resolve_prereleases)
+
+
+def _conflicting_version(require, node,
+                         prev_require, prev_node, prev_ref, base_previous, resolve_prereleases):
+    version_range = require.version_range
+    prev_version_range = prev_require.version_range if prev_node is None else None
+    if version_range:
+        if require.ref.user != prev_require.ref.user or \
+                require.ref.channel != prev_require.ref.channel:
+            raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+        if prev_version_range is not None:
+            # It it is not conflicting, but range can be incompatible, restrict range
+            restricted_version_range = version_range.intersection(prev_version_range)
+            if restricted_version_range is None:
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+            require.ref.version = restricted_version_range.version()
+        else:
+            if version_range.contains(prev_ref.version, resolve_prereleases):
+                require.ref = prev_ref
+            else:
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+    elif prev_version_range is not None:
+        if require.ref.user != prev_require.ref.user or \
+                require.ref.channel != prev_require.ref.channel:
+            raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+        if not prev_version_range.contains(require.ref.version, resolve_prereleases):
+            raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+    else:
+        def _conflicting_refs(ref1, ref2):
+            ref1_norev = copy.copy(ref1)
+            ref1_norev.revision = None
+            ref2_norev = copy.copy(ref2)
+            ref2_norev.revision = None
+            if ref2_norev != ref1_norev:
+                return True
+            # Computed node, if is Editable, has revision=None
+            # If new_ref.revision is None we cannot assume any conflict, user hasn't specified
+            # a revision, so it's ok any previous_ref
+            if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
+                return True
+
+        # As we are closing a diamond, there can be conflicts. This will raise if so
+        conflict = _conflicting_refs(prev_ref, require.ref)
+        if conflict:  # It is possible to get conflict from alias, try to resolve it
+            raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
