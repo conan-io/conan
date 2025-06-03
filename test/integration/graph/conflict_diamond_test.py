@@ -121,3 +121,23 @@ def test_header_only_conflict_when_not_visible():
     tc.run("export pkg1")
     tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0", assert_error=True)
     assert "Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
+
+
+def test_header_only_conflict_when_not_visible_should_raise():
+    # cli --------------------------------------------> pkg3/1.0
+    #   \--> pkg1/1.0 -(visible=False) -> pkg3/1.1
+    #             \----> pkg2/1.0 --------------------> pkg3/1.1 (conflict)
+    tc = TestClient(light=True)
+    tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
+             "pkg2/conanfile.py": GenConanfile("pkg2", "1.0")
+                .with_requirement("pkg3/1.1"),
+             "pkg1/conanfile.py": GenConanfile("pkg1", "1.0")
+                .with_requirement("pkg3/1.1", visible=False)
+                .with_requirement("pkg2/1.0")})
+    tc.run("export pkg3 --version=1.0")
+    tc.run("export pkg3 --version=1.1")
+    tc.run("export pkg2")
+    # Creating this pkg1 does generate a conflict
+    tc.run("export pkg1")
+    tc.run("graph info --requires=pkg3/1.0 --requires=pkg1/1.0", assert_error=True)
+    assert "Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
