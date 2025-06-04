@@ -493,8 +493,8 @@ def _cc_compiler(compiler_exe="cc"):
         installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9])?)", out)
         # Fallback to the first number we find optionally followed by other version fields
         installed_version = installed_version or re.search(r"([0-9]+(\.[0-9])?)", out)
-        if installed_version and installed_version.group():
-            installed_version = installed_version.group()
+        if installed_version and installed_version.group(1):
+            installed_version = installed_version.group(1)
             ConanOutput(scope="detect_api").info("Found cc=%s-%s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
