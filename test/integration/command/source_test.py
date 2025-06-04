@@ -150,21 +150,30 @@ class ConanLib(ConanFile):
         # same in both methods)
         conanfile = textwrap.dedent('''
             from conan import ConanFile
+            from conan.tools.files import save, load
 
             class ConanLib(ConanFile):
                 
                 def layout(self):
-                    self.folders.root = "root_folder"
-
+                    self.folders.root = ".."
+                    self.folders.source = "src"
+                
                 def source(self):
-                    self.output.info(f"Source Folder: {self.source_folder}")
-        ''')
-        # First, failing source()
+                    self.output.info(f"In the source() method the Source folder is: {self.source_folder}")
+                    save(self, "source_file.c", "conent")
+
+                def build(self):
+                    self.output.info(f"In the build() method the Source folder is: {self.source_folder}")
+                    load(self, f"{self.source_folder}/source_file.c")
+            ''')
         client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
-
+        
         client.run("source .")
-        self.assertTrue(client.out.strip().endswith("spaces\\root_folder"))
+        # The build method will fail if source() and build() don't 
+        # both use the correct source_folder
+        client.run("build .")
+        print(client.out)
 
     def test_retrieve_exports_sources(self):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
