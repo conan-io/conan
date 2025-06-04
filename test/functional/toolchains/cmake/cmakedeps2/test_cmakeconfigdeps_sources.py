@@ -32,7 +32,7 @@ def test_cpp_info_sources():
                 copy(self, "*.cpp", self.source_folder, self.package_folder)
 
             def package_info(self):
-                self.cpp_info.sources = ["include/hello.h", "src/hello.cpp"]
+                self.cpp_info.sources = ["src/hello.cpp"]
     """)
     c.save({"conanfile.py": conanfile})
     # Check that the hello library builds in test_package
@@ -43,8 +43,7 @@ def test_cpp_info_sources():
     cmake = c.load("hello-Targets-release.cmake")
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
-           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;" \
-           "${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
@@ -67,7 +66,7 @@ def test_cpp_info_component_sources():
                 copy(self, "*.cpp", self.source_folder, self.package_folder)
 
             def package_info(self):
-                self.cpp_info.components["my_comp"].sources = ["include/hello.h", "src/hello.cpp"]
+                self.cpp_info.components["my_comp"].sources = ["src/hello.cpp"]
     """)
     c.save({
         "conanfile.py": conanfile
@@ -87,5 +86,4 @@ def test_cpp_info_component_sources():
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "add_library(hello::my_comp INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
-           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/include/hello.h;" \
-           "${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
