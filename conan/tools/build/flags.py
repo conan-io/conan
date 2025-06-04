@@ -67,9 +67,15 @@ def architecture_flag(conanfile):
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
 
-    if the_os == "Emscripten" and arch == "wasm64":
-        return "-sMEMORY64=1"
-
+    if the_os == "Emscripten":
+        # Emscripten default output is WASM, force it for backwards compatibility
+        if arch == "wasm":
+            return "-sWASM=1"
+        elif arch == "wasm64":
+            return "-sWASM=1 -sMEMORY64=1"
+        # Deactivate WASM output forcing asm.js output instead
+        elif arch == "asm.js":
+            return "-sWASM=0"
     return ""
 
 
