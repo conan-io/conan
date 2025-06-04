@@ -173,7 +173,7 @@ class ConanLib(ConanFile):
         # The build method will fail if source() and build() don't 
         # both use the correct source_folder
         client.run("build .")
-        print(client.out)
+        assert "conanfile.py: Calling build()" in client.out  # doesn't fail
 
     def test_retrieve_exports_sources(self):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
