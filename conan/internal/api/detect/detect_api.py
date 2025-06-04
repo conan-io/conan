@@ -490,9 +490,9 @@ def _cc_compiler(compiler_exe="cc"):
         # that might appear in the first line of the output before the version
         installed_version = re.search(r" ([0-9]+(\.[0-9]+)+)", out)
         # Try only major but with spaces next
-        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9])?)", out)
+        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9]+)?)", out)
         # Fallback to the first number we find optionally followed by other version fields
-        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9])?)", out)
+        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9]+)?)", out)
         if installed_version and installed_version.group(1):
             installed_version = installed_version.group(1)
             ConanOutput(scope="detect_api").info("Found cc=%s-%s" % (compiler, installed_version))
