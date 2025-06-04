@@ -1515,3 +1515,51 @@ class TestCppInfoChecks:
         args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
         c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
+
+
+
+def test_multiple_find_package_subfolder():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class TestPackage(ConanFile):
+        name = "matrix"
+        version = "1.0"
+        def package_info(self):
+            self.cpp_info.system_libs = ["mysystemlib"]
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app NONE)
+
+        find_package(matrix CONFIG REQUIRED)
+        add_subdirectory(subdir)
+        """)
+    subcmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(subdir NONE)
+
+        find_package(matrix CONFIG REQUIRED)
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Pkg(ConanFile):
+            requires = "matrix/1.0"
+            generators = "CMakeToolchain", "CMakeDeps"
+            settings = "os", "compiler", "build_type", "arch"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake,
+            "subdir/CMakeLists.txt": subcmake}, clean_first=True)
+
+    c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+    assert "find_package(matrix)" in c.out
+    assert "target_link_libraries(... matrix::matrix)" in c.out
+    assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
