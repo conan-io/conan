@@ -14,7 +14,7 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
             "quiet": "Quiet",
             "verbose": "Detailed",
         }.get(verbosity)
-        return f'-verbosity:{verbosity}'
+        return f'/verbosity:{verbosity}'
     return ""
 
 
