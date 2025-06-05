@@ -953,26 +953,9 @@ def test_overlapping_versions():
     assert len(results["Local Cache"]) == 2
 
 def test_list_local_recipe_index():
-    # Setup the release pkg0.1.zip http server
-    file_server = TestFileServer()
-    zippath = os.path.join(file_server.store, "pkg0.1.zip")
-    repo_folder = temp_folder()
-    cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
-                           public_header="pkg.h")
-    save_files(repo_folder, {"pkg/CMakeLists.txt": cmake,
-                             "pkg/pkg.h": gen_function_h(name="pkg"),
-                             "pkg/pkg.cpp": gen_function_cpp(name="pkg")})
-    zipdir(repo_folder, zippath)
-    sha256 = sha256sum(zippath)
-    url = f"{file_server.fake_url}/pkg0.1.zip"
-
-    c0 = TestClient()
-    c0.servers["file_server"] = file_server
-    c0.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
-
     c = TestClient()
-    c.run(f"remote add local '{c0.current_folder}'")
-
+    c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
+    c.run(f"remote add local '{c.current_folder}'")
 
     c.run("list 'pkg/*' -r=local")
     assert "Found 1 pkg/version recipes matching pkg/* in local" in c.out
