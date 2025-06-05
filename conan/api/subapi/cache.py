@@ -72,7 +72,7 @@ class CacheAPI:
     def check_integrity(self, package_list):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
-        checker = IntegrityChecker(cache)
+        checker = IntegrityChecker(cache, self.conan_api.home_folder)
         checker.check(package_list)
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,

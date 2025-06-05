@@ -4,6 +4,7 @@ from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 
 
 class IntegrityChecker:
@@ -17,17 +18,55 @@ class IntegrityChecker:
         This is to be done over the package contents, not the compressed conan_package.tgz
         artifacts
     """
-    def __init__(self, cache):
+    def __init__(self, cache, home_folder):
+        self._home_folder = home_folder
         self._cache = cache
 
     def check(self, pkg_list):
         corrupted = False
+        invalid_sign = False
         for ref, recipe_bundle in pkg_list.refs().items():
             corrupted = self._recipe_corrupted(ref) or corrupted
+            invalid_sign = self._recipe_invalid_sign(ref) or invalid_sign
             for pref, prev_bundle in pkg_list.prefs(ref, recipe_bundle).items():
                 corrupted = self._package_corrupted(pref) or corrupted
+                invalid_sign = self._package_invalid_sign(pref) or invalid_sign
+        msgs = []
         if corrupted:
-            raise ConanException("There are corrupted artifacts, check the error logs")
+            msgs.append("There are corrupted artifacts.")
+        if invalid_sign:
+            msgs.append("There are artifacts with invalid signature.")
+        if corrupted or invalid_sign:
+            msgs.append("Check the error logs.")
+            raise ConanException(" ".join(msgs))
+
+    def _recipe_invalid_sign(self, ref: RecipeReference):
+        output = ConanOutput()
+        layout = self._cache.recipe_layout(ref)
+        folder = layout.download_export()
+        files = os.listdir(folder)
+        verifier = PkgSignaturesPlugin(self._cache, self._home_folder)
+        if not verifier.is_plugin_configured():
+            return
+        try:
+            verifier.verify(ref, folder, files)
+        except ConanException:
+            output.error(f"{ref}: Signature verification failed.", error_type="exception")
+            return True
+
+    def _package_invalid_sign(self, ref: PkgReference):
+        output = ConanOutput()
+        layout = self._cache.pkg_layout(ref)
+        folder = layout.download_package()
+        files = os.listdir(folder)
+        verifier = PkgSignaturesPlugin(self._cache, self._home_folder)
+        if not verifier.is_plugin_configured():
+            return
+        try:
+            verifier.verify(ref, folder, files)
+        except ConanException:
+            output.error(f"{ref}: Signature verification failed.", error_type="exception")
+            return True
 
     def _recipe_corrupted(self, ref: RecipeReference):
         layout = self._cache.recipe_layout(ref)

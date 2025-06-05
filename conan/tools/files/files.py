@@ -19,7 +19,7 @@ from conan.internal.util.files import rmdir as _internal_rmdir, human_size, chec
 def load(conanfile, path, encoding="utf-8"):
     """
     Utility function to load files in one line. It will manage the open and close of the file,
-    and load binary encodings. Returns the content of the file.
+    and load binary encodings. Returns the conxtent of the file.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the file to read

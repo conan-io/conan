@@ -18,6 +18,9 @@ class PkgSignaturesPlugin:
         else:
             self._plugin_sign_function = self._plugin_verify_function = None
 
+    def is_plugin_configured(self):
+        return self._plugin_verify_function is not None and self._plugin_sign_function is not None
+
     def sign(self, upload_data):
         if self._plugin_sign_function is None:
             return
