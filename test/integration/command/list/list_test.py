@@ -10,10 +10,14 @@ import pytest
 
 from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
+from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.sources import gen_function_h, gen_function_cpp
+from conan.test.utils.file_server import TestFileServer
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, zipdir
 from conan.test.utils.env import environment_update
-from conan.internal.util.files import save
+from conan.internal.util.files import save, save_files, sha256sum
 
 
 class TestParamErrors:
@@ -947,3 +951,29 @@ def test_overlapping_versions():
     tc.run("list * -c -f=json", redirect_stdout="list.json")
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
+def test_list_local_recipe_index():
+    # Setup the release pkg0.1.zip http server
+    file_server = TestFileServer()
+    zippath = os.path.join(file_server.store, "pkg0.1.zip")
+    repo_folder = temp_folder()
+    cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
+                           public_header="pkg.h")
+    save_files(repo_folder, {"pkg/CMakeLists.txt": cmake,
+                             "pkg/pkg.h": gen_function_h(name="pkg"),
+                             "pkg/pkg.cpp": gen_function_cpp(name="pkg")})
+    zipdir(repo_folder, zippath)
+    sha256 = sha256sum(zippath)
+    url = f"{file_server.fake_url}/pkg0.1.zip"
+
+    c0 = TestClient()
+    c0.servers["file_server"] = file_server
+    c0.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
+
+    c = TestClient()
+    c.run(f"remote add local '{c0.current_folder}'")
+
+
+    c.run("list 'pkg/*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/* in local" in c.out
+    c.run("list 'pkg' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg in local" in c.out

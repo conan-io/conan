@@ -210,6 +210,8 @@ class _LocalRecipesIndexLayout:
             pattern = f"{pattern_ref.name}/{pattern_ref.version}"
         except:
             # pattern = pattern
+            pattern = f"{name_pattern}/*"
+            original_pattern = pattern
             pass
 
         loader = ConanFileLoader(None)
