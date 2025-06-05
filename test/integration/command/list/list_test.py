@@ -953,11 +953,29 @@ def test_overlapping_versions():
     assert len(results["Local Cache"]) == 2
 
 def test_list_local_recipe_index():
-    c = TestClient()
+    c = TestClient(light=True)
     c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
     c.run(f"remote add local '{c.current_folder}'")
 
+    c.run("list '*' -r=local")
+    assert "Found 1 pkg/version recipes matching * in local" in c.out
+    c.run("list '*/*' -r=local")
+    assert "Found 1 pkg/version recipes matching */* in local" in c.out
+    c.run("list '*/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching */0.1 in local" in c.out
     c.run("list 'pkg/*' -r=local")
     assert "Found 1 pkg/version recipes matching pkg/* in local" in c.out
+    c.run("list 'pkg/0.*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.* in local" in c.out
     c.run("list 'pkg' -r=local")
     assert "Found 1 pkg/version recipes matching pkg in local" in c.out
+    c.run("list 'pkg/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.1 in local" in c.out
+    c.run("list 'foo' -r=local")
+    assert "ERROR: Recipe 'foo' not found" in c.out
+    c.run("list '/#@&%%&@#/' -r=local")
+    assert "ERROR: Recipe '/' not found" in c.out
+    c.run("list 'pkg/0.1@a' -r=local")
+    assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
+    c.run("list 'pkg%0.1#a@b/c' -r=local")
+    assert "ERROR: Recipe 'pkg%0.1' not found" in c.out
