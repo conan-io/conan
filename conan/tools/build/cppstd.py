@@ -104,6 +104,7 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
             "clang": _clang_supported_cppstd,
             "mcst-lcc": _mcst_lcc_supported_cppstd,
             "qcc": _qcc_supported_cppstd,
+            "emcc": _emcc_supported_cppstd,
             }.get(compiler)
     if func:
         return func(Version(compiler_version))
@@ -267,3 +268,16 @@ def _qcc_supported_cppstd(version):
         return ["98", "gnu98"]
     else:
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+
+def _emcc_supported_cppstd(version):
+    """
+    emcc is based on clang but follow different versioning scheme.
+    """
+    if version <= "3.0.1":
+        return _clang_supported_cppstd("14")
+    if version <= "3.1.50":
+        return _clang_supported_cppstd("18")
+    if version <= "4.0.1":
+        return _clang_supported_cppstd("20")
+    # Since emcc 4.0.2 clang version is 21
+    return _clang_supported_cppstd("21")
