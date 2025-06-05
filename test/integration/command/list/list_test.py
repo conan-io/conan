@@ -951,6 +951,7 @@ def test_overlapping_versions():
     tc.run("list * -c -f=json", redirect_stdout="list.json")
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
+
 def test_list_local_recipe_index():
     # Setup the release pkg0.1.zip http server
     file_server = TestFileServer()
