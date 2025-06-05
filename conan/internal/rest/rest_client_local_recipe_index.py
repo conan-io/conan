@@ -82,7 +82,9 @@ class RestApiClientLocalRecipesIndex:
         except ConanReferenceDoesNotExistInDB as e:
             # This can happen when there a local-recipes-index is being queried for sources it
             # doesn't contain
-            raise NotFoundException(str(e))
+            # If that is the case, check if they are in the repo, try to export
+            exported_ref = self._export_recipe(ref)  # This will raise NotFound if non existing
+            export_sources = self._app.cache.recipe_layout(exported_ref).export_sources()
         return self._copy_files(export_sources, dest_folder)
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
