@@ -66,10 +66,11 @@ def test_cpp_info_component_sources():
                 copy(self, "*.cpp", self.source_folder, self.package_folder)
 
             def package_info(self):
-                self.cpp_info.components["my_comp"].sources = ["src/hello.cpp"]
+                self.cpp_info.components["my_comp"].sources = ["src/hello.cpp", "src/other.cpp"]
     """)
     c.save({
-        "conanfile.py": conanfile
+        "conanfile.py": conanfile,
+        "src/other.cpp": "",
     })
 
     # Make test_package link with component's target
@@ -86,4 +87,5 @@ def test_cpp_info_component_sources():
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "add_library(hello::my_comp INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
-           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp"\
+           ";${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
