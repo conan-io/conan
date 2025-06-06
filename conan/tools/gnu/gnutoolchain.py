@@ -239,7 +239,8 @@ class GnuToolchain:
             if self._conanfile.settings.compiler.runtime == "dynamic":
                 runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
                 library = "msvcrtd" if runtime_type == "Debug" else "msvcrt"
-                return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+                debug = "-D_DEBUG " if runtime_type == "Debug" else ""
+                return f"{debug}-D_DLL -D_MT -Xclang --dependent-lib={library}"
             return ""  # By default it already link statically
 
         flag = msvc_runtime_flag(self._conanfile)
