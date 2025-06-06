@@ -9,7 +9,6 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
     if not static:
         cmd = ('%s && dumpbin /nologo /dependents "%s"' % (vcvars, normalized_path))
         client.run_command(cmd)
-        print(client.out)
         if subsystem:
             assert "KERNEL32.dll" in client.out
             if subsystem in ("mingw32", "mingw64"):
