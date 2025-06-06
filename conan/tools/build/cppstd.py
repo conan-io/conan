@@ -274,10 +274,10 @@ def _emcc_supported_cppstd(version):
     emcc is based on clang but follow different versioning scheme.
     """
     if version <= "3.0.1":
-        return _clang_supported_cppstd("14")
+        return _clang_supported_cppstd(Version("14"))
     if version <= "3.1.50":
-        return _clang_supported_cppstd("18")
+        return _clang_supported_cppstd(Version("18"))
     if version <= "4.0.1":
-        return _clang_supported_cppstd("20")
+        return _clang_supported_cppstd(Version("20"))
     # Since emcc 4.0.2 clang version is 21
-    return _clang_supported_cppstd("21")
+    return _clang_supported_cppstd(Version("21"))

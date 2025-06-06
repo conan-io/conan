@@ -164,10 +164,10 @@ compiler:
         libcxx: [libstdc++, libstdc++11]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     emcc:
-        # Following versions are the ones available in Conan Center Index within emsdk package.
-        # Other versions can be added by the usage of settings_user.yml
-        version: ["2.0.34", "3.0.1", "3.1.50", "3.1.73", "4.0.6", "4.0.9"]
-        libcxx: [null, libstdc++, libc++]
+        # From https://github.com/emscripten-core/emscripten/blob/main/ChangeLog.md
+        # There is no ABI compatibility guarantee between versions
+        version: [ANY]
+        libcxx: [null, libstdc++, libstdc++11, libc++]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23, 26, gnu26]
         cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
 
