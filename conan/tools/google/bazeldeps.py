@@ -10,6 +10,28 @@ from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import save
 
 
+def _relativize_path(path, start_folder):
+    """
+    Returns a relative path with regard to the given folder.
+
+    :param path: absolute or relative path.
+    :param start_folder: folder to start relative to.
+    :return: Unix-like path relative if matches to the given pattern.
+             Otherwise, it returns the original path.
+    """
+    if not path or not start_folder:
+        return path
+    path_ = path.replace("\\", "/").replace("/./", "/")
+    pattern_ = start_folder.replace("\\", "/").replace("/./", "/")
+    match = re.match(pattern_, path_)
+    if match:
+        matching = match[0]
+        if path_.startswith(matching):
+            path_ = path_.replace(matching, "").strip("/")
+            return path_.strip("./") or "./"
+    return path
+
+
 class _BazelDepBuildGenerator:
     """
     This class creates the BUILD.bazel for each dependency where it's declared all the
@@ -173,14 +195,14 @@ class _BazelDepBuildGenerator:
         return comp_name or f"{pkg_name}-{comp_ref_name}"
 
     def _get_headers(self, cpp_info):
-        return ['"{}/**"'.format(self._relativize_path(path))
+        return ['"{}/**"'.format(_relativize_path(path, self._package_folder))
                 for path in cpp_info.includedirs]
 
     def _get_bindirs(self, cpp_info):
-        return [self._relativize_path(bindir) for bindir in cpp_info.bindirs]
+        return [_relativize_path(bindir, self._package_folder) for bindir in cpp_info.bindirs]
 
     def _get_includes(self, cpp_info):
-        return ['"{}"'.format(self._relativize_path(path))
+        return ['"{}"'.format(_relativize_path(path, self._package_folder))
                 for path in cpp_info.includedirs]
 
     def _get_defines(self, cpp_info):
@@ -201,26 +223,6 @@ class _BazelDepBuildGenerator:
         cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
         cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
         return [f'"{flag}"' for flag in (cxxflags + cflags)]
-
-    def _relativize_path(self, path):
-        """
-        Returns a relative path with regard to the package folder.
-
-        :param path: absolute or relative path
-        :return: Unix-like path relative if matches to the given pattern.
-                 Otherwise, it returns the original path.
-        """
-        if not path:
-            return path
-        path_ = path.replace("\\", "/").replace("/./", "/")
-        pattern_ = self._package_folder.replace("\\", "/").replace("/./", "/")
-        match = re.match(pattern_, path_)
-        if match:
-            matching = match[0]
-            if path_.startswith(matching):
-                path_ = path_.replace(matching, "").strip("/")
-                return path_.strip("./") or "./"
-        return path
 
     def _get_component_requirement_names(self, cpp_info):
         """
@@ -269,8 +271,8 @@ class _BazelDepBuildGenerator:
             return {
                 "name": lib_name,
                 "is_shared": virtual_cpp_info.type == PackageType.SHARED,
-                "lib_path": self._relativize_path(virtual_cpp_info.location),
-                "import_lib_path": self._relativize_path(virtual_cpp_info.link_location)
+                "lib_path": _relativize_path(virtual_cpp_info.location, self._package_folder),
+                "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder)
             }
 
         libs = cpp_info.libs
