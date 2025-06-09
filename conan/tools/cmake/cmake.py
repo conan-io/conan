@@ -212,7 +212,7 @@ class CMake:
         deprecated_install_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
         if deprecated_install_strip:
             self._conanfile.output.warning("The 'tools.cmake:install_strip' configuration is deprecated, "
-                                           "use 'tools.install:strip' instead.")
+                                           "use 'tools.install:strip' instead.", warn_tag="deprecated")
 
         do_strip = self._conanfile.conf.get("tools.install:strip", check_type=bool)
         if do_strip or deprecated_install_strip:
