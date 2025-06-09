@@ -96,7 +96,9 @@ def check_output_runner(cmd, stderr=None, ignore_error=False, ignore_encoding_er
             msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
             raise ConanException(msg)
 
-        output = load(tmp_file, ignore_encoding_error=ignore_encoding_error)
+        with open(tmp_file, 'r', encoding="utf-8", newline="",
+                  errors="ignore" if ignore_encoding_error else None) as handle:
+            output = handle.read()
         return output
     finally:
         try:
