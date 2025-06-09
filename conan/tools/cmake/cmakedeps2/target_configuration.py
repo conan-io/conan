@@ -180,7 +180,7 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
-        system_libs = " ".join(info.system_libs)
+        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
@@ -189,7 +189,8 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(info.cflags),
                   "sharedlinkflags": " ".join(info.sharedlinkflags),
                   "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": system_libs
+                  "system_libs": " ".join(info.system_libs),
+                  "sources": " ".join(sources)
         }
         # System frameworks (only Apple OS)
         if info.frameworks:
@@ -417,6 +418,11 @@ class TargetConfigurationTemplate2:
             set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
                          $<$<COMPILE_LANGUAGE:C>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
         endif()
+        {% endif %}
+
+        {% if lib_info.get("sources") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
+                     {{config_wrapper(config, lib_info["sources"] )}})
         {% endif %}
         {% endfor %}
 
