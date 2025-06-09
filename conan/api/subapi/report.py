@@ -30,7 +30,7 @@ class ReportAPI:
 
         def _source(path_to_conanfile, reference):
             if path_to_conanfile is None:
-                export_ref, cache_path = _download_ref_from_remote(self.conan_api, reference, remotes)
+                export_ref, cache_path = _get_ref_from_cache_or_remote(self.conan_api, reference, remotes)
             else:
                 export_ref, cache_path = _export_recipe_from_path(self.conan_api, path_to_conanfile,
                                                                   reference, remotes, cwd)
@@ -98,7 +98,7 @@ def _configure_source(conan_api, conanfile_path, ref, remotes):
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
     config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
 
-def _download_ref_from_remote(conan_api, reference, enabled_remotes):
+def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
     ref = RecipeReference.loads(reference)
     full_ref, matching_remote = None, False
     # The first remote is None, which means local cache for the list subapi methods
