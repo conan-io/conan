@@ -215,7 +215,7 @@ class CMake:
                                            "use 'tools.install:strip' instead.")
 
         do_strip = self._conanfile.conf.get("tools.install:strip", check_type=bool)
-        if do_strip:
+        if do_strip or deprecated_install_strip:
             arg_list.append("--strip")
 
         if cli_args:

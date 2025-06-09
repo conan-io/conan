@@ -73,12 +73,11 @@ def test_run_install_strip(config, deprecated):
         cmake.install(stdout=stdout, stderr=stderr)
 
     if deprecated:
-        assert "--strip" not in conanfile.command
         assert "WARN: The 'tools.cmake:install_strip' configuration is deprecated, "\
                 "use 'tools.install:strip' instead." in stderr
     else:
-        assert "--strip" in conanfile.command
         assert "tools.cmake:install_strip" not in stderr
+    assert "--strip" in conanfile.command
 
 def test_run_install_cli_args():
     """
