@@ -5,7 +5,7 @@ import textwrap
 
 from conan.api.output import ConanOutput, Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars
-from conan.tools.cmake.toolchain.blocks import GenericSystemBlock, CompilersBlock
+from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
@@ -307,6 +307,7 @@ class _IncludingPresets:
         if not absolute_paths:
             try:  # Make it relative to the CMakeUserPresets.json if possible
                 preset_path = os.path.relpath(preset_path, output_dir)
+                preset_path = preset_path.replace("\\", "/")
             except ValueError:
                 pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
