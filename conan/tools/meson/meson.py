@@ -82,8 +82,8 @@ class Meson(object):
         verbosity = self._install_verbosity
         if verbosity:
             cmd += " " + verbosity
-        if self._install_strip:
-            cmd += " " + self._install_strip
+        if self._conanfile.conf.get("tools.install:strip", check_type=bool):
+            cmd += " --strip"
         self._conanfile.run(cmd)
 
     def test(self):
@@ -113,15 +113,6 @@ class Meson(object):
         # so it's a bit backwards
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
         return "--quiet" if verbosity else ""
-
-    @property
-    def _install_strip(self) -> str:
-        """
-        Returns Meson install strip the value based on ``tools.install:strip`` configuration.
-        https://mesonbuild.com/Release-notes-for-0-62-0.html#meson-install-strip
-        """
-        strip = self._conanfile.conf.get("tools.install:strip", check_type=bool)
-        return "--strip" if strip else ""
 
     @property
     def _prefix(self):
