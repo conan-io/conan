@@ -47,7 +47,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -168,7 +168,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version

@@ -190,6 +190,7 @@ tools_locations = {
             "path": {'Linux': '/usr/share/qbs/bin'}
         }
     },
+    "emcc": {}
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
