@@ -39,9 +39,10 @@ def test_run_install_component():
 
     assert "--component foo" in conanfile.command
 
+
 @pytest.mark.parametrize("config, deprecated",
                          [("tools.cmake:install_strip", True),
-                          ("tools.install:strip", False),])
+                          ("tools.build.install:strip", False),])
 def test_run_install_strip(config, deprecated):
     """
     Testing that the install/strip rule is called
@@ -73,8 +74,8 @@ def test_run_install_strip(config, deprecated):
         cmake.install(stdout=stdout, stderr=stderr)
 
     if deprecated:
-        assert "WARN: The 'tools.cmake:install_strip' configuration is deprecated, "\
-                "use 'tools.install:strip' instead." in stderr
+        assert "WARN: deprecated: The 'tools.cmake:install_strip' configuration is deprecated, use"\
+               " 'tools.build.install:strip' instead" in stderr
     else:
         assert "tools.cmake:install_strip" not in stderr
     assert "--strip" in conanfile.command
