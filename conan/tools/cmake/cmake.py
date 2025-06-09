@@ -209,7 +209,12 @@ class CMake:
             arg_list.extend(["--component", component])
         arg_list.extend(self._compilation_verbosity_arg)
 
-        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        deprecated_install_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        if deprecated_install_strip:
+            self._conanfile.output.warning("The 'tools.cmake:install_strip' configuration is deprecated, "
+                                           "use 'tools.install:strip' instead.")
+
+        do_strip = self._conanfile.conf.get("tools.install:strip", check_type=bool)
         if do_strip:
             arg_list.append("--strip")
 
