@@ -113,7 +113,6 @@ class TargetConfigurationTemplate2:
             libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
-        sources = self._get_sources(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
 
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
@@ -139,7 +138,6 @@ class TargetConfigurationTemplate2:
                 "pkg_folder_var": pkg_folder_var,
                 "config": config,
                 "exes": exes,
-                "sources": sources,
                 "libs": libs,
                 "context": self._conanfile.context,
                 # Extra global variables
@@ -182,7 +180,7 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
-        system_libs = " ".join(info.system_libs)
+        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
@@ -191,7 +189,8 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(info.cflags),
                   "sharedlinkflags": " ".join(info.sharedlinkflags),
                   "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": system_libs
+                  "system_libs": " ".join(info.system_libs),
+                  "sources": " ".join(sources)
         }
         # System frameworks (only Apple OS)
         if info.frameworks:
@@ -270,27 +269,6 @@ class TargetConfigurationTemplate2:
                 exes[target] = exe_location
 
         return exes
-
-    def _get_sources(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
-        sources = {}
-
-        if cpp_info.has_components:
-            for name, comp in cpp_info.components.items():
-                if comp.sources:
-                    target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
-                                                               name)
-                    target = target_name or f"{pkg_name}::{name}"
-                    sources[target] = []
-                    for source in comp.sources:
-                        sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
-        else:
-            if cpp_info.sources:
-                target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-                target = target_name or f"{pkg_name}::{pkg_name}"
-                sources[target] = []
-                for source in cpp_info.sources:
-                    sources[target].append(self._path(source, pkg_folder, pkg_folder_var))
-        return sources
 
     def _get_dependencies(self):
         """ transitive dependencies Filenames for find_dependency()
@@ -440,6 +418,11 @@ class TargetConfigurationTemplate2:
                          $<$<COMPILE_LANGUAGE:C>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
         endif()
         {% endif %}
+
+        {% if lib_info.get("sources") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
+                     {{config_wrapper(config, lib_info["sources"] )}})
+        {% endif %}
         {% endfor %}
 
         ################# Global variables for try compile and legacy ##############
@@ -479,13 +462,4 @@ class TargetConfigurationTemplate2:
         set_target_properties({{exe}} PROPERTIES IMPORTED_LOCATION_{{config}} "{{location}}")
         set_property(TARGET {{exe}} PROPERTY CONAN_CONTEXT "{{context}}")
         {% endfor %}
-
-        {% if sources %}
-        ################# Sources information ##############
-        {% for target, srcs in sources.items() %}
-        #################### {{target}} ####################
-        set_property(TARGET {{target}} APPEND PROPERTY INTERFACE_SOURCES
-                     {{config_wrapper(config, srcs | join(';') )}})
-        {% endfor %}
-        {% endif %}
         """)

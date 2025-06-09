@@ -88,4 +88,4 @@ def test_cpp_info_component_sources():
     assert "add_library(hello::my_comp INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
            "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp"\
-           ";${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
+           " ${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
