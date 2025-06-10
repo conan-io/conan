@@ -1246,7 +1246,7 @@ def test_pkg_skip_component():
             requires = "pkg_a/0.1"
             def package_info(self):
                 self.cpp_info.set_property("pkg_config_name", "none")
-                self.cpp_info.components["cmp1"].libs = []
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
         """)
 
     conanfile_c = textwrap.dedent("""
@@ -1270,6 +1270,6 @@ def test_pkg_skip_component():
     install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
     assert "pkg_a.pc" not in install_contents
     assert "pkg_b.pc" not in install_contents
-    assert "pkg_b-cmp1.pc" in install_contents
+    assert "b-cmp1.pc" in install_contents
     assert "pkg_c.pc" in install_contents
     assert "pkg_c-cmp2.pc" not in install_contents
