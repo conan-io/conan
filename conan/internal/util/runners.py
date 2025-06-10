@@ -96,7 +96,8 @@ def check_output_runner(cmd, stderr=None, ignore_error=False):
             msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
             raise ConanException(msg)
 
-        return load(tmp_file)
+        output = load(tmp_file)
+        return output
     finally:
         try:
             os.unlink(tmp_file)
