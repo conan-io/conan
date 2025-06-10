@@ -887,24 +887,25 @@ def test_android_legacy_toolchain_with_compileflags(cmake_legacy_toolchain):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_presets_paths_normalization():
     # https://github.com/conan-io/conan/issues/11795
+    # But then also https://github.com/conan-io/conan/issues/18434
     client = TestClient()
     conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
 
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain"
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
 
-                def layout(self):
-                    cmake_layout(self)
-            """)
+            def layout(self):
+                cmake_layout(self)
+        """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
     client.run("install .")
 
     presets = json.loads(client.load("CMakeUserPresets.json"))
-
-    assert "/" not in presets["include"]
+    assert "/" in presets["include"][0]
+    assert "\\" not in presets["include"][0]
 
 
 @pytest.mark.parametrize("arch, arch_toolset", [("x86", "x86_64"), ("x86_64", "x86_64"),

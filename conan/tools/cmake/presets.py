@@ -307,6 +307,8 @@ class _IncludingPresets:
         if not absolute_paths:
             try:  # Make it relative to the CMakeUserPresets.json if possible
                 preset_path = os.path.relpath(preset_path, output_dir)
+                # If we don't normalize, path will be removed in Linux shared folders
+                # https://github.com/conan-io/conan/issues/18434
                 preset_path = preset_path.replace("\\", "/")
             except ValueError:
                 pass
