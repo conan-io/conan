@@ -1236,7 +1236,7 @@ def test_pkg_skip_component():
             name = "pkg_a"
             version = "0.1"
             def package_info(self):
-                self.cpp_info.set_property("pkg_config_skip", True)
+                self.cpp_info.set_property("pkg_config_name", "none")
         """)
     conanfile_b = textwrap.dedent("""
         from conan import ConanFile
@@ -1245,7 +1245,7 @@ def test_pkg_skip_component():
             version = "0.1"
             requires = "pkg_a/0.1"
             def package_info(self):
-                self.cpp_info.set_property("pkg_config_skip", True)
+                self.cpp_info.set_property("pkg_config_name", "none")
                 self.cpp_info.components["cmp1"].libs = []
         """)
 
@@ -1256,7 +1256,7 @@ def test_pkg_skip_component():
                 version = "0.1"
                 requires = "pkg_b/0.1"
                 def package_info(self):
-                    self.cpp_info.components["cmp2"].set_property("pkg_config_skip", True)
+                    self.cpp_info.components["cmp2"].set_property("pkg_config_name", "none")
             """)
     tc = TestClient(light=True)
     tc.save({"a/conanfile.py": conanfile_a,

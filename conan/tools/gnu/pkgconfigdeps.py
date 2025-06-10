@@ -229,7 +229,7 @@ class _PCFilesDeps:
         # First, let's load all the components PC files
         # Loop through all the package's components
         for comp_ref_name, comp_cpp_info in self._dep.cpp_info.get_sorted_components().items():
-            should_skip = self._get_property("pkg_config_skip", self._dep, comp_ref_name, check_type=bool)
+            should_skip = self._get_property("pkg_config_skip", self._dep, comp_ref_name) == "none"
             if should_skip:
                 continue
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
@@ -262,7 +262,7 @@ class _PCFilesDeps:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        should_skip_main = self._get_property("pkg_config_skip", self._dep, check_type=bool)
+        should_skip_main = self._get_property("pkg_config_name", self._dep) == "none"
         if pkg_name not in pc_files and not should_skip_main:
             cpp_info = self._dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
