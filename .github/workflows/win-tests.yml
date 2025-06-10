@@ -86,7 +86,7 @@ jobs:
           Invoke-WebRequest -Uri $url -OutFile $zipFile
           Expand-Archive -Path $zipFile -DestinationPath $destination -Force
           Remove-Item $zipFile
-          cd $destination
+          cd $destination\emsdk-$version
           .\emsdk install latest
           .\emsdk activate latest --permanent
           .\emsdk_env.ps1
