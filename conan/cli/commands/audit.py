@@ -114,7 +114,7 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     input_group.add_argument("-l", "--list", help="pkglist file to list vulnerabilities for")
     input_group.add_argument("-s", "--sbom", help="sbom file to list vulnerabilities for")
     input_group.add_argument("-lock", "--lockfile", help="lockfile file to list vulnerabilities for")
-    input_group.add_argument("-r", "--remote", help="Remote to use for listing")
+    subparser.add_argument("-r", "--remote", help="Remote to use for listing")
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
 
