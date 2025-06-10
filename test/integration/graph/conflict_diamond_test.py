@@ -129,7 +129,9 @@ class TestErrorVisibleFalse:
         #  cli--> pkg1/1.0 -(visible=False) --------------> pkg3/1.0 (no conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.0 (no conflict)
         # This doesn't conflict, but package topology is affected, converging to a direct dependency
-        # of a visi
+        # of a visible one
+        #  cli--> pkg1/1.0 -(visible=Tru) --------------> pkg3/1.0 (no conflict)
+        #             \----> pkg2/1.0 ----------------------/
         tc = TestClient(light=True)
         tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
                  "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.0"),
@@ -142,11 +144,20 @@ class TestErrorVisibleFalse:
         tc.run("export pkg2")
         # Creating this pkg1 does generate a conflict
         tc.run("export pkg1")
+
         tc.run("graph info --requires=pkg1/1.0 --format=json")
-        print(tc.stdout)
+        print(tc.out)
         graph = json.loads(tc.stdout)
-        pkg1 = graph["graph"]["nodes"]["2"]
+        pkg1 = graph["graph"]["nodes"]["1"]
         assert pkg1["ref"] == "pkg1/1.0#0500746058caef3211f77104e0b13b12"
+        deps = pkg1["dependencies"]
+        assert len(deps) == 2
+        dep_pkg2 = deps["3"]
+        assert dep_pkg2["ref"] == "pkg2/1.0"
+        assert dep_pkg2["visible"] is True
+        dep_pkg3 = deps["2"]
+        assert dep_pkg3["ref"] == "pkg3/1.0"
+        assert dep_pkg2["visible"] is True
 
     def test_header_only_conflict_when_not_visible(self):
         # cli --------------------------------------------> pkg3/1.1
