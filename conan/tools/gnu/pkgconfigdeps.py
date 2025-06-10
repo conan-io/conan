@@ -4,6 +4,7 @@ import textwrap
 
 from jinja2 import Template, StrictUndefined
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
@@ -229,11 +230,14 @@ class _PCFilesDeps:
         # First, let's load all the components PC files
         # Loop through all the package's components
         for comp_ref_name, comp_cpp_info in self._dep.cpp_info.get_sorted_components().items():
-            # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             should_skip = self._get_property("pkg_config_skip", self._dep, comp_ref_name, check_type=bool)
             if should_skip:
                 continue
+            # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires = self._get_component_requirement_names(comp_cpp_info)
+            for req in comp_requires:
+                if not self._get_property("pkg_config_skip", self._dep, req, check_type=bool):
+                    ConanOutput().debug(f"Component {req} is required by {comp_ref_name} but is skipping its .pc file")
             comp_name = self._get_name(self._dep, pkg_name, comp_ref_name)
             version = (self._get_property("component_version", self._dep, comp_ref_name) or
                        self._get_property("system_package_version", self._dep, comp_ref_name) or
@@ -262,7 +266,8 @@ class _PCFilesDeps:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        if pkg_name not in pc_files:
+        should_skip_main = self._get_property("pkg_config_skip", self._dep, check_type=bool)
+        if pkg_name not in pc_files and not should_skip_main:
             cpp_info = self._dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
             # Note: If DEP has components, they'll be the requirements == pc_files.keys()

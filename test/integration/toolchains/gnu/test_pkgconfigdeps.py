@@ -1228,3 +1228,48 @@ def test_pkg_with_duplicated_component_requires():
     pc_content = client.load("mylib-myfirstcomp.pc")
     assert "Requires: mylib-mycomponent" == get_requires_from_content(pc_content)
 
+
+def test_pkg_skip_component():
+    conanfile_a = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_a"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_skip", True)
+        """)
+    conanfile_b = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_b"
+            version = "0.1"
+            requires = "pkg_a/0.1"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_skip", True)
+                self.cpp_info.components["cmp1"].libs = []
+        """)
+
+    conanfile_c = textwrap.dedent("""
+            from conan import ConanFile
+            class PkgConfigConan(ConanFile):
+                name = "pkg_c"
+                version = "0.1"
+                requires = "pkg_b/0.1"
+                def package_info(self):
+                    self.cpp_info.components["cmp2"].set_property("pkg_config_skip", True)
+            """)
+    tc = TestClient(light=True)
+    tc.save({"a/conanfile.py": conanfile_a,
+             "b/conanfile.py": conanfile_b,
+             "c/conanfile.py": conanfile_c})
+    tc.run("create a")
+    tc.run("create b")
+    tc.run("create c")
+
+    tc.run("install --requires=pkg_c/0.1 --generator=PkgConfigDeps -of=out")
+    install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
+    assert "pkg_a.pc" not in install_contents
+    assert "pkg_b.pc" not in install_contents
+    assert "pkg_b-cmp1.pc" in install_contents
+    assert "pkg_c.pc" in install_contents
+    assert "pkg_c-cmp2.pc" not in install_contents
