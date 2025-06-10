@@ -176,8 +176,10 @@ RUN cd /tmp && \
     cd /usr/share/emsdk-${EMSDK} && \
     ./emsdk update && \
     ./emsdk install latest && \
-    ./emsdk activate latest --permanent && \
-    echo "EMSDK_QUIET=1 source /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
+    ./emsdk activate latest --permanent
+    # echo "EMSDK_QUIET=1 source /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
+# Manually add the environment variables to the PATH
+ENV PATH "/usr/share/emsdk-$EMSDK:/usr/share/emsdk-$EMSDK/upstream/emscripten:/usr/share/emsdk-$EMSDK/node/22.16.0_64bit/bin:$PATH"
 
 RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
 
