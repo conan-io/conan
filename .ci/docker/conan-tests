@@ -177,7 +177,7 @@ RUN cd /tmp && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \
-    echo "source '/usr/share/emsdk-${EMSDK}/emsdk_env.sh'" > /etc/profile.d/emsdk.sh
+    echo "EMSDK_QUIET=1 source /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
 
 RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
 
