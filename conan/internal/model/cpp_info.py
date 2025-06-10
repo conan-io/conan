@@ -13,7 +13,7 @@ from conan.internal.util.files import load, save
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_package_framework", "_frameworks", "_libs", "_defines",
-                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags"]
+                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags", "_sources"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
@@ -81,6 +81,7 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
+        self._sources = None  # source files
         self._exe = None  # application executable, only 1 allowed, following CPS
         self._languages = None
 
@@ -120,6 +121,7 @@ class _Component:
             "sharedlinkflags": self._sharedlinkflags,
             "exelinkflags": self._exelinkflags,
             "objects": self._objects,
+            "sources": self._sources,
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
@@ -379,6 +381,16 @@ class _Component:
     @objects.setter
     def objects(self, value):
         self._objects = value
+
+    @property
+    def sources(self):
+        if self._sources is None:
+            self._sources = []
+        return self._sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
 
     @property
     def sysroot(self):
