@@ -163,14 +163,11 @@ def test_autotools_emscripten():
     assert "Hello World Release!" in client.out
 
 
+# TODO: need incubating bazel toolchain
 # def test_bazel_emscripten():
 #     client = TestClient(path_with_spaces=False)
 #     client.run("new bazel7_exe -d name=hello -d version=0.1")
 #     client.save({"wasm32": wasm32_profile, "wasm64": wasm_64_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
 #     client.run("build . -pr:h=wasm32")
 
-# def test_msbuild_emscripten():
-#     client = TestClient(path_with_spaces=False)
-#     client.run("new msbuild_exe -d name=hello -d version=0.1")
-#     client.save({"wasm32": wasm32_profile, "wasm64": wasm_64_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
-#     client.run("build . -pr:h=wasm32")
+# TODO: give support to msbuild
