@@ -209,6 +209,16 @@ jobs:
               Remove-Item $zipFile
           }
 
+      - name: Install emscripten SDK
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          emsdk update
+          emsdk install latest
+          emsdk activate latest
+          call emsdk_env.bat
+          emcc --version
+
       - name: Prepare environment for functional tests
         run: |
           git config --global core.autocrlf false

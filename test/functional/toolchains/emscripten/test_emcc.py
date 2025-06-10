@@ -81,6 +81,7 @@ asmjs_profile = textwrap.dedent(
 
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("emcc")
+@pytest.mark.tool("node")
 def test_cmake_emscripten():
     client = TestClient()
 
@@ -107,6 +108,7 @@ def test_cmake_emscripten():
 
 @pytest.mark.tool("meson")
 @pytest.mark.tool("emcc")
+@pytest.mark.tool("node")
 def test_meson_emscripten():
     client = TestClient()
     client.run("new meson_exe -d name=hello -d version=0.1")
@@ -134,6 +136,7 @@ def test_meson_emscripten():
 
 @pytest.mark.tool("autotools")
 @pytest.mark.tool("emcc")
+@pytest.mark.tool("node")
 def test_autotools_emscripten():
     client = TestClient(path_with_spaces=False)
     client.run("new autotools_exe -d name=hello -d version=0.1")
