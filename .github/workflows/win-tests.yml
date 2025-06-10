@@ -74,30 +74,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install emscripten SDK
-        run: |
-          $version = "4.0.10"
-          $destination = "C:\tools\emsdk\$version"
-          if (-not (Test-Path $destination)) {
-              New-Item -Path $destination -ItemType Directory
-          }
-          $url = "https://github.com/emscripten-core/emsdk/archive/refs/tags/$version.zip"
-          $zipFile = "emsdk-$version.zip"
-          Invoke-WebRequest -Uri $url -OutFile $zipFile
-          Expand-Archive -Path $zipFile -DestinationPath $destination -Force
-          Remove-Item $zipFile
-          cd $destination\emsdk-$version
-          .\emsdk install latest
-          .\emsdk activate latest --permanent
-          .\emsdk_env.ps1
-          $node = Split-Path $EMSDK_NODE
-          echo  "$node;$env:path"| Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          emcc -v
-          node --version
-
-      - name: test
-        run: emcc -v
-
       - name: Install MSVC v14.38 Toolset
         run: |
           Start-Process -Wait "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList {`
