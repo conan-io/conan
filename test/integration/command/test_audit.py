@@ -105,11 +105,14 @@ def test_conan_audit_proxy():
         "error": None
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient(light=True, default_server_user=True)
 
     tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
              "sbom.cdx.json": _sbom_zlib_1_2_11})
     tc.run("create . --lockfile-out=conan.lock")
+    tc.run("upload * -c -r=default")
+
+    tc.run("list * -r=default -f=json", redirect_stdout="pkglist_remote.json")
 
     tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
 
@@ -123,6 +126,9 @@ def test_conan_audit_proxy():
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit list -l=pkglist.json")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list -l=pkglist_remote.json -r=default")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit list --lockfile=conan.lock")
