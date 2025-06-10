@@ -230,6 +230,9 @@ class _PCFilesDeps:
         # Loop through all the package's components
         for comp_ref_name, comp_cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
+            should_skip = self._get_property("pkg_config_skip", self._dep, comp_ref_name, check_type=bool)
+            if should_skip:
+                continue
             comp_requires = self._get_component_requirement_names(comp_cpp_info)
             comp_name = self._get_name(self._dep, pkg_name, comp_ref_name)
             version = (self._get_property("component_version", self._dep, comp_ref_name) or
