@@ -58,8 +58,8 @@ class ReportAPI:
             f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
         ConanOutput().info(command)
 
-        stdout = StringIO()
-        conan_run(command, stdout=stdout)
+        stdout, stderr = StringIO(), StringIO()
+        conan_run(command, stdout=stdout, stderr=stderr)
         diff = stdout.getvalue()
 
         if old_path:
