@@ -172,12 +172,12 @@ RUN cd /tmp && \
 
 RUN cd /tmp && \
     wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
-    tar xzf ${EMSDK}.tar.gz --directory /usr/share/emsdk && \
-    cd /usr/share/emsdk && \
+    tar xzf ${EMSDK}.tar.gz --directory /usr/share && \
+    cd /usr/share/emsdk-${EMSDK} && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \
-    echo "source '/usr/share/emsdk/emsdk_env.sh'" > /etc/profile.d/emsdk.sh
+    echo "source '/usr/share/emsdk-${EMSDK}/emsdk_env.sh'" > /etc/profile.d/emsdk.sh
 
 RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
 
