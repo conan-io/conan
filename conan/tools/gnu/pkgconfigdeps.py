@@ -4,7 +4,6 @@ import textwrap
 
 from jinja2 import Template, StrictUndefined
 
-from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
