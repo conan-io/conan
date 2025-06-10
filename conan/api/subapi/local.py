@@ -82,7 +82,9 @@ class LocalAPI:
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-        folder = conanfile.recipe_folder
+        folder = conanfile.recipe_folder if conanfile.folders.root is None else \
+            os.path.normpath(os.path.join(conanfile.recipe_folder, conanfile.folders.root))
+
         conanfile.folders.set_base_source(folder)
         conanfile.folders.set_base_export_sources(folder)
         conanfile.folders.set_base_recipe_metadata(os.path.join(folder, "metadata"))
