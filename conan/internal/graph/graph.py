@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conan.internal.graph.graph_error import GraphError
+from conan.internal.graph.graph_error import GraphError, GraphRuntimeError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -113,7 +113,11 @@ class Node:
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
-                return True
+                raise GraphRuntimeError(self, node, existing.node)
+            if require.visible != existing.require.visible:
+                self.conanfile.output.warning(f"This package has 2 different dependencies on "
+                                              f"{require.ref} with different visibility. This is an "
+                                              f"ill-formed graph", warn_tag="risk")
             require.aggregate(existing.require)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
@@ -122,6 +126,7 @@ class Node:
                 existing.require.override_ref = require.ref
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
+        # TODO: Missing the update of the node.dependencies[item].require (Edge.require)
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)

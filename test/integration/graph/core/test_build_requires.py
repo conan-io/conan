@@ -203,11 +203,11 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
                                       install=False)
 
         assert type(deps_graph.error) == GraphRuntimeError
-        expected = "Runtime Conflict Error: There is a conflict between packages that will happen " \
-                   "at runtime (but not at compile time), like different versions of the same " \
-                   "shared library that would end in the path. Please check the 'application' " \
-                   "and 'shared-library' package types and requirements with 'run=True' " \
-                   "trait in your graph: 'mingw/0.1' with 'zlib/0.2'."
+        expected = ("Runtime Conflict Error: There is a conflict between packages that will happen "
+                    "at runtime (but not at compile time), like different versions of the same "
+                    "shared library that would end in the path, in package lib/0.1. Please check "
+                    "the 'application' and 'shared-library' package types and requirements with "
+                    "'run=True' trait in your graph: 'zlib/0.2' with 'zlib/0.1'.")
         assert str(deps_graph.error) == expected
 
         self.assertEqual(6, len(deps_graph.nodes))

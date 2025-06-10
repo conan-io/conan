@@ -75,13 +75,15 @@ class GraphProvidesError(GraphError):
 
 class GraphRuntimeError(GraphError):
 
-    def __init__(self, node, conflicting_node):
+    def __init__(self, base, node, conflicting_node):
+        self.base = base
         self.node = node
         self.conflicting_node = conflicting_node
 
     def __str__(self):
         return f"Runtime Conflict Error: There is a conflict between packages that will happen " \
                f"at runtime (but not at compile time), like different versions of the same shared " \
-               f"library that would end in the path. Please check the 'application' and " \
+               f"library that would end in the path, in package {self.base.ref}. " \
+               f"Please check the 'application' and " \
                f"'shared-library' package types and requirements with 'run=True' trait in your " \
                f"graph: '{self.node.ref}' with '{self.conflicting_node.ref}'."

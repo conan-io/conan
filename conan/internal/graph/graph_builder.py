@@ -406,8 +406,7 @@ class DepsGraphBuilder:
         require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
-        if node.propagate_downstream(require, new_node):
-            raise GraphRuntimeError(node, new_node)
+        node.propagate_downstream(require, new_node)
 
         # This is necessary to prevent infinite loops even when visibility is False
         ancestor = node.check_loops(new_node)
@@ -447,3 +446,10 @@ class DepsGraphBuilder:
             to_remove = [r for r in node.transitive_deps if r.override]
             for r in to_remove:
                 node.transitive_deps.pop(r)
+
+        # remove orphans too
+        # FIXME: Look for better place to do this
+        all_referenced = {dep_graph.root}
+        for node in dep_graph.nodes:
+            all_referenced.update(r.node for r in node.transitive_deps.values())
+        dep_graph.nodes = [n for n in dep_graph.nodes if n in all_referenced]
