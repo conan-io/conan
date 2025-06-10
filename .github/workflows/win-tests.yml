@@ -137,6 +137,15 @@ jobs:
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 
+      - name: Install emscripten SDK
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          .\emsdk install latest
+          .\emsdk activate latest
+          .\emsdk_env.bat
+          emcc --version
+
       - uses: msys2/setup-msys2@v2
         id: msys2-setup
         with:
@@ -208,16 +217,6 @@ jobs:
               Expand-Archive -Path $zipFile -DestinationPath $destination -Force
               Remove-Item $zipFile
           }
-
-      - name: Install emscripten SDK
-        run: |
-          git clone https://github.com/emscripten-core/emsdk.git
-          cd emsdk
-          emsdk update
-          emsdk install latest
-          emsdk activate latest
-          call emsdk_env.bat
-          emcc --version
 
       - name: Prepare environment for functional tests
         run: |
