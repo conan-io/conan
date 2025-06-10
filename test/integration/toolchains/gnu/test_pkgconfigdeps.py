@@ -1272,4 +1272,4 @@ def test_pkg_skip_component():
     assert "pkg_b.pc" not in install_contents
     assert "b-cmp1.pc" in install_contents
     assert "pkg_c.pc" in install_contents
-    assert "pkg_c-cmp2.pc" not in install_contents
+    assert "none.pc" in install_contents

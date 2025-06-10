@@ -229,9 +229,6 @@ class _PCFilesDeps:
         # First, let's load all the components PC files
         # Loop through all the package's components
         for comp_ref_name, comp_cpp_info in self._dep.cpp_info.get_sorted_components().items():
-            should_skip = self._get_property("pkg_config_name", self._dep, comp_ref_name) == "none"
-            if should_skip:
-                continue
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires = self._get_component_requirement_names(comp_cpp_info)
             comp_name = self._get_name(self._dep, pkg_name, comp_ref_name)
