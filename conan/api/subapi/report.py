@@ -1,5 +1,6 @@
 import base64
 import os
+from io import StringIO
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -9,7 +10,7 @@ from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.source import config_source
-from conan.internal.util.runners import check_output_runner
+from conan.internal.util.runners import conan_run
 
 
 class ReportAPI:
@@ -57,9 +58,9 @@ class ReportAPI:
             f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
         ConanOutput().info(command)
 
-        # TODO: This is internal, we should use the public API, but nothing exposes functionality like this
-        # We ignore the errors because git diff returns 1 if there are differences
-        diff = check_output_runner(command, ignore_error=True, ignore_encoding_error=True)
+        stdout = StringIO()
+        conan_run(command, stdout=stdout)
+        diff = stdout.getvalue()
 
         if old_path:
             self.conan_api.remove.recipe(old_export_ref)

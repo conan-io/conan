@@ -79,7 +79,7 @@ def detect_runner(command):
     return proc.returncode, "".join(output_buffer)
 
 
-def check_output_runner(cmd, stderr=None, ignore_error=False, ignore_encoding_error=False):
+def check_output_runner(cmd, stderr=None, ignore_error=False):
     # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
     assert isinstance(cmd, str)
     d = tempfile.mkdtemp()
@@ -96,10 +96,7 @@ def check_output_runner(cmd, stderr=None, ignore_error=False, ignore_encoding_er
             msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
             raise ConanException(msg)
 
-        with open(tmp_file, 'r', encoding="utf-8", newline="",
-                  errors="ignore" if ignore_encoding_error else None) as handle:
-            output = handle.read()
-        return output
+        return load(tmp_file)
     finally:
         try:
             os.unlink(tmp_file)
