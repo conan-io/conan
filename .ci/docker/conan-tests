@@ -25,7 +25,8 @@ ENV PY36=3.6.15 \
     CLANGXX_14=/usr/bin/clang++-14 \
     BAZEL_6=6.5.0 \
     BAZEL_7=7.4.1 \
-    BAZEL_8=8.0.0
+    BAZEL_8=8.0.0 \
+    EMSDK=4.0.10
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -75,8 +76,7 @@ RUN apt-get update && \
         g++-9-multilib \
         gcc-11-multilib \
         g++-11-multilib \
-        scons \
-        emscripten && \
+        scons && \
     # fix: asm/errno.h: No such file or directory
     ln -s /usr/include/asm-generic/ /usr/include/asm && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
@@ -169,6 +169,15 @@ RUN cd /tmp && \
     tar -xzf qbs-linux-x86_64-2.6.0.tar.gz && \
     mv qbs-linux-x86_64-2.6.0 /usr/share/qbs && \
     rm qbs-linux-x86_64-2.6.0.tar.gz
+
+RUN cd /tmp && \
+    wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
+    tar xzf ${EMSDK}.tar.gz && \
+    cd ${EMSDK} && \
+    ./emsdk update && \
+    ./emsdk install latest && \
+    ./emsdk activate latest --permanent && \
+    source ./emsdk_env.sh
 
 RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
 

@@ -142,9 +142,12 @@ jobs:
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
           .\emsdk install latest
-          .\emsdk activate latest
+          .\emsdk activate latest --permanent
           .\emsdk_env.bat
           emcc --version
+
+      - name: test
+        run: emcc -v
 
       - uses: msys2/setup-msys2@v2
         id: msys2-setup
