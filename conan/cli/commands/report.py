@@ -49,14 +49,13 @@ def report_diff(conan_api, parser, subparser, *args):
 
     result = conan_api.report.diff(args.old_reference, args.new_reference, enabled_remotes,
                                    old_path=args.old_path, new_path=args.new_path, cwd=cwd)
-
     return {
         "conan_api": conan_api,
         "diff": result["diff"],
         "old_export_ref": result["old_export_ref"],
         "new_export_ref": result["new_export_ref"],
-        "old_cache_path": result["old_diff_path"],
-        "new_cache_path": result["new_diff_path"],
+        "old_cache_path": result["old_cache_path"],
+        "new_cache_path": result["new_cache_path"],
         "src_prefix": result["src_prefix"],
         "dst_prefix": result["dst_prefix"],
     }

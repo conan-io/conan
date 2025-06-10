@@ -54,9 +54,7 @@ def _render_diff(content, template, template_folder, **kwargs):
         return line.replace(kwargs["old_cache_path"], "(old)").replace(kwargs["new_cache_path"], "(new)")
 
     def _replace_paths(line):
-        src_path = kwargs["src_prefix"][:-1] + kwargs["old_cache_path"]
-        dst_path = kwargs["dst_prefix"][:-1] + kwargs["new_cache_path"]
-        return line.replace(src_path, "(old)").replace(dst_path, "(new)")
+        return _remove_prefixes(_replace_cache_paths(line))
 
     return template.render(content=content,
                            base_template_path=template_folder, version=__version__,
@@ -69,8 +67,6 @@ def _render_diff(content, template, template_folder, **kwargs):
 
 def format_diff_html(result):
     conan_api = result["conan_api"]
-    src_prefix = result["src_prefix"]
-    dst_prefix = result["dst_prefix"]
 
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "diff.html")
@@ -86,8 +82,8 @@ def format_diff_html(result):
                                new_reference=result["new_export_ref"],
                                old_cache_path=result["old_cache_path"],
                                new_cache_path=result["new_cache_path"],
-                               src_prefix=src_prefix,
-                               dst_prefix=dst_prefix))
+                               src_prefix=result["src_prefix"],
+                               dst_prefix=result["dst_prefix"]))
 
 
 def format_diff_txt(result):

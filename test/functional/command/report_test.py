@@ -103,5 +103,5 @@ def test_compare_paths(old_args, new_args, formatter):
         # We have exports information
         assert f"""(old)/e/v1.txt""" in output_html
         # New files appear both in the menu and in the diff
-        assert output_html.count("(new)/s/new-file-for-v2.txt") == 4
+        assert output_html.count("(new)/s/new-file-for-v2.txt") == 3
 

@@ -51,7 +51,7 @@ class ReportAPI:
         src_prefix = base64.b64encode(str(new_export_ref.repr_notime()).encode()).decode() + "/"
         dst_prefix = base64.b64encode(str(old_export_ref.repr_notime()).encode()).decode() + "/"
 
-        command = (f'git diff --no-index --src-prefix {src_prefix} --dst-prefix {dst_prefix} '
+        command = (f'git diff --no-index --src-prefix "{src_prefix}" --dst-prefix "{dst_prefix}" '
                    f'"{old_diff_path}" "{new_diff_path}"')
 
         ConanOutput().info(
@@ -71,8 +71,8 @@ class ReportAPI:
             "diff": diff,
             "old_export_ref": old_export_ref,
             "new_export_ref": new_export_ref,
-            "old_diff_path": old_diff_path,
-            "new_diff_path": new_diff_path,
+            "old_cache_path": old_diff_path,
+            "new_cache_path": new_diff_path,
             "src_prefix": src_prefix,
             "dst_prefix": dst_prefix,
         }

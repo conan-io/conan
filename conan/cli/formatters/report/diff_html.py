@@ -110,7 +110,7 @@ diff_html = r"""
                     {%- for line in lines -%}
                         {%- if loop.first -%}
                             <hr/>
-                            <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(line) }}">{{ remove_prefixes(line) }}</h3>
+                            <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(filename) }}">{{ remove_prefixes(line) }}</h3>
                         {%- elif line.startswith('+++') %}
                             <span class="add">{{ replace_paths(line) }}</span>
                             <br/>
