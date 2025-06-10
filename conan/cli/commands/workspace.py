@@ -21,8 +21,6 @@ def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     Return the folder containing the conanws.py/conanws.yml workspace file
     """
     ws = conan_api.workspace
-    if not ws.folder():
-        raise ConanException("No workspace defined, conanws.py file not found")
     return ws.folder()
 
 
@@ -110,8 +108,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     """
     Build the current workspace, starting from the "products"
     """
-    subparser.add_argument("--pkg", action="append",
-                           help='Path to a package folder in the user workspace')
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -131,7 +128,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         ConanOutput().info("Adding '--build=editable' as build mode")
     buildmode.append("editable")
 
-    all_editables = conan_api.workspace.editable_packages
+    all_editables = conan_api.workspace.editable_packages()
     packages = conan_api.workspace.select_packages(args.pkg)
     ConanOutput().box("Workspace computing the build order")
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, buildmode,
@@ -170,8 +167,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     Install the workspace as a monolith, installing only external dependencies to the workspace,
     generating a single result (generators, etc) for the whole workspace.
     """
-    subparser.add_argument("--pkg", action="append",
-                           help='Path to a package folder in the user workspace')
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -237,10 +233,10 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
 @conan_subcommand()
 def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Build the current workspace, starting from the "products"
+    Call "conan create" for packages in the workspace, in the correct order.
+    Packages will be created in the Conan cache, not locally
     """
-    subparser.add_argument("--pkg", action="append",
-                           help='Path to a package folder in the user workspace')
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -261,8 +257,11 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     build_mode = args.build if args.build else []
     build_mode.extend(f"missing:{r}" for r in exported_refs)
 
-    all_packages = conan_api.workspace.editable_packages
+    all_packages = conan_api.workspace.editable_packages()
     packages = conan_api.workspace.select_packages(args.pkg)
+
+    # If we don't disable the workspace, then, the packages are not created in the Conan cache,
+    # but locally in the user folders, are they are intercepted as editables
     conan_api.workspace.enable(False)
 
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, build_mode,
@@ -297,6 +296,23 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         ConanOutput().box(f"Workspace create {ref}")
                         ConanOutput().info(f"Conan create command: {cmd}\n")
                         conan_api.command.run(cmd)
+
+
+@conan_subcommand()
+def workspace_source(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Call the source() method of packages in the workspace
+    """
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
+    args = parser.parse_args(*args)
+
+    remotes = conan_api.remotes.list()  # In case "python_requires" are needed
+    packages = conan_api.workspace.select_packages(args.pkg)
+
+    ConanOutput().box("Workspace getting sources")
+    for pkg, info in packages.items():
+        conan_api.local.source(info["path"], name=pkg.name, version=pkg.version,
+                               user=pkg.user, channel=pkg.channel, remotes=remotes)
 
 
 @conan_command(group="Consumer")

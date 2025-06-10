@@ -100,9 +100,9 @@ class WorkspaceAPI:
         """
         @return: the current workspace folder where the conanws.yml or conanws.py is located
         """
+        self._check_ws()
         return self._folder
 
-    @property
     def editable_packages(self):
         """
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
@@ -269,7 +269,7 @@ class WorkspaceAPI:
     def export(self, lockfile=None, remotes=None):
         self._check_ws()
         exported = []
-        for ref, info in self.editable_packages.items():
+        for ref, info in self.editable_packages().items():
             exported_ref = self._conan_api.export.export(info["path"], ref.name, str(ref.version),
                                                          ref.user, ref.channel,
                                                          lockfile=lockfile, remotes=remotes)
@@ -280,7 +280,7 @@ class WorkspaceAPI:
 
     def select_packages(self, packages):
         self._check_ws()
-        editable = self.editable_packages
+        editable = self.editable_packages()
         packages = packages or []
         selected_editables = {}
         for ref, info in editable.items():
@@ -292,8 +292,8 @@ class WorkspaceAPI:
 
         return selected_editables
 
-    def build_order(self, packages, profile_host, profile_build, build_mode, lockfile, remotes, args,
-                    update=False):
+    def build_order(self, packages, profile_host, profile_build, build_mode, lockfile, remotes,
+                    profile_args, update=False):
         ConanOutput().title(f"Computing dependency graph for each pkgs")
         conan_api = self._conan_api
         from conan.internal.graph.install_graph import InstallGraph
@@ -313,7 +313,7 @@ class WorkspaceAPI:
 
             ConanOutput().info(f"Aggregating build-order for package: {ref}")
             install_graph = InstallGraph(deps_graph, order_by="recipe",
-                                         profile_args=ProfileArgs.from_args(args))
+                                         profile_args=ProfileArgs.from_args(profile_args))
             install_order.merge(install_graph)
 
         return install_order

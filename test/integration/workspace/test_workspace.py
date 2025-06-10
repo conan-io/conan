@@ -21,13 +21,13 @@ class TestWorkspaceRoot:
         c = TestClient(light=True)
         # Just check the root command works
         c.run("workspace root", assert_error=True)
-        assert "ERROR: No workspace defined, conanws.py file not found" in c.out
+        assert "ERROR: Workspace not defined, please create" in c.out
 
         # error, conanws/ folder does not contain conanws.[py | yml]
         c.save({"conanws/test.txt": ""})
         with c.chdir("conanws"):
             c.run("workspace root", assert_error=True)
-            assert "ERROR: No workspace defined, conanws.py file not found" in c.out
+            assert "ERROR: Workspace not defined, please create" in c.out
             c.save({"conanws.yml": ""})
             c.run("workspace root")
             assert c.current_folder in c.stdout
@@ -806,6 +806,48 @@ class TestCreate:
 
         c.run("workspace create -s:b os=Linux -s:h os=Windows")
 
-        print(c.out)
         assert "protobuf/0.1: Building for: Windows!!!" in c.out
         assert "protobuf/0.1: Building for: Linux!!!" in c.out
+
+
+class TestSource:
+    def test_source(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        pkga = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                def source(self):
+                    self.output.info("Executing SOURCE!!!")
+            """)
+        pkgb = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkgb"
+                version = "0.1"
+                requires = "pkga/0.1"
+                def source(self):
+                    self.output.info("Executing SOURCE!!!")
+            """)
+        pkgc = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkgc"
+                version = "0.1"
+                requires = "pkgb/0.1"
+                def source(self):
+                    self.output.info("Executing SOURCE!!!")
+            """)
+        c.save({"pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb,
+                "pkgc/conanfile.py": pkgc})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc")
+        c.run("workspace source")
+        assert "conanfile.py (pkga/0.1): Executing SOURCE!!!" in c.out
+        assert "conanfile.py (pkgb/0.1): Executing SOURCE!!!" in c.out
+        assert "conanfile.py (pkgc/0.1): Executing SOURCE!!!" in c.out
