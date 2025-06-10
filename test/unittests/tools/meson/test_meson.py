@@ -68,11 +68,11 @@ def test_meson_to_cppstd_flag(compiler, compiler_version, cppstd, expected):
 
 
 def test_meson_install_strip():
-    """When the configuration `tools.build.install_strip` is set to True,
+    """When the configuration `tools.build:install_strip` is set to True,
         the Meson install command should include the `--strip` option.
     """
     c = ConfDefinition()
-    c.loads("tools.build.install_strip=True")
+    c.loads("tools.build:install_strip=True")
 
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",
