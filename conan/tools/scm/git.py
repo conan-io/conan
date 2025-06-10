@@ -89,7 +89,7 @@ class Git:
             if name == remote:
                 url, _ = url.rsplit(None, 1)
                 if "(" in url: # if the url still has (fetch) or (push) at the end
-                    url = url[:url.index("(")-1]
+                    url, _ = url.rsplit(None, 1)
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
                 return url
