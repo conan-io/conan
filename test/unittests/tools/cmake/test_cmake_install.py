@@ -1,10 +1,14 @@
+import pytest
+
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.internal.model.conf import Conf
 from conan.internal.model.settings import Settings
-from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import redirect_output
+
 
 
 def test_run_install_component():
@@ -36,7 +40,10 @@ def test_run_install_component():
     assert "--component foo" in conanfile.command
 
 
-def test_run_install_strip():
+@pytest.mark.parametrize("config, deprecated",
+                         [("tools.cmake:install_strip", True),
+                          ("tools.build:install_strip", False),])
+def test_run_install_strip(config, deprecated):
     """
     Testing that the install/strip rule is called
     Issue related: https://github.com/conan-io/conan/issues/14166
@@ -52,7 +59,7 @@ def test_run_install_strip():
     conanfile = ConanFileMock()
 
     conanfile.conf = Conf()
-    conanfile.conf.define("tools.cmake:install_strip", True)
+    conanfile.conf.define(config, True)
 
     conanfile.folders.generators = "."
     conanfile.folders.set_base_generators(temp_folder())
@@ -61,9 +68,17 @@ def test_run_install_strip():
 
     write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
     cmake = CMake(conanfile)
-    cmake.install()
-    assert "--strip" in conanfile.command
+    stdout = RedirectedTestOutput()  # Initialize each command
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr, stdout):
+        cmake.install(stdout=stdout, stderr=stderr)
 
+    if deprecated:
+        assert "WARN: deprecated: The 'tools.cmake:install_strip' configuration is deprecated, use"\
+               " 'tools.build:install_strip' instead" in stderr
+    else:
+        assert "tools.cmake:install_strip" not in stderr
+    assert "--strip" in conanfile.command
 
 def test_run_install_cli_args():
     """
