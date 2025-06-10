@@ -235,9 +235,6 @@ class _PCFilesDeps:
                 continue
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires = self._get_component_requirement_names(comp_cpp_info)
-            for req in comp_requires:
-                if not self._get_property("pkg_config_skip", self._dep, req, check_type=bool):
-                    ConanOutput().debug(f"Component {req} is required by {comp_ref_name} but is skipping its .pc file")
             comp_name = self._get_name(self._dep, pkg_name, comp_ref_name)
             version = (self._get_property("component_version", self._dep, comp_ref_name) or
                        self._get_property("system_package_version", self._dep, comp_ref_name) or
