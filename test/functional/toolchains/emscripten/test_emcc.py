@@ -119,9 +119,10 @@ def test_meson_emscripten():
     assert "C++ linker for the host machine: em++ ld.wasm" in client.out
     assert "Host machine cpu family: wasm64" in client.out
     assert os.path.exists(os.path.join(client.current_folder, "build", "hello.wasm"))
-    # Add --experimental-wasm-memory64 flag as node version in CI is less than 24 (the one shipped with Emscripten 4.0.10)
-    client.run_command("node --experimental-wasm-memory64 ./build/hello")
-    assert "Hello World Release!" in client.out
+    # wasm64 only supported since node v23 so only run in MacOS where it is available
+    if platform.system() == "Darwin":
+        client.run_command("node ./build/hello")
+        assert "Hello World Release!" in client.out
 
     rmtree(os.path.join(client.current_folder, "build"))
     client.run("build . -pr:h=asmjs")
