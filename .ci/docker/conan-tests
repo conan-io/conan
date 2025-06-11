@@ -177,6 +177,7 @@ RUN cd /tmp && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \
+    source /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
     embuilder build MINIMAL && \
     embuilder build MINIMAL --wasm64
     # echo "EMSDK_QUIET=1 source /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
