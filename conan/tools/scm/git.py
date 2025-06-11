@@ -69,7 +69,7 @@ class Git:
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
 
-    def get_remote_url(self, remote="origin"):
+    def get_remote_url(self, remote="origin") -> str:
         """
         Obtains the URL of the remote git remote repository, with ``git remote -v``
 
@@ -93,6 +93,7 @@ class Git:
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
                 return url
+        return ""
 
     def commit_in_remote(self, commit, remote="origin"):
         """
