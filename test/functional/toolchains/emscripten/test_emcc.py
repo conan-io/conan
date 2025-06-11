@@ -91,8 +91,7 @@ def test_cmake_emscripten():
 
     client.run("build . -pr:h=wasm32")
     assert "em++   -stdlib=libc++ -O3 -DNDEBUG -std=c++17" in client.out
-    build_folder = "build/release-wasm" if platform.system() != "Windows" else "build"
-    assert os.path.exists(os.path.join(client.current_folder, build_folder, "hello.wasm"))
+    assert os.path.exists(os.path.join(client.current_folder, "build/release-wasm" , "hello.wasm"))
 
     # Run JavaScript generated code which uses .wasm file
     client.run_command("node ./build/release-wasm/hello")
@@ -100,9 +99,8 @@ def test_cmake_emscripten():
 
     client.run("build . -pr:h=asmjs")
     assert "WASM=0" in client.out
-    build_folder = "build/release-asm.js" if platform.system() != "Windows" else "build"
     # No wasm should be generated for asm.js architecture
-    assert not os.path.exists(os.path.join(client.current_folder, build_folder, "hello.wasm"))
+    assert not os.path.exists(os.path.join(client.current_folder, "build/release-asm.js" , "hello.wasm"))
     client.run_command("node ./build/release-asm.js/hello")
     assert "Hello World Release!" in client.out
 
@@ -121,7 +119,8 @@ def test_meson_emscripten():
     assert "C++ linker for the host machine: em++ ld.wasm" in client.out
     assert "Host machine cpu family: wasm64" in client.out
     assert os.path.exists(os.path.join(client.current_folder, "build", "hello.wasm"))
-    client.run_command("node ./build/hello")
+    # Add --experimental-wasm-memory64 flag as node version in CI is less than 24 (the one shipped with Emscripten 4.0.10)
+    client.run_command("node --experimental-wasm-memory64 ./build/hello")
     assert "Hello World Release!" in client.out
 
     rmtree(os.path.join(client.current_folder, "build"))
@@ -143,7 +142,7 @@ def test_meson_emscripten():
 def test_autotools_emscripten():
     client = TestClient(path_with_spaces=False)
     client.run("new autotools_exe -d name=hello -d version=0.1")
-    client.save({"wasm32": wasm32_profile, "wasm64": wasm_64_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
+    client.save({"wasm32": wasm32_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
     client.run("build . -pr:h=wasm32")
     assert "em++  -stdlib=libc++  -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB" in client.out
     assert "checking for wasm32-local-emscripten-ranlib... emranlib" in client.out
