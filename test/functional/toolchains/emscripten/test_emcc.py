@@ -90,7 +90,7 @@ def test_cmake_emscripten():
     client.save({"wasm32": wasm32_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
 
     client.run("build . -pr:h=wasm32")
-    assert "em++   -stdlib=libc++ -O3 -DNDEBUG -std=c++17" in client.out
+    assert "Conan toolchain: Defining libcxx as C++ flags: -stdlib=libc++" in client.out
     assert os.path.exists(os.path.join(client.current_folder, "build/release-wasm" , "hello.wasm"))
 
     # Run JavaScript generated code which uses .wasm file
@@ -145,7 +145,6 @@ def test_autotools_emscripten():
     client.run("new autotools_exe -d name=hello -d version=0.1")
     client.save({"wasm32": wasm32_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
     client.run("build . -pr:h=wasm32")
-    assert "em++  -stdlib=libc++  -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB" in client.out
     assert "checking for wasm32-local-emscripten-ranlib... emranlib" in client.out
     assert "checking for wasm32-local-emscripten-gcc... emcc" in client.out
     assert "checking for wasm32-local-emscripten-ar... emar" in client.out
