@@ -162,7 +162,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand()
-def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     """
     Install the workspace as a monolith, installing only external dependencies to the workspace,
     generating a single result (generators, etc) for the whole workspace.
@@ -237,6 +237,8 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     Packages will be created in the Conan cache, not locally
     """
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
+    subparser.add_argument("--local", action="store_true", help="Build and test packages locally, "
+                                                                "not in the Conan cache")
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -251,21 +253,25 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    ConanOutput().box("Exporting workspace packages recipes to Conan cache")
-    exported_refs = conan_api.workspace.export()
-
     build_mode = args.build if args.build else []
-    build_mode.extend(f"missing:{r}" for r in exported_refs)
+    if not args.local:
+        ConanOutput().box("Exporting workspace recipes to Conan cache")
+        exported_refs = conan_api.workspace.export()
+        build_mode.extend(f"missing:{r}" for r in exported_refs)
+    else:
+        build_mode.append("editable")
 
     all_packages = conan_api.workspace.editable_packages()
     packages = conan_api.workspace.select_packages(args.pkg)
 
     # If we don't disable the workspace, then, the packages are not created in the Conan cache,
     # but locally in the user folders, are they are intercepted as editables
-    conan_api.workspace.enable(False)
+    if not args.local:
+        conan_api.workspace.enable(False)
 
-    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, build_mode,
-                                                    lockfile, remotes, args, update=args.update)
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build,
+                                                    build_mode, lockfile, remotes, args,
+                                                    update=args.update)
 
     ConanOutput().box("Workspace creating each package")
     order = install_order.install_build_order()
@@ -276,7 +282,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
             ref = RecipeReference.loads(elem["ref"])
             for package_level in elem["packages"]:
                 for package in package_level:
-                    if package["binary"] != "Build":
+                    if package["binary"] not in ("Build", "EditableBuild"):
                         continue
 
                     if ref not in all_packages:

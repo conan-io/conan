@@ -486,7 +486,7 @@ class TestMeta:
                clean_first=True)
         c.run("workspace add liba")
         c.run("workspace add libb")
-        c.run("workspace install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
+        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
@@ -515,7 +515,7 @@ class TestMeta:
         c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
                 "conanws.py": conanfilews})
         c.run("workspace add dep")
-        c.run("workspace install -of=build")
+        c.run("workspace super-install -of=build")
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conandeps.props" in files
 
@@ -535,10 +535,10 @@ class TestMeta:
         c.save({"conanws.yml": "conanfilews: myconanfilews.py",
                 "dep/conanfile.py": GenConanfile("dep", "0.1"),
                 "conanws.py": conanfilews})
-        c.run("workspace install", assert_error=True)
+        c.run("workspace super-install", assert_error=True)
         assert "ERROR: There are no selected packages defined in the workspace" in c.out
         c.run("workspace add dep")
-        c.run("workspace install", assert_error=True)
+        c.run("workspace super-install", assert_error=True)
         assert "ERROR: Conanfile in conanws.py shouldn't have 'requires'" in c.out
 
     def test_install_partial(self):
@@ -557,7 +557,7 @@ class TestMeta:
         c.run("workspace add libb")
         c.run("workspace add libc")
         for arg in ("--pkg=libb/*", "--pkg=libb/* --pkg=liba/*"):
-            c.run(f"workspace install {arg} -g CMakeDeps -of=build")
+            c.run(f"workspace super-install {arg} -g CMakeDeps -of=build")
             assert "dep1/0.1" in c.out
             assert "dep2/0.1" not in c.out
             assert "libc/0.1" not in c.out
@@ -755,6 +755,20 @@ class TestCreate:
         assert "pkga/0.1 (test package): Running test()" in c.out
         assert "pkgb/0.1 (test package): Running test()" in c.out
         assert "pkgc/0.1 (test package): Running test()" in c.out
+
+    def test_create_local(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+                "pkga/test_package/conanfile.py": GenConanfile().with_test("pass")})
+        c.run("workspace add pkga")
+        c.run("workspace create --local")
+        print(c.out)
+        assert "pkga/0.1 (test package): Running test()" in c.out
+        c.run("list *")
+        print(c.out)
+        assert "pkga/0.1" not in c.out
 
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
