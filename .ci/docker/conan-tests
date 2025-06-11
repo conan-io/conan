@@ -177,10 +177,10 @@ RUN cd /tmp && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \
-    source /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
+    . /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
     embuilder build MINIMAL && \
     embuilder build MINIMAL --wasm64
-    # echo "EMSDK_QUIET=1 source /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
+    # echo "EMSDK_QUIET=1 . /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
 # Manually add the emsdk binaries to the PATH and set emcc cache directory to a writable location
 ENV PATH="/usr/share/emsdk-$EMSDK:/usr/share/emsdk-$EMSDK/upstream/emscripten:/usr/share/emsdk-$EMSDK/node/22.16.0_64bit/bin:$PATH" \
     EM_CACHE=$HOME/.emscripten_cache
