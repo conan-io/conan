@@ -391,6 +391,16 @@ class TestErrorsUx:
         c.run("install --requires=zlib/0.1@myuser/mychannel")
         c.assert_listed_require({"zlib/0.1@myuser/mychannel": "Downloaded (default)"})
 
+    def test_errors_missing_folder(self):
+        folder = temp_folder()
+        repo = os.path.join(folder, "repo")
+        mkdir(repo)
+        c = TestClient(light=True)
+        c.run(f"remote add local '{repo}'")
+        # shutil.rmtree(repo)
+        c.run("install --requires=zlib/[*] --build missing", assert_error=True)
+        assert "Cannot connect to 'local-recipes-index' repository, missing 'recipes'" in c.out
+
 
 class TestPythonRequires:
     @pytest.fixture(scope="class")

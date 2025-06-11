@@ -199,6 +199,9 @@ class _LocalRecipesIndexLayout:
     def get_recipes_references(self, pattern):
         name_pattern = pattern.split("/", 1)[0]
         recipes_dir = os.path.join(self._base_folder, "recipes")
+        if not os.path.isdir(recipes_dir):
+            raise ConnectionError("Cannot connect to 'local-recipes-index' repository, missing "
+                                  f"'recipes' folder: {recipes_dir}")
         recipes = os.listdir(recipes_dir)
         recipes.sort()
         ret = []
