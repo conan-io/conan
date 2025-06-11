@@ -1,3 +1,8 @@
+import argparse
+
+import pytest
+from mock import patch
+
 from conan import __version__
 from conan.test.utils.tools import TestClient
 
@@ -43,3 +48,31 @@ class TestHelp:
         assert "Perform file operations in the local cache (of recipes and/or packages)" in c.out
         c.run("cache path -h")
         assert "Show the path to the Conan cache for a given reference" in c.out
+
+
+def test_all_commands_call_args_parse():
+    tc = TestClient(light=True)
+    tc.run("-h")
+    commands = tc.api.command.cli._builtin_commands
+    tc.api.workspace.TEST_ENABLED = True
+    for command, info in commands.items():
+        if command == "workspace":
+            continue
+
+        if len(info._subcommands) > 0:
+            for subcommand in info._subcommands.values():
+                with patch("conan.cli.command.ConanArgumentParser.parse_args", side_effect=Exception("called")) as mock_run:
+                    try:
+                        tc.run(f"{command} {subcommand.name} -h")
+                    except:
+                        pass
+                    finally:
+                        assert mock_run.called, f'Command "conan {command} {subcommand.name}" did not call parse_args()'
+        else:
+            with patch("conan.cli.command.ConanArgumentParser.parse_args", side_effect=Exception("called")) as mock_run:
+                try:
+                    tc.run(f"{command} -h")
+                except:
+                    pass
+                finally:
+                    assert mock_run.called, f'Command "conan {command}" did not call parse_args()'

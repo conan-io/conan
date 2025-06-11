@@ -18,6 +18,7 @@ def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Return the folder containing the conanws.py/conanws.yml workspace file
     """
+    parser.parse_args(*args)
     ws = conan_api.workspace
     if not ws.folder():
         raise ConanException("No workspace defined, conanws.py file not found")
@@ -101,6 +102,7 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Display info for current workspace
     """
+    parser.parse_args(*args)
     return {"info": conan_api.workspace.info()}
 
 
