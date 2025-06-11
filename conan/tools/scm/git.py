@@ -69,7 +69,7 @@ class Git:
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
 
-    def get_remote_url(self, remote="origin") -> str:
+    def get_remote_url(self, remote="origin"):
         """
         Obtains the URL of the remote git remote repository, with ``git remote -v``
 
@@ -88,12 +88,12 @@ class Git:
             name, url = r.split(maxsplit=1)
             if name == remote:
                 url, _ = url.rsplit(None, 1)
-                if "(" in url: # if the url still has (fetch) or (push) at the end
+                # if the url still has (fetch) or (push) at the end
+                if url.endswith("(fetch)") or url.endswith("(push)"):
                     url, _ = url.rsplit(None, 1)
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
                 return url
-        return ""
 
     def commit_in_remote(self, commit, remote="origin"):
         """
