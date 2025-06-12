@@ -311,7 +311,7 @@ def workspace_source(conan_api: ConanAPI, parser, subparser, *args):
 
     ConanOutput().box("Workspace getting sources")
     for pkg, info in packages.items():
-        conan_api.local.source(info["path"], name=pkg.name, version=pkg.version,
+        conan_api.local.source(info["path"], name=pkg.name, version=str(pkg.version),
                                user=pkg.user, channel=pkg.channel, remotes=remotes)
 
 
