@@ -237,8 +237,6 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     Packages will be created in the Conan cache, not locally
     """
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
-    subparser.add_argument("--local", action="store_true", help="Build and test packages locally, "
-                                                                "not in the Conan cache")
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -254,20 +252,16 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     print_profiles(profile_host, profile_build)
 
     build_mode = args.build if args.build else []
-    if not args.local:
-        ConanOutput().box("Exporting workspace recipes to Conan cache")
-        exported_refs = conan_api.workspace.export()
-        build_mode.extend(f"missing:{r}" for r in exported_refs)
-    else:
-        build_mode.append("editable")
+    ConanOutput().box("Exporting workspace recipes to Conan cache")
+    exported_refs = conan_api.workspace.export()
+    build_mode.extend(f"missing:{r}" for r in exported_refs)
 
     all_packages = conan_api.workspace.editable_packages()
     packages = conan_api.workspace.select_packages(args.pkg)
 
     # If we don't disable the workspace, then, the packages are not created in the Conan cache,
     # but locally in the user folders, are they are intercepted as editables
-    if not args.local:
-        conan_api.workspace.enable(False)
+    conan_api.workspace.enable(False)
 
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build,
                                                     build_mode, lockfile, remotes, args,

@@ -756,20 +756,6 @@ class TestCreate:
         assert "pkgb/0.1 (test package): Running test()" in c.out
         assert "pkgc/0.1 (test package): Running test()" in c.out
 
-    def test_create_local(self):
-        c = TestClient(light=True)
-        c.save({"conanws.yml": ""})
-
-        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
-                "pkga/test_package/conanfile.py": GenConanfile().with_test("pass")})
-        c.run("workspace add pkga")
-        c.run("workspace create --local")
-        print(c.out)
-        assert "pkga/0.1 (test package): Running test()" in c.out
-        c.run("list *")
-        print(c.out)
-        assert "pkga/0.1" not in c.out
-
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
             import os
