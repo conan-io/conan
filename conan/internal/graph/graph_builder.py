@@ -8,8 +8,7 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
-    GraphRuntimeError, GraphError
+from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, GraphError
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.graph.provides import check_graph_provides
 from conan.errors import ConanException

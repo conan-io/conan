@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conan.internal.graph.graph_error import GraphError, GraphRuntimeError
+from conan.internal.graph.graph_error import GraphError, GraphConflictError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -113,7 +113,7 @@ class Node:
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
-                raise GraphRuntimeError(self, node, existing.node)
+                raise GraphConflictError(self, require, existing.node, existing.require, self)
             if require.visible != existing.require.visible:
                 self.conanfile.output.warning(f"This package has 2 different dependencies on "
                                               f"{require.ref} with different visibility. This is an "

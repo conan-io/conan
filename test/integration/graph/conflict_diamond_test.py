@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -104,19 +105,20 @@ def test_conflict_user_order():
     assert "ERROR: Version conflict: Conflict between dep/1.0@user1 and dep/[>=1.0]@user2" in c.out
 
 
+@pytest.mark.parametrize("test", [True, False])
+@pytest.mark.parametrize("order", [True, False])
 class TestErrorVisibleFalse:
 
-    @pytest.mark.parametrize("order", [True, False])
-    def test_subgraph_conflict(self, order):
+    def test_subgraph_conflict(self, order, test):
         #  cli--> pkg1/1.0 -(visible=False) --------------> pkg3/1.0 (conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.1 (conflict)
         # This conflict is good, the default dependencies are incompatible in definition
         tc = TestClient(light=True)
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
-            pkg1.with_requirement("pkg3/1.0", visible=False).with_requirement("pkg2/1.0")
+            pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
         else:
-            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False)
+            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False, test=test)
         tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
                  "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.1"),
                  "pkg1/conanfile.py": pkg1})
@@ -128,8 +130,7 @@ class TestErrorVisibleFalse:
         tc.run("graph info --requires=pkg1/1.0", assert_error=True)
         assert "ERROR: Version conflict: Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
 
-    @pytest.mark.parametrize("order", [True, False])
-    def test_subgraph_no_conflict(self, order):
+    def test_subgraph_no_conflict(self, order, test):
         #  cli--> pkg1/1.0 -(visible=False) --------------> pkg3/1.0 (no conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.0 (no conflict)
         # This doesn't conflict, but package topology is affected, converging to a direct dependency
@@ -139,9 +140,9 @@ class TestErrorVisibleFalse:
         tc = TestClient(light=True)
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
-            pkg1.with_requirement("pkg3/1.0", visible=False).with_requirement("pkg2/1.0")
+            pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
         else:
-            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False)
+            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False, test=test)
         tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
                  "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.0"),
                  "pkg1/conanfile.py": pkg1})
@@ -157,12 +158,11 @@ class TestErrorVisibleFalse:
         pkg1 = graph["graph"]["nodes"]["1"]
         deps = pkg1["dependencies"]
         assert len(deps) == 2
+        assert "pkg1/1.0" in pkg1["ref"]
         if order:
-            assert pkg1["ref"] == "pkg1/1.0#0500746058caef3211f77104e0b13b12"
             dep_pkg2 = deps["3"]
             dep_pkg3 = deps["2"]
         else:
-            assert pkg1["ref"] == "pkg1/1.0#35693f0161f7c150aa3e86f5d13e77b1"
             dep_pkg2 = deps["2"]
             dep_pkg3 = deps["3"]
         assert dep_pkg2["ref"] == "pkg2/1.0"
@@ -170,17 +170,16 @@ class TestErrorVisibleFalse:
         assert dep_pkg3["ref"] == "pkg3/1.0"
         assert dep_pkg2["visible"] is True
 
-    @pytest.mark.parametrize("order", [True, False])
-    def test_transitive_conflict(self, order):
+    def test_transitive_conflict(self, order, test):
         # cli --------------------------------------------> pkg3/1.1
         #   \--> pkg1/1.0 -(visible=False) -> pkg3/1.0 (conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.1 (no conflict)
         tc = TestClient(light=True)
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
-            pkg1.with_requirement("pkg3/1.0", visible=False).with_requirement("pkg2/1.0")
+            pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
         else:
-            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False)
+            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/1.0", visible=False, test=test)
         tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
                  "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.1"),
                  "pkg1/conanfile.py": pkg1})
@@ -188,22 +187,24 @@ class TestErrorVisibleFalse:
         tc.run("export pkg3 --version=1.1")
         tc.run("export pkg2")
         tc.run("export pkg1")
-        tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0", assert_error=True)
-        # TODO: The error conflict is different, still better than nothing
+        tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=html", assert_error=True,
+               redirect_stdout="graph.html")
+        # Check that the graph.html is generated
+        assert os.path.exists(os.path.join(tc.current_folder, "graph.html"))
         if order:
-            assert "ERROR: Runtime Conflict Error: There is a conflict between packages " in tc.out
+            assert "ERROR: Version conflict: Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
         else:
             assert "ERROR: Version conflict: Conflict between pkg3/1.0 and pkg3/1.1" in tc.out
+        assert "Conflict originates from pkg1/1.0" in tc.out
 
-    @pytest.mark.parametrize("order", [True, False])
-    def test_transitive_version_range_no_conflict(self, order):
+    def test_transitive_version_range_no_conflict(self, order, test):
         # if in the case above, we use a version-range, we can avoid the conflict
         tc = TestClient(light=True)
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
-            pkg1.with_requirement("pkg3/[*]", visible=False).with_requirement("pkg2/1.0")
+            pkg1.with_requirement("pkg3/[*]", visible=False, test=test).with_requirement("pkg2/1.0")
         else:
-            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/[*]", visible=False)
+            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/[*]", visible=False, test=test)
         tc.save({"pkg3/conanfile.py": GenConanfile("pkg3"),
                  "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.1"),
                  "pkg1/conanfile.py": pkg1})
@@ -216,14 +217,11 @@ class TestErrorVisibleFalse:
         assert ("pkg1/1.0: WARN: risk: This package has 2 different dependencies on pkg3/1.1 "
                 "with different visibility. This is an ill-formed graph") in tc.out
         graph = json.loads(tc.stdout)
-        assert len(graph["graph"]["nodes"]) == 4  # FIXME: Orphan!!!
+        assert len(graph["graph"]["nodes"]) == 4  # This was having an orphan node!!!
         pkg1 = graph["graph"]["nodes"]["2"]
         deps = pkg1["dependencies"]
         assert len(deps) == 2
-        if order:
-            assert pkg1["ref"] == "pkg1/1.0#49dcd0519757b43aec3907d6c2a68c2f"
-        else:
-            assert pkg1["ref"] == "pkg1/1.0#b49fcee999d981b22021b0c80d92b122"
+        assert "pkg1/1.0" in pkg1["ref"]
         dep_pkg2 = deps["3"]
         dep_pkg3 = deps["1"]
         assert dep_pkg2["ref"] == "pkg2/1.0"
