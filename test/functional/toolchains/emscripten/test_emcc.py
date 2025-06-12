@@ -17,9 +17,6 @@ base_emscripten_profile = textwrap.dedent(
     compiler.version=4.0.10
     os=Emscripten
 
-    [platform_tool_requires]
-    emsdk/4.0.10
-
     [conf]
     tools.build:exelinkflags=['-sALLOW_MEMORY_GROWTH=1']
     tools.build:sharedlinkflags=['-sALLOW_MEMORY_GROWTH=1']
@@ -99,7 +96,7 @@ def test_cmake_emscripten():
 
     client.run("build . -pr:h=asmjs")
     assert "WASM=0" in client.out
-    # No wasm should be generated for asm.js architecture
+    # No wasm should have been generated for asm.js architecture
     assert not os.path.exists(os.path.join(client.current_folder, "build/release-asm.js" , "hello.wasm"))
     client.run_command("node ./build/release-asm.js/hello")
     assert "Hello World Release!" in client.out
@@ -159,17 +156,12 @@ def test_autotools_emscripten():
     rmtree(os.path.join(client.current_folder, "build-release"))
     client.run("build . -pr:h=asmjs")
     assert "WASM=0" in client.out
-    # No wasm should be generated for asm.js architecture
+    # No wasm should have been generated for asm.js architecture
     assert not os.path.exists(os.path.join(client.current_folder, "build-release", "hello.wasm"))
     client.run_command("node ./build-release/src/hello")
     assert "Hello World Release!" in client.out
 
 
-# TODO: need incubating bazel toolchain
-# def test_bazel_emscripten():
-#     client = TestClient(path_with_spaces=False)
-#     client.run("new bazel7_exe -d name=hello -d version=0.1")
-#     client.save({"wasm32": wasm32_profile, "wasm64": wasm_64_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
-#     client.run("build . -pr:h=wasm32")
-
-# TODO: give support to msbuild
+# TODO: test_bazel_emscripten(): need WIP new bazel toolchain
+# TODO: test_msbuild_emscripten(): give support to msbuild
+# TODO: test_premake_emscripten(): premake tests
