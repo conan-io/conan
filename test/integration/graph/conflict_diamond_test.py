@@ -228,3 +228,40 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
         assert dep_pkg3["ref"] == "pkg3/1.1"
         assert dep_pkg2["visible"] is True
+
+    def test_transitive_orphans(self, order, test):
+        # if in the case above, we use a version-range, we can avoid the conflict
+        tc = TestClient(light=True)
+        pkg1 = GenConanfile("pkg1", "1.0")
+        if order:
+            pkg1.with_requirement("pkg3/[*]", visible=False, test=test).with_requirement("pkg2/1.0")
+        else:
+            pkg1.with_requirement("pkg2/1.0").with_requirement("pkg3/[*]", visible=False, test=test)
+        tc.save({"pkg4/conanfile.py": GenConanfile("pkg4", "0.1"),
+                 "pkg3/conanfile.py": GenConanfile("pkg3").with_requires("pkg4/0.1"),
+                 "pkg2/conanfile.py": GenConanfile("pkg2", "1.0").with_requirement("pkg3/1.1"),
+                 "pkg1/conanfile.py": pkg1})
+        tc.run("export pkg4")
+        tc.run("export pkg3 --version=1.0")
+        tc.run("export pkg3 --version=1.1")
+        tc.run("export pkg2")
+        # Creating this pkg1 does generate a conflict
+        tc.run("export pkg1")
+        tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=html", redirect_stdout="graph.html")
+        #tc.open("graph.html")
+
+        tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=json")
+        assert ("pkg1/1.0: WARN: risk: This package has 2 different dependencies on pkg3/1.1 "
+                "with different visibility. This is an ill-formed graph") in tc.out
+        graph = json.loads(tc.stdout)
+        assert len(graph["graph"]["nodes"]) == 5  # This was having an orphan node!!!
+        pkg1 = graph["graph"]["nodes"]["3"]
+        assert "pkg1/1.0" in pkg1["ref"]
+        deps = pkg1["dependencies"]
+        assert len(deps) == 3
+        dep_pkg2 = deps["4"]
+        dep_pkg3 = deps["1"]
+        assert dep_pkg2["ref"] == "pkg2/1.0"
+        assert dep_pkg2["visible"] is True
+        assert dep_pkg3["ref"] == "pkg3/1.1"
+        assert dep_pkg2["visible"] is True
