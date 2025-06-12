@@ -128,7 +128,7 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
         ConanOutput().info("Adding '--build=editable' as build mode")
     buildmode.append("editable")
 
-    all_editables = conan_api.workspace.editable_packages()
+    all_editables = conan_api.workspace.packages()
     packages = conan_api.workspace.select_packages(args.pkg)
     ConanOutput().box("Workspace computing the build order")
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, buildmode,
@@ -196,7 +196,7 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     print_graph_basic(deps_graph)
 
     # Collapsing the graph
-    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
+    ws_graph = conan_api.workspace.super_build_graph(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
 
@@ -256,7 +256,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     exported_refs = conan_api.workspace.export()
     build_mode.extend(f"missing:{r}" for r in exported_refs)
 
-    all_packages = conan_api.workspace.editable_packages()
+    all_packages = conan_api.workspace.packages()
     packages = conan_api.workspace.select_packages(args.pkg)
 
     # If we don't disable the workspace, then, the packages are not created in the Conan cache,

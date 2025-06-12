@@ -103,7 +103,7 @@ class WorkspaceAPI:
         self._check_ws()
         return self._folder
 
-    def editable_packages(self):
+    def packages(self):
         """
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
         """
@@ -222,8 +222,8 @@ class WorkspaceAPI:
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 
-    def collapse_editables(self, deps_graph, profile_host, profile_build):
-        ConanOutput().title("Collapsing workspace editables")
+    def super_build_graph(self, deps_graph, profile_host, profile_build):
+        ConanOutput().title("Collapsing workspace packages")
 
         root_class = self._ws.root_conanfile()
         if root_class is not None:
@@ -269,7 +269,7 @@ class WorkspaceAPI:
     def export(self, lockfile=None, remotes=None):
         self._check_ws()
         exported = []
-        for ref, info in self.editable_packages().items():
+        for ref, info in self.packages().items():
             exported_ref = self._conan_api.export.export(info["path"], ref.name, str(ref.version),
                                                          ref.user, ref.channel,
                                                          lockfile=lockfile, remotes=remotes)
@@ -280,7 +280,7 @@ class WorkspaceAPI:
 
     def select_packages(self, packages):
         self._check_ws()
-        editable = self.editable_packages()
+        editable = self.packages()
         packages = packages or []
         selected_editables = {}
         for ref, info in editable.items():
