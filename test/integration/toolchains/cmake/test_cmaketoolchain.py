@@ -1116,7 +1116,7 @@ def test_build_folder_vars_editables():
     c.run("editable add dep")
     conf = "tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\", \"settings.build_type\"]'"
     settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
-    c.run("install app -c={} {}".format(conf, settings))
+    c.run("install app -c={} {} --build=editable".format(conf, settings))
     assert os.path.exists(os.path.join(c.current_folder, "dep", "build", "freebsd-debug"))
 
 
