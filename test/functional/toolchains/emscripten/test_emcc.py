@@ -4,8 +4,11 @@ import os
 import platform
 from shutil import rmtree
 import pytest
+import sys
 
 from conan.test.utils.tools import TestClient
+
+EMCC_MIN_PYTHON_VERSION = (3, 8)
 
 base_emscripten_profile = textwrap.dedent(
     """
@@ -79,6 +82,7 @@ asmjs_profile = textwrap.dedent(
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
+@pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
 @pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
 def test_cmake_emscripten():
     client = TestClient()
@@ -105,6 +109,7 @@ def test_cmake_emscripten():
 @pytest.mark.tool("meson")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
+@pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
 @pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
 def test_meson_emscripten():
     client = TestClient()
@@ -136,6 +141,7 @@ def test_meson_emscripten():
 @pytest.mark.tool("autotools")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
+@pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
 @pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
 def test_autotools_emscripten():
     client = TestClient(path_with_spaces=False)
