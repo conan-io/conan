@@ -141,14 +141,15 @@ def build_type_flags(conanfile):
     if not compiler or not build_type:
         return []
 
-    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
-    # Modules/Platform/Windows-MSVC.cmake
     comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
                                    default={})
     clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
 
     if compiler == "msvc" or clangcl:
-        if clangcl or (vs_toolset and "clang" in vs_toolset):
+        # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+        # Modules/Platform/Windows-MSVC.cmake
+        # FIXME: This condition seems legacy, as no more "clang" exists in Conan toolsets
+        if vs_toolset and "clang" in vs_toolset:
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
                      "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],

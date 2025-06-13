@@ -70,7 +70,8 @@ def test_autotools_bash_complete():
 @pytest.mark.tool("msys2")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
-def test_autotools_bash_complete_clang(frontend, runtime):
+@pytest.mark.parametrize("build_type", ("Debug", "Release"))
+def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
     clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
@@ -81,7 +82,7 @@ def test_autotools_bash_complete_clang(frontend, runtime):
         [settings]
         os=Windows
         arch=x86_64
-        build_type=Release
+        build_type={build_type}
         compiler=clang
         compiler.version=18
         compiler.cppstd=14
@@ -92,6 +93,7 @@ def test_autotools_bash_complete_clang(frontend, runtime):
         tools.build:compiler_executables={comps}
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
+        tools.compilation:verbosity=verbose
         """)
 
     main = gen_function_cpp(name="main")
@@ -128,16 +130,17 @@ def test_autotools_bash_complete_clang(frontend, runtime):
                  "main.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
+    print(client.out)
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__18" in client.out
-    check_exe_run(client.out, "main", "clang", None, "Release", "x86_64", None)
+    check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
 
     static_runtime = runtime == "static"
-    check_vs_runtime("main.exe", client, "17", build_type="Release", static_runtime=static_runtime)
+    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
