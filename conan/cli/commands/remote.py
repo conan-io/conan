@@ -170,6 +170,7 @@ def remote_list_users(conan_api, parser, subparser, *args):  # noqa
     """
     List the users logged into all the remotes.
     """
+    parser.parse_args(*args)
     remotes = conan_api.remotes.list()
     ret = OrderedDict()
     if not remotes:

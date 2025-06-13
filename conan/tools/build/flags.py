@@ -66,6 +66,13 @@ def architecture_flag(conanfile):
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
+    elif compiler == "emcc":
+        # Emscripten default output is WASM since 1.37.x (long time ago)
+        if arch == "wasm64":
+            return "-sMEMORY64=1"
+        # Deactivate WASM output forcing asm.js output instead
+        elif arch == "asm.js":
+            return "-sWASM=0"
     return ""
 
 
@@ -78,7 +85,7 @@ def libcxx_flags(conanfile):
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
         lib = f'-stdlib={libcxx}'
-    elif compiler == "clang" or compiler == "intel-cc":
+    elif compiler in ("clang", "intel-cc", "emcc"):
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
         elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -93,7 +100,7 @@ def libcxx_flags(conanfile):
     elif compiler == "qcc":
         lib = f'-Y _{libcxx}'
 
-    if compiler in ['clang', 'apple-clang', 'gcc']:
+    if compiler in ['clang', 'apple-clang', 'gcc', 'emcc']:
         if libcxx == "libstdc++":
             stdlib11 = "_GLIBCXX_USE_CXX11_ABI=0"
         elif libcxx == "libstdc++11" and conanfile.conf.get("tools.gnu:define_libcxx11_abi",
