@@ -19,7 +19,7 @@ class TestVersionRanges(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
         self._check_node(libb, "libb/0.2#123", dependents=[app])
         self._check_node(app, "app/0.1", deps=[libb])
@@ -42,7 +42,7 @@ class TestVersionRanges(GraphManagerTest):
             deps_graph = self.build_consumer(consumer)
             self.assertEqual(2, len(deps_graph.nodes))
             app = deps_graph.root
-            libb = app.dependencies[0].dst
+            libb = app.edges[0].dst
 
             self._check_node(libb, f"libb/{solution}#123", dependents=[app])
             self._check_node(app, "app/0.1", deps=[libb])
@@ -115,9 +115,9 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.2#123", dependents=[libb, libc], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -137,9 +137,9 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.2#123", dependents=[libb, libc], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -158,9 +158,9 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -181,9 +181,9 @@ class TestVersionRangesDiamond(GraphManagerTest):
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         app.enabled_remotes = [Remote("foo", None)]
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -203,9 +203,9 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -225,8 +225,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -243,8 +243,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -261,8 +261,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -281,7 +281,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
     def test_transitive_fixed_conflict_forced(self):
         # app ---> libb/0.1 -----------> liba/1.2
@@ -295,8 +295,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/1.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -315,8 +315,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.3#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
@@ -338,8 +338,8 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])

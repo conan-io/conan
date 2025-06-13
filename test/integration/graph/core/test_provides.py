@@ -21,7 +21,7 @@ class TestProvidesTest(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
@@ -38,8 +38,8 @@ class TestProvidesTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
@@ -64,8 +64,8 @@ class TestProvidesTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
@@ -83,8 +83,8 @@ class TestProvidesTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -109,10 +109,10 @@ class TestProvidesTest(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        libd2 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
+        libd2 = libc.edges[0].dst
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[libd2], dependents=[app])
@@ -136,9 +136,9 @@ class TestProvidesTest(GraphManagerTest):
         self.assertEqual(4, len(deps_graph.nodes))
 
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -158,8 +158,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -180,8 +180,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        br = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        br = lib.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[lib])
         self._check_node(lib, "lib/0.1#123", deps=[br], dependents=[app])
@@ -205,8 +205,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -226,8 +226,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
-        br1 = app.dependencies[0].dst
-        br2 = app.dependencies[1].dst
+        br1 = app.edges[0].dst
+        br2 = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[br1, br2])
         self._check_node(br1, "br1/0.1#123", deps=[], dependents=[app])
