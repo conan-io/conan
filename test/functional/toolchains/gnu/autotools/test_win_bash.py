@@ -274,7 +274,7 @@ def test_msys2_and_msbuild():
         """)
 
     # A minimal project is sufficient - here just copy the application file to another directory
-    my_vcxproj = """<?xml version="1.0" encoding="utf-8"?>
+    my_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
         <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
         <ItemGroup Label="ProjectConfigurations">
         <ProjectConfiguration Include="Debug|Win32">
