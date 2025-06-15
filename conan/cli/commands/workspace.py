@@ -167,14 +167,14 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                     elif package["binary"] in ("Editable", "EditableBuild"):
                         path = all_editables[ref]["path"]
                         output_folder = all_editables[ref].get("output_folder")
-                        build = "--build-require" if package["context"] == "build" else ""
+                        build_arg = "--build-require" if package["context"] == "build" else ""
                         ref_args = " ".join(f"--{k}={getattr(ref, k)}"
                                             for k in ("name", "version", "user", "channel")
                                             if getattr(ref, k, None))
                         of_arg = f'-of="{output_folder}"' if output_folder else ""
                         # TODO: Missing --lockfile-overrides arg here
                         command = "build" if build else "install"
-                        cmd = f'{command} "{path}" {profile_args} {build} {ref_args} {of_arg}'
+                        cmd = f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg}'
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)

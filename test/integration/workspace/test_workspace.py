@@ -593,8 +593,8 @@ class TestClean:
         # Using cmake_layout, we can clean the build folders
         c = TestClient()
         c.save({"conanws.yml": "name: my_workspace"})
-        pkga = GenConanfile("pkga", "0.1").with_generator("CMakeToolchain").with_settings("build_type")
-        pkgb = GenConanfile("pkgb", "0.1").with_generator("CMakeToolchain").with_requires("pkga/0.1").with_settings("build_type")
+        pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
+        pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
         c.save({"pkga/conanfile.py": pkga ,
                 "pkgb/conanfile.py": pkgb,
                 "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")})
@@ -602,7 +602,6 @@ class TestClean:
         c.run("workspace add pkgb -of=build/pkgb")
         c.run("workspace add pkgc")
         c.run("workspace build")
-        print(c.out)
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
         c.run("workspace clean")
