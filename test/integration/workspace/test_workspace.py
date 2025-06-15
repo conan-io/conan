@@ -593,8 +593,8 @@ class TestClean:
         # Using cmake_layout, we can clean the build folders
         c = TestClient()
         c.save({"conanws.yml": "name: my_workspace"})
-        pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
-        pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
+        pkga = GenConanfile("pkga", "0.1").with_generator("CMakeToolchain").with_settings("build_type")
+        pkgb = GenConanfile("pkgb", "0.1").with_generator("CMakeToolchain").with_requires("pkga/0.1").with_settings("build_type")
         c.save({"pkga/conanfile.py": pkga ,
                 "pkgb/conanfile.py": pkgb,
                 "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")})
@@ -602,6 +602,7 @@ class TestClean:
         c.run("workspace add pkgb -of=build/pkgb")
         c.run("workspace add pkgc")
         c.run("workspace build")
+        print(c.out)
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
         c.run("workspace clean")
@@ -736,10 +737,12 @@ def test_host_build_require():
 
 class TestCreate:
     def test_create(self):
-        c = TestClient(light=True)
-        c.save({"conanws.yml": ""})
-
-        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+        c = TestClient(light=True, default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("zlib", "0.1").with_build_msg("BUILD ZLIB!")})
+        c.run("export .")
+        c.save({"conanws.yml": ""}, clean_first=True)
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("zlib/0.1")
+                                                                .with_build_msg("BUILD PKGA!"),
                 "pkga/test_package/conanfile.py": GenConanfile().with_test("pass"),
                 "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_build_msg("BUILD PKGB!")
                .with_requires("pkga/0.1"),
@@ -751,10 +754,32 @@ class TestCreate:
         c.run("workspace add pkga")
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
-        c.run("workspace create")
+        c.run("workspace create --build=zlib/*")
+        assert str(c.out).count("zlib/0.1: WARN: BUILD ZLIB!") == 1
+        assert str(c.out).count("pkga/0.1: WARN: BUILD PKGA!") == 1
+        assert str(c.out).count("pkgb/0.1: WARN: BUILD PKGB!") == 1
+        assert str(c.out).count("pkgc/0.1: WARN: BUILD PKGC!") == 1
         assert "pkga/0.1 (test package): Running test()" in c.out
         assert "pkgb/0.1 (test package): Running test()" in c.out
         assert "pkgc/0.1 (test package): Running test()" in c.out
+
+        # A second conan workspace create will not re-build
+        c.run("workspace create")
+        assert "WARN: BUILD ZLIB!" not in c.out
+        assert "WARN: BUILD PKGA!" not in c.out
+        assert "WARN: BUILD PKGB!" not in c.out
+        assert "WARN: BUILD PKBC!" not in c.out
+        assert "pkga/0.1 (test package): Running test()" not in c.out
+        assert "pkgb/0.1 (test package): Running test()" not in c.out
+        assert "pkgc/0.1 (test package): Running test()" not in c.out
+
+        c.run("upload zlib/* -r=default -c")
+        c.run("remove zlib/* -c")
+        c.run("remove pkgc/* -c")
+        c.run("workspace create")
+        assert "WARN: BUILD ZLIB!" not in c.out
+        assert "pkgc/0.1: WARN: BUILD PKGC!" in c.out
+
 
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
@@ -851,3 +876,30 @@ class TestSource:
         assert "conanfile.py (pkga/0.1): Executing SOURCE!!!" in c.out
         assert "conanfile.py (pkgb/0.1): Executing SOURCE!!!" in c.out
         assert "conanfile.py (pkgc/0.1): Executing SOURCE!!!" in c.out
+
+
+class TestInstall:
+    def test_install(self):
+        c = TestClient()
+        c.save({"conanws.yml": ""})
+
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Package(ConanFile):
+                name = "{}"
+                version = "0.1"
+                settings = "os", "build_type"
+                {}
+                generators = "CMakeToolchain"
+            """)
+
+        c.save({"pkga/conanfile.py": pkg.format("pkga", ''),
+                "pkgb/conanfile.py": pkg.format("pkgb", 'requires="pkga/0.1"'),
+                "pkgc/conanfile.py": pkg.format("pkgc", 'requires="pkgb/0.1"')})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc")
+        c.run("workspace install")
+        assert "conanfile.py (pkga/0.1): CMakeToolchain generated" in c.out
+        assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
+        assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out

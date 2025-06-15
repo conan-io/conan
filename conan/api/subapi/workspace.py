@@ -294,13 +294,13 @@ class WorkspaceAPI:
 
     def build_order(self, packages, profile_host, profile_build, build_mode, lockfile, remotes,
                     profile_args, update=False):
-        ConanOutput().title(f"Computing dependency graph for each pkgs")
+        ConanOutput().title(f"Computing dependency graph for each package")
         conan_api = self._conan_api
         from conan.internal.graph.install_graph import InstallGraph
         install_order = InstallGraph(None)
 
         for ref, info in packages.items():
-            ConanOutput().info(f"Computing the dependency graph for package: {ref}")
+            ConanOutput().title(f"Computing the dependency graph for package: {ref}")
 
             deps_graph = conan_api.graph.load_graph_requires([ref], None,
                                                              profile_host, profile_build, lockfile,
@@ -311,7 +311,7 @@ class WorkspaceAPI:
                                              lockfile=lockfile)
             print_graph_packages(deps_graph)
 
-            ConanOutput().info(f"Aggregating build-order for package: {ref}")
+            ConanOutput().success(f"\nAggregating build-order for package: {ref}")
             install_graph = InstallGraph(deps_graph, order_by="recipe",
                                          profile_args=ProfileArgs.from_args(profile_args))
             install_order.merge(install_graph)

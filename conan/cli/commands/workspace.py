@@ -108,8 +108,20 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Build the current workspace, starting from the "products"
+    Call "conan build" for packages in the workspace, in the right order
     """
+    _install_build(conan_api, parser, subparser, True, *args)
+
+
+@conan_subcommand()
+def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Call "conan install" for packages in the workspace, in the right order
+    """
+    _install_build(conan_api, parser, subparser, False, *args)
+
+
+def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
@@ -125,10 +137,11 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    buildmode = args.build or []
-    if "editable" not in buildmode:
+    buildmode = args.build
+    if build and (not buildmode or "editable" not in buildmode):
         ConanOutput().info("Adding '--build=editable' as build mode")
-    buildmode.append("editable")
+        buildmode = buildmode or []
+        buildmode.append("editable")
 
     all_editables = conan_api.workspace.packages()
     packages = conan_api.workspace.select_packages(args.pkg)
@@ -136,7 +149,8 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, buildmode,
                                                     lockfile, remotes, args, update=args.update)
 
-    ConanOutput().box("Workspace building each package")
+    msg = "build" if build else "install"
+    ConanOutput().box(f"Workspace {msg}ing each package")
     order = install_order.install_build_order()
 
     profile_args = ProfileArgs.from_args(args)
@@ -148,18 +162,21 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
                     if package["binary"] == "Build":  # Build external to Workspace
                         cmd = f'install {package["build_args"]} {profile_args}'
                         ConanOutput().box(f"Workspace building external {ref}")
-                        ConanOutput().info(f"Build command: {cmd}\n")
+                        ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)
-                    elif package["binary"] == "EditableBuild":
+                    elif package["binary"] in ("Editable", "EditableBuild"):
                         path = all_editables[ref]["path"]
+                        output_folder = all_editables[ref].get("output_folder")
                         build = "--build-require" if package["context"] == "build" else ""
                         ref_args = " ".join(f"--{k}={getattr(ref, k)}"
                                             for k in ("name", "version", "user", "channel")
                                             if getattr(ref, k, None))
+                        of_arg = f'-of="{output_folder}"' if output_folder else ""
                         # TODO: Missing --lockfile-overrides arg here
-                        cmd = f'build "{path}" {profile_args} {build} {ref_args}'
-                        ConanOutput().box(f"Workspace building {ref}")
-                        ConanOutput().info(f"Build command: {cmd}\n")
+                        command = "build" if build else "install"
+                        cmd = f'{command} "{path}" {profile_args} {build} {ref_args} {of_arg}'
+                        ConanOutput().box(f"Workspace {command}: {ref}")
+                        ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)
 
 
@@ -279,6 +296,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
             for package_level in elem["packages"]:
                 for package in package_level:
                     if package["binary"] not in ("Build", "EditableBuild"):
+                        ConanOutput().info(f"Skip build for {ref} binary: {package['binary']}")
                         continue
 
                     if ref not in all_packages:
