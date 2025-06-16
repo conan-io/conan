@@ -230,7 +230,6 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
 
     def test_transitive_orphans(self, order, test):
-        # if in the case above, we use a version-range, we can avoid the conflict
         tc = TestClient(light=True)
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
@@ -247,8 +246,6 @@ class TestErrorVisibleFalse:
         tc.run("export pkg2")
         # Creating this pkg1 does generate a conflict
         tc.run("export pkg1")
-        tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=html", redirect_stdout="graph.html")
-        #tc.open("graph.html")
 
         tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=json")
         assert ("pkg1/1.0: WARN: risk: This package has 2 different dependencies on pkg3/1.1 "

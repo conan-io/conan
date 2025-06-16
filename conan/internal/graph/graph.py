@@ -110,11 +110,13 @@ class Node:
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
         existing = self.transitive_deps.get(require)
+        ill_formed = False
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
-            if require.visible != existing.require.visible:
+            ill_formed = require.visible != existing.require.visible
+            if ill_formed:
                 self.conanfile.output.warning(f"This package has 2 different dependencies on "
                                               f"{require.ref} with different visibility. This is an "
                                               f"ill-formed graph", warn_tag="risk")
@@ -128,8 +130,11 @@ class Node:
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Missing the update of the node.dependencies[item].require (Edge.require)
         # TODO: Might need to move to an update() for performance
-        self.transitive_deps.pop(require, None)
+        popped = self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
+        if ill_formed and popped:
+            existing_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
+            self.edges = [e for e in self.edges if e.dst in existing_nodes]
 
         if self.conanfile.vendor:
             return

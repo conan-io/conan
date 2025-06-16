@@ -62,6 +62,7 @@ class DepsGraphBuilder:
                                                      profile_host)
                     open_requires.extendleft((r, new_node) for r in reversed(newr))
             self._remove_overrides(dep_graph)
+            self._remove_orphans(dep_graph)
             check_graph_provides(dep_graph)
         except GraphError as e:
             dep_graph.error = e
@@ -446,9 +447,14 @@ class DepsGraphBuilder:
             for r in to_remove:
                 node.transitive_deps.pop(r)
 
-        # remove orphans too
-        # FIXME: Look for better place to do this
-        all_referenced = {dep_graph.root}
-        for node in dep_graph.nodes:
-            all_referenced.update(r.node for r in node.transitive_deps.values())
+    @staticmethod
+    def _remove_orphans(dep_graph):
+        opened = {dep_graph.root}
+        all_referenced = set()
+        while opened:
+            all_referenced.update(opened)
+            next_open = set(edge.dst for node in opened for edge in node.edges
+                            if edge.dst not in all_referenced)
+            opened = next_open
+        # Keep order in previous list
         dep_graph.nodes = [n for n in dep_graph.nodes if n in all_referenced]
