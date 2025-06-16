@@ -57,7 +57,7 @@ def test_config_package_id_clear(config_version, mode, result):
 
 def test_recipe_revision_mode():
     clienta = TestClient()
-    save(clienta.paths.new_config_path, "core.package_id:default_unknown_mode=recipe_revision_mode")
+    clienta.save_home({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"})
 
     clienta.save({"conanfile.py": GenConanfile()})
     clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")

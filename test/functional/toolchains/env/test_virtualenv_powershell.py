@@ -11,7 +11,6 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.tools.env.environment import environment_wrap_command
-from conan.internal.util.files import save
 
 
 @pytest.fixture
@@ -30,7 +29,7 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    save(client.paths.new_config_path, "tools.env.virtualenv:powershell=powershell.exe\n")
+    client.save_home({"global.conf": "tools.env.virtualenv:powershell=powershell.exe\n"})
     return client
 
 

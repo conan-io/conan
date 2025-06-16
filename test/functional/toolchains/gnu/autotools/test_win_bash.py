@@ -10,7 +10,6 @@ from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -158,10 +157,10 @@ def test_add_msys2_path_automatically():
     except KeyError:
         pytest.skip("msys2 path not defined")
 
-    save(client.paths.new_config_path, textwrap.dedent("""
+    client.save_home({"global.conf": textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
-            """.format(bash_path)))
+            """.format(bash_path))})
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
