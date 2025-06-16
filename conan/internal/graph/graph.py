@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conan.api.output import ConanOutput
 from conan.internal.graph.graph_error import GraphError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
@@ -69,6 +70,13 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+
+    @property
+    def dependencies(self):
+        ConanOutput().warning("Node.dependencies is private and shouldn't be used. It is now "
+                              "node.edges. Please fix your code, Node.dependencies will be removed "
+                              "in future versions", warn_tag="deprecated")
+        return self.edges
 
     def subgraph(self):
         nodes = [self]
