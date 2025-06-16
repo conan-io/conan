@@ -387,7 +387,7 @@ class Conf:
     def filter_core(self):
         c = Conf()
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
-                                if not k.startswith("core"))
+                                if not CORE_CONF_PATTERN.match(k))
         return c
 
     def dumps(self):
