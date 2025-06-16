@@ -277,9 +277,9 @@ class RemoteManager:
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
         local_folder_remote = self._local_folder_remote(remote)
-        if local_folder_remote is not None:
-            return local_folder_remote.call_method(method, *args, **kwargs)
         try:
+            if local_folder_remote is not None:
+                return local_folder_remote.call_method(method, *args, **kwargs)
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
             raise ConanConnectionError(("%s\n\nUnable to connect to remote %s=%s\n"

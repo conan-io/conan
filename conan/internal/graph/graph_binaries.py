@@ -48,8 +48,8 @@ class GraphBinariesAnalyzer:
         with_deps_to_build = False
         # check dependencies, if they are being built, "cascade" will try to build this one too
         if build_mode.cascade:
-            with_deps_to_build = any(dep.dst.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
-                                     for dep in node.dependencies)
+            with_deps_to_build = any(edge.dst.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
+                                     for edge in node.edges)
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
