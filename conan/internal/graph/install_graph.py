@@ -171,7 +171,7 @@ class _InstallRecipeReference:
             install_pkg_ref = _InstallPackageReference.create(node)
             self.packages[node.package_id] = install_pkg_ref
 
-        for dep in node.dependencies:
+        for dep in node.edges:
             if dep.dst.binary != BINARY_SKIP:
                 if dep.dst.ref == node.ref:  # If the node is itself, then it is internal dep
                     install_pkg_ref.depends.append(dep.dst.pref.package_id)
@@ -270,7 +270,7 @@ class _InstallConfiguration:
         result.info = node.conanfile.info.serialize()
 
         result.nodes.append(node)
-        for dep in node.dependencies:
+        for dep in node.edges:
             if dep.dst.binary != BINARY_SKIP:
                 if dep.dst.pref not in result.depends:
                     result.depends.append(dep.dst.pref)
@@ -284,10 +284,10 @@ class _InstallConfiguration:
         # assert self.context == node.context
         self.nodes.append(node)
 
-        for dep in node.dependencies:
-            if dep.dst.binary != BINARY_SKIP:
-                if dep.dst.pref not in self.depends:
-                    self.depends.append(dep.dst.pref)
+        for edge in node.edges:
+            if edge.dst.binary != BINARY_SKIP:
+                if edge.dst.pref not in self.depends:
+                    self.depends.append(edge.dst.pref)
 
     def _build_args(self):
         if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):

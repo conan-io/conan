@@ -66,11 +66,11 @@ class ConfigAPI:
 
         # Basic checks of the package: correct package_type and no-dependencies
         deps_graph.report_graph_error()
-        pkg = deps_graph.root.dependencies[0].dst
+        pkg = deps_graph.root.edges[0].dst
         ConanOutput().info(f"Configuration from package: {pkg}")
         if pkg.conanfile.package_type is not PackageType.CONF:
             raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
-        if pkg.dependencies:
+        if pkg.edges:
             raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
         # The computation of the "package_id" and the download of the package is done as usual
