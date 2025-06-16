@@ -902,3 +902,35 @@ class TestInstall:
         assert "conanfile.py (pkga/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out
+
+
+def test_keep_core_conf():
+    c = TestClient()
+    myprofile = textwrap.dedent("""\
+        [settings]
+        os=FreeBSD
+        arch=armv7
+        """)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkga"
+            version = "0.1"
+            settings = "os", "arch"
+
+            def generate(self):
+                self.output.info(f"Generating!: {self.settings.os}-{self.settings.arch}!!!!")
+        """)
+    c.save_home({"profiles/myprofile": myprofile})
+    c.run("profile show ")
+    c.save({"conanws.yml": "",
+            "pkga/conanfile.py": conanfile})
+    c.run("workspace add pkga")
+    # The injected -cc is still applied to every "conan install"
+    c.run("workspace install -cc core:default_profile=myprofile")
+    assert "conanfile.py (pkga/0.1): Generating!: FreeBSD-armv7!!!!" in c.out
+    # also the global.conf
+    c.save_home({"global.conf": "core:default_profile=myprofile"})
+    c.run("workspace install")
+    assert "conanfile.py (pkga/0.1): Generating!: FreeBSD-armv7!!!!" in c.out

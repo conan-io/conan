@@ -314,6 +314,7 @@ class WorkspaceAPI:
             ConanOutput().success(f"\nAggregating build-order for package: {ref}")
             install_graph = InstallGraph(deps_graph, order_by="recipe",
                                          profile_args=ProfileArgs.from_args(profile_args))
+            install_graph.raise_errors()
             install_order.merge(install_graph)
 
         return install_order
