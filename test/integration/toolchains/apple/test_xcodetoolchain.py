@@ -1,11 +1,9 @@
-import os
 import platform
 import re
 import textwrap
 
 import pytest
 
-from conan.internal.util.files import load
 from conan.test.utils.tools import TestClient
 
 
@@ -103,7 +101,7 @@ def test_xcodetoolchain_xcconfig_deplyment_target(os_name, sdk, min_version, dep
     conanfile = textwrap.dedent(f"""
         import os
         from conan import ConanFile
-        from conan.tools.apple import XcodeToolchain, to_apple_arch
+        from conan.tools.apple import XcodeToolchain
         from conan.tools.files import save
         class MyApplicationConan(ConanFile):
             name = "myapplication"
