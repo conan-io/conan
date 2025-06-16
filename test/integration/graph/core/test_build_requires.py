@@ -45,7 +45,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        cmake = app.dependencies[0].dst
+        cmake = app.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[cmake], dependents=[])
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[app])
@@ -58,8 +58,8 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
@@ -90,9 +90,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
-        cmakelib = cmake.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
+        cmakelib = cmake.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[], settings={"os": "Linux"})
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app],
@@ -120,9 +120,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake2 = lib.dependencies[0].dst
-        cmake1 = cmake2.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake2 = lib.edges[0].dst
+        cmake1 = cmake2.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake2], dependents=[app])
@@ -143,9 +143,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
-        zlib = cmake.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
+        zlib = cmake.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
@@ -173,11 +173,11 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
-        mingw = lib.dependencies[1].dst
-        zlib1 = cmake.dependencies[0].dst
-        zlib2 = mingw.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
+        mingw = lib.edges[1].dst
+        zlib1 = cmake.edges[0].dst
+        zlib2 = mingw.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake, mingw], dependents=[app])
@@ -212,11 +212,11 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
-        mingw = lib.dependencies[1].dst
-        zlib1 = cmake.dependencies[0].dst
-        zlib2 = mingw.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
+        mingw = lib.edges[1].dst
+        zlib1 = cmake.edges[0].dst
+        zlib2 = mingw.edges[0].dst
 
         assert zlib1 is not zlib2
 
@@ -242,9 +242,9 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         cheetah = deps_graph.root
-        gazelle = cheetah.dependencies[0].dst
-        grass2 = cheetah.dependencies[1].dst
-        grass1 = gazelle.dependencies[0].dst
+        gazelle = cheetah.edges[0].dst
+        grass2 = cheetah.edges[1].dst
+        grass1 = gazelle.edges[0].dst
         self._check_node(cheetah, "cheetah/0.1", deps=[gazelle, grass2])
         self._check_node(gazelle, "gazelle/0.1#123", deps=[grass1], dependents=[cheetah])
         self._check_node(grass1, "grass/0.1#123", deps=[], dependents=[gazelle])
@@ -261,9 +261,9 @@ class TestBuildRequiresVisible(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[libc], dependents=[])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -289,7 +289,7 @@ class TestTestRequire(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        gtest = app.dependencies[0].dst
+        gtest = app.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[gtest], dependents=[])
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
@@ -305,8 +305,8 @@ class TestTestRequire(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        gtest = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app])
@@ -324,8 +324,8 @@ class TestTestRequire(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        gtest = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app])
@@ -356,9 +356,9 @@ class TestTestRequire(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[0].dst
-        gtestlib = gtest.dependencies[0].dst
+        lib = app.edges[0].dst
+        gtest = lib.edges[0].dst
+        gtestlib = gtest.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[], settings={"os": "Linux"})
         self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app],
@@ -393,10 +393,10 @@ class TestTestRequire(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[1].dst
-        zlib = gtest.dependencies[0].dst
-        zlib2 = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        gtest = lib.edges[1].dst
+        zlib = gtest.edges[0].dst
+        zlib2 = lib.edges[0].dst
         assert zlib is zlib2
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
@@ -419,9 +419,9 @@ class TestTestRequire(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         opencv = deps_graph.root
-        gtest14 = opencv.dependencies[0].dst
-        abseil = gtest14.dependencies[0].dst
-        gtest11 = abseil.dependencies[0].dst
+        gtest14 = opencv.edges[0].dst
+        abseil = gtest14.edges[0].dst
+        gtest11 = abseil.edges[0].dst
 
         self._check_node(opencv, "opencv/1.0@", deps=[gtest14], dependents=[])
         self._check_node(gtest14, "gtest/1.14#123", deps=[abseil], dependents=[opencv])
@@ -435,13 +435,13 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
         lib_c = deps_graph.root
         if not reverse:
-            lib_a = lib_c.dependencies[0].dst
-            util = lib_a.dependencies[0].dst
-            util2 = lib_c.dependencies[1].dst
+            lib_a = lib_c.edges[0].dst
+            util = lib_a.edges[0].dst
+            util2 = lib_c.edges[1].dst
         else:
-            util = lib_c.dependencies[0].dst
-            lib_a = lib_c.dependencies[1].dst
-            util2 = lib_a.dependencies[0].dst
+            util = lib_c.edges[0].dst
+            lib_a = lib_c.edges[1].dst
+            util2 = lib_a.edges[0].dst
         assert util is util2
 
         self._check_node(lib_c, "lib_c/0.1@", deps=[lib_a, util], dependents=[])
@@ -582,8 +582,8 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
@@ -600,8 +600,8 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
@@ -616,7 +616,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
+        lib = app.edges[0].dst
         assert lib.package_id == "2813db72897dd13aca2af071efe8ecb116f679ed"
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
 
@@ -634,8 +634,8 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        cmake = lib.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
@@ -663,17 +663,17 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(8 + 4, len(deps_graph.nodes))
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        libb = liba.dependencies[0].dst
-        libsfun = libb.dependencies[0].dst
-        libx = libsfun.dependencies[0].dst
-        liby = libx.dependencies[0].dst
-        libz = liby.dependencies[0].dst
-        sfun = libb.dependencies[1].dst
-        libsfun_build = sfun.dependencies[0].dst
-        libx_build = libsfun_build.dependencies[0].dst
-        liby_build = libx_build.dependencies[0].dst
-        libz_build = liby_build.dependencies[0].dst
+        liba = app.edges[0].dst
+        libb = liba.edges[0].dst
+        libsfun = libb.edges[0].dst
+        libx = libsfun.edges[0].dst
+        liby = libx.edges[0].dst
+        libz = liby.edges[0].dst
+        sfun = libb.edges[1].dst
+        libsfun_build = sfun.edges[0].dst
+        libx_build = libsfun_build.edges[0].dst
+        liby_build = libx_build.edges[0].dst
+        libz_build = liby_build.edges[0].dst
 
         # TODO non-build-requires
 
@@ -747,9 +747,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        cmake1 = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        cmake1 = libb.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[libb, libc], dependents=[])
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
@@ -776,11 +776,11 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libe = app.dependencies[1].dst
-        libb = libd.dependencies[0].dst
-        libc = libe.dependencies[0].dst
-        cmake1 = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libe = app.edges[1].dst
+        libb = libd.edges[0].dst
+        libc = libe.edges[0].dst
+        cmake1 = libb.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[libd, libe], dependents=[])
         self._check_node(libd, "libd/0.1#123", deps=[libb], dependents=[app])
@@ -803,9 +803,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        protobuf_host = libb.dependencies[0].dst
-        protobuf_build = libb.dependencies[1].dst
+        libb = app.edges[0].dst
+        protobuf_host = libb.edges[0].dst
+        protobuf_build = libb.edges[1].dst
 
         self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
         self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
@@ -834,9 +834,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        protobuf_host = libb.dependencies[0].dst
-        protobuf_build = libb.dependencies[1].dst
+        libb = app.edges[0].dst
+        protobuf_host = libb.edges[0].dst
+        protobuf_build = libb.edges[1].dst
 
         self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
         self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
@@ -870,7 +870,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        tool = app.dependencies[0].dst
+        tool = app.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[tool], dependents=[])
         self._check_node(tool, "gtest/0.1#123", deps=[], dependents=[app])
@@ -890,9 +890,9 @@ class TestLoops(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        tool = app.dependencies[0].dst
-        tool2 = tool.dependencies[0].dst
-        tool3 = tool2.dependencies[0].dst
+        tool = app.edges[0].dst
+        tool2 = tool.edges[0].dst
+        tool3 = tool2.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[tool], dependents=[])
         self._check_node(tool, "cmake/0.1#123", deps=[tool2], dependents=[app])
@@ -912,11 +912,11 @@ class TestLoops(GraphManagerTest):
         # Build requires always apply to the consumer
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
-        cmake = app.dependencies[0].dst
-        gtest = cmake.dependencies[0].dst
-        cmake2 = gtest.dependencies[0].dst
-        gtest2 = cmake2.dependencies[0].dst
-        cmake3 = gtest2.dependencies[0].dst
+        cmake = app.edges[0].dst
+        gtest = cmake.edges[0].dst
+        cmake2 = gtest.edges[0].dst
+        gtest2 = cmake2.edges[0].dst
+        cmake3 = gtest2.edges[0].dst
 
         assert deps_graph.error.ancestor == cmake
         assert deps_graph.error.node == cmake3
