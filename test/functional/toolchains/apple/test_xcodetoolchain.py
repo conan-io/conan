@@ -1,4 +1,6 @@
+import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -94,3 +96,49 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     assert "sdk {}".format(sdk_version) in client.out
     assert "libc++" in client.out
     assert " -fstack-protector-strong" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.parametrize("os_name, sdk, min_version, deployment_target_flag", [
+    ("Macos", None, "11.0", "MACOSX_DEPLOYMENT_TARGET"),
+    ("iOS", "iphoneos", "18.0", "IPHONEOS_DEPLOYMENT_TARGET"),
+    ("tvOS", "appletvos", "18.4", "TVOS_DEPLOYMENT_TARGET"),
+    ("watchOS", "watchos", "9.0", "WATCHOS_DEPLOYMENT_TARGET"),
+    ("visionOS", "xros", "2.0", "XROS_DEPLOYMENT_TARGET"),
+])
+def test_xcodetoolchain_xcconfig_deplyment_target(os_name, sdk, min_version, deployment_target_flag):
+    client = TestClient()
+
+    xcconfig_path_prefix = "xcconfig from test="
+
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XcodeToolchain
+        from conan.tools.files import copy
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def generate(self):
+                tc = XcodeToolchain(self)
+                tc.generate()
+                self.output.info("{xcconfig_path_prefix}" + tc._vars_xconfig_filename)
+        """)
+
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+
+    settings = "-s arch=armv8 -s compiler.cppstd=gnu17 -s compiler.libcxx=libc++ " \
+               "-s os={} -s os.version={}".format(os_name, min_version)
+    if sdk:
+        settings += f" -s os.sdk={sdk}"
+
+    client.run("create . -s build_type=Release {} --build=missing".format(settings))
+
+    match = re.search(f"{xcconfig_path_prefix}(.+)$", client.out, re.MULTILINE)
+    assert match != None
+
+    generated_xcconfig_path = os.path.join(client.created_layout().build(), match[1])
+    xcconfig_contents = open(generated_xcconfig_path, 'r').read()
+    match = re.search(f"^{deployment_target_flag}.+={min_version}$", xcconfig_contents, re.MULTILINE)
+    assert match != None
