@@ -449,6 +449,7 @@ class DepsGraphBuilder:
 
     @staticmethod
     def _remove_orphans(dep_graph):
+        # when requires to the same thing with different visible=xxx converge, there can be orphans
         opened = {dep_graph.root}
         all_referenced = set()
         while opened:

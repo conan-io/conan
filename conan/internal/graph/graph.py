@@ -136,13 +136,12 @@ class Node:
                 existing.require.override_ref = require.ref
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
-        # TODO: Missing the update of the node.dependencies[item].require (Edge.require)
         # TODO: Might need to move to an update() for performance
-        popped = self.transitive_deps.pop(require, None)
+        self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
-        if ill_formed and popped:
-            existing_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
-            self.edges = [e for e in self.edges if e.dst in existing_nodes]
+        if ill_formed:  # remove dead .edges, to avoid orphans
+            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
+            self.edges = [e for e in self.edges if e.dst in direct_nodes]
 
         if self.conanfile.vendor:
             return
