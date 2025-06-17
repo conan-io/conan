@@ -1278,4 +1278,5 @@ def test_pkg_skip_component():
     b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
     assert "Requires:" not in b_cmp1_content
     assert "pkg_c.pc" in install_contents
+    # Components can not skip the PC file creation
     assert "none.pc" in install_contents
