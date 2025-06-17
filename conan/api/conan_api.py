@@ -7,6 +7,7 @@ from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
+from conan.api.subapi.report import ReportAPI
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.download import DownloadAPI
@@ -72,6 +73,7 @@ class ConanAPI:
         self.audit = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
+        self.report = ReportAPI(self)
 
         _check_conan_version(self)
 
