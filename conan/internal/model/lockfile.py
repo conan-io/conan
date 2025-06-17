@@ -138,6 +138,9 @@ class Lockfile(object):
                     self._python_requires.add(r)
             except AttributeError:
                 pass
+            if graph_node.conanfile.info and graph_node.conanfile.info.config_version:
+                for config_version in graph_node.conanfile.info.config_version._data.keys():
+                    self._conf_requires.add(config_version.ref)
             if graph_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER) or graph_node.ref is None:
                 continue
             assert graph_node.conanfile is not None

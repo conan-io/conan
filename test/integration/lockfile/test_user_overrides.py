@@ -113,9 +113,24 @@ def test_config_overrides():
     """ Test that it is possible to lock also config-requires
     """
     c = TestClient(light=True)
+
+    c.save({"config/conanfile.py": GenConanfile("config").with_package_type("configuration"),
+            "conanfile.py": GenConanfile("pkg", "1.0")})
+    c.run("create config --version=1.0")
+    c.run("create config --version=2.0")
+    c.run("config install-pkg config/1.0")
+
     c.run("lock add --config-requires=config/1.0")
     assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/1.0"]
-    c.run("lock remove --config-requires=config/1.0")
+
+    c.run("lock upgrade . --update-config-requires=config/1.0 -cc core.package_id:config_mode=minor_mode")
+    assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/1.0#1b2c6ee1795084b5a58ea455052a563a"]
+
+    c.run("config install-pkg config/2.0 --lockfile=''")
+    c.run("lock upgrade . --update-config-requires=config/1.0 -cc core.package_id:config_mode=minor_mode")
+    assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/2.0#1b2c6ee1795084b5a58ea455052a563a"]
+
+    c.run("lock remove --config-requires=config/2.0")
     assert json.loads(c.load("conan.lock"))["config_requires"] == []
 
 
