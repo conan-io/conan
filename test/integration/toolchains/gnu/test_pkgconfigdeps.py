@@ -1245,7 +1245,6 @@ def test_pkg_skip_component():
             version = "0.1"
             requires = "pkg_a/0.1"
             def package_info(self):
-                self.cpp_info.set_property("pkg_config_name", "none")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
         """)
 
@@ -1269,7 +1268,14 @@ def test_pkg_skip_component():
     tc.run("install --requires=pkg_c/0.1 --generator=PkgConfigDeps -of=out")
     install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
     assert "pkg_a.pc" not in install_contents
-    assert "pkg_b.pc" not in install_contents
+    assert "pkg_b.pc" in install_contents
+    pkg_b_content = tc.load(os.path.join("out", "pkg_b.pc"))
+    pkg_b_requires = get_requires_from_content(pkg_b_content)
+    assert "b-cmp1" in pkg_b_requires
+    assert "pkg_a" not in pkg_b_requires
+    assert "none" not in pkg_b_requires
     assert "b-cmp1.pc" in install_contents
+    b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    assert "Requires:" not in b_cmp1_content
     assert "pkg_c.pc" in install_contents
     assert "none.pc" in install_contents
