@@ -130,6 +130,34 @@ class TestErrorVisibleFalse:
         tc.run("graph info --requires=pkg1/1.0", assert_error=True)
         assert "ERROR: Version conflict: Conflict between pkg3/1.1 and pkg3/1.0" in tc.out
 
+    def test_subgraph_conflict_second_level(self, order, test):
+        #  cli--> pkg1/1.0 -(visible=False) ---> gtest/1.0 -> zlib/1.0
+        #             \----> boost/1.0 ---------------------> zlib/1.1 (conflict)
+        # This conflict is good, the default dependencies are incompatible in definition
+        tc = TestClient(light=True)
+        pkg = GenConanfile("pkg1", "1.0")
+        if order:
+            pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
+        else:
+            pkg.with_requirement("boost/1.0").with_requirement("gtest/1.0", visible=False, test=test)
+        tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                 "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("zlib/1.1"),
+                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requirement("zlib/1.0"),
+                 "pkg1/conanfile.py": pkg})
+        tc.run("export zlib --version=1.0")
+        tc.run("export zlib --version=1.1")
+        tc.run("export boost")
+        tc.run("export gtest")
+        # Creating this pkg1 does generate a conflict
+        tc.run("export pkg1")
+        tc.run("graph info --requires=pkg1/1.0", assert_error=True)
+        if order:
+            assert "ERROR: Version conflict: Conflict between zlib/1.1 and zlib/1.0" in tc.out
+            assert "Conflict originates from boost/1.0" in tc.out
+        else:
+            assert "ERROR: Version conflict: Conflict between zlib/1.0 and zlib/1.1" in tc.out
+            assert "Conflict originates from gtest/1.0" in tc.out
+
     def test_subgraph_no_conflict(self, order, test):
         #  cli--> pkg1/1.0 -(visible=False) --------------> pkg3/1.0 (no conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.0 (no conflict)
@@ -170,6 +198,35 @@ class TestErrorVisibleFalse:
         assert dep_pkg3["ref"] == "pkg3/1.0"
         assert dep_pkg2["visible"] is True
 
+    def test_subgraph_no_conflict_second_level(self, order, test):
+        #  cli--> pkg1/1.0 -(visible=False) ---> gtest/1.0 -> zlib/1.0
+        #             \----> boost/1.0 ---------------------> zlib/1.0 (noconflict)
+        tc = TestClient(light=True)
+        pkg = GenConanfile("pkg1", "1.0")
+        if order:
+            pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
+        else:
+            pkg.with_requirement("boost/1.0").with_requirement("gtest/1.0", visible=False, test=test)
+        tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                 "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("zlib/1.0"),
+                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requirement("zlib/1.0"),
+                 "pkg1/conanfile.py": pkg})
+        tc.run("export zlib --version=1.0")
+        tc.run("export boost")
+        tc.run("export gtest")
+        # Creating this pkg1 does generate a conflict
+        tc.run("export pkg1")
+        tc.run("graph info --requires=pkg1/1.0 --format=json")
+        assert "WARN: risk: This package has 2 different dependencies on zlib/1.0" not in tc.out
+        graph = json.loads(tc.stdout)
+        assert len(graph["graph"]["nodes"]) == 5  # Including the CLI 0-4
+        pkg1 = graph["graph"]["nodes"]["1"]
+        deps = pkg1["dependencies"]
+        assert len(deps) == 3
+        zlib = deps["3"]
+        assert "zlib/1.0" in zlib["ref"]
+        assert zlib["visible"] is True
+
     def test_transitive_conflict(self, order, test):
         # cli --------------------------------------------> pkg3/1.1
         #   \--> pkg1/1.0 -(visible=False) -> pkg3/1.0 (conflict)
@@ -196,6 +253,36 @@ class TestErrorVisibleFalse:
         else:
             assert "ERROR: Version conflict: Conflict between pkg3/1.0 and pkg3/1.1" in tc.out
         assert "Conflict originates from pkg1/1.0" in tc.out
+
+    def test_transitive_conflict_second_level(self, order, test):
+        # cli --------------------------------------------> zlib/1.1
+        #   \--> pkg1/1.0 -(visible=False) -gtest---------> zlib/1.0 (conflict)
+        #             \----> boost/1.0 -------------------> zlib/1.1 (no conflict)
+        tc = TestClient(light=True)
+        pkg = GenConanfile("pkg1", "1.0")
+        if order:
+            pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
+        else:
+            pkg.with_requirement("boost/1.0").with_requirement("gtest/1.0", visible=False, test=test)
+        tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requirement("zlib/1.0"),
+                 "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("zlib/1.1"),
+                 "pkg1/conanfile.py": pkg})
+        tc.run("export zlib --version=1.0")
+        tc.run("export zlib --version=1.1")
+        tc.run("export gtest")
+        tc.run("export boost")
+        tc.run("export pkg1")
+        tc.run("graph info --requires=zlib/1.1 --requires=pkg1/1.0 --format=html", assert_error=True,
+               redirect_stdout="graph.html")
+        # Check that the graph.html is generated
+        assert os.path.exists(os.path.join(tc.current_folder, "graph.html"))
+        if order:
+            assert "ERROR: Version conflict: Conflict between zlib/1.1 and zlib/1.0" in tc.out
+            assert "Conflict originates from pkg1/1.0" in tc.out
+        else:
+            assert "ERROR: Version conflict: Conflict between zlib/1.0 and zlib/1.1" in tc.out
+            assert "Conflict originates from gtest/1.0" in tc.out
 
     def test_transitive_version_range_no_conflict(self, order, test):
         # if in the case above, we use a version-range, we can avoid the conflict
@@ -228,6 +315,33 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
         assert dep_pkg3["ref"] == "pkg3/1.1"
         assert dep_pkg2["visible"] is True
+
+    def test_transitive_version_range_no_conflict_second_level(self, order, test):
+        # cli --------------------------------------------> zlib/1.1
+        #   \--> pkg1/1.0 -(visible=False) -gtest---------> zlib/[*] (no conflict, range)
+        #             \----> boost/1.0 -------------------> zlib/1.1 (no conflict)
+        tc = TestClient(light=True)
+        pkg = GenConanfile("pkg1", "1.0")
+        if order:
+            pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
+        else:
+            pkg.with_requirement("boost/1.0").with_requirement("gtest/1.0", visible=False, test=test)
+        tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                 "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requirement("zlib/[*]"),
+                 "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("zlib/1.1"),
+                 "pkg1/conanfile.py": pkg})
+        tc.run("export zlib --version=1.0")
+        tc.run("export zlib --version=1.1")
+        tc.run("export gtest")
+        tc.run("export boost")
+        tc.run("export pkg1")
+        tc.run("graph info --requires=zlib/1.1 --requires=pkg1/1.0 --build=missing")
+        assert "pkg1/1.0: WARN: risk: This package has 2 different dependencies" not in tc.out
+        # This doesn't conflict, but depending on the order, it is possible to have 2 differnet
+        # dependency graphs. If gtest is evaluated first, there will be no diamond, and
+        # gtest->zlib/1.1 will be private, and there will be another branch with another zlib/1.1
+        # node as regular requires.
+        # In both cases, it seems that zlib is not Skipped when it is necessary to build gtest
 
     def test_transitive_orphans(self, order, test):
         tc = TestClient(light=True)

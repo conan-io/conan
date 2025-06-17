@@ -123,7 +123,8 @@ class Node:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
-            ill_formed = require.visible != existing.require.visible
+            ill_formed = ((require.direct or existing.require.direct)
+                          and require.visible != existing.require.visible)
             if ill_formed:
                 self.conanfile.output.warning(f"This package has 2 different dependencies on "
                                               f"{require.ref} with different visibility. This is an "
