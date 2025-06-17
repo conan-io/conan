@@ -28,5 +28,6 @@ CONAN_TO_PREMAKE_ARCH = {
     "riscv64": "riscv64",
 
     "wasm": "wasm32",
+    "wasm64": "wasm64",
     "asm.js": "wasm32",
 }

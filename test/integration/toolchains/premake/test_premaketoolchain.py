@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 from conan.test.utils.tools import TestClient
@@ -26,7 +25,12 @@ def test_extra_flags_via_conf():
     """
     )
     tc = TestClient()
-    tc.save({"conanfile.txt": "[generators]\nPremakeToolchain", "profile": profile})
+    tc.save(
+        {
+            "conanfile.txt": "[generators]\nPremakeToolchain",
+            "profile": profile,
+        }
+    )
 
     tc.run("install . -pr:a=profile")
     content = tc.load(PremakeToolchain.filename)
@@ -34,8 +38,8 @@ def test_extra_flags_via_conf():
 
     assert (
         """
-        filter {"files:**.c"}
-            buildoptions { "-flag3", "-flag4" }
+        filter { files { "**.c" } }
+            buildoptions { "-flag3", "-flag4", "-m64" }
         filter {}
         """
         in content
@@ -43,14 +47,14 @@ def test_extra_flags_via_conf():
 
     assert (
         """
-        filter {"files:**.cpp", "**.cxx", "**.cc"}
-            buildoptions { "-flag1", "-flag2" }
+        filter { files { "**.cpp", "**.cxx", "**.cc" } }
+            buildoptions { "-flag1", "-flag2", "-m64" }
         filter {}
         """
         in content
     )
 
-    assert 'linkoptions { "-flag5", "-flag6" }' in content
+    assert 'linkoptions { "-flag5", "-flag6", "-m64" }' in content
     assert 'defines { "define1=0" }' in content
 
 
@@ -89,9 +93,10 @@ def test_project_configuration():
 
     toolchain = tc.load("build-release/conan/conantoolchain.premake5.lua")
 
+    print(toolchain)
     assert (
         """
-        filter {"files:**.c"}
+        filter { files { "**.c" } }
             buildoptions { "-Wextra" }
         filter {}
         """
@@ -99,7 +104,7 @@ def test_project_configuration():
     )
     assert (
         """
-        filter {"files:**.cpp", "**.cxx", "**.cc"}
+        filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { "-Wall", "-Wextra" }
         filter {}
         """
@@ -116,7 +121,7 @@ def test_project_configuration():
         -- Workspace flags
 
         -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
-        filter {"files:**.cpp", "**.cxx", "**.cc"}
+        filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { "-FS" }
         filter {}
         -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
