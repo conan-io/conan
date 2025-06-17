@@ -359,6 +359,9 @@ class ProfileArgs:
                             getattr(args, f"{f}_{context}") or []]
         return ProfileArgs(" ".join(pr_args))
 
+    def __str__(self):
+        return self._args
+
     @staticmethod
     def deserialize(data):
         return ProfileArgs(data.get("args"))

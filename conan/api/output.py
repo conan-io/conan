@@ -175,6 +175,12 @@ class ConanOutput:
 
         return self
 
+    def box(self, msg):
+        color = Color.BRIGHT_GREEN
+        self.writeln("\n**************************************************", fg=color)
+        self.writeln(f'*{msg: ^48}*', fg=color)
+        self.writeln(f"**************************************************\n", fg=color)
+
     def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural

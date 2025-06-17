@@ -11,8 +11,6 @@ packages:
     path: libb
   app1/0.1:
     path: app1
-products:
-- app1
 """
 
 cmake = """\
