@@ -168,6 +168,29 @@ def test_autotools_emscripten():
     assert "Hello World Release!" in client.out
 
 
+@pytest.mark.tool("premake")
+@pytest.mark.tool("emcc")
+@pytest.mark.tool("node")
+@pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
+@pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
+def test_premake_emscripten():
+    client = TestClient()
+    client.run("new premake_exe -d name=hello -d version=0.1")
+    client.save({"wasm32": wasm32_profile, "asmjs": asmjs_profile, "base_emscripten_profile": base_emscripten_profile,})
+    client.run("build . -pr:h=wasm32")
+    assert "gmake --arch=wasm32" in client.out
+    assert os.path.exists(os.path.join(client.current_folder, "build-release", "bin", "hello.wasm"))
+    # Run JavaScript generated code which uses .wasm file
+    client.run_command("node ./build-release/bin/hello")
+    assert "Hello World Release!" in client.out
+    rmtree(os.path.join(client.current_folder, "build-release"))
+
+    client.run("build . -pr:h=asmjs")
+    assert "WASM=0" in client.out
+    # No wasm should have been generated for asm.js architecture
+    assert not os.path.exists(os.path.join(client.current_folder, "build-release", "bin", "hello.wasm"))
+    client.run_command("node ./build-release/bin/hello")
+    assert "Hello World Release!" in client.out
+
 # TODO: test_bazel_emscripten(): need WIP new bazel toolchain
 # TODO: test_msbuild_emscripten(): give support to msbuild
-# TODO: test_premake_emscripten(): premake tests

@@ -1,4 +1,3 @@
-import os
 import platform
 import textwrap
 
@@ -79,61 +78,14 @@ def test_premake_legacy(matrix_client):
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
 @pytest.mark.tool("premake")
-def test_premake_new_generator(matrix_client):
-    c = matrix_client
+def test_premake_new_generator():
+    c = TestClient()
+    c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
+    c.run("create lib")
+    c.run("new premake_exe -d name=example -d requires=lib/0.1 -d version=1.0 -o exe")
+    c.run("create exe")
 
-    premake5 = textwrap.dedent(
-        """
-        workspace "Project"
-           language "C++"
-           configurations { "Debug", "Release" }
+    assert "example/1.0 (test package): RUN: example" in c.out
+    assert "lib/0.1: Hello World Release!" in c.out
+    assert "example/1.0: Hello World Release!" in c.out
 
-        project "app"
-           kind "ConsoleApp"
-           files { "**.h", "**.cpp" }
-           filter "configurations:Debug"
-              defines { "DEBUG" }
-              symbols "On"
-           filter "configurations:Release"
-              defines { "NDEBUG" }
-              optimize "On"
-    """
-    )
-
-    conanfile = textwrap.dedent(
-        """
-        from conan import ConanFile
-        from conan.tools.layout import basic_layout
-        from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
-        import os
-
-        class Pkg(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
-            name = "pkg"
-            version = "1.0"
-            requires = "matrix/1.0"
-            generators = "PremakeDeps", "PremakeToolchain"
-
-            def layout(self):
-                basic_layout(self, src_folder="src")
-
-            def build(self):
-                premake = Premake(self)
-                premake.configure()
-                premake.build(workspace="Project", targets=["app"])
-
-                # Run executable after build
-                p = os.path.join(self.build_folder, "bin", "app")
-                self.run(f'"{p}"')
-        """
-    )
-
-    c.save({"conanfile.py": conanfile,
-            "src/premake5.lua": premake5,
-            "src/main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])})
-
-    c.run("build .")
-    assert "matrix/1.0: Hello World Release!" in c.out
-
-    c.run("build . -s build_type=Debug --build=missing")
-    assert "matrix/1.0: Hello World Debug!" in c.out

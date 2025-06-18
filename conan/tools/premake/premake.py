@@ -95,7 +95,8 @@ class Premake:
     @property
     def _compilation_verbosity(self):
         verbosity = self._conanfile.conf.get("tools.compilation:verbosity", choices=("quiet", "verbose"))
-        return " --debug" if verbosity == "verbose" else ""
+        # --verbose does not print compilation commands but internal Makefile progress logic
+        return " verbose=1" if verbosity == "verbose" else ""
 
     def build(self, workspace, targets=None):
         """

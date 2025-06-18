@@ -1,8 +1,9 @@
-from conan.tools.build.flags import architecture_flag
+from conan.tools.build.flags import architecture_flag, libcxx_flags
 import os
 import textwrap
 from pathlib import Path
 
+from conan.tools.env.virtualbuildenv import VirtualBuildEnv
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
@@ -14,8 +15,6 @@ from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
 def _generate_flags(self, conanfile):
     template = textwrap.dedent(
         """\
-        -- Workspace flags
-
         {% if extra_cflags %}
         -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags) and extra_cflags
         filter { files { "**.c" } }
@@ -42,20 +41,23 @@ def _generate_flags(self, conanfile):
     def format_list(items):
         return ", ".join(f'"{item}"' for item in items) if items else None
 
-    architecture_flags = architecture_flag(self._conanfile)
-    architecture_flags = [architecture_flags] if architecture_flags else []
+    def to_list(value):
+        return value if isinstance(value, list) else [value] if value else []
+
+    architecture_flags = to_list(architecture_flag(self._conanfile))
+    cxx_flags, libcxx_compile_definitions = libcxx_flags(self._conanfile)
 
     extra_defines = format_list(
         conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         + self.extra_defines
+        + to_list(libcxx_compile_definitions)
     )
     extra_c_flags = format_list(
-        conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        + self.extra_cflags
-        + architecture_flags
+        conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self.extra_cflags + architecture_flags
     )
     extra_cxx_flags = format_list(
         conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        + to_list(cxx_flags)
         + self.extra_cxxflags
         + architecture_flags
     )
@@ -86,7 +88,6 @@ class _PremakeProject:
         kind "{{ kind }}"
         {% endif %}
         {% if flags %}
-        -- Project flags {{ "(global)" if is_global else "(specific)"}}
     {{ flags | indent(indent_level, first=True) }}
         {% endif %}
     """
@@ -104,12 +105,8 @@ class _PremakeProject:
 
     def _generate(self):
         """Generates project block"""
-        flags_content = _generate_flags(
-            self, self._conanfile
-        )  # Generate flags specific to this project
-        return Template(
-            self._premake_project_template, trim_blocks=True, lstrip_blocks=True
-        ).render(
+        flags_content = _generate_flags(self, self._conanfile)  # Generate flags specific to this project
+        return Template(self._premake_project_template, trim_blocks=True, lstrip_blocks=True).render(
             name=self.name,
             kind="None" if self.disable else self.kind,
             flags=flags_content,
@@ -150,13 +147,27 @@ class PremakeToolchain:
             {% if cstd %}
             cdialect "{{ cstd }}"
             {% endif %}
-
-            {% if cross_build_arch %}
-            -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
-            buildoptions "-arch {{ cross_build_arch }}"
-            linkoptions "-arch {{ cross_build_arch }}"
+            {% if fpic != None %}
+            -- Enable position independent code
+            pic "{{ "On" if fpic else "Off" }}"
             {% endif %}
-
+            {% if cross_build_os %}
+            filter { "architecture: not wasm64" }
+                -- TODO: There is an issue with premake and "wasm64" when system is declared "emscripten"
+                system "{{ cross_build_os }}"
+            filter {}
+            {% endif %}
+            {% if macho_to_amd64 %}
+            -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
+            buildoptions "-arch x86_64"
+            linkoptions "-arch x86_64"
+            {% endif %}
+            {% if cross_build_os == "emscripten" %}
+            filter { "system:emscripten", "kind:ConsoleApp or WindowedApp" }
+                -- Replace built in .wasm extension to .js to generate also a JavaScript files
+                targetextension ".js"
+            filter {}
+            {% endif %}
             {% if flags %}
     {{ flags | indent(indent_level, first=True) }}
             {% endif %}
@@ -206,9 +217,7 @@ class PremakeToolchain:
         :return: ``<PremakeProject>`` object which allow to set project specific flags.
         """
         if project_name not in self._projects:
-            self._projects[project_name] = _PremakeProject(
-                project_name, self._conanfile
-            )
+            self._projects[project_name] = _PremakeProject(project_name, self._conanfile)
         return self._projects[project_name]
 
     def generate(self):
@@ -226,29 +235,37 @@ class PremakeToolchain:
             elif cppstd[0].isnumeric():
                 cppstd = f"c++{cppstd}"
 
-        cstd = self._conanfile.settings.get_safe("compiler.cstd")
-        cross_build_arch = (
-            self._conanfile.settings.arch if cross_building(self._conanfile) else None
+        # TODO: programmatically updating project kind (SharedLib / StaticLib) is not yet supported
+        shared = self._conanfile.options.get_safe("shared")
+        compilers_build_mapping = self._conanfile.conf.get(
+            "tools.build:compiler_executables", default={}, check_type=dict
         )
-        # Avoid passing arch=wasm to emcc
-        if self._conanfile.settings.compiler == "emcc":
-            cross_build_arch = None
+        if compilers_build_mapping:
+            build_env = VirtualBuildEnv(self._conanfile, auto_generate=False)
+            env = build_env.environment()
+            if "c" in compilers_build_mapping:
+                env.define("CC", compilers_build_mapping["c"])
+            if "cpp" in compilers_build_mapping:
+                env.define("CXX", compilers_build_mapping["cpp"])
+            build_env.generate()
 
-        flags_content = _generate_flags(
-            self, self._conanfile
-        )  # Generate flags specific to this workspace
+        macho_to_amd64 = (
+            self._conanfile.settings.arch
+            if cross_building(self._conanfile) and self._conanfile.settings.os == "Macos"
+            else None
+        )
 
-        content = Template(
-            self._premake_file_template, trim_blocks=True, lstrip_blocks=True
-        ).render(
+        content = Template(self._premake_file_template, trim_blocks=True, lstrip_blocks=True).render(
             # Pass posix path for better cross-platform compatibility in Lua
             build_folder=Path(self._conanfile.build_folder).as_posix(),
             has_conan_deps=premake_conan_deps.exists(),
             cppstd=cppstd,
-            cstd=cstd,
-            cross_build_arch=cross_build_arch,
+            cstd=self._conanfile.settings.get_safe("compiler.cstd"),
+            fpic=self._conanfile.options.get_safe("fPIC"),
+            cross_build_os=self._cross_build_os(),
+            macho_to_amd64=macho_to_amd64,
             projects=self._projects,
-            flags=flags_content,
+            flags=_generate_flags(self, self._conanfile),
             indent_level=8,
         )
         save(
@@ -256,6 +273,12 @@ class PremakeToolchain:
             os.path.join(self._conanfile.generators_folder, self.filename),
             content,
         )
-        # TODO: improve condition
+        # Generate VCVars if using MSVC
         if "msvc" in self._conanfile.settings.compiler:
             VCVars(self._conanfile).generate()
+
+    def _cross_build_os(self):
+        conan_os = str(self._conanfile.settings.os)
+        if conan_os == "Macos":
+            return "macosx"
+        return conan_os.lower()

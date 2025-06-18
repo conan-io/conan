@@ -72,6 +72,8 @@ def test_project_configuration():
             settings = "os", "compiler", "build_type", "arch"
             name = "pkg"
             version = "1.0"
+            options = {"fPIC": [True, False]}
+            default_options = {"fPIC": True}
 
             def layout(self):
                 basic_layout(self, src_folder="src")
@@ -93,7 +95,7 @@ def test_project_configuration():
 
     toolchain = tc.load("build-release/conan/conantoolchain.premake5.lua")
 
-    print(toolchain)
+    assert 'pic "On"' in toolchain
     assert (
         """
         filter { files { "**.c" } }
@@ -117,9 +119,6 @@ def test_project_configuration():
         textwrap.dedent(
             """
     project "main"
-        -- Project flags (specific)
-        -- Workspace flags
-
         -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { "-FS" }
