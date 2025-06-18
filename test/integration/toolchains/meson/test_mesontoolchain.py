@@ -794,5 +794,6 @@ def test_conf_extra_apple_flags():
     c.run("install . -pr:a host")
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fvisibility=hidden', " \
-               "'-fvisibility-inlines-hidden']" in tc
+        assert f"{flags} = ['-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
