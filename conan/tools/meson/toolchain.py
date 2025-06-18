@@ -412,9 +412,9 @@ class MesonToolchain:
             fobj_arc = "-fobjc-arc"
         if enable_arc is False:
             fobj_arc = "-fno-objc-arc"
-        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', [fobj_arc]))
+        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', [])) + [fobj_arc]
         self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
-        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', [fobj_arc]))
+        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', [])) + [fobj_arc]
         self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
     def _resolve_android_cross_compilation(self):
