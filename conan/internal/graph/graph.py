@@ -70,6 +70,7 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+        self._ill_formed_warnings = set()
 
     @property
     def dependencies(self):
@@ -125,7 +126,8 @@ class Node:
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
             ill_formed = ((require.direct or existing.require.direct)
                           and require.visible != existing.require.visible)
-            if ill_formed:
+            if ill_formed and require.ref not in self._ill_formed_warnings:
+                self._ill_formed_warnings.add(require.ref)
                 self.conanfile.output.warning(f"This package has 2 different dependencies on "
                                               f"{require.ref} with different visibility. This is an "
                                               f"ill-formed graph", warn_tag="risk")
