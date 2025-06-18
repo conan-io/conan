@@ -768,13 +768,15 @@ def test_conf_extra_apple_flags():
     f = "conan_meson_native.ini"
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fembed-bitcode', '-fobjc-arc', '-fvisibility=default']" in tc
-
+        assert f"{flags} = ['-m64', '-fembed-bitcode', '-fvisibility=default']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fobjc-arc', '-m64', '-fembed-bitcode', '-fvisibility=default']" in tc
     c.run("install . -pr:a host -s build_type=Debug")
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fembed-bitcode-marker'," \
-               " '-fobjc-arc', '-fvisibility=default']" in tc
+        assert f"{flags} = ['-m64', '-fembed-bitcode-marker', '-fvisibility=default']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fobjc-arc', '-m64', '-fembed-bitcode-marker', '-fvisibility=default']" in tc
 
     host = textwrap.dedent("""
         [settings]
@@ -792,5 +794,5 @@ def test_conf_extra_apple_flags():
     c.run("install . -pr:a host")
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fno-objc-arc', '-fvisibility=hidden', " \
+        assert f"{flags} = ['-m64', '-fvisibility=hidden', " \
                "'-fvisibility-inlines-hidden']" in tc

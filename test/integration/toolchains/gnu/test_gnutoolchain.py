@@ -476,15 +476,15 @@ def test_conf_extra_apple_flags(toolchain):
     c.run("install . -pr:a host")
     f = "conanautotoolstoolchain.sh" if toolchain == "AutotoolsToolchain" else "conangnutoolchain.sh"
     tc = c.load(f)
-    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
-    assert 'export CFLAGS="$CFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
-    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode -fobjc-arc -fvisibility=default"' in tc
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode -fvisibility=default"' in tc
 
     c.run("install . -pr:a host -s build_type=Debug")
     tc = c.load(f)
-    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
-    assert 'export CFLAGS="$CFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
-    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode-marker -fobjc-arc -fvisibility=default"' in tc
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
 
     host = textwrap.dedent("""
         [settings]
@@ -499,9 +499,9 @@ def test_conf_extra_apple_flags(toolchain):
     c.save({"host": host})
     c.run("install . -pr:a host")
     tc = c.load(f)
-    assert 'CXXFLAGS="$CXXFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
-    assert 'CFLAGS="$CFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
-    assert 'LDFLAGS="$LDFLAGS -fno-objc-arc -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'CXXFLAGS="$CXXFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'CFLAGS="$CFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'LDFLAGS="$LDFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
 
 
 def test_toolchain_crossbuild_to_android():
