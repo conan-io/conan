@@ -2,6 +2,7 @@ import json
 import os
 
 from conan.api.conan_api import ConanAPI
+from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
@@ -11,6 +12,7 @@ from conan.cli.commands.list import print_serial
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conan.internal.graph.install_graph import ProfileArgs
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
@@ -20,8 +22,6 @@ def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     parser.parse_args(*args)
     ws = conan_api.workspace
-    if not ws.folder():
-        raise ConanException("No workspace defined, conanws.py file not found")
     return ws.folder()
 
 
@@ -59,7 +59,6 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
                        help='Look in the specified remote or remotes server')
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
-    subparser.add_argument("--product", action="store_true", help="Add the package as a product")
     args = parser.parse_args(*args)
     if args.path and args.ref:
         raise ConanException("Do not use both 'path' and '--ref' argument")
@@ -71,7 +70,7 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
         path = conan_api.workspace.open(args.ref, remotes, cwd=cwd)
     ref = conan_api.workspace.add(path,
                                   args.name, args.version, args.user, args.channel,
-                                  cwd, args.output_folder, remotes=remotes, product=args.product)
+                                  cwd, args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' added to workspace".format(ref))
 
 
@@ -109,10 +108,21 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Build the current workspace, starting from the "products"
+    Call "conan build" for packages in the workspace, in the right order
     """
-    subparser.add_argument("path", nargs="?",
-                           help='Path to a package folder in the user workspace')
+    _install_build(conan_api, parser, subparser, True, *args)
+
+
+@conan_subcommand()
+def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Call "conan install" for packages in the workspace, in the right order
+    """
+    _install_build(conan_api, parser, subparser, False, *args)
+
+
+def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
     args = parser.parse_args(*args)
@@ -122,58 +132,61 @@ def workspace_build(conan_api: ConanAPI, parser, subparser, *args):
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None,
-                                               partial=args.lockfile_partial, overrides=overrides)
+                                               cwd=None, partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    build_mode = args.build or []
-    if "editable" not in build_mode:
+    buildmode = args.build
+    if build and (not buildmode or "editable" not in buildmode):
         ConanOutput().info("Adding '--build=editable' as build mode")
-        build_mode.append("editable")
+        buildmode = buildmode or []
+        buildmode.append("editable")
 
-    if args.path:
-        products = [args.path]
-    else:  # all products
-        products = conan_api.workspace.products
-        if not products:
-            raise ConanException("There are no products defined in the workspace, can't build\n"
-                                 "You can use 'conan build <path> --build=editable' to build")
-        ConanOutput().title(f"Building workspace products {products}")
+    all_editables = conan_api.workspace.packages()
+    packages = conan_api.workspace.select_packages(args.pkg)
+    ConanOutput().box("Workspace computing the build order")
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build, buildmode,
+                                                    lockfile, remotes, args, update=args.update)
 
-    editables = conan_api.workspace.editable_packages
-    # TODO: This has to be improved to avoid repetition when there are multiple products
-    for product in products:
-        ConanOutput().subtitle(f"Building workspace product: {product}")
-        product_ref = conan_api.workspace.editable_from_path(product)
-        if product_ref is None:
-            raise ConanException(f"Product '{product}' not defined in the workspace as editable")
-        editable = editables[product_ref]
-        editable_path = editable["path"]
-        deps_graph = conan_api.graph.load_graph_consumer(editable_path, None, None, None, None,
-                                                         profile_host, profile_build, lockfile,
-                                                         remotes, args.update)
-        deps_graph.report_graph_error()
-        print_graph_basic(deps_graph)
-        conan_api.graph.analyze_binaries(deps_graph, build_mode, remotes=remotes, update=args.update,
-                                         lockfile=lockfile)
-        print_graph_packages(deps_graph)
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-        conan_api.install.install_consumer(deps_graph, None, os.path.dirname(editable_path),
-                                           editable.get("output_folder"))
-        ConanOutput().title(f"Calling build() for the product {product_ref}")
-        conanfile = deps_graph.root.conanfile
-        conan_api.local.build(conanfile)
+    msg = "build" if build else "install"
+    ConanOutput().box(f"Workspace {msg}ing each package")
+    order = install_order.install_build_order()
+
+    profile_args = ProfileArgs.from_args(args)
+    for level in order["order"]:
+        for elem in level:
+            ref = RecipeReference.loads(elem["ref"])
+            for package_level in elem["packages"]:
+                for package in package_level:
+                    if package["binary"] == "Build":  # Build external to Workspace
+                        cmd = f'install {package["build_args"]} {profile_args}'
+                        ConanOutput().box(f"Workspace building external {ref}")
+                        ConanOutput().info(f"Command: {cmd}\n")
+                        conan_api.command.run(cmd)
+                    elif package["binary"] in ("Editable", "EditableBuild"):
+                        path = all_editables[ref]["path"]
+                        output_folder = all_editables[ref].get("output_folder")
+                        build_arg = "--build-require" if package["context"] == "build" else ""
+                        ref_args = " ".join(f"--{k}={getattr(ref, k)}"
+                                            for k in ("name", "version", "user", "channel")
+                                            if getattr(ref, k, None))
+                        of_arg = f'-of="{output_folder}"' if output_folder else ""
+                        # TODO: Missing --lockfile-overrides arg here
+                        command = "build" if build else "install"
+                        cmd = f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg}'
+                        ConanOutput().box(f"Workspace {command}: {ref}")
+                        ConanOutput().info(f"Command: {cmd}\n")
+                        conan_api.command.run(cmd)
 
 
 @conan_subcommand()
-def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     """
     Install the workspace as a monolith, installing only external dependencies to the workspace,
     generating a single result (generators, etc) for the whole workspace.
     """
-    subparser.add_argument("path", nargs="*",
-                           help="Install only these editable packages, not all")
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -193,11 +206,8 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
-    conan_api.workspace.info()  # FIXME: Just to force error if WS not enabled
     # Build a dependency graph with all editables as requirements
-    requires = conan_api.workspace.select_editables(args.path)
-    if not requires:
-        raise ConanException("This workspace cannot be installed, it doesn't have any editable")
+    requires = conan_api.workspace.select_packages(args.pkg)
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
                                                      profile_host, profile_build, lockfile,
                                                      remotes, args.build, args.update)
@@ -205,7 +215,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     print_graph_basic(deps_graph)
 
     # Collapsing the graph
-    ws_graph = conan_api.workspace.collapse_editables(deps_graph, profile_host, profile_build)
+    ws_graph = conan_api.workspace.super_build_graph(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
 
@@ -219,7 +229,7 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand()
-def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):
+def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Clean the temporary build folders when possible
     """
@@ -237,6 +247,92 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
                              "If  does not exist")
     args = parser.parse_args(*args)
     conan_api.workspace.init(args.path)
+
+
+@conan_subcommand()
+def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Call "conan create" for packages in the workspace, in the correct order.
+    Packages will be created in the Conan cache, not locally
+    """
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    # Basic collaborators: remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None,
+                                               partial=args.lockfile_partial, overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    build_mode = args.build if args.build else []
+    ConanOutput().box("Exporting workspace recipes to Conan cache")
+    exported_refs = conan_api.workspace.export()
+    build_mode.extend(f"missing:{r}" for r in exported_refs)
+
+    all_packages = conan_api.workspace.packages()
+    packages = conan_api.workspace.select_packages(args.pkg)
+
+    # If we don't disable the workspace, then, the packages are not created in the Conan cache,
+    # but locally in the user folders, are they are intercepted as editables
+    conan_api.workspace.enable(False)
+
+    install_order = conan_api.workspace.build_order(packages, profile_host, profile_build,
+                                                    build_mode, lockfile, remotes, args,
+                                                    update=args.update)
+
+    ConanOutput().box("Workspace creating each package")
+    order = install_order.install_build_order()
+
+    profile_args = ProfileArgs.from_args(args)
+    for level in order["order"]:
+        for elem in level:
+            ref = RecipeReference.loads(elem["ref"])
+            for package_level in elem["packages"]:
+                for package in package_level:
+                    if package["binary"] not in ("Build", "EditableBuild"):
+                        ConanOutput().info(f"Skip build for {ref} binary: {package['binary']}")
+                        continue
+
+                    if ref not in all_packages:
+                        # Build external to Workspace
+                        cmd = f'install {package["build_args"]} {profile_args}'
+                        ConanOutput().box(f"Workspace building external {ref}")
+                        ConanOutput().info(f"Build command: {cmd}\n")
+                        conan_api.command.run(cmd)
+                    else:  # Package in workspace
+                        path = packages[ref]["path"]
+                        # TODO: Missing --lockfile-overrides arg here
+                        build = "--build-require" if package["context"] == "build" else ""
+                        ref_args = " ".join(f"--{k}={getattr(ref, k)}"
+                                            for k in ("name", "version", "user", "channel")
+                                            if getattr(ref, k, None))
+                        cmd = f'create "{path}" {profile_args} {build} {ref_args}'
+                        ConanOutput().box(f"Workspace create {ref}")
+                        ConanOutput().info(f"Conan create command: {cmd}\n")
+                        conan_api.command.run(cmd)
+
+
+@conan_subcommand()
+def workspace_source(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Call the source() method of packages in the workspace
+    """
+    subparser.add_argument("--pkg", action="append", help='Define specific packages')
+    args = parser.parse_args(*args)
+
+    remotes = conan_api.remotes.list()  # In case "python_requires" are needed
+    packages = conan_api.workspace.select_packages(args.pkg)
+
+    ConanOutput().box("Workspace getting sources")
+    for pkg, info in packages.items():
+        conan_api.local.source(info["path"], name=pkg.name, version=str(pkg.version),
+                               user=pkg.user, channel=pkg.channel, remotes=remotes)
 
 
 @conan_command(group="Consumer")

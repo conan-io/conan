@@ -337,6 +337,17 @@ class GnuToolchain:
                 triplets[f"--{context}"] = info["triplet"]
         return triplets
 
+    def _include_obj_arc_flags(self, env):
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        fobj_arc = ""
+        if enable_arc:
+            fobj_arc = "-fobjc-arc"
+        if enable_arc is False:
+            fobj_arc = "-fno-objc-arc"
+        if fobj_arc:
+            env.append('OBJCFLAGS', [fobj_arc])
+            env.append('OBJCXXFLAGS', [fobj_arc])
+
     @property
     def _environment(self):
         env = Environment()
@@ -346,6 +357,8 @@ class GnuToolchain:
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        # Objective C/C++
+        self._include_obj_arc_flags(env)
         # Let's compose with user extra env variables defined (user ones have precedence)
         return self.extra_env.compose_env(env)
 

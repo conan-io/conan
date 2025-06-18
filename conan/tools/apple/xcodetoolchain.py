@@ -13,7 +13,7 @@ class XcodeToolchain(object):
 
     _vars_xconfig = textwrap.dedent("""\
         // Definition of toolchain variables
-        {macosx_deployment_target}
+        {apple_deployment_target}
         {clang_cxx_library}
         {clang_cxx_language_standard}
         """)
@@ -63,9 +63,17 @@ class XcodeToolchain(object):
         return cppstd
 
     @property
-    def _macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
-                                                      self.os_version) if self.os_version else ""
+    def _apple_deployment_target(self):
+        deployment_target_key = {
+            "Macos": "MACOSX_DEPLOYMENT_TARGET",
+            "iOS": "IPHONEOS_DEPLOYMENT_TARGET",
+            "tvOS": "TVOS_DEPLOYMENT_TARGET",
+            "watchOS": "WATCHOS_DEPLOYMENT_TARGET",
+            "visionOS": "XROS_DEPLOYMENT_TARGET",
+        }.get(str(self._conanfile.settings.get_safe("os")))
+        return '{}{}={}'.format(deployment_target_key,
+                                _xcconfig_conditional(self._conanfile.settings, self.configuration),
+                                self.os_version) if self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
@@ -83,7 +91,7 @@ class XcodeToolchain(object):
 
     @property
     def _vars_xconfig_content(self):
-        ret = self._vars_xconfig.format(macosx_deployment_target=self._macosx_deployment_target,
+        ret = self._vars_xconfig.format(apple_deployment_target=self._apple_deployment_target,
                                         clang_cxx_library=self._clang_cxx_library,
                                         clang_cxx_language_standard=self._clang_cxx_language_standard)
         return ret
