@@ -494,8 +494,8 @@ class MesonToolchain:
         self.objc_args.extend(self.c_args)
         self.objcpp_args.extend(self.cpp_args)
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
-        self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
-        self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+        self.objc_link_args.extend(self.c_link_args)
+        self.objcpp_link_args.extend(self.cpp_link_args)
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)

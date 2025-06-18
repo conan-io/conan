@@ -243,6 +243,16 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
 
+    def _include_obj_arc_flags(self, env):
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        fobj_arc = ""
+        if enable_arc:
+            fobj_arc = "-fobjc-arc"
+        if enable_arc is False:
+            fobj_arc = "-fno-objc-arc"
+        env.append('OBJCFLAGS', [fobj_arc] + self.cflags)
+        env.append('OBJCXXFLAGS', [fobj_arc] + self.cxxflags)
+
     def environment(self):
         env = Environment()
         # Setting Android cross-compilation flags (if exist)
@@ -276,6 +286,8 @@ class AutotoolsToolchain:
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        # Objective C/C++
+        self._include_obj_arc_flags(env)
         # Issue related: https://github.com/conan-io/conan/issues/15486
         if self._is_cross_building and self._conanfile.conf_build:
             compilers_build_mapping = (
