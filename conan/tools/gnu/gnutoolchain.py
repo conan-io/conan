@@ -344,8 +344,9 @@ class GnuToolchain:
             fobj_arc = "-fobjc-arc"
         if enable_arc is False:
             fobj_arc = "-fno-objc-arc"
-        env.append('OBJCFLAGS', [fobj_arc] + self.cflags)
-        env.append('OBJCXXFLAGS', [fobj_arc] + self.cxxflags)
+        if fobj_arc:
+            env.append('OBJCFLAGS', [fobj_arc])
+            env.append('OBJCXXFLAGS', [fobj_arc])
 
     @property
     def _environment(self):

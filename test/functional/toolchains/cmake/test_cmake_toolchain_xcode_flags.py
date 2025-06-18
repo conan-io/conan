@@ -12,6 +12,8 @@ def _add_message_status_flags(client):
     with open(cmakelists_path, "a") as cmakelists_file:
         cmakelists_file.write('message(STATUS "CONAN_C_FLAGS: ${CONAN_C_FLAGS}")\n')
         cmakelists_file.write('message(STATUS "CONAN_CXX_FLAGS: ${CONAN_CXX_FLAGS}")\n')
+        cmakelists_file.write('message(STATUS "CONAN_OBJC_FLAGS: ${CONAN_OBJC_FLAGS}")\n')
+        cmakelists_file.write('message(STATUS "CONAN_OBJCXX_FLAGS: ${CONAN_OBJCXX_FLAGS}")\n')
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
