@@ -72,7 +72,11 @@ premake5 = """workspace "{{name.capitalize()}}"
 
 project "{{name}}"
     cppdialect "C++17"
-    kind "StaticLib"
+
+    -- To let conan take control over `kind` of the libraries, DO NOT SET `kind` (StaticLib or
+    -- SharedLib) in `project` block.
+    -- kind "<controlled by conan>"
+
     language "C++"
     files { "include/*.hpp", "include/*.h", "src/*.cpp" }
 

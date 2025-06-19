@@ -89,3 +89,13 @@ def test_premake_new_generator():
     assert "lib/0.1: Hello World Release!" in c.out
     assert "example/1.0: Hello World Release!" in c.out
 
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
+def test_premake_shared_lib():
+    c = TestClient()
+    c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
+    c.run("create lib -o '&:shared=True'")
+    assert "lib/0.1: package(): Packaged 1 '.dylib' file: liblib.dylib" in c.out
+    assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
+

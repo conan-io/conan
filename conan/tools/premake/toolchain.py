@@ -147,6 +147,13 @@ class PremakeToolchain:
             {% if cstd %}
             cdialect "{{ cstd }}"
             {% endif %}
+            {% if shared != None %}
+            -- IMPORTANT: this global setting will only apply `project`s which do not have `kind` set.
+            -- IMPORTANT: This will not override existing `kind` set in `project` block.
+            -- To let conan take control over `kind` of the libraries, DO NOT SET `kind` (StaticLib or
+            -- SharedLib) in `project` block.
+            kind "{{ "SharedLib" if shared else "StaticLib" }}"
+            {% endif %}
             {% if fpic != None %}
             -- Enable position independent code
             pic "{{ "On" if fpic else "Off" }}"
@@ -235,8 +242,6 @@ class PremakeToolchain:
             elif cppstd[0].isnumeric():
                 cppstd = f"c++{cppstd}"
 
-        # TODO: programmatically updating project kind (SharedLib / StaticLib) is not yet supported
-        shared = self._conanfile.options.get_safe("shared")
         compilers_build_mapping = self._conanfile.conf.get(
             "tools.build:compiler_executables", default={}, check_type=dict
         )
@@ -261,6 +266,7 @@ class PremakeToolchain:
             has_conan_deps=premake_conan_deps.exists(),
             cppstd=cppstd,
             cstd=self._conanfile.settings.get_safe("compiler.cstd"),
+            shared=self._conanfile.options.get_safe("shared"),
             fpic=self._conanfile.options.get_safe("fPIC"),
             cross_build_os=self._cross_build_os(),
             macho_to_amd64=macho_to_amd64,
