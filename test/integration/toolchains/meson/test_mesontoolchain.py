@@ -748,6 +748,32 @@ def test_cross_x86_64_to_x86():
     assert "cpu = 'x86'" in cross  # This is the host machine
 
 
+def test_cross_x86_64_to_riscv32():
+    """
+    https://github.com/conan-io/conan/issues/18490
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run("install . -g MesonToolchain -s os=Linux -s arch=riscv32 -s:b arch=x86_64")
+    assert not os.path.exists(os.path.join(c.current_folder, MesonToolchain.native_filename))
+    cross = c.load(MesonToolchain.cross_filename)
+    assert "cpu = 'x86_64'" in cross  # This is the build machine
+    assert "cpu = 'riscv32'" in cross  # This is the host machine
+
+
+def test_cross_x86_64_to_riscv64():
+    """
+    https://github.com/conan-io/conan/issues/18490
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run("install . -g MesonToolchain -s os=Linux -s arch=riscv64 -s:b arch=x86_64")
+    assert not os.path.exists(os.path.join(c.current_folder, MesonToolchain.native_filename))
+    cross = c.load(MesonToolchain.cross_filename)
+    assert "cpu = 'x86_64'" in cross  # This is the build machine
+    assert "cpu = 'riscv64'" in cross  # This is the host machine
+
+
 def test_conf_extra_apple_flags():
     host = textwrap.dedent("""
     [settings]
@@ -768,13 +794,15 @@ def test_conf_extra_apple_flags():
     f = "conan_meson_native.ini"
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fembed-bitcode', '-fobjc-arc', '-fvisibility=default']" in tc
-
+        assert f"{flags} = ['-m64', '-fembed-bitcode', '-fvisibility=default']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fobjc-arc', '-m64', '-fembed-bitcode', '-fvisibility=default']" in tc
     c.run("install . -pr:a host -s build_type=Debug")
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fembed-bitcode-marker'," \
-               " '-fobjc-arc', '-fvisibility=default']" in tc
+        assert f"{flags} = ['-m64', '-fembed-bitcode-marker', '-fvisibility=default']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fobjc-arc', '-m64', '-fembed-bitcode-marker', '-fvisibility=default']" in tc
 
     host = textwrap.dedent("""
         [settings]
@@ -792,5 +820,6 @@ def test_conf_extra_apple_flags():
     c.run("install . -pr:a host")
     tc = c.load(f)
     for flags in ["c_args", "cpp_args", "c_link_args", "cpp_link_args"]:
-        assert f"{flags} = ['-m64', '-fno-objc-arc', '-fvisibility=hidden', " \
-               "'-fvisibility-inlines-hidden']" in tc
+        assert f"{flags} = ['-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
+    for flags in ["objcpp_args", "objc_args"]:
+        assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
