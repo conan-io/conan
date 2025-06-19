@@ -752,10 +752,9 @@ def test_cross_x86_64_to_riscv32():
     """
     https://github.com/conan-io/conan/issues/18490
     """
-
     c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
-    c.run("install . -g MesonToolchain -s arch=riscv32 -s:b arch=x86_64")
+    c.run("install . -g MesonToolchain -s os=Linux -s arch=riscv32 -s:b arch=x86_64")
     assert not os.path.exists(os.path.join(c.current_folder, MesonToolchain.native_filename))
     cross = c.load(MesonToolchain.cross_filename)
     assert "cpu = 'x86_64'" in cross  # This is the build machine
@@ -766,10 +765,9 @@ def test_cross_x86_64_to_riscv64():
     """
     https://github.com/conan-io/conan/issues/18490
     """
-
     c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
-    c.run("install . -g MesonToolchain -s arch=riscv64 -s:b arch=x86_64")
+    c.run("install . -g MesonToolchain -s os=Linux -s arch=riscv64 -s:b arch=x86_64")
     assert not os.path.exists(os.path.join(c.current_folder, MesonToolchain.native_filename))
     cross = c.load(MesonToolchain.cross_filename)
     assert "cpu = 'x86_64'" in cross  # This is the build machine
