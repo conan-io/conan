@@ -86,6 +86,7 @@ class ConanFile:
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
+        self.generator_info = []
         self.info = None
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_runenv = None
