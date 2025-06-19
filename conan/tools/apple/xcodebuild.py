@@ -28,7 +28,7 @@ class XcodeBuild(object):
             sdk = "{}{}".format(self._sdk, self._sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
 
-    def build(self, xcodeproj, target=None, configuration=None):
+    def build(self, xcodeproj, target=None, configuration=None, build_options=None):
         """
         Call to ``xcodebuild`` to build a Xcode project.
 
@@ -37,6 +37,7 @@ class XcodeBuild(object):
                        method it will add the ``-target`` argument to the build system call. If not passed, it
                        will build all the targets passing the ``-alltargets`` argument instead.
         :param configuration: the configuration to build, defaults to profile's ``settings.build_type``.
+        :param build_options: arbitrary options (list of strings) to be passed to ``xcodebuild`` as is.
         :return: the return code for the launched ``xcodebuild`` command.
         """
         target = "-target '{}'".format(target) if target else "-alltargets"
@@ -51,4 +52,5 @@ class XcodeBuild(object):
         if deployment_target_key and self._os_version:
             cmd += f" {deployment_target_key}={self._os_version}"
 
+        cmd += f" {' '.join(build_options or [])}"
         self._conanfile.run(cmd)
