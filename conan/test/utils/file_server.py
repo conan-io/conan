@@ -40,7 +40,7 @@ class TestFileServer:
         def head(folder, file):
             exists = os.path.exists(os.path.join(store, folder, file))
             if exists:
-                return True
+                return bottle.HTTPResponse(status=200)
             return bottle.HTTPError(404, "Not found")
 
         @app.route("/forbidden", method=["GET"])

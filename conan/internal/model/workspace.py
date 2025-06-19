@@ -38,15 +38,13 @@ class Workspace:
             raise ConanException("Invalid yml format at {}: {}".format(WORKSPACE_YML, e))
         return data or {}
 
-    def add(self, ref, path, output_folder, product=False):
+    def add(self, ref, path, output_folder):
         assert os.path.isfile(path)
         path = self._conan_rel_path(os.path.dirname(path))
         editable = {"path": path}
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
         self.conan_data.setdefault("packages", {})[str(ref)] = editable
-        if product:
-            self.conan_data.setdefault("products", []).append(path)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
     def remove(self, path):
@@ -59,8 +57,6 @@ class Workspace:
         if not found_ref:
             raise ConanException(f"No editable package to remove from this path: {path}")
         self.conan_data["packages"].pop(found_ref)
-        if path in self.conan_data.get("products", []):
-            self.conan_data["products"].remove(path)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
         return found_ref
 
@@ -87,9 +83,6 @@ class Workspace:
 
     def packages(self):
         return self.conan_data.get("packages", {})
-
-    def products(self):
-        return self.conan_data.get("products", [])
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")

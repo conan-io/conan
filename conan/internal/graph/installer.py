@@ -355,12 +355,12 @@ class BinaryInstaller:
         base_path = os.path.dirname(conanfile_path)
 
         conanfile.folders.set_base_folders(base_path, output_folder)
-        output = conanfile.output
-        output.info("Rewriting files of editable package "
-                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, self._hook_manager, self._home_folder)
 
         if node.binary == BINARY_EDITABLE_BUILD:
+            output = conanfile.output
+            output.info("Rewriting files of editable package "
+                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+            write_generators(conanfile, self._hook_manager, self._home_folder)
             run_build_method(conanfile, self._hook_manager)
 
         rooted_base_path = base_path if conanfile.folders.root is None else \

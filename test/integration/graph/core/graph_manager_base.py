@@ -134,7 +134,7 @@ class GraphManagerTest(unittest.TestCase):
         if conanfile:
             self.assertEqual(conanfile.name, ref.name)
 
-        self.assertEqual(len(node.dependencies), len(deps))
+        self.assertEqual(len(node.edges), len(deps))
         for d in node.neighbors():
             assert d in deps
 

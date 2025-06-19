@@ -1,4 +1,5 @@
 import os
+import shlex
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -12,7 +13,7 @@ class CommandAPI:
 
     def run(self, cmd):
         if isinstance(cmd, str):
-            cmd = cmd.split()
+            cmd = shlex.split(cmd)
         if isinstance(cmd, list):
             current_cmd = cmd[0]
             args = cmd[1:]

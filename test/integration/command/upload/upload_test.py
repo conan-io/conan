@@ -571,7 +571,7 @@ def test_upload_json_output():
     }
 
 
-def test_upload_dry_run_json_output():
+def test_upload_dry_run_output():
     c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
                                                        .with_shared_option(False)})
@@ -606,3 +606,9 @@ def test_upload_dry_run_json_output():
             "checksum": sha1sum(prev["files"]["conanmanifest.txt"])
         }
     }
+
+    # check we don't have anything about the upload-urls in the text formatter
+    c.run("upload * -r=default -c --dry-run")
+    assert "upload-urls" not in c.stdout
+    assert "url:" not in c.stdout
+    assert "checksum:" not in c.stdout

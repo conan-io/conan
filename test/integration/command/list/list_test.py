@@ -10,10 +10,14 @@ import pytest
 
 from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
+from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conan.test.assets.sources import gen_function_h, gen_function_cpp
+from conan.test.utils.file_server import TestFileServer
+from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, zipdir
 from conan.test.utils.env import environment_update
-from conan.internal.util.files import save
+from conan.internal.util.files import save, save_files, sha256sum
 
 
 class TestParamErrors:
@@ -947,3 +951,31 @@ def test_overlapping_versions():
     tc.run("list * -c -f=json", redirect_stdout="list.json")
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
+
+def test_list_local_recipe_index():
+    c = TestClient(light=True)
+    c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
+    c.run(f"remote add local '{c.current_folder}'")
+
+    c.run("list '*' -r=local")
+    assert "Found 1 pkg/version recipes matching * in local" in c.out
+    c.run("list '*/*' -r=local")
+    assert "Found 1 pkg/version recipes matching */* in local" in c.out
+    c.run("list '*/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching */0.1 in local" in c.out
+    c.run("list 'pkg/*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/* in local" in c.out
+    c.run("list 'pkg/0.*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.* in local" in c.out
+    c.run("list 'pkg' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg in local" in c.out
+    c.run("list 'pkg/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.1 in local" in c.out
+    c.run("list 'foo' -r=local")
+    assert "ERROR: Recipe 'foo' not found" in c.out
+    c.run("list '/#@&%%&@#/' -r=local")
+    assert "ERROR: Recipe '/' not found" in c.out
+    c.run("list 'pkg/0.1@a' -r=local")
+    assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
+    c.run("list 'pkg%0.1#a@b/c' -r=local")
+    assert "ERROR: Recipe 'pkg%0.1' not found" in c.out

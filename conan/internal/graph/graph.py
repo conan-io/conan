@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conan.api.output import ConanOutput
 from conan.internal.graph.graph_error import GraphError
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
@@ -61,14 +62,21 @@ class Node:
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
-        self.dependencies = []  # Ordered Edges
+        self.edges = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
         self.is_conf = False
-        self.replaced_requires = {}  # To track the replaced requires for self.dependencies[old-ref]
+        self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+
+    @property
+    def dependencies(self):
+        ConanOutput().warning("Node.dependencies is private and shouldn't be used. It is now "
+                              "node.edges. Please fix your code, Node.dependencies will be removed "
+                              "in future versions", warn_tag="deprecated")
+        return self.edges
 
     def subgraph(self):
         nodes = [self]
@@ -233,12 +241,12 @@ class Node:
 
     def add_edge(self, edge):
         if edge.src == self:
-            self.dependencies.append(edge)
+            self.edges.append(edge)
         else:
             self.dependants.append(edge)
 
     def neighbors(self):
-        return [edge.dst for edge in self.dependencies]
+        return [edge.dst for edge in self.edges]
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]

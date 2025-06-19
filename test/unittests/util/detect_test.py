@@ -65,6 +65,9 @@ class DetectTest(unittest.TestCase):
 @pytest.mark.parametrize("version_return,expected_version", [
     ["cc.exe (Rev3, Built by MSYS2 project) 14.1.0", "14.1.0"],
     ["g++ (Conan-Build-gcc--binutils-2.42) 14.1.0", "14.1.0"],
+    ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.1.0", "15.1.0"],
+    ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.15.0", "15.15.0"],
+    ["gcc (GCC) 4.8.1", "4.8.1"],
     ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
     ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
@@ -74,6 +77,8 @@ class DetectTest(unittest.TestCase):
 def test_detect_cc_versionings(detect_runner_mock, version_return, expected_version):
     detect_runner_mock.return_value = 0, version_return
     compiler, installed_version, compiler_exe = _cc_compiler()
+    # Using private _value attribute to compare the str that reaches it, so no space issues arise
+    assert installed_version._value == Version(expected_version)._value
     assert installed_version == Version(expected_version)
 
 @pytest.mark.parametrize("function,version_return,expected_version", [
