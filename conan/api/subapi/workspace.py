@@ -110,16 +110,23 @@ class WorkspaceAPI:
         if not self._folder or not self._enabled:
             return
         editables = self._ws.packages()
-        editables = {RecipeReference.loads(r): v.copy() for r, v in editables.items()}
-        for v in editables.values():
-            path = os.path.normpath(os.path.join(self._folder, v["path"], "conanfile.py"))
+        packages = {}
+        for label, info in editables.items():
+            copied_info = info.copy()
+            path = os.path.normpath(os.path.join(self._folder, info["path"], "conanfile.py"))
             if not os.path.isfile(path):
                 raise ConanException(f"Workspace editable not found: {path}")
-            v["path"] = path
-            if v.get("output_folder"):
-                v["output_folder"] = os.path.normpath(os.path.join(self._folder,
-                                                                   v["output_folder"]))
-        return editables
+            copied_info["path"] = path
+            if info.get("output_folder"):
+                copied_info["output_folder"] = os.path.normpath(os.path.join(self._folder,
+                                                                             info["output_folder"]))
+            try:
+                reference = RecipeReference.loads(label)
+            except ConanException:
+                conanfile = self._ws.load_conanfile(info["path"])
+                reference = RecipeReference.loads(f"{conanfile.name}/{conanfile.version}")
+            packages[reference] = copied_info
+        return packages
 
     def open(self, require, remotes, cwd=None):
         app = ConanApp(self._conan_api)
