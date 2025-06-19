@@ -39,7 +39,7 @@ class XcodeBuild(object):
         :return: the return code for the launched ``xcodebuild`` command.
         """
         target = "-target {}".format(target) if target else "-alltargets"
-        cmd = "xcodebuild -project {} -configuration {} -arch {} " \
+        cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,
                                 self._verbosity, target)
 
