@@ -9,7 +9,7 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import libcxx_flags, architecture_flag
+from conan.tools.build.flags import architecture_link_flag, libcxx_flags, architecture_flag
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.meson.helpers import get_apple_subsystem
@@ -216,6 +216,8 @@ class MesonToolchain:
         self.extra_defines = []
         #: Architecture flag deduced by Conan and added to ``c_args``, ``cpp_args``, ``c_link_args`` and ``cpp_link_args``
         self.arch_flag = architecture_flag(self._conanfile)  # https://github.com/conan-io/conan/issues/17624
+        #: Architecture link flag deduced by Conan and added to ``c_link_args`` and ``cpp_link_args``
+        self.arch_link_flag = architecture_link_flag(self._conanfile)
         #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
@@ -459,7 +461,7 @@ class MesonToolchain:
         return {
             "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags,
             "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags,
-            "ldflags": [self.arch_flag] + ld,
+            "ldflags": [self.arch_flag] + [self.arch_link_flag] + ld,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }
 
