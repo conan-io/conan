@@ -49,10 +49,10 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
             def build(self):
                 xcode = XcodeBuild(self)
                 xcode.build("app.xcodeproj")
-                self.run("otool -l build/{}/app".format(self.settings.build_type))
+                self.run("otool -l '{}/{}/app'".format(self.build_folder, self.settings.build_type))
 
             def package(self):
-                copy(self, "build/{}/app".format(self.settings.build_type), self.build_folder,
+                copy(self, "{}/app".format(self.settings.build_type), self.build_folder,
                      os.path.join(self.package_folder, "bin"), keep_path=False)
 
             def package_info(self):

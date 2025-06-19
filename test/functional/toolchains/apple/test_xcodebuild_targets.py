@@ -130,7 +130,7 @@ conanfile = textwrap.dedent("""
 
         def package(self):
             name = "hello-dynamic.dylib" if self.options.shared else "libhello-static.a"
-            copy(self, "build/{}/{}".format(self.settings.build_type, name),
+            copy(self, "{}/{}".format(self.settings.build_type, name),
                  src=self.build_folder, dst=os.path.join(self.package_folder, "lib"), keep_path=False)
             copy(self, "*/*.hpp", src=self.build_folder, dst=os.path.join(self.package_folder, "include"), keep_path=False)
 
