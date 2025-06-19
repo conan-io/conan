@@ -122,6 +122,7 @@ class WorkspaceAPI:
                                                                              info["output_folder"]))
             try:
                 reference = RecipeReference.loads(label)
+                reference.validate_ref(reference)
             except ConanException:
                 conanfile = self._ws.load_conanfile(info["path"])
                 reference = RecipeReference.loads(f"{conanfile.name}/{conanfile.version}")

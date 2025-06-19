@@ -934,3 +934,26 @@ def test_keep_core_conf():
     c.save_home({"global.conf": "core:default_profile=myprofile"})
     c.run("workspace install")
     assert "conanfile.py (pkga/0.1): Generating!: FreeBSD-armv7!!!!" in c.out
+
+
+def test_workspace_with_different_labels():
+    c = TestClient()
+    c.run("new workspace")
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      liba/1.*:
+        path: liba
+      libb_label:
+        path: libb
+      my_app1:
+        path: app1
+    """)
+    c.save({"conanws.yml": conanws_with_labels})
+    c.run("workspace info")
+    assert "liba/1.*" in c.out
+    assert "libb_label" in c.out
+    assert "my_app1" in c.out
+    c.run("workspace install")
+    assert "conanfile.py (app1/0.1)" in c.out
+    assert "liba/0.1 - Editable" in c.out
+    assert "libb/0.1 - Editable" in c.out
