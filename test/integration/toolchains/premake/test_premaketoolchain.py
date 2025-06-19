@@ -55,7 +55,8 @@ def test_extra_flags_via_conf():
     )
 
     assert 'linkoptions { "-flag5", "-flag6", "-m64" }' in content
-    assert 'defines { "define1=0" }' in content
+    assert 'defines { "define1=0", "_GLIBCXX_USE_CXX11_ABI=0" }' in content
+
 
 
 def test_project_configuration():
@@ -107,7 +108,7 @@ def test_project_configuration():
     assert (
         """
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
-            buildoptions { "-Wall", "-Wextra" }
+            buildoptions { "-stdlib=libc++", "-Wall", "-Wextra" }
         filter {}
         """
         in toolchain
@@ -121,7 +122,7 @@ def test_project_configuration():
     project "main"
         -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
-            buildoptions { "-FS" }
+            buildoptions { "-stdlib=libc++", "-FS" }
         filter {}
         -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
         defines { "TEST=False" }
