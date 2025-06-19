@@ -158,18 +158,16 @@ class PremakeToolchain:
             -- Enable position independent code
             pic "{{ "On" if fpic else "Off" }}"
             {% endif %}
-            {% if cross_build_os %}
             filter { "architecture: not wasm64" }
                 -- TODO: There is an issue with premake and "wasm64" when system is declared "emscripten"
-                system "{{ cross_build_os }}"
+                system "{{ target_build_os }}"
             filter {}
-            {% endif %}
             {% if macho_to_amd64 %}
             -- TODO: this should be fixed by premake: https://github.com/premake/premake-core/issues/2136
             buildoptions "-arch x86_64"
             linkoptions "-arch x86_64"
             {% endif %}
-            {% if cross_build_os == "emscripten" %}
+            {% if target_build_os == "emscripten" %}
             filter { "system:emscripten", "kind:ConsoleApp or WindowedApp" }
                 -- Replace built in .wasm extension to .js to generate also a JavaScript files
                 targetextension ".js"
@@ -268,7 +266,7 @@ class PremakeToolchain:
             cstd=self._conanfile.settings.get_safe("compiler.cstd"),
             shared=self._conanfile.options.get_safe("shared"),
             fpic=self._conanfile.options.get_safe("fPIC"),
-            cross_build_os=self._cross_build_os(),
+            target_build_os=self._target_build_os(),
             macho_to_amd64=macho_to_amd64,
             projects=self._projects,
             flags=_generate_flags(self, self._conanfile),
@@ -283,7 +281,7 @@ class PremakeToolchain:
         if "msvc" in self._conanfile.settings.compiler:
             VCVars(self._conanfile).generate()
 
-    def _cross_build_os(self):
+    def _target_build_os(self):
         conan_os = str(self._conanfile.settings.os)
         if conan_os == "Macos":
             return "macosx"

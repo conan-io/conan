@@ -61,7 +61,19 @@ def test_extra_flags_via_conf():
 
 def test_project_configuration():
     tc = TestClient(path_with_spaces=False)
-
+    profile = textwrap.dedent(
+        """
+        [settings]
+        arch=armv8
+        build_type=Release
+        compiler=apple-clang
+        compiler.cppstd=gnu17
+        compiler.cstd=gnu11
+        compiler.libcxx=libc++
+        compiler.version=17
+        os=Macos
+    """
+    )
     conanfile = textwrap.dedent(
         """
         from conan import ConanFile
@@ -91,8 +103,8 @@ def test_project_configuration():
                 tc.generate()
     """
     )
-    tc.save({"conanfile.py": conanfile})
-    tc.run("install .")
+    tc.save({"conanfile.py": conanfile, "profile": profile})
+    tc.run("install . -pr:a profile")
 
     toolchain = tc.load("build-release/conan/conantoolchain.premake5.lua")
 
