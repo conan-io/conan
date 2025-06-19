@@ -25,12 +25,12 @@ def test_inject_generators_conf():
                 self.generator_info.extend(["CMakeToolchain", MyGenerator])
         """)})
 
-    tc.save({"consumer/conanfile.py": GenConanfile()
+    tc.save({"consumer/conanfile.py": GenConanfile("consumer", "0.1")
                 .with_tool_requires("tool/0.1")
-                .with_class_attribute("generators = ('VirtualBuildEnv', 'VirtualRunEnv')")})
+                .with_class_attribute("generators = 'VirtualBuildEnv', 'VirtualRunEnv'")})
 
     tc.run("create tool")
-    tc.run("install consumer")
+    tc.run("create consumer")
     assert "WARN: experimental: Tool-require tool/0.1 adding generators: " \
            "['CMakeToolchain', 'MyGenerator']" in tc.out
     assert "Generator 'CMakeToolchain' calling 'generate()'" in tc.out
