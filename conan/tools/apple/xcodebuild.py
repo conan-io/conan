@@ -42,8 +42,10 @@ class XcodeBuild(object):
         target = "-target '{}'".format(target) if target else "-alltargets"
         build_config = configuration or self._build_type
         cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
-              "{} {} {}".format(xcodeproj, build_config, self._arch, self._sdkroot,
-                                self._verbosity, target)
+              "SYMROOT='{}' OBJROOT='{}' " \
+              "{} {} {}".format(xcodeproj, build_config, self._arch,
+                                self._conanfile.build_folder, self._conanfile.build_folder,
+                                self._sdkroot, self._verbosity, target)
 
         deployment_target_key = xcodebuild_deployment_target_key(self._os)
         if deployment_target_key and self._os_version:
