@@ -1,6 +1,7 @@
 import json
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -21,15 +22,21 @@ def test_inject_generators_conf():
             version = "0.1"
 
             def package_info(self):
-                self.generator_info = ["CMakeToolchain", MyGenerator]
+                self.generator_info.extend(["CMakeToolchain", MyGenerator])
         """)})
 
+    tc.save({"consumer/conanfile.py": GenConanfile()
+                .with_tool_requires("tool/0.1")
+                .with_class_attribute("generators = ('VirtualBuildEnv', 'VirtualRunEnv')")})
+
     tc.run("create tool")
-    tc.run("install --tool-requires=tool/0.1")
+    tc.run("install consumer")
     assert "WARN: experimental: Tool-require tool/0.1 adding generators: " \
            "['CMakeToolchain', 'MyGenerator']" in tc.out
     assert "Generator 'CMakeToolchain' calling 'generate()'" in tc.out
     assert "Generator 'MyGenerator' calling 'generate()'" in tc.out
+    assert "Generator 'VirtualBuildEnv' calling 'generate()'" in tc.out
+    assert "Generator 'VirtualRunEnv' calling 'generate()'" in tc.out
     assert "CMakeToolchain generated: conan_toolchain.cmake" in tc.out
     assert "MyGenerator generated" in tc.out
 
