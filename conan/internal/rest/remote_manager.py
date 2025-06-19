@@ -38,11 +38,13 @@ class RemoteManager:
     def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
+        remote.invalidate_cache()
         self._call_remote(remote, "upload_recipe", ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
+        remote.invalidate_cache()
         self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote, metadata=None):
@@ -204,12 +206,15 @@ class RemoteManager:
         return packages
 
     def remove_recipe(self, ref, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, prefs, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_packages", prefs)
 
     def remove_all_packages(self, ref, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_all_packages", ref)
 
     def authenticate(self, remote, name, password):
@@ -243,10 +248,19 @@ class RemoteManager:
 
         cached_method = remote._caching.setdefault("get_latest_package_reference", {})
         try:
-            return cached_method[pref]
+            result = cached_method[pref]
         except KeyError:
-            result = self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
-            cached_method[pref] = result
+            try:
+                result = self._call_remote(remote, "get_latest_package_reference", pref,
+                                           headers=headers)
+                cached_method[pref] = result
+                return result
+            except Exception as e:
+                cached_method[pref] = e
+                raise e
+        else:
+            if isinstance(result, Exception):
+                raise result
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
@@ -263,9 +277,9 @@ class RemoteManager:
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
         local_folder_remote = self._local_folder_remote(remote)
-        if local_folder_remote is not None:
-            return local_folder_remote.call_method(method, *args, **kwargs)
         try:
+            if local_folder_remote is not None:
+                return local_folder_remote.call_method(method, *args, **kwargs)
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
             raise ConanConnectionError(("%s\n\nUnable to connect to remote %s=%s\n"

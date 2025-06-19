@@ -280,6 +280,19 @@ class TestConan(ConanFile):
         cmakeinfo = client.load("hello1-release-data.cmake")
         self.assertIn("set(hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
+    def test_export_pkg_version_type(self):
+        client = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Hello(ConanFile):
+                def requirements(self):
+                    assert type(self.version) is str, "Version should be a string"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name=hello --version=0.1")
+        # This used to trigger the assertion error
+        client.run("export-pkg . --name=hello --version=0.1")
+
     def test_export_pkg_json(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})

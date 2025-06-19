@@ -628,9 +628,13 @@ def default_compiler_version(compiler, version):
     if compiler == "clang" and major >= 8:
         output.info("clang>=8, using the major as version")
         return major
-    elif compiler == "gcc" and major >= 5:
-        output.info("gcc>=5, using the major as version")
-        return major
+    elif compiler == "gcc":
+        if major >= 5:
+            output.info("gcc>=5, using the major as version")
+            return major
+        else:
+            output.info("gcc<5, using the major.minor as version")
+            return Version(f"{major}.{minor}")
     elif compiler == "apple-clang" and major >= 13:
         output.info("apple-clang>=13, using the major as version")
         return major
