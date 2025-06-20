@@ -244,7 +244,8 @@ class ArchitectureBlock(Block):
         string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
-        {% elif arch_link_flag %}
+        {% endif %}
+        {% if arch_link_flag %}
         message(STATUS "Conan toolchain: Defining architecture linker flag: {{ arch_link_flag }}")
         string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_link_flag }}")
         string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_link_flag }}")
