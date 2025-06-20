@@ -172,7 +172,7 @@ def test_autotools_emscripten():
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
 @pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
-@pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
+@pytest.mark.skipif(platform.system() != "Linux", reason = "Premake only installed in linux")
 def test_premake_emscripten():
     client = TestClient()
     client.run("new premake_exe -d name=hello -d version=0.1")
