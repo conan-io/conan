@@ -256,7 +256,6 @@ class ArchitectureBlock(Block):
         arch_link_flag = architecture_link_flag(self._conanfile)
         if not arch_flag and not arch_link_flag:
             return
-        print(f"ArchitectureBlock: arch_flag={arch_flag}, arch_link_flags={arch_link_flag}")
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag}
 
 
