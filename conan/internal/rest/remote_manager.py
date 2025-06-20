@@ -304,12 +304,13 @@ def uncompress_file(src_path, dest_folder, scope="", config_api=None):
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
 
-        if config_api and config_api.compression_plugin:
-            config_api.compression_plugin.tar_extract(archive_path=src_path, dest_dir=dest_folder,
-                                                      conf=config_api.global_conf)
-        else:
-            with open(src_path, mode='rb') as file_handler:
-                tar_extract(file_handler, dest_folder)
+        with open(src_path, mode='rb') as file_handler:
+            tar_extract(
+                fileobj=file_handler,
+                destination_dir=dest_folder,
+                compression_plugin=config_api.compression_plugin if config_api and config_api.compression_plugin else None,
+                conf=config_api.global_conf if config_api else None
+            )
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))

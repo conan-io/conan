@@ -181,13 +181,13 @@ class CacheAPI:
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
-        compression_plugin = self.conan_api.config.compression_plugin
-        if compression_plugin:
-            compression_plugin.tar_extract(archive_path=path, dest_dir=cache_folder,
-                                           conf=self.conan_api.config.global_conf)
-        else:
-            with open(path, mode='rb') as file_handler:
-                tar_extract(file_handler, cache_folder)
+        with open(path, mode="rb") as file_handler:
+            tar_extract(
+                fileobj=file_handler,
+                destination_dir=cache_folder,
+                compression_plugin=self.conan_api.config.compression_plugin,
+                conf=self.conan_api.config.global_conf,
+            )
 
         # Retrieve the package list from the already extracted archive
         pkglist_path = os.path.join(cache_folder, "pkglist.json")

@@ -4,6 +4,7 @@ import os
 import shutil
 import tarfile
 import time
+from pathlib import Path
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
@@ -12,7 +13,7 @@ from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
+from conan.internal.util.files import (COMPRESSED_PLUGIN_TAR_NAME, clean_dirty, is_dirty, gather_files, remove,
                                        set_dirty_context_manager, mkdir, human_size)
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -274,13 +275,26 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
 def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False, compression_plugin=None):
     tgz_path = os.path.join(dest_dir, name)
     if compression_plugin:
-        compression_plugin.tar_compress(
-            archive_path=tgz_path,
+        t1 = time.time()
+        compressed_path = compression_plugin.tar_compress(
+            archive_path=os.path.join(dest_dir, COMPRESSED_PLUGIN_TAR_NAME),
             files=files,
             recursive=recursive,
             conf=conf,
             ref=ref,
         )
+        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time in plugin")
+        ConanOutput(scope=str(ref or "")).info(f"Compressing {compressed_path}")
+        t1 = time.time()
+        ConanOutput().debug(f"Wrapping {compressed_path} in {name}")
+        with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
+            tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=0)
+            tgz.add(compressed_path, arcname=os.path.basename(compressed_path), recursive=recursive)
+            tgz.close()
+        ConanOutput().debug(f"{name} wrapped in {time.time() - t1} time")
+        # Only remove wrapped if it is different from the tgz_path
+        if compressed_path != os.path.basename(tgz_path):
+            remove(compressed_path)
         return tgz_path
 
     t1 = time.time()
