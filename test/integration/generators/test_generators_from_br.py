@@ -1,7 +1,6 @@
 import json
 import textwrap
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
