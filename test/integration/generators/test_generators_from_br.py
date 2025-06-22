@@ -22,7 +22,7 @@ def test_inject_generators_conf():
             version = "0.1"
 
             def package_info(self):
-                self.generator_info.extend(["CMakeToolchain", MyGenerator])
+                self.generator_info = ["CMakeToolchain", MyGenerator]
         """)})
 
     tc.save({"consumer/conanfile.py": GenConanfile("consumer", "0.1")
