@@ -53,7 +53,7 @@ _meson_cpu_family_map = {
     'x86': ('x86', 'x86', 'little'),
     'x86_64': ('x86_64', 'x86_64', 'little'),
     'riscv32': ('riscv32', 'riscv32', 'little'),
-    'riscv64': ('riscv64', 'riscv32', 'little')
+    'riscv64': ('riscv64', 'riscv64', 'little')
 }
 
 

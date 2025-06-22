@@ -67,11 +67,21 @@ def architecture_flag(conanfile):
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
     elif compiler == "emcc":
-        # Emscripten default output is WASM since 1.37.x (long time ago)
         if arch == "wasm64":
             return "-sMEMORY64=1"
+    return ""
+
+
+def architecture_link_flag(conanfile):
+    """
+    returns exclusively linker flags specific to the target architecture and compiler
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    arch = conanfile.settings.get_safe("arch")
+    if compiler == "emcc":
+        # Emscripten default output is WASM since 1.37.x (long time ago)
         # Deactivate WASM output forcing asm.js output instead
-        elif arch == "asm.js":
+        if arch == "asm.js":
             return "-sWASM=0"
     return ""
 
