@@ -1,7 +1,7 @@
 import json
 import textwrap
 
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_inject_generators_conf():
