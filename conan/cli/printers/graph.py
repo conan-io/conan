@@ -98,6 +98,11 @@ def print_graph_basic(graph):
     if deprecated:
         output.warning("There are deprecated packages in the graph", warn_tag="risk")
 
+    if graph.visibility_conflicts:
+        output.warning("Packages required both with visible=True and visible=False", warn_tag="risk")
+        for ref, consumers in graph.visibility_conflicts.items():
+            output.info(f"    {ref}: Required by {', '.join(str(c) for c in consumers)}")
+
 
 def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not

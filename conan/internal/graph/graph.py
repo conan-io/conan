@@ -43,6 +43,7 @@ class TransitiveRequirement:
 
 
 class Node:
+
     def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
@@ -70,7 +71,6 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
-        self._ill_formed_warnings = set()
 
     @property
     def dependencies(self):
@@ -103,16 +103,17 @@ class Node:
         # TODO: Remove this order, shouldn't be necessary
         return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
 
-    def propagate_closing_loop(self, require, prev_node):
-        self.propagate_downstream(require, prev_node)
+    def propagate_closing_loop(self, require, prev_node, visibility_conflicts):
+        self.propagate_downstream(require, prev_node, visibility_conflicts)
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
             if transitive.require.override:
                 continue
-            prev_node.propagate_downstream(transitive.require, transitive.node, self)
+            prev_node.propagate_downstream(transitive.require, transitive.node, visibility_conflicts,
+                                           self)
 
-    def propagate_downstream(self, require, node, src_node=None):
+    def propagate_downstream(self, require, node, visibility_conflicts, src_node=None):
         # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
@@ -126,11 +127,8 @@ class Node:
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
             ill_formed = ((require.direct or existing.require.direct)
                           and require.visible != existing.require.visible)
-            if ill_formed and require.ref not in self._ill_formed_warnings:
-                self._ill_formed_warnings.add(require.ref)
-                self.conanfile.output.warning(f"This package has 2 different dependencies on "
-                                              f"{require.ref} with different visibility. This is an "
-                                              f"ill-formed graph", warn_tag="risk")
+            if ill_formed:
+                visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
             require.aggregate(existing.require)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
@@ -169,7 +167,7 @@ class Node:
         if down_require.files:
             down_require.required_nodes = require.required_nodes.copy()
         down_require.required_nodes.add(self)
-        d.src.propagate_downstream(down_require, node)
+        d.src.propagate_downstream(down_require, node, visibility_conflicts)
 
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
@@ -383,6 +381,7 @@ class DepsGraph:
         self.resolved_ranges = {}
         self.replaced_requires = {}
         self.options_conflicts = {}
+        self.visibility_conflicts = {}
         self.error = False
 
     def lockfile(self):

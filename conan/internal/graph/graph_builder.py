@@ -109,7 +109,7 @@ class DepsGraphBuilder:
             self._save_options_conflicts(node, require, prev_node, graph)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
-            node.propagate_closing_loop(require, prev_node)
+            node.propagate_closing_loop(require, prev_node, graph.visibility_conflicts)
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report
@@ -406,7 +406,7 @@ class DepsGraphBuilder:
         require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
-        node.propagate_downstream(require, new_node)
+        node.propagate_downstream(require, new_node, graph.visibility_conflicts)
 
         # This is necessary to prevent infinite loops even when visibility is False
         ancestor = node.check_loops(new_node)
