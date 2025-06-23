@@ -107,7 +107,7 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     for package_info in ws_info["packages"]:
         ret.append(f"- Path: {package_info['path']}")
         ret.append(f"  Reference: {package_info.get('ref')}")
-    ws_info["packages"] = ret
+    ws_info["packages"] = ret or "(empty)"
     return {"info": ws_info}
 
 
