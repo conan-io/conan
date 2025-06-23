@@ -124,8 +124,9 @@ class WorkspaceAPI:
                     reference = RecipeReference.loads(editable_info["ref"])
                 reference.validate_ref(reference)
             except:
-                raise ConanException(f"Workspace editable reference '{ref}' is invalid or could not be"
-                                     f" deduced by the editable conanfile.py.")
+                raise ConanException(f"Workspace editable reference could not be deduced by"
+                                     f" {editable_info["path"]}/conanfile.py or it is not"
+                                     f" correctly defined in the conanws.yml file.")
             packages[reference] = {"path": path}
             if editable_info.get("output_folder"):
                 packages[reference]["output_folder"] = (

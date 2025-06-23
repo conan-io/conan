@@ -967,3 +967,16 @@ def test_workspace_defining_only_paths():
     assert "conanfile.py (app1/0.1)" in c.out
     assert "liba/0.1@myuser/mychannel - Editable" in c.out
     assert "libb/0.1 - Editable" in c.out
+
+
+def test_workspace_reference_error():
+    c = TestClient()
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      - path: libx
+    """)
+    c.save({"conanws.yml": conanws_with_labels,
+            "libx/conanfile.py": ""})
+    c.run("workspace install", assert_error=True)
+    assert ("Workspace editable reference could not be deduced by libx/conanfile.py or it is not"
+            " correctly defined in the conanws.yml file.") in c.out
