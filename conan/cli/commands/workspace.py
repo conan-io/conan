@@ -93,6 +93,11 @@ def print_json(data):
 
 
 def _print_workspace_info(data):
+    ret = []
+    for package_info in data["info"]["packages"]:
+        ret.append(f"- Path: {package_info['path']}")
+        ret.append(f"  Reference: {package_info.get('ref', "")}")
+    data["info"]["packages"] = ret or "(empty)"
     print_serial(data["info"])
 
 
@@ -102,13 +107,7 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     Display info for current workspace
     """
     parser.parse_args(*args)
-    ws_info = conan_api.workspace.info()
-    ret = []
-    for package_info in ws_info["packages"]:
-        ret.append(f"- Path: {package_info['path']}")
-        ret.append(f"  Reference: {package_info.get('ref')}")
-    ws_info["packages"] = ret or "(empty)"
-    return {"info": ws_info}
+    return {"info": conan_api.workspace.info()}
 
 
 @conan_subcommand()

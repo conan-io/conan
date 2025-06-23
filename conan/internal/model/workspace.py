@@ -54,7 +54,6 @@ class Workspace:
         packages.append(editable)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
-
     def remove(self, path):
         found_ref_index = None
         path = self._conan_rel_path(path)
@@ -70,11 +69,12 @@ class Workspace:
 
     def clean(self):
         self.output.info("Default workspace clean: Removing the output-folder of each editable")
-        for ref, info in self.conan_data.get("packages", {}).items():
-            if not info.get("output_folder"):
+        for package_info in self.conan_data.get("packages", []):
+            ref = package_info.get("ref", "") or package_info['path']
+            if not package_info.get("output_folder"):
                 self.output.info(f"Editable {ref} doesn't have an output_folder defined")
                 continue
-            of = os.path.join(self.folder, info["output_folder"])
+            of = os.path.join(self.folder, package_info["output_folder"])
             try:
                 self.output.info(f"Removing {ref} output folder: {of}")
                 shutil.rmtree(of)
@@ -90,7 +90,7 @@ class Workspace:
         return path.replace("\\", "/")  # Normalize to unix path
 
     def packages(self):
-        return self.conan_data.get("packages", {})
+        return self.conan_data.get("packages", [])
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")

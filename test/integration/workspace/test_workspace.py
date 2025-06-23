@@ -137,14 +137,14 @@ class TestAddRemove:
 
                 class MyWorkspace(Workspace):
                     def packages(self):
-                        result = {}
+                        result = []
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 full_path = os.path.join(self.folder, f, "name.txt")
                                 name = open(full_path).read().strip()
                                 version = open(os.path.join(self.folder, f,
                                                             "version.txt")).read().strip()
-                                result[f"{name}/{version}"] = {"path": f}
+                                result.append({"path": f, "ref": f"{name}/{version}"})
                         return result
                 """)
         else:
@@ -154,11 +154,11 @@ class TestAddRemove:
 
                 class MyWorkspace(Workspace):
                     def packages(self):
-                        result = {}
+                        result = []
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 conanfile = self.load_conanfile(f)
-                                result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
+                                result.append({"path": f, "ref": f"{conanfile.name}/{conanfile.version}"})
                         return result
                """)
 
@@ -203,7 +203,7 @@ class TestAddRemove:
             class MyWorkspace(Workspace):
                 def packages(self):
                     conanfile = self.load_conanfile("dep1")
-                    return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1"}}
+                    return [{"path": "dep1", "ref": f"{conanfile.name}/{conanfile.version}"}]
             """)
 
         c.save({"conanws.py": workspace,
@@ -435,10 +435,10 @@ class TestWorkspaceBuild:
 
             class MyWorkspace(Workspace):
                 def packages(self):
-                    result = {}
+                    result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result[f"{f}/0.1"] = {"path": f}
+                            result.append({"path": f, "ref": f"{f}/0.1"})
                     return result
            """)
         c = TestClient(light=True)
@@ -787,10 +787,10 @@ class TestCreate:
 
             class MyWorkspace(Workspace):
                 def packages(self):
-                    result = {}
+                    result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result[f"{f}/0.1"] = {"path": f}
+                            result.append({"path": f, "ref": f"{f}/0.1"})
                     return result
            """)
         c = TestClient(light=True)
@@ -941,12 +941,9 @@ def test_workspace_with_different_labels():
     c.run("new workspace")
     conanws_with_labels = textwrap.dedent("""\
     packages:
-      liba/1.*:
-        path: liba
-      libb_label:
-        path: libb
-      my_app1:
-        path: app1
+      - path: liba
+      - path: libb
+      - path: app1
     """)
     c.save({"conanws.yml": conanws_with_labels})
     c.run("workspace info")
