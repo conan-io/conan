@@ -109,24 +109,27 @@ class WorkspaceAPI:
         """
         if not self._folder or not self._enabled:
             return
-        editables = self._ws.packages()
         packages = {}
-        for label, info in editables.items():
-            copied_info = info.copy()
-            path = os.path.normpath(os.path.join(self._folder, info["path"], "conanfile.py"))
+        for editable_info in self._ws.packages():
+            path = os.path.normpath(os.path.join(self._folder, editable_info["path"], "conanfile.py"))
             if not os.path.isfile(path):
                 raise ConanException(f"Workspace editable not found: {path}")
-            copied_info["path"] = path
-            if info.get("output_folder"):
-                copied_info["output_folder"] = os.path.normpath(os.path.join(self._folder,
-                                                                             info["output_folder"]))
+            ref = editable_info.get("ref")
             try:
-                reference = RecipeReference.loads(label)
+                if ref is None:
+                    conanfile = self._ws.load_conanfile(editable_info["path"])
+                    reference = RecipeReference.loads(f"{conanfile.name}/{conanfile.version}")
+                else:
+                    reference = RecipeReference.loads(editable_info["ref"])
                 reference.validate_ref(reference)
-            except ConanException:
-                conanfile = self._ws.load_conanfile(info["path"])
-                reference = RecipeReference.loads(f"{conanfile.name}/{conanfile.version}")
-            packages[reference] = copied_info
+            except:
+                raise ConanException(f"Workspace editable reference '{ref}' is invalid or could not be"
+                                     f" deduced by the editable conanfile.py.")
+            packages[reference] = {"path": path}
+            if editable_info.get("output_folder"):
+                packages[reference]["output_folder"] = (
+                    os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
+                )
         return packages
 
     def open(self, require, remotes, cwd=None):

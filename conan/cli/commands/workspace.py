@@ -102,7 +102,13 @@ def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     Display info for current workspace
     """
     parser.parse_args(*args)
-    return {"info": conan_api.workspace.info()}
+    ws_info = conan_api.workspace.info()
+    ret = []
+    for package_info in ws_info["packages"]:
+        ret.append(f"- Path: {package_info['path']}")
+        ret.append(f"  Reference: {package_info.get('ref')}")
+    ws_info["packages"] = ret
+    return {"info": ws_info}
 
 
 @conan_subcommand()

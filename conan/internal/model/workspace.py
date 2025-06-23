@@ -41,24 +41,32 @@ class Workspace:
     def add(self, ref, path, output_folder):
         assert os.path.isfile(path)
         path = self._conan_rel_path(os.path.dirname(path))
-        editable = {"path": path}
+        editable = {
+            "path": path,
+            "ref": str(ref)
+        }
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
-        self.conan_data.setdefault("packages", {})[str(ref)] = editable
+        packages = self.conan_data.setdefault("packages", [])
+        if any([True for p in packages if p["path"] == path]):
+            self.output.warning(f"Package {path} already exists, skipping")
+            return
+        packages.append(editable)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
+
     def remove(self, path):
-        found_ref = None
+        found_ref_index = None
         path = self._conan_rel_path(path)
-        for ref, info in self.conan_data.get("packages", {}).items():
-            if info["path"].replace("\\", "/") == path:
-                found_ref = ref
+        for i, package_info in enumerate(self.conan_data.get("packages", [])):
+            if package_info["path"].replace("\\", "/") == path:
+                found_ref_index = i
                 break
-        if not found_ref:
+        if found_ref_index is None:
             raise ConanException(f"No editable package to remove from this path: {path}")
-        self.conan_data["packages"].pop(found_ref)
+        self.conan_data["packages"].pop(found_ref_index)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
-        return found_ref
+        return path
 
     def clean(self):
         self.output.info("Default workspace clean: Removing the output-folder of each editable")
