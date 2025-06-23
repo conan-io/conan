@@ -7,10 +7,12 @@ import pytest
 
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
+from conan.tools.files import replace_in_file
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -936,7 +938,7 @@ def test_keep_core_conf():
     assert "conanfile.py (pkga/0.1): Generating!: FreeBSD-armv7!!!!" in c.out
 
 
-def test_workspace_with_different_labels():
+def test_workspace_defining_only_paths():
     c = TestClient()
     c.run("new workspace")
     conanws_with_labels = textwrap.dedent("""\
@@ -946,6 +948,13 @@ def test_workspace_with_different_labels():
       - path: app1
     """)
     c.save({"conanws.yml": conanws_with_labels})
+    # liba with user and channel too
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "liba", "conanfile.py"),
+                    'version = "0.1"',
+                    'version = "0.1"\n    user = "myuser"\n    channel = "mychannel"')
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "libb", "conanfile.py"),
+                    'self.requires("liba/0.1")',
+                    'self.requires("liba/0.1@myuser/mychannel")')
     c.run("workspace info")
     expected = textwrap.dedent("""\
     packages
@@ -956,5 +965,5 @@ def test_workspace_with_different_labels():
     assert expected in c.out
     c.run("workspace install")
     assert "conanfile.py (app1/0.1)" in c.out
-    assert "liba/0.1 - Editable" in c.out
+    assert "liba/0.1@myuser/mychannel - Editable" in c.out
     assert "libb/0.1 - Editable" in c.out

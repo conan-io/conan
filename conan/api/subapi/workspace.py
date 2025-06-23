@@ -118,7 +118,8 @@ class WorkspaceAPI:
             try:
                 if ref is None:
                     conanfile = self._ws.load_conanfile(editable_info["path"])
-                    reference = RecipeReference.loads(f"{conanfile.name}/{conanfile.version}")
+                    reference = RecipeReference(name=conanfile.name, version=conanfile.version,
+                                                user=conanfile.user, channel=conanfile.channel)
                 else:
                     reference = RecipeReference.loads(editable_info["ref"])
                 reference.validate_ref(reference)
