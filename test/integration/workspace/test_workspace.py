@@ -643,10 +643,10 @@ def test_relative_paths():
         c.run("workspace info")
         expected = textwrap.dedent("""\
         packages
-          - Path: ../liba
-            Reference: liba/0.1
-          - Path: ../app1
-            Reference: app1/0.1
+          - path: ../liba
+            ref: liba/0.1
+          - path: ../app1
+            ref: app1/0.1
         """)
         assert expected in c.out
         c.run("graph info --requires=app1/0.1")
@@ -658,10 +658,10 @@ def test_relative_paths():
         c.run("workspace info")
         expected = textwrap.dedent("""\
         packages
-          - Path: ../other/libb
-            Reference: libb/0.1
-          - Path: ../other/app2
-            Reference: app2/0.1
+          - path: ../other/libb
+            ref: libb/0.1
+          - path: ../other/app2
+            ref: app2/0.1
         """)
         assert expected in c.out
         c.run("graph info --requires=app2/0.1")
@@ -949,9 +949,9 @@ def test_workspace_with_different_labels():
     c.run("workspace info")
     expected = textwrap.dedent("""\
     packages
-      - Path: liba
-      - Path: libb
-      - Path: app1
+      - path: liba
+      - path: libb
+      - path: app1
     """)
     assert expected in c.out
     c.run("workspace install")
