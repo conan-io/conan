@@ -4,7 +4,6 @@ import os
 import shutil
 import tarfile
 import time
-from pathlib import Path
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput

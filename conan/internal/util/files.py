@@ -272,7 +272,7 @@ def tar_extract(fileobj, destination_dir, compression_plugin=None, conf=None):
     the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
     the_tar.extractall(path=destination_dir)
     the_tar.close()
-    if Path(destination_dir).glob(f"{COMPRESSED_PLUGIN_TAR_NAME}.*"):
+    if list(Path(destination_dir).glob(f"{COMPRESSED_PLUGIN_TAR_NAME}.*")):
         raise ConanException(f"Error while extracting {os.path.basename(fileobj.name)}.\n"
                              "This file has been compressed using a `compression` plugin.\n"
                              "If your organization uses this plugin, ensure it is correctly installed on your environment.")
@@ -297,6 +297,7 @@ def _tar_extract_with_plugin(fileobj, destination_dir, compression_plugin, conf)
         else:
             # The tar was not compressed using the plugin, copy files to destination
             from conan.tools.files import copy
+            ConanOutput().debug(f"Extracted in {time.time() - t1} time built in")
             copy(None, pattern="*", src=temp_dir, dst=destination_dir)
 
 def merge_directories(src, dst):
