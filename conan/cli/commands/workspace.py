@@ -96,7 +96,9 @@ def _print_workspace_info(data):
     ret = []
     for package_info in data["info"]["packages"]:
         ret.append(f"- Path: {package_info['path']}")
-        ret.append(f"  Reference: {package_info.get('ref', "")}")
+        ref = package_info.get('ref')
+        if ref:
+            ret.append(f"  Reference: {ref}")
     data["info"]["packages"] = ret or "(empty)"
     print_serial(data["info"])
 

@@ -168,12 +168,12 @@ class TestAddRemove:
                 "dep1/version.txt": "2.1"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.save({"dep1/name.txt": "other",
                 "dep1/version.txt": "14.5"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"other/14.5": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "other/14.5", "path": "dep1"}]
         c.run("install --requires=other/14.5")
         # Doesn't fail
         assert "other/14.5 - Editable" in c.out
@@ -210,7 +210,7 @@ class TestAddRemove:
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.run("install --requires=pkg/2.1")
         # it will not fail
 
@@ -250,7 +250,7 @@ class TestAddRemove:
         shutil.rmtree(os.path.join(c.current_folder, "mydeppkg"))
         # It can still be removed by path, even if the path doesn't exist
         c.run("workspace remove mydeppkg")
-        assert "Removed from workspace: mydeppkg/0.1" in c.out
+        assert "Removed from workspace: mydeppkg" in c.out
         c.run("workspace info")
         assert "mydeppkg" not in c.out
 
@@ -642,12 +642,12 @@ def test_relative_paths():
         c.run("workspace add ../app1")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            packages
-              app1/0.1
-                path: ../app1
-              liba/0.1
-                path: ../liba
-            """)
+        packages
+          - Path: ../liba
+            Reference: liba/0.1
+          - Path: ../app1
+            Reference: app1/0.1
+        """)
         assert expected in c.out
         c.run("graph info --requires=app1/0.1")
         c.assert_listed_require({"app1/0.1": "Editable", "liba/0.1": "Editable"})
@@ -657,12 +657,12 @@ def test_relative_paths():
         c.run("workspace add ../other/app2")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            packages
-              app2/0.1
-                path: ../other/app2
-              libb/0.1
-                path: ../other/libb
-            """)
+        packages
+          - Path: ../other/libb
+            Reference: libb/0.1
+          - Path: ../other/app2
+            Reference: app2/0.1
+        """)
         assert expected in c.out
         c.run("graph info --requires=app2/0.1")
         c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
@@ -947,9 +947,13 @@ def test_workspace_with_different_labels():
     """)
     c.save({"conanws.yml": conanws_with_labels})
     c.run("workspace info")
-    assert "liba/1.*" in c.out
-    assert "libb_label" in c.out
-    assert "my_app1" in c.out
+    expected = textwrap.dedent("""\
+    packages
+      - Path: liba
+      - Path: libb
+      - Path: app1
+    """)
+    assert expected in c.out
     c.run("workspace install")
     assert "conanfile.py (app1/0.1)" in c.out
     assert "liba/0.1 - Editable" in c.out
