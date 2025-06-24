@@ -111,13 +111,14 @@ class WorkspaceAPI:
             return
         packages = {}
         for editable_info in self._ws.packages():
-            path = os.path.normpath(os.path.join(self._folder, editable_info["path"], "conanfile.py"))
+            rel_path = editable_info["path"]
+            path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
             if not os.path.isfile(path):
                 raise ConanException(f"Workspace editable not found: {path}")
             ref = editable_info.get("ref")
             try:
                 if ref is None:
-                    conanfile = self._ws.load_conanfile(editable_info["path"])
+                    conanfile = self._ws.load_conanfile(rel_path)
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
@@ -125,7 +126,7 @@ class WorkspaceAPI:
                 reference.validate_ref(reference)
             except:
                 raise ConanException(f"Workspace editable reference could not be deduced by"
-                                     f" {editable_info["path"]}/conanfile.py or it is not"
+                                     f" {rel_path}/conanfile.py or it is not"
                                      f" correctly defined in the conanws.yml file.")
             packages[reference] = {"path": path}
             if editable_info.get("output_folder"):
