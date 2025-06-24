@@ -24,23 +24,23 @@ class IntegrityChecker:
 
     def check(self, pkg_list):
         corrupted = False
-        invalid_sign = False
+        invalid_signature = False
         for ref, recipe_bundle in pkg_list.refs().items():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            invalid_sign = self._ref_invalid_sign(ref) or invalid_sign
+            invalid_signature = self._ref_invalid_signature(ref) or invalid_signature
             for pref, prev_bundle in pkg_list.prefs(ref, recipe_bundle).items():
                 corrupted = self._package_corrupted(pref) or corrupted
-                invalid_sign = self._ref_invalid_sign(pref) or invalid_sign
+                invalid_signature = self._ref_invalid_signature(pref) or invalid_signature
         msgs = []
         if corrupted:
             msgs.append("There are corrupted artifacts.")
-        if invalid_sign:
+        if invalid_signature:
             msgs.append("There are artifacts with invalid signature.")
-        if corrupted or invalid_sign:
+        if corrupted or invalid_signature:
             msgs.append("Check the error logs.")
             raise ConanException(" ".join(msgs))
 
-    def _ref_invalid_sign(self, ref):
+    def _ref_invalid_signature(self, ref):
         output = ConanOutput(scope=f"{ref.repr_notime()}")
         is_recipe = isinstance(ref, RecipeReference)
         layout = self._cache.recipe_layout(ref) if is_recipe else self._cache.pkg_layout(ref)
