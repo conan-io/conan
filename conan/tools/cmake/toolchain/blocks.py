@@ -10,7 +10,7 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flag
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
@@ -259,6 +259,21 @@ class ArchitectureBlock(Block):
             return
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag}
 
+class ThreadsBlock(Block):
+    template = textwrap.dedent("""\
+        # Define C++ flags, C flags and linker flags from 'compiler.threads'
+        message(STATUS "Conan toolchain: Defining threads flag: {{ threads_flag }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ threads_flag }}")
+        string(APPEND CONAN_C_FLAGS " {{ threads_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ threads_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ threads_flag }}")
+        """)
+
+    def context(self):
+        flags = threads_flag(self._conanfile)
+        if not flags:
+            return
+        return {"threads_flag": flags}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
