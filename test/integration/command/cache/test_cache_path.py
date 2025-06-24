@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 
 import pytest
 
@@ -200,5 +201,6 @@ class TestCacheRef:
         t.run('cache ref "/some/non/existing/path"', assert_error=True)
         assert "ERROR: Reference for this path not found in cache" in t.out
 
-        t.run("cache ref J:/not/path", assert_error=True)
-        assert "ERROR: Invalid path: J:/not/path" in t.out
+        if platform.system() == "Windows":
+            t.run("cache ref J:/not/path", assert_error=True)
+            assert "ERROR: Invalid path: J:/not/path" in t.out
