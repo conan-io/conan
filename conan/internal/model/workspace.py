@@ -48,7 +48,7 @@ class Workspace:
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
         packages = self.conan_data.setdefault("packages", [])
-        if any([True for p in packages if p["path"] == path]):
+        if any(p["path"] == path for p in packages):
             self.output.warning(f"Package {path} already exists, skipping")
             return
         packages.append(editable)
