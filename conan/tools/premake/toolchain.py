@@ -1,4 +1,4 @@
-from conan.tools.build.flags import architecture_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags
 import os
 import textwrap
 from pathlib import Path
@@ -44,8 +44,9 @@ def _generate_flags(self, conanfile):
     def to_list(value):
         return value if isinstance(value, list) else [value] if value else []
 
-    architecture_flags = to_list(architecture_flag(self._conanfile))
+    arch_flags = to_list(architecture_flag(self._conanfile))
     cxx_flags, libcxx_compile_definitions = libcxx_flags(self._conanfile)
+    arch_link_flags = to_list(architecture_link_flag(self._conanfile))
 
     extra_defines = format_list(
         conanfile.conf.get("tools.build:defines", default=[], check_type=list)
@@ -53,19 +54,20 @@ def _generate_flags(self, conanfile):
         + to_list(libcxx_compile_definitions)
     )
     extra_c_flags = format_list(
-        conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self.extra_cflags + architecture_flags
+        conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self.extra_cflags + arch_flags
     )
     extra_cxx_flags = format_list(
         conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         + to_list(cxx_flags)
         + self.extra_cxxflags
-        + architecture_flags
+        + arch_flags
     )
     extra_ld_flags = format_list(
         conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         + conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         + self.extra_ldflags
-        + architecture_flags
+        + arch_flags
+        + arch_link_flags
     )
 
     return (
