@@ -7,10 +7,12 @@ import pytest
 
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
+from conan.tools.files import replace_in_file
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -137,14 +139,14 @@ class TestAddRemove:
 
                 class MyWorkspace(Workspace):
                     def packages(self):
-                        result = {}
+                        result = []
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 full_path = os.path.join(self.folder, f, "name.txt")
                                 name = open(full_path).read().strip()
                                 version = open(os.path.join(self.folder, f,
                                                             "version.txt")).read().strip()
-                                result[f"{name}/{version}"] = {"path": f}
+                                result.append({"path": f, "ref": f"{name}/{version}"})
                         return result
                 """)
         else:
@@ -154,11 +156,11 @@ class TestAddRemove:
 
                 class MyWorkspace(Workspace):
                     def packages(self):
-                        result = {}
+                        result = []
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 conanfile = self.load_conanfile(f)
-                                result[f"{conanfile.name}/{conanfile.version}"] = {"path": f}
+                                result.append({"path": f, "ref": f"{conanfile.name}/{conanfile.version}"})
                         return result
                """)
 
@@ -168,12 +170,12 @@ class TestAddRemove:
                 "dep1/version.txt": "2.1"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.save({"dep1/name.txt": "other",
                 "dep1/version.txt": "14.5"})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"other/14.5": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "other/14.5", "path": "dep1"}]
         c.run("install --requires=other/14.5")
         # Doesn't fail
         assert "other/14.5 - Editable" in c.out
@@ -203,14 +205,14 @@ class TestAddRemove:
             class MyWorkspace(Workspace):
                 def packages(self):
                     conanfile = self.load_conanfile("dep1")
-                    return {f"{conanfile.name}/{conanfile.version}": {"path": "dep1"}}
+                    return [{"path": "dep1", "ref": f"{conanfile.name}/{conanfile.version}"}]
             """)
 
         c.save({"conanws.py": workspace,
                 "dep1/conanfile.py": conanfile})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
-        assert info["packages"] == {"pkg/2.1": {"path": "dep1"}}
+        assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.run("install --requires=pkg/2.1")
         # it will not fail
 
@@ -250,7 +252,7 @@ class TestAddRemove:
         shutil.rmtree(os.path.join(c.current_folder, "mydeppkg"))
         # It can still be removed by path, even if the path doesn't exist
         c.run("workspace remove mydeppkg")
-        assert "Removed from workspace: mydeppkg/0.1" in c.out
+        assert "Removed from workspace: mydeppkg" in c.out
         c.run("workspace info")
         assert "mydeppkg" not in c.out
 
@@ -435,10 +437,10 @@ class TestWorkspaceBuild:
 
             class MyWorkspace(Workspace):
                 def packages(self):
-                    result = {}
+                    result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result[f"{f}/0.1"] = {"path": f}
+                            result.append({"path": f, "ref": f"{f}/0.1"})
                     return result
            """)
         c = TestClient(light=True)
@@ -642,12 +644,12 @@ def test_relative_paths():
         c.run("workspace add ../app1")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            packages
-              app1/0.1
-                path: ../app1
-              liba/0.1
-                path: ../liba
-            """)
+        packages
+          - path: ../liba
+            ref: liba/0.1
+          - path: ../app1
+            ref: app1/0.1
+        """)
         assert expected in c.out
         c.run("graph info --requires=app1/0.1")
         c.assert_listed_require({"app1/0.1": "Editable", "liba/0.1": "Editable"})
@@ -657,12 +659,12 @@ def test_relative_paths():
         c.run("workspace add ../other/app2")
         c.run("workspace info")
         expected = textwrap.dedent("""\
-            packages
-              app2/0.1
-                path: ../other/app2
-              libb/0.1
-                path: ../other/libb
-            """)
+        packages
+          - path: ../other/libb
+            ref: libb/0.1
+          - path: ../other/app2
+            ref: app2/0.1
+        """)
         assert expected in c.out
         c.run("graph info --requires=app2/0.1")
         c.assert_listed_require({"app2/0.1": "Editable", "libb/0.1": "Editable"})
@@ -787,10 +789,10 @@ class TestCreate:
 
             class MyWorkspace(Workspace):
                 def packages(self):
-                    result = {}
+                    result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result[f"{f}/0.1"] = {"path": f}
+                            result.append({"path": f, "ref": f"{f}/0.1"})
                     return result
            """)
         c = TestClient(light=True)
@@ -934,3 +936,68 @@ def test_keep_core_conf():
     c.save_home({"global.conf": "core:default_profile=myprofile"})
     c.run("workspace install")
     assert "conanfile.py (pkga/0.1): Generating!: FreeBSD-armv7!!!!" in c.out
+
+
+def test_workspace_defining_only_paths():
+    c = TestClient()
+    c.run("new workspace")
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      - path: liba
+      - path: libb
+      - path: app1
+    """)
+    c.save({"conanws.yml": conanws_with_labels})
+    # liba with user and channel too
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "liba", "conanfile.py"),
+                    'version = "0.1"',
+                    'version = "0.1"\n    user = "myuser"\n    channel = "mychannel"')
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "libb", "conanfile.py"),
+                    'self.requires("liba/0.1")',
+                    'self.requires("liba/0.1@myuser/mychannel")')
+    c.run("workspace info")
+    expected = textwrap.dedent("""\
+    packages
+      - path: liba
+      - path: libb
+      - path: app1
+    """)
+    assert expected in c.out
+    c.run("workspace install")
+    assert "conanfile.py (app1/0.1)" in c.out
+    assert "liba/0.1@myuser/mychannel - Editable" in c.out
+    assert "libb/0.1 - Editable" in c.out
+
+
+def test_workspace_defining_duplicate_references():
+    """
+    Testing duplicate references but different paths
+    """
+    c = TestClient()
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      - path: liba
+      - path: liba1
+      - path: liba2
+    """)
+    c.save({
+        "conanws.yml": conanws_with_labels,
+        "liba/conanfile.py": GenConanfile(name="liba", version="0.1"),
+        "liba1/conanfile.py": GenConanfile(name="liba", version="0.1"),
+        "liba2/conanfile.py": GenConanfile(name="liba", version="0.1"),
+    })
+    c.run("workspace install", assert_error=True)
+    assert "Workspace editable reference 'liba/0.1' already exists." in c.out
+
+
+def test_workspace_reference_error():
+    c = TestClient()
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      - path: libx
+    """)
+    c.save({"conanws.yml": conanws_with_labels,
+            "libx/conanfile.py": ""})
+    c.run("workspace install", assert_error=True)
+    assert ("Workspace editable reference could not be deduced by libx/conanfile.py or it is not"
+            " correctly defined in the conanws.yml file.") in c.out
