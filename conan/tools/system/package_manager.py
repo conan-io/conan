@@ -11,6 +11,7 @@ class _SystemPackageManagerTool(object):
     mode_report = "report"  # Only report what would be installed, no check (can run in any system)
     mode_report_installed = "report-installed"  # report installed and missing packages
     tool_name = None
+    version_separator = None
     install_command = ""
     update_command = ""
     check_command = ""
@@ -72,10 +73,25 @@ class _SystemPackageManagerTool(object):
         # we should add the host arch when cross building.
         # If the package is a tool that should be installed on the current build
         # machine we should not add the arch.
+        package = package.split("=")[0]
         if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
             return "{}{}{}".format(package, self._arch_separator,
                                    self._arch_names.get(self._arch))
         return package
+
+    def get_versioned_package_name(self, package, host_package=True):
+        # Only if the package is for building, for example a library,
+        # we should add the host arch when cross building.
+        # If the package is a tool that should be installed on the current build
+        # machine we should not add the arch.
+
+        name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, None)
+        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+            name = "{}{}{}".format(name, self._arch_separator,
+                                   self._arch_names.get(self._arch))
+        if version and self.version_separator:
+            name = "{}{}{}".format(name, self.version_separator, version)
+        return name
 
     @property
     def sudo_str(self):
@@ -169,7 +185,6 @@ class _SystemPackageManagerTool(object):
             packages = self.check(packages, host_package=host_package)
             missing_pkgs = pkgs.setdefault("missing", [])
             missing_pkgs.extend(p for p in packages if p not in missing_pkgs)
-
         if self._mode == self.mode_report_installed:
             return
 
@@ -186,8 +201,7 @@ class _SystemPackageManagerTool(object):
         elif packages:
             if update:
                 self.update()
-
-            packages_arch = [self.get_package_name(package, host_package=host_package) for package in packages]
+            packages_arch = [self.get_versioned_package_name(package, host_package=host_package) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
                                                       tool=self.tool_name,
@@ -206,18 +220,21 @@ class _SystemPackageManagerTool(object):
             return self._conanfile_run(command, self.accepted_update_codes)
 
     def _check(self, packages, host_package=True):
+        # TODO: check installed version
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg, host_package=host_package)) != 0]
         return missing
 
     def check_package(self, package):
+        # TODO: check installed version
         command = self.check_command.format(tool=self.tool_name,
-                                            package=package)
+                                            package=self.get_package_name(package))
         return self._conanfile_run(command, self.accepted_check_codes)
 
 
 class Apt(_SystemPackageManagerTool):
     # TODO: apt? apt-get?
     tool_name = "apt-get"
+    version_separator = "="
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
     update_command = "{sudo}{tool} update"
     check_command = "dpkg-query -W -f='${{Status}}' {package} | grep -q \"ok installed\""
@@ -265,6 +282,7 @@ class Apt(_SystemPackageManagerTool):
 
 class Yum(_SystemPackageManagerTool):
     tool_name = "yum"
+    version_separator = "-"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} check-update -y"
     check_command = "rpm -q {package}"
@@ -293,10 +311,12 @@ class Yum(_SystemPackageManagerTool):
 
 class Dnf(Yum):
     tool_name = "dnf"
+    version_separator = "-"
 
 
 class Brew(_SystemPackageManagerTool):
     tool_name = "brew"
+    version_separator = "@"
     install_command = "{sudo}{tool} install {packages}"
     update_command = "{sudo}{tool} update"
     check_command = 'test -n "$({tool} ls --versions {package})"'
@@ -304,6 +324,7 @@ class Brew(_SystemPackageManagerTool):
 
 class Pkg(_SystemPackageManagerTool):
     tool_name = "pkg"
+    version_separator = "-"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} update"
     check_command = "{tool} info {package}"
@@ -318,6 +339,7 @@ class PkgUtil(_SystemPackageManagerTool):
 
 class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
+    version_separator = " --version "
     install_command = "{tool} install --yes {packages}"
     update_command = "{tool} outdated"
     check_command = '{tool} list --exact {package} | findstr /c:"1 packages installed."'
@@ -345,6 +367,7 @@ class PacMan(_SystemPackageManagerTool):
 
 class Apk(_SystemPackageManagerTool):
     tool_name = "apk"
+    version_separator = "="
     install_command = "{sudo}{tool} add --no-cache {packages}"
     update_command = "{sudo}{tool} update"
     check_command = "{tool} info -e {package}"
@@ -364,6 +387,7 @@ class Apk(_SystemPackageManagerTool):
 
 class Zypper(_SystemPackageManagerTool):
     tool_name = "zypper"
+    version_separator = "="  # < or >
     install_command = "{sudo}{tool} --non-interactive in {packages}"
     update_command = "{sudo}{tool} --non-interactive ref"
     check_command = "rpm -q {package}"
