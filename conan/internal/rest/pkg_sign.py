@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
@@ -19,16 +20,18 @@ class PkgSignaturesPlugin:
             self._plugin_sign_function = self._plugin_verify_function = None
 
     def is_plugin_configured(self):
-        return self._plugin_verify_function is not None and self._plugin_sign_function is not None
+        return self._plugin_verify_function is not None or self._plugin_sign_function is not None
 
     def sign(self, upload_data):
         if self._plugin_sign_function is None:
             return
 
         def _sign(ref, files, folder):
+            output = ConanOutput(scope=f"{ref.repr_notime()}")
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
-            self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign)
+            self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
+                                       output=output)
             for f in os.listdir(metadata_sign):
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
@@ -40,8 +43,9 @@ class PkgSignaturesPlugin:
                     _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
 
     def verify(self, ref, folder, files):
+        output = ConanOutput(scope=f"{ref.repr_notime()}")
         if self._plugin_verify_function is None:
             return
         metadata_sign = os.path.join(folder, METADATA, "sign")
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
-                                     files=files)
+                                     files=files, output=output)

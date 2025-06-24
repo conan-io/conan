@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -13,7 +14,7 @@ def test_pkg_sign():
     signer = textwrap.dedent(r"""
         import os
 
-        def sign(ref, artifacts_folder, signature_folder):
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
             print("Signing ref: ", ref)
             print("Signing folder: ", artifacts_folder)
             files = []
@@ -24,7 +25,7 @@ def test_pkg_sign():
             signature = os.path.join(signature_folder, "signature.asc")
             open(signature, "w").write("\n".join(files))
 
-        def verify(ref, artifacts_folder, signature_folder, files):
+        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             print("Verifying ref: ", ref)
             print("Verifying folder: ", artifacts_folder)
             signature = os.path.join(signature_folder, "signature.asc")
@@ -49,21 +50,14 @@ def test_pkg_sign():
     assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     assert "VERIFYING  conanfile.py" in c.out
     assert "VERIFYING  conan_sources.tgz" not in c.out  # Sources not retrieved now
-    print("INSTALL: ", c.out)
     # Lets force the retrieval of the sources
     c.run("install --requires=pkg/0.1 --build=*")
     assert "Verifying ref:  pkg/0.1" in c.out
     assert "VERIFYING  conanfile.py" not in c.out  # It doesn't re-verify previous contents
     assert "VERIFYING  conan_sources.tgz" in c.out
-    print("INSTALL-BUILD: ", c.out)
-    #c.run("remove * -r=default -c")
-    #c.run("upload * -r=default --dry-run -c --force")
-    print(c.out)
-    c.run("cache check-integrity *")
-    print(c.out)
 
 
-def test_pkg_sign_verify_integrity():
+def test_pkg_sign_check_integrity():
     c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
             .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
@@ -71,55 +65,95 @@ def test_pkg_sign_verify_integrity():
             "export_sources/file2.txt": "file2!"})
     signer = textwrap.dedent(r"""
         import os
+        from conan.api.output import ConanOutput
+        from conan.api.model.refs import PkgReference
+        from conan.errors import ConanException
 
-        def sign(ref, artifacts_folder, signature_folder):
-            print("Signing ref: ", ref)
-            print("Signing folder: ", artifacts_folder)
+
+        def sign(ref, artifacts_folder, signature_folder, output):
+            output.info("Signing reference")
+            output.info(f"Signing folder: {artifacts_folder}")
             files = []
             for f in sorted(os.listdir(artifacts_folder)):
                 if os.path.isfile(os.path.join(artifacts_folder, f)):
                     files.append(f)
-            print("Signing files: ", sorted(files))
+            output.info(f"Signing files: {sorted(files)}")
             signature = os.path.join(signature_folder, "signature.asc")
             open(signature, "w").write("\n".join(files))
+            output.info("Package signature creation: ok")
 
-        def verify(ref, artifacts_folder, signature_folder, files):
-            print("FILES: ", files)
-            is_package = ":" in str(ref)
-            print("Verifying ref: ", ref)
-            print("Verifying folder: ", artifacts_folder)
+        def verify(ref, artifacts_folder, signature_folder, files, output):
+            output.info("Verifying reference")
+            output.info(f"Verifying folder: {artifacts_folder}")
             signature = os.path.join(signature_folder, "signature.asc")
-            build_dir = os.path.join(os.path.dirname(artifacts_folder), "b")
-            build_dir_exists = os.path.exists(build_dir)
-            if is_package and build_dir_exists and not os.path.exists(signature):
-                print("WARN: Could not verify built package ", ref)
+
+            # This is to check if the package was signed or not
+            if isinstance(ref, PkgReference):
+                download_file_path = os.path.join(artifacts_folder, "conan_package.tgz")
+            else:
+                download_file_path = os.path.join(artifacts_folder, "conanfile.py")
+
+            if not os.path.isfile(download_file_path) and not os.path.isfile(signature):
+                output.warning("Could not verify unsigned package")
                 return
+
+            if not os.path.isfile(signature):
+                raise ConanException("Missing signature file!")
+
             contents = open(signature).read()
-            print("verifying contents", contents)
+            output.info(f"Verifying contents: {contents}")
             for f in files:
-                print("VERIFYING ", f)
+                output.info(f"Verifying file: {f}")
                 if os.path.isfile(os.path.join(artifacts_folder, f)):
-                    assert f in contents
+                    if f not in contents:
+                        raise ConanException(f"File {f} not found in signature contents")
+            output.info("Package signature verification: ok")
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
-    c.run("upload * -r=default -c")
-    c.run("remove * -c")
-    c.run("install --requires=pkg/0.1")
-    assert "Verifying ref:  pkg/0.1" in c.out
-    assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
-    assert "VERIFYING  conan_package.tgz" in c.out
-    c.run("cache check-integrity *")
-    assert "Verifying ref:  pkg/0.1" in c.out
-    assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
-    assert "VERIFYING  conan_package.tgz" in c.out
-    c.run("install --requires=pkg/0.1 --build=*")
-    c.run("cache check-integrity *")
-    assert "Verifying ref:  pkg/0.1" in c.out
-    assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
-    assert "WARN: Could not verify built package" in c.out
-    c.run("upload * -r=default --dry-run -c --force")
-    c.run("cache check-integrity *")
-    assert "Verifying ref:  pkg/0.1" in c.out
-    assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
-    assert "VERIFYING  conan_package.tgz" in c.out
+
+    # Package is still not signed
+    c.run("cache check-integrity pkg/0.1")
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: WARN: Could not verify unsigned package" in c.out
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: WARN: Could not verify unsigned package" in c.out
+
+    # Sign the packages and verify
+    c.run("upload pkg/0.1 -r=default -c --dry-run --force")
+    assert "Signing ref" in c.out
+    c.run("cache check-integrity pkg/0.1")
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Package signature verification: ok" in c.out
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: Package signature verification: ok" in c.out
+
+    # Remove signature file to force error
+    c.run("cache path pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    signature_path = os.path.join(os.path.dirname(c.out), "d", "metadata", "sign", "signature.asc")
+    os.unlink(signature_path)
+    c.run("cache check-integrity pkg/0.1", assert_error=True)
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Package signature verification: ok" in c.out
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: ERROR: Missing signature file!" in c.out
+
+    # Sign the package again and remove file from signature file to force error
+    c.run("upload pkg/0.1 -r=default -c --dry-run --force")
+    assert "Signing ref" in c.out
+    c.run("cache path pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    signature_path = os.path.join(os.path.dirname(c.out), "d", "metadata", "sign", "signature.asc")
+    signature_content = c.load(signature_path)
+    signature_content = signature_content.replace("conan_package.tgz", "")
+    c.save({signature_path: signature_content})
+    c.run("cache check-integrity pkg/0.1", assert_error=True)
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Package signature verification: ok" in c.out
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: ERROR: File conan_package.tgz not found " \
+           "in signature contents" in c.out
+
+    # Build the package again (the download folder contents are cleared)
+    c.run("install --requires pkg/0.1 --build pkg/0.1")
+    c.run("cache check-integrity pkg/0.1")
+    # Recipe is still signed as it was not modified
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Package signature verification: ok" in c.out
+    # But the new built package has not been signed
+    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: WARN: Could not verify unsigned package" in c.out
