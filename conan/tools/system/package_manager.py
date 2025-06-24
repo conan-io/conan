@@ -338,7 +338,6 @@ class Brew(_SystemPackageManagerTool):
     check_version_command = 'brew list --versions {package} | grep "{version}"'
 
 
-
 class Pkg(_SystemPackageManagerTool):
     tool_name = "pkg"
     version_separator = "-"
