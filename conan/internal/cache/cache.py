@@ -277,3 +277,8 @@ class PkgCache:
 
     def update_package_lru(self, pref):
         self._db.update_package_lru(pref)
+
+    def path_to_ref(self, path):
+        path = os.path.relpath(path, self._base_folder)
+        path = path.replace("\\", "/")  # Uniform for Windows and Linux
+        return self._db.path_to_ref(path)
