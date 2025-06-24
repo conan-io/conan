@@ -146,7 +146,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     sbom_cyclonedx_1_6 = {
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
-            "bom-ref": special_id if has_special_root_node else f"pkg:conan/{node.name}@{node.ref.version}?rref={node.ref.revision}",
+            "bom-ref": f"pkg:conan/{node.name}@{node.ref.version}?rref={node.ref.revision}",
             "description": node.conanfile.description,
             **({"externalReferences": [{
                 "type": "website",
