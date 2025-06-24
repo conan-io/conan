@@ -17,7 +17,7 @@ def json_export(data):
 
 def _cache_ref_text(result):
     if "ref" in result:
-        cli_out_write(f"Recipe: {result["ref"].repr_humantime()}")
+        cli_out_write(f"Recipe: {result['ref'].repr_humantime()}")
     else:
         cli_out_write(f"Package: {result['pref'].repr_humantime()}")
     folder = result.get("folder", "base")
