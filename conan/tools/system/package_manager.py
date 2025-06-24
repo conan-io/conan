@@ -11,10 +11,12 @@ class _SystemPackageManagerTool(object):
     mode_report = "report"  # Only report what would be installed, no check (can run in any system)
     mode_report_installed = "report-installed"  # report installed and missing packages
     tool_name = None
-    version_separator = None
+    version_separator = ""
     install_command = ""
     update_command = ""
     check_command = ""
+    check_version_command = ""
+    full_package_name = "{name}{arch_separator}{arch_name}"
     accepted_install_codes = [0]
     accepted_update_codes = [0]
     accepted_check_codes = [0, 1]
@@ -68,30 +70,30 @@ class _SystemPackageManagerTool(object):
         self._conanfile.output.info("A default system package manager couldn't be found for {}, "
                                     "system packages will not be installed.".format(os_name))
 
+    def _split_package_name(self, package, host_package):
+
+        name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
+        arch_separator, arch_name, version_separator = "", "", ""
+        version_separator = self.version_separator if version else ""
+
+        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+            arch_separator = self._arch_separator
+            arch_name = self._arch_names.get(self._arch)
+        return name, version, arch_separator, arch_name, version_separator
+
     def get_package_name(self, package, host_package=True):
         # Only if the package is for building, for example a library,
         # we should add the host arch when cross building.
         # If the package is a tool that should be installed on the current build
         # machine we should not add the arch.
-        package = package.split("=")[0]
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
-            return "{}{}{}".format(package, self._arch_separator,
-                                   self._arch_names.get(self._arch))
-        return package
 
-    def get_versioned_package_name(self, package, host_package=True):
-        # Only if the package is for building, for example a library,
-        # we should add the host arch when cross building.
-        # If the package is a tool that should be installed on the current build
-        # machine we should not add the arch.
+        name, version, arch_separator, arch_name, version_separator = self._split_package_name(package, host_package)
 
-        name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, None)
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
-            name = "{}{}{}".format(name, self._arch_separator,
-                                   self._arch_names.get(self._arch))
-        if version and self.version_separator:
-            name = "{}{}{}".format(name, self.version_separator, version)
-        return name
+        return self.full_package_name.format(name=name,
+                                             arch_separator=arch_separator,
+                                             arch_name=arch_name,
+                                             version_separator=version_separator,
+                                             version=version)
 
     @property
     def sudo_str(self):
@@ -201,7 +203,7 @@ class _SystemPackageManagerTool(object):
         elif packages:
             if update:
                 self.update()
-            packages_arch = [self.get_versioned_package_name(package, host_package=host_package) for package in packages]
+            packages_arch = [self.get_package_name(package, host_package=host_package) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
                                                       tool=self.tool_name,
@@ -220,14 +222,21 @@ class _SystemPackageManagerTool(object):
             return self._conanfile_run(command, self.accepted_update_codes)
 
     def _check(self, packages, host_package=True):
-        # TODO: check installed version
-        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg, host_package=host_package)) != 0]
+        missing = [pkg for pkg in packages if self.check_package(pkg, host_package) != 0]
         return missing
 
-    def check_package(self, package):
+    def check_package(self, package, host_package=True):
         # TODO: check installed version
-        command = self.check_command.format(tool=self.tool_name,
-                                            package=self.get_package_name(package))
+        name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
+        package = self.full_package_name.format(name=name,
+                                                arch_separator=arch_separator,
+                                                arch_name=arch_name,
+                                                version="",
+                                                version_separator="")
+        if version and self.check_version_command:
+            command = self.check_version_command.format(tool=self.tool_name, package=package, version=version)
+        else:
+            command = self.check_command.format(tool=self.tool_name, package=package)
         return self._conanfile_run(command, self.accepted_check_codes)
 
 
@@ -235,9 +244,11 @@ class Apt(_SystemPackageManagerTool):
     # TODO: apt? apt-get?
     tool_name = "apt-get"
     version_separator = "="
+    full_package_name = "{name}{arch_separator}{arch_name}{version_separator}{version}"
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
     update_command = "{sudo}{tool} update"
     check_command = "dpkg-query -W -f='${{Status}}' {package} | grep -q \"ok installed\""
+    check_version_command = "dpkg -s {package} | grep \"Version: {version}\""
 
     def __init__(self, conanfile, arch_names=None):
         """
@@ -283,9 +294,11 @@ class Apt(_SystemPackageManagerTool):
 class Yum(_SystemPackageManagerTool):
     tool_name = "yum"
     version_separator = "-"
+    full_package_name = "{name}{version_separator}{version}{arch_separator}{arch_name}"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} check-update -y"
     check_command = "rpm -q {package}"
+    check_version_command = "rpm -q {package}-{version}"
     accepted_update_codes = [0, 100]
 
     def __init__(self, conanfile, arch_names=None):
@@ -312,26 +325,35 @@ class Yum(_SystemPackageManagerTool):
 class Dnf(Yum):
     tool_name = "dnf"
     version_separator = "-"
+    full_package_name = "{name}{version_separator}{version}{arch_separator}{arch_name}"
+    check_version_command = "rpm -q {package}-{version}"
 
 
 class Brew(_SystemPackageManagerTool):
     tool_name = "brew"
     version_separator = "@"
+    full_package_name = "{name}{version_separator}{version}"
     install_command = "{sudo}{tool} install {packages}"
     update_command = "{sudo}{tool} update"
     check_command = 'test -n "$({tool} ls --versions {package})"'
+    check_version_command = 'brew list --versions {package} | grep "{version}"'
+
 
 
 class Pkg(_SystemPackageManagerTool):
     tool_name = "pkg"
     version_separator = "-"
+    full_package_name = "{name}{version_separator}{version}"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} update"
     check_command = "{tool} info {package}"
+    check_version_command = "{tool} info {package} | grep \"Version: {version}\""
 
 
 class PkgUtil(_SystemPackageManagerTool):
     tool_name = "pkgutil"
+    version_separator = "@"
+    full_package_name = "{name}{version_separator}{version}"
     install_command = "{sudo}{tool} --install --yes {packages}"
     update_command = "{sudo}{tool} --catalog"
     check_command = 'test -n "`{tool} --list {package}`"'
@@ -340,9 +362,11 @@ class PkgUtil(_SystemPackageManagerTool):
 class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
     version_separator = " --version "
+    full_package_name = "{name}{version_separator}{version}"
     install_command = "{tool} install --yes {packages}"
     update_command = "{tool} outdated"
     check_command = '{tool} list --exact {package} | findstr /c:"1 packages installed."'
+    check_version_command = '{tool} list --local-only {package} | findstr /i "{version}"'
 
 
 class PacMan(_SystemPackageManagerTool):
@@ -350,6 +374,7 @@ class PacMan(_SystemPackageManagerTool):
     install_command = "{sudo}{tool} -S --noconfirm {packages}"
     update_command = "{sudo}{tool} -Syyu --noconfirm"
     check_command = "{tool} -Qi {package}"
+    # check_version_command = "pacman -Q {package} | grep \"{version}\""
 
     def __init__(self, conanfile, arch_names=None):
         """
@@ -368,9 +393,11 @@ class PacMan(_SystemPackageManagerTool):
 class Apk(_SystemPackageManagerTool):
     tool_name = "apk"
     version_separator = "="
+    full_package_name = "{name}{version_separator}{version}"
     install_command = "{sudo}{tool} add --no-cache {packages}"
     update_command = "{sudo}{tool} update"
     check_command = "{tool} info -e {package}"
+    check_version_command = "{tool} info {package} | grep \"{version}\""
 
     def __init__(self, conanfile, _arch_names=None):
         """
@@ -388,6 +415,8 @@ class Apk(_SystemPackageManagerTool):
 class Zypper(_SystemPackageManagerTool):
     tool_name = "zypper"
     version_separator = "="  # < or >
+    full_package_name = "{name}{arch_separator}{arch_name}{version_separator}{version}"
     install_command = "{sudo}{tool} --non-interactive in {packages}"
     update_command = "{sudo}{tool} --non-interactive ref"
     check_command = "rpm -q {package}"
+    check_version_command = "rpm -q {package}-{version}"

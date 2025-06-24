@@ -254,17 +254,17 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
     (Dnf, 'x86_64', 'dnf install -y package1-0.1 package2-0.2'),
     (Brew, 'x86_64', 'brew install package1@0.1 package2@0.2'),
     (Pkg, 'x86_64', 'pkg install -y package1-0.1 package2-0.2'),
-    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1 package2'),
+    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1@0.1 package2@0.2'),
     (Chocolatey, 'x86_64', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
     (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
     (Zypper, 'x86_64', 'zypper --non-interactive in package1=0.1 package2=0.2'),
     # Install host package and cross-compile -> add host architecture
     (Apt, 'x86', 'apt-get install -y --no-install-recommends package1:i386=0.1 package2:i386=0.2'),
-    (Yum, 'x86', 'yum install -y package1.i?86-0.1 package2.i?86-0.2'),
-    (Dnf, 'x86', 'dnf install -y package1.i?86-0.1 package2.i?86-0.2'),
+    (Yum, 'x86', 'yum install -y package1-0.1.i?86 package2-0.2.i?86'),
+    (Dnf, 'x86', 'dnf install -y package1-0.1.i?86 package2-0.2.i?86'),
     (Brew, 'x86', 'brew install package1@0.1 package2@0.2'),
     (Pkg, 'x86', 'pkg install -y package1-0.1 package2-0.2'),
-    (PkgUtil, 'x86', 'pkgutil --install --yes package1 package2'),
+    (PkgUtil, 'x86', 'pkgutil --install --yes package1@0.1 package2@0.2'),
     (Chocolatey, 'x86', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
     (PacMan, 'x86', 'pacman -S --noconfirm package1-lib32 package2-lib32'),
     (Zypper, 'x86', 'zypper --non-interactive in package1=0.1 package2=0.2'),
@@ -284,7 +284,6 @@ def test_tools_install_mode_install_different_archs_with_version(tool_class, arc
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
             tool.install(["package1=0.1", "package2=0.2"])
-    print(tool._conanfile.command)
     assert tool._conanfile.command == result
 
 
@@ -338,7 +337,7 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
     (Dnf, 'x86_64', 'dnf install -y package1-0.1 package2-0.2'),
     (Brew, 'x86_64', 'brew install package1@0.1 package2@0.2'),
     (Pkg, 'x86_64', 'pkg install -y package1-0.1 package2-0.2'),
-    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1 package2'),
+    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1@0.1 package2@0.2'),
     (Chocolatey, 'x86_64', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
     (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
     (Zypper, 'x86_64', 'zypper --non-interactive in package1=0.1 package2=0.2'),
@@ -348,7 +347,7 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
     (Dnf, 'x86', 'dnf install -y package1-0.1 package2-0.2'),
     (Brew, 'x86', 'brew install package1@0.1 package2@0.2'),
     (Pkg, 'x86', 'pkg install -y package1-0.1 package2-0.2'),
-    (PkgUtil, 'x86', 'pkgutil --install --yes package1 package2'),
+    (PkgUtil, 'x86', 'pkgutil --install --yes package1@0.1 package2@0.2'),
     (Chocolatey, 'x86', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
     (PacMan, 'x86', 'pacman -S --noconfirm package1 package2'),
     (Zypper, 'x86', 'zypper --non-interactive in package1=0.1 package2=0.2'),
@@ -452,16 +451,16 @@ def test_tools_check(tool_class, result):
 
 
 @pytest.mark.parametrize("tool_class, result", [
-    (Apk, 'apk info -e package'),
-    (Apt, 'dpkg-query -W -f=\'${Status}\' package | grep -q "ok installed"'),
-    (Yum, 'rpm -q package'),
-    (Dnf, 'rpm -q package'),
-    (Brew, 'test -n "$(brew ls --versions package)"'),
-    (Pkg, 'pkg info package'),
+    (Apk, 'apk info package | grep "0.1"'),
+    (Apt, 'dpkg -s package | grep "Version: 0.1"'),
+    (Yum, 'rpm -q package-0.1'),
+    (Dnf, 'rpm -q package-0.1'),
+    (Brew, 'brew list --versions package | grep "0.1"'),
+    (Pkg, 'pkg info package | grep "Version: 0.1"'),
     (PkgUtil, 'test -n "`pkgutil --list package`"'),
-    (Chocolatey, 'choco list --exact package | findstr /c:"1 packages installed."'),
+    (Chocolatey, 'choco list --local-only package | findstr /i "0.1"'),
     (PacMan, 'pacman -Qi package'),
-    (Zypper, 'rpm -q package'),
+    (Zypper, 'rpm -q package-0.1'),
 ])
 def test_tools_check_with_version(tool_class, result):
     conanfile = ConanFileMock()
