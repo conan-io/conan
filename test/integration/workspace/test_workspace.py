@@ -969,6 +969,27 @@ def test_workspace_defining_only_paths():
     assert "libb/0.1 - Editable" in c.out
 
 
+def test_workspace_defining_duplicate_references():
+    """
+    Testing duplicate references but different paths
+    """
+    c = TestClient()
+    conanws_with_labels = textwrap.dedent("""\
+    packages:
+      - path: liba
+      - path: liba1
+      - path: liba2
+    """)
+    c.save({
+        "conanws.yml": conanws_with_labels,
+        "liba/conanfile.py": GenConanfile(name="liba", version="0.1"),
+        "liba1/conanfile.py": GenConanfile(name="liba", version="0.1"),
+        "liba2/conanfile.py": GenConanfile(name="liba", version="0.1"),
+    })
+    c.run("workspace install", assert_error=True)
+    assert "Workspace editable reference 'liba/0.1' already exists." in c.out
+
+
 def test_workspace_reference_error():
     c = TestClient()
     conanws_with_labels = textwrap.dedent("""\
