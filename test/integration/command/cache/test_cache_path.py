@@ -197,5 +197,8 @@ class TestCacheRef:
 
     def test_errors(self):
         t = TestClient(light=True)
-        t.run(f'cache ref "/some/non/existing/path"', assert_error=True)
+        t.run('cache ref "/some/non/existing/path"', assert_error=True)
         assert "ERROR: Reference for this path not found in cache" in t.out
+
+        t.run("cache ref J:/not/path", assert_error=True)
+        assert "ERROR: Invalid path: J:/not/path" in t.out

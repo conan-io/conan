@@ -279,6 +279,9 @@ class PkgCache:
         self._db.update_package_lru(pref)
 
     def path_to_ref(self, path):
-        path = os.path.relpath(path, self._base_folder)
-        path = path.replace("\\", "/")  # Uniform for Windows and Linux
+        try:
+            path = os.path.relpath(path, self._base_folder)
+            path = path.replace("\\", "/")  # Uniform for Windows and Linux
+        except ValueError:
+            raise ConanException(f"Invalid path: {path}")
         return self._db.path_to_ref(path)
