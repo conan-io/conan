@@ -226,7 +226,6 @@ class _SystemPackageManagerTool(object):
         return missing
 
     def check_package(self, package, host_package=True):
-        # TODO: check installed version
         name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
         package = self.full_package_name.format(name=name,
                                                 arch_separator=arch_separator,
