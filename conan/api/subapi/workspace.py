@@ -121,7 +121,7 @@ class WorkspaceAPI:
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
-                    reference = RecipeReference.loads(editable_info["ref"])
+                    reference = RecipeReference.loads(ref)
                 reference.validate_ref(reference)
             except:
                 raise ConanException(f"Workspace editable reference could not be deduced by"
