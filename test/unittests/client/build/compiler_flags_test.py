@@ -41,11 +41,11 @@ class CompilerFlagsTest(unittest.TestCase):
     @parameterized.expand([("clang", None, ""),
                            ("emcc", None, ""),
                            ("emcc", "posix", "-pthread"),
-                           ("emcc", "wasm_threads", "-sWASM_THREADS=1"),
+                           ("emcc", "wasm_workers", "-sWASM_WORKERS=1"),
                            ])
     def test_threads_flag(self, compiler, threads, flag):
         settings = MockSettings({"compiler": compiler,
-                                 "threads": threads})
+                                 "compiler.threads": threads})
         conanfile = ConanFileMock()
         conanfile.settings = settings
         self.assertEqual(threads_flag(conanfile), flag)
