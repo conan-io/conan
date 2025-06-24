@@ -110,6 +110,25 @@ def test_composition_conan_conf(client):
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
 
 
+def test_core_global_conf_not_in_profile(client):
+    client.save_home({"global.conf": "core.upload:retry=1"})
+    profile = textwrap.dedent("""\
+        [conf]
+        tools.build:verbosity=quiet
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+    # also with -cc command line argument
+    client.run("install . -pr=profile -cc core.upload:retry=1")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+
 def test_new_config_file(client):
     conf = textwrap.dedent("""\
         tools.build:verbosity=quiet
