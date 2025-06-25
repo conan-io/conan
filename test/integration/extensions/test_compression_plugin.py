@@ -39,7 +39,7 @@ def test_compression_plugin_returning_invalid_path():
     compression_plugin = textwrap.dedent(
         """
         def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
-            return archive_path
+            return
         def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
             pass
     """
@@ -56,7 +56,7 @@ def test_compression_plugin_returning_invalid_path():
     c.run("create .")
     c.run("cache save 'pkg/*:*'", assert_error=True)
     assert (
-        "ERROR: The 'compression.py' plugin returned an unexpected path. Plugin should return the 'archive_path' with an extra extension"
+        "ERROR: The 'compression.py' did not return the compressed extension."
         in c.out
     )
 
@@ -76,7 +76,8 @@ def test_compression_plugin_correctly_load():
 
         # xz compression
         def tar_compress(archive_path, files, recursive, conf=None, ref=None, *args, **kwargs):
-            archive_path += ".xz"
+            extension = ".xz"
+            archive_path += extension
             name = os.path.basename(archive_path)
             ConanOutput(scope=ref).info(f"Compressing {name} using compression plugin (xz)")
             compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
@@ -84,7 +85,7 @@ def test_compression_plugin_correctly_load():
             with tarfile.open(archive_path, f"w:xz", **kwargs) as tgz:
                 for filename, abs_path in sorted(files.items()):
                     tgz.add(abs_path, filename, recursive=True)
-            return archive_path
+            return extension
 
         def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
             ConanOutput().info(f"Decompressing {os.path.basename(archive_path)} using compression plugin (xz)")
@@ -141,7 +142,8 @@ def test_compression_plugin_tar_not_compatible_with_builtin():
         # zip compression
         def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
             # compress files using zipfile library taking into account recursive
-            archive_path += ".zip"
+            extension = ".zip"
+            archive_path += extension
             name = os.path.basename(archive_path)
             compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
             ConanOutput().info(f"Compressing {name} using compression plugin (zip)")
@@ -152,7 +154,7 @@ def test_compression_plugin_tar_not_compatible_with_builtin():
                         zipf.write(abs_path, arcname)
                     else:
                         zipf.write(abs_path, filename)
-            return archive_path
+            return extension
 
         def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
             # extract tar using zipfile library
@@ -192,7 +194,8 @@ def test_compress_in_subdirectory():
         from conan.api.output import ConanOutput
         def tar_compress(archive_path, files, recursive, *args, **kwargs):
             # compress files using tarfile putting all content in a `conan/` subfolder
-            archive_path += ".tgz"
+            extension = ".tgz"
+            archive_path += extension
             name = os.path.basename(archive_path)
             ConanOutput().info(f"Compressing {os.path.basename(name)} in conan subfolder")
             with open(archive_path, "wb") as tgz_handle:
@@ -200,7 +203,7 @@ def test_compress_in_subdirectory():
                 for filename, abs_path in sorted(files.items()):
                     tgz.add(abs_path, os.path.join("conan", filename), recursive=recursive)
                 tgz.close()
-            return archive_path
+            return extension
 
         def tar_extract(archive_path, dest_dir, *args, **kwargs):
             ConanOutput().info(f"Decompressing {archive_path} in conan subfolder")
