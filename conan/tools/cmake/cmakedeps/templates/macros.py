@@ -64,7 +64,6 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                get_name_extension(_LIBRARY_NAME _LIBRARY_EXT)
                set(_OLD_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
                if(_LIBRARY_EXT)
-                message(INFO "New extension: ${_LIBRARY_EXT}")
                 set(CMAKE_FIND_LIBRARY_SUFFIXES ${_LIBRARY_EXT} ${CMAKE_FIND_LIBRARY_SUFFIXES})
                endif()
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
