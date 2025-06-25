@@ -183,6 +183,7 @@ class TargetConfigurationTemplate2:
         extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
                                                   check_type=list) or []
         system_libs = " ".join(info.system_libs + extra_libs)
+        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
@@ -191,7 +192,8 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(info.cflags),
                   "sharedlinkflags": " ".join(info.sharedlinkflags),
                   "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": system_libs
+                  "system_libs": system_libs,
+                  "sources": " ".join(sources)
         }
         # System frameworks (only Apple OS)
         if info.frameworks:
@@ -279,7 +281,7 @@ class TargetConfigurationTemplate2:
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
         extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
-                                                  check_type=list)
+                                                  check_type=list) or []
         ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
 
@@ -350,13 +352,13 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
+                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
         {% endif %}
 
         {% if lib_info.get("link_languages") %}
@@ -405,7 +407,8 @@ class TargetConfigurationTemplate2:
         {% endif %}
 
         {% if lib_info.get("system_libs") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     {{config_wrapper(config, lib_info["system_libs"])}})
         {% endif %}
         {% if lib_info.get("frameworks") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
@@ -421,6 +424,11 @@ class TargetConfigurationTemplate2:
             set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
                          $<$<COMPILE_LANGUAGE:C>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
         endif()
+        {% endif %}
+
+        {% if lib_info.get("sources") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
+                     {{config_wrapper(config, lib_info["sources"] )}})
         {% endif %}
         {% endfor %}
 

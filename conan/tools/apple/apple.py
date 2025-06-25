@@ -334,20 +334,14 @@ def apple_extra_flags(conanfile):
     if not is_apple_os(conanfile):
         return []
     enable_bitcode = conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
-    enable_arc = conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
     enable_visibility = conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
     is_debug = conanfile.settings.get_safe('build_type') == "Debug"
-
     flags = []
     if enable_bitcode:
         if is_debug:
             flags.append("-fembed-bitcode-marker")
         else:
             flags.append("-fembed-bitcode")
-    if enable_arc:
-        flags.append("-fobjc-arc")
-    if enable_arc is False:
-        flags.append("-fno-objc-arc")
     if enable_visibility:
         flags.append("-fvisibility=default")
     if enable_visibility is False:

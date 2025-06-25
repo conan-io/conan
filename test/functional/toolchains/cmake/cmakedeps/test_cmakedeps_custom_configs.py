@@ -44,6 +44,8 @@ class CustomConfigurationTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release ReleaseShared CACHE STRING
             "Available build-types: Debug, Release and ReleaseShared")
 
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
 
@@ -127,6 +129,10 @@ class CustomSettingsTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release MyRelease CACHE STRING
             "Available build-types: Debug, Release and MyRelease")
 
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 

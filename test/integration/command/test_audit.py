@@ -11,6 +11,48 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient
 
+_sbom_zlib_1_2_11 = """
+{
+  "components" : [ {
+    "author" : "<Put your name here> <And your email here>",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "description" : "<Description of zlib package here>",
+    "licenses" : [ {
+      "license" : {
+        "name" : "<Put the package license here>"
+      }
+    } ],
+    "name" : "zlib",
+    "purl" : "pkg:conan/zlib@1.2.11",
+    "type" : "library",
+    "version" : "1.2.11"
+  } ],
+  "dependencies" : [ {
+    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+  } ],
+  "metadata" : {
+    "component" : {
+      "author" : "<Put your name here> <And your email here>",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "name" : "zlib/1.2.11",
+      "type" : "library"
+    },
+    "timestamp" : "2025-06-10T08:13:11Z",
+    "tools" : [ {
+      "externalReferences" : [ {
+        "type" : "website",
+        "url" : "https://github.com/conan-io/conan"
+      } ],
+      "name" : "Conan-io"
+    } ]
+  },
+  "serialNumber" : "urn:uuid:4f7ce240-4c6d-4a87-bfb6-78d0fbc839e3",
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.4",
+  "version" : 1
+}
+"""
+
 
 @contextmanager
 def proxy_response(status, data, retry_after=60):
@@ -63,10 +105,14 @@ def test_conan_audit_proxy():
         "error": None
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient(light=True, default_server_user=True)
 
-    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
-    tc.run("export .")
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
+             "sbom.cdx.json": _sbom_zlib_1_2_11})
+    tc.run("create . --lockfile-out=conan.lock")
+    tc.run("upload * -c -r=default")
+
+    tc.run("list * -r=default -f=json", redirect_stdout="pkglist_remote.json")
 
     tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
 
@@ -80,6 +126,15 @@ def test_conan_audit_proxy():
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit list -l=pkglist.json")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list -l=pkglist_remote.json -r=default")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --lockfile=conan.lock")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --sbom=sbom.cdx.json")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit scan --requires=zlib/1.2.11")
@@ -175,8 +230,9 @@ def test_conan_audit_private():
 
     tc = TestClient(light=True)
 
-    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
-    tc.run("export .")
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
+             "sbom.cdx.json": _sbom_zlib_1_2_11})
+    tc.run("create . --lockfile-out=conan.lock")
 
     tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
 
@@ -197,6 +253,12 @@ def test_conan_audit_private():
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit list -l=pkglist.json -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --lockfile=conan.lock -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --sbom=sbom.cdx.json -p=myprivate")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
         tc.run("audit scan --requires=zlib/1.2.11  -p=myprivate")
@@ -248,7 +310,7 @@ def test_audit_list_conflicting_args():
     tc = TestClient(light=True)
     tc.save({"pkglist.json": '{"Local Cache": {"zlib/1.2.11": {}}}'})
     tc.run("audit list zlib/1.2.11 -l=pkglist.json", assert_error=True)
-    assert "Please specify a reference or a pkglist file, not both" in tc.out
+    assert "argument -l/--list: not allowed with argument reference" in tc.out
 
 
 def test_audit_provider_add_missing_url():
@@ -266,7 +328,7 @@ def test_audit_provider_remove_nonexistent():
 def test_audit_list_missing_arguments():
     tc = TestClient(light=True)
     tc.run("audit list", assert_error=True)
-    assert "Please specify a reference or a pkglist file" in tc.out
+    assert "one of the arguments reference" in tc.out
 
 
 def test_audit_provider_env_credentials_with_proxy(monkeypatch):
@@ -387,3 +449,26 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
             if threshold is None:
                 threshold = "9.0"
             assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
+
+def test_parse_error_crash_when_no_edges():
+    from conan.cli.commands.audit import _parse_error_threshold
+
+    scan_result = {
+        "data": {
+            # this used to crash because dav1d not having vulnerabilities field
+            "dav1d/1.4.3": {"error": {"details": "Package 'dav1d/1.4.3' not scanned: Not found."}},
+            "zlib/1.2.11": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {"node": {"cvss": {"preferredBaseScore": 7.0}}}
+                    ]
+                }
+            }
+        }
+    }
+
+    _parse_error_threshold(scan_result, error_level=5.0)
+    assert "conan_error" in scan_result
+    assert "zlib/1.2.11" in scan_result["conan_error"]
+    assert "7.0" in scan_result["conan_error"]

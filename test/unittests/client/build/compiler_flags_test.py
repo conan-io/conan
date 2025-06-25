@@ -127,10 +127,10 @@ class CompilerFlagsTest(unittest.TestCase):
         conanfile.settings = settings
         self.assertEqual(' '.join(build_type_flags(conanfile)), flags)
 
-    @parameterized.expand([("clang", "Debug", "-gline-tables-only -fno-inline -O0"),
-                           ("clang", "Release", "-O2"),
-                           ("clang", "RelWithDebInfo", "-gline-tables-only -O2 -fno-inline"),
-                           ("clang", "MinSizeRel", ""),
+    @parameterized.expand([("clang", "Debug", "-Zi -Ob0 -Od"),
+                           ("clang", "Release", "-O2 -Ob2"),
+                           ("clang", "RelWithDebInfo", "-Zi -O2 -Ob1"),
+                           ("clang", "MinSizeRel", "-O1 -Ob1"),
                            ])
     def test_build_type_flags_clangcl(self, compiler, build_type, flags):
         settings = MockSettings({"compiler": compiler,

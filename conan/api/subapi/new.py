@@ -96,6 +96,8 @@ class NewAPI:
         from conan.internal.api.new.bazel_7_exe import bazel_exe_files_7
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
+        from conan.internal.api.new.premake_lib import premake_lib_files
+        from conan.internal.api.new.premake_exe import premake_exe_files
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
         from conan.internal.api.new.workspace import workspace_files
@@ -114,6 +116,8 @@ class NewAPI:
                          "bazel_7_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
+                         "premake_lib": premake_lib_files,
+                         "premake_exe": premake_exe_files,
                          "alias": alias_file,
                          "local_recipes_index": local_recipes_index_files,
                          "qbs_lib": qbs_lib_files,

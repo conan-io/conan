@@ -106,8 +106,12 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     for exclude in excludes:
         if ignore_case:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f.lower(), exclude)]
+            files_symlinked_to_folders =\
+                [f for f in files_symlinked_to_folders if not fnmatch.fnmatch(f.lower(), exclude)]
         else:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatchcase(f, exclude)]
+            files_symlinked_to_folders =\
+                [f for f in files_symlinked_to_folders if not fnmatch.fnmatchcase(f, exclude)]
 
     return files_to_copy, files_symlinked_to_folders
 

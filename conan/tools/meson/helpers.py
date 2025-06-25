@@ -49,10 +49,11 @@ _meson_cpu_family_map = {
     'sparc': ('sparc', 'sparc', 'big'),
     'sparcv9': ('sparc64', 'sparc64', 'big'),
     'wasm': ('wasm32', 'wasm32', 'little'),
+    'wasm64': ('wasm64', 'wasm64', 'little'),
     'x86': ('x86', 'x86', 'little'),
     'x86_64': ('x86_64', 'x86_64', 'little'),
     'riscv32': ('riscv32', 'riscv32', 'little'),
-    'riscv64': ('riscv64', 'riscv32', 'little')
+    'riscv64': ('riscv64', 'riscv64', 'little')
 }
 
 

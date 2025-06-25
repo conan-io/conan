@@ -887,24 +887,25 @@ def test_android_legacy_toolchain_with_compileflags(cmake_legacy_toolchain):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_presets_paths_normalization():
     # https://github.com/conan-io/conan/issues/11795
+    # But then also https://github.com/conan-io/conan/issues/18434
     client = TestClient()
     conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
 
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain"
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
 
-                def layout(self):
-                    cmake_layout(self)
-            """)
+            def layout(self):
+                cmake_layout(self)
+        """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
     client.run("install .")
 
     presets = json.loads(client.load("CMakeUserPresets.json"))
-
-    assert "/" not in presets["include"]
+    assert "/" in presets["include"][0]
+    assert "\\" not in presets["include"][0]
 
 
 @pytest.mark.parametrize("arch, arch_toolset", [("x86", "x86_64"), ("x86_64", "x86_64"),
@@ -1115,7 +1116,7 @@ def test_build_folder_vars_editables():
     c.run("editable add dep")
     conf = "tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\", \"settings.build_type\"]'"
     settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
-    c.run("install app -c={} {}".format(conf, settings))
+    c.run("install app -c={} {} --build=editable".format(conf, settings))
     assert os.path.exists(os.path.join(c.current_folder, "dep", "build", "freebsd-debug"))
 
 
@@ -1747,3 +1748,27 @@ def test_declared_stdlib_and_passed():
     client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
     tc = client.load("conan_toolchain.cmake")
     assert 'string(APPEND CONAN_CXX_FLAGS " -library=stdcxx4")' in tc
+
+
+def test_cmake_presets_compiler():
+    profile = textwrap.dedent(r"""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=dynamic
+        [conf]
+        tools.build:compiler_executables={"c": "cl", "cpp": "cl.exe"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    # https://github.com/microsoft/vscode-cmake-tools/blob/a1ceda25ea93fc0060324de15970a8baa69addf6/src/presets/preset.ts#L1095C23-L1095C35
+    assert cache_variables["CMAKE_C_COMPILER"] == "cl"
+    assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"

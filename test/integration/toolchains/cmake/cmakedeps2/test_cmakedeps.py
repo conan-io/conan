@@ -234,7 +234,8 @@ def test_system_wrappers():
           f"-c tools.cmake.cmakedeps:new={new_value}")
     cmake = c.load("lib-Targets-release.cmake")
     assert "add_library(lib::lib INTERFACE IMPORTED)" in cmake
-    assert "target_link_libraries(lib::lib INTERFACE my_system_cool_lib)" in cmake
+    assert "set_property(TARGET lib::lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             $<$<CONFIG:RELEASE>:my_system_cool_lib>)' in cmake
 
 
 def test_autolink_pragma():
@@ -378,4 +379,5 @@ def test_cmake_extra_dependencies():
     tc.run(f"install --requires=dep/0.1 {args}")
     dep = tc.load("dep-Targets-release.cmake")
     assert "find_dependency(MyOpenMPI REQUIRED )" in dep
-    assert "target_link_libraries(dep::dep INTERFACE MyOpenMPILib)" in dep
+    assert "set_property(TARGET dep::dep APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep

@@ -142,6 +142,39 @@ class ConanLib(ConanFile):
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
 
+    def test_local_source_layout_root(self):
+        # Ensure that if a root folder is specified Conan source method
+        # uses it. This is especially important when running with
+        # no_copy_source where both the build()  and source() methods
+        # need to reference source_folder (so the value must be the
+        # same in both methods)
+        conanfile = textwrap.dedent('''
+            from conan import ConanFile
+            from conan.tools.files import save, load
+
+            class ConanLib(ConanFile):
+                
+                def layout(self):
+                    self.folders.root = ".."
+                    self.folders.source = "src"
+                
+                def source(self):
+                    self.output.info(f"In the source() method the Source folder is: {self.source_folder}")
+                    save(self, "source_file.c", "conent")
+
+                def build(self):
+                    self.output.info(f"In the build() method the Source folder is: {self.source_folder}")
+                    load(self, f"{self.source_folder}/source_file.c")
+            ''')
+        client = TestClient(light=True)
+        client.save({CONANFILE: conanfile})
+        
+        client.run("source .")
+        # The build method will fail if source() and build() don't 
+        # both use the correct source_folder
+        client.run("build .")
+        assert "conanfile.py: Calling build()" in client.out  # doesn't fail
+
     def test_retrieve_exports_sources(self):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
         # remote we need to download the sources, as we consider revisions immutable, let's

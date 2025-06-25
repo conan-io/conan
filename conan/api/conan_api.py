@@ -7,6 +7,7 @@ from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
+from conan.api.subapi.report import ReportAPI
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.download import DownloadAPI
@@ -45,8 +46,7 @@ class ConanAPI:
             raise ConanException("cache_folder has to be an absolute path")
 
         init_colorama(sys.stderr)
-        self.workspace = WorkspaceAPI(self)
-        self.cache_folder = self.workspace.home_folder() or cache_folder or get_conan_user_home()
+        self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
         self.migrate()
 
@@ -71,6 +71,9 @@ class ConanAPI:
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
         self.audit = AuditAPI(self)
+        # Now, lazy loading of editables
+        self.workspace = WorkspaceAPI(self)
+        self.report = ReportAPI(self)
 
         _check_conan_version(self)
 

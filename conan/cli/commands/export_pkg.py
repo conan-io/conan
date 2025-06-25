@@ -59,7 +59,7 @@ def export_pkg(conan_api, parser, *args):
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
     deps_graph = conan_api.graph.load_graph_consumer(path,
-                                                     ref.name, ref.version, ref.user, ref.channel,
+                                                     ref.name, str(ref.version), ref.user, ref.channel,
                                                      profile_host=profile_host,
                                                      profile_build=profile_build,
                                                      lockfile=lockfile, remotes=remotes, update=None,

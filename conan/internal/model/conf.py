@@ -86,7 +86,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
-    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -101,6 +101,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
@@ -134,6 +135,8 @@ BUILT_IN_CONFS = {
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
+    # Toolchain installation
+    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake and Meson",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -379,6 +382,12 @@ class Conf:
     def copy(self):
         c = Conf()
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        return c
+
+    def filter_core(self):
+        c = Conf()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
+                                if not CORE_CONF_PATTERN.match(k))
         return c
 
     def dumps(self):
@@ -627,7 +636,9 @@ class ConfDefinition:
         :type global_conf: ConfDefinition
         """
         result = ConfDefinition()
-        result._pattern_confs = global_conf._pattern_confs.copy()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
         result.update_conf_definition(self)
         self._pattern_confs = result._pattern_confs
         return

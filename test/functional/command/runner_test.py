@@ -605,6 +605,8 @@ def test_create_docker_runner_in_subfolder():
         """)
 
     cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(pkg CXX)
         add_library(pkg src/hello.cpp)

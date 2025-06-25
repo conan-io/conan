@@ -11,6 +11,7 @@ import textwrap
 import traceback
 import uuid
 import zipfile
+import subprocess
 from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
@@ -450,6 +451,22 @@ class TestClient:
             return load(os.path.join(self.cache_folder, filename))
         except IOError:
             return None
+
+    def open(self, filename):
+        # CI is set by default by GitHub Actions
+        if os.environ.get("CI", False):
+            assert False, "TestClient::open should not be used in CI"
+
+        current_path = os.path.join(self.current_folder, filename)
+        if platform.system() == "Windows":
+            os.startfile(os.path.normpath(current_path))
+        elif platform.system() == "Darwin":
+            subprocess.call(["open", current_path])
+        else:
+            subprocess.call(["xdg-open", current_path])
+
+    def open_home(self, filename):
+        return self.open(os.path.join(self.cache_folder, filename))
 
     @property
     def cache(self):
