@@ -1772,3 +1772,35 @@ def test_cmake_presets_compiler():
     # https://github.com/microsoft/vscode-cmake-tools/blob/a1ceda25ea93fc0060324de15970a8baa69addf6/src/presets/preset.ts#L1095C23-L1095C35
     assert cache_variables["CMAKE_C_COMPILER"] == "cl"
     assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("CMakeToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'string(APPEND CONAN_CXX_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain

@@ -1,4 +1,6 @@
 import textwrap
+from conan.test.assets.genconanfile import GenConanfile
+import pytest
 
 from conan.test.utils.tools import TestClient
 from conan.tools.premake.toolchain import PremakeToolchain
@@ -56,7 +58,6 @@ def test_extra_flags_via_conf():
 
     assert 'linkoptions { "-flag5", "-flag6", "-m64" }' in content
     assert 'defines { "define1=0", "_GLIBCXX_USE_CXX11_ABI=0" }' in content
-
 
 
 def test_project_configuration():
@@ -132,7 +133,7 @@ def test_project_configuration():
         textwrap.dedent(
             """
     project "main"
-        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
+        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags), extra_cxxflags and compiler settings
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { "-stdlib=libc++", "-FS" }
         filter {}
@@ -151,3 +152,51 @@ def test_project_configuration():
         )
         in toolchain
     )
+
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm64
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("PremakeToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conantoolchain.premake5.lua")
+    assert (
+        """
+        filter { files { "**.c" } }
+            buildoptions { "-sMEMORY64=1", "%s" }
+        filter {}
+        """
+        % flags
+        in toolchain
+    )
+    assert (
+        """
+        filter { files { "**.cpp", "**.cxx", "**.cc" } }
+            buildoptions { "-stdlib=libc++", "-sMEMORY64=1", "%s" }
+        filter {}
+        """
+        % flags
+        in toolchain
+    )
+    assert 'linkoptions { "-sMEMORY64=1", "%s" }' % flags in toolchain

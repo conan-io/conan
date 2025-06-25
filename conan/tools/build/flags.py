@@ -195,6 +195,18 @@ def build_type_flags(conanfile):
             return flags
     return []
 
+def threads_flags(conanfile):
+    """
+    returns flags specific to the threading model used by the compiler
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    threads = conanfile.settings.get_safe("compiler.threads")
+    if compiler == "emcc":
+        if threads == "posix":
+            return ["-pthread"]
+        elif threads == "wasm_workers":
+            return ["-sWASM_WORKERS=1"]
+    return []
 
 def llvm_clang_front(conanfile):
     # Only Windows clang with MSVC backend (LLVM/Clang, not MSYS2 clang)

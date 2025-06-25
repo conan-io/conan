@@ -9,7 +9,7 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_link_flag, libcxx_flags, architecture_flag
+from conan.tools.build.flags import architecture_link_flag, libcxx_flags, architecture_flag, threads_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.meson.helpers import get_apple_subsystem
@@ -218,6 +218,8 @@ class MesonToolchain:
         self.arch_flag = architecture_flag(self._conanfile)  # https://github.com/conan-io/conan/issues/17624
         #: Architecture link flag deduced by Conan and added to ``c_link_args`` and ``cpp_link_args``
         self.arch_link_flag = architecture_link_flag(self._conanfile)
+        #: Threads flags deduced by Conan and added to ``c_args``, ``cpp_args``, ``c_link_args`` and ``cpp_link_args``
+        self.threads_flags = threads_flags(self._conanfile)
         #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
@@ -453,14 +455,14 @@ class MesonToolchain:
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
-        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags
+        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags + self.threads_flags
         # Apple extra flags from confs (visibilty, bitcode, arc)
         cxxflags += self.apple_extra_flags
         cflags += self.apple_extra_flags
         ld += self.apple_extra_flags
         return {
-            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags,
-            "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags,
+            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags + self.threads_flags,
+            "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags + self.threads_flags,
             "ldflags": [self.arch_flag] + [self.arch_link_flag] + ld,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }

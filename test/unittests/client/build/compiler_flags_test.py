@@ -1,7 +1,7 @@
 import unittest
 from parameterized.parameterized import parameterized
 
-from conan.tools.build.flags import architecture_flag, build_type_flags
+from conan.tools.build.flags import architecture_flag, build_type_flags, threads_flags
 from conan.test.utils.mocks import MockSettings, ConanFileMock
 
 
@@ -36,6 +36,19 @@ class CompilerFlagsTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
         self.assertEqual(architecture_flag(conanfile), flag)
+
+
+    @parameterized.expand([("clang", None, []),
+                           ("emcc", None, []),
+                           ("emcc", "posix", ["-pthread"]),
+                           ("emcc", "wasm_workers", ["-sWASM_WORKERS=1"]),
+                           ])
+    def test_threads_flag(self, compiler, threads, flag):
+        settings = MockSettings({"compiler": compiler,
+                                 "compiler.threads": threads})
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        self.assertEqual(threads_flags(conanfile), flag)
 
     @parameterized.expand([("clang", "x86", "Windows", ""),
                            ("clang", "x86_64", "Windows", "")

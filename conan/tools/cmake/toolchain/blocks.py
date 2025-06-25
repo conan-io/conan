@@ -10,7 +10,7 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
@@ -237,8 +237,8 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""\
-        # Define C++ flags, C flags and linker flags from 'settings.arch'
         {% if arch_flag %}
+        # Define C++ flags, C flags and linker flags from 'settings.arch'
         message(STATUS "Conan toolchain: Defining architecture flag: {{ arch_flag }}")
         string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
@@ -250,15 +250,23 @@ class ArchitectureBlock(Block):
         string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_link_flag }}")
         string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_link_flag }}")
         {% endif %}
+        {% if thread_flags_list %}
+        # Define C++ flags, C flags and linker flags from 'compiler.threads'
+        message(STATUS "Conan toolchain: Defining thread flags: {{ thread_flags_list }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_C_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ thread_flags_list }}")
+        {% endif %}
         """)
 
     def context(self):
         arch_flag = architecture_flag(self._conanfile)
         arch_link_flag = architecture_link_flag(self._conanfile)
-        if not arch_flag and not arch_link_flag:
+        thread_flags_list = " ".join(threads_flags(self._conanfile))
+        if not arch_flag and not arch_link_flag and not thread_flags_list:
             return
-        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag}
-
+        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag, "thread_flags_list": thread_flags_list}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
