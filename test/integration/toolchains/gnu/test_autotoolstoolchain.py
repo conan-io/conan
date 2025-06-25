@@ -374,8 +374,7 @@ def test_conf_build_does_not_exist():
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
 )
 def test_thread_flags(threads, flags):
-    os_ = platform.system()
-    os_ = "Macos" if os_ == "Darwin" else os_
+    os = platform.system()
     client = TestClient()
     profile = textwrap.dedent(f"""
         [settings]
@@ -397,7 +396,12 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
-    assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
-    assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
-    assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+    if os == "Windows":
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
+    else:
+        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
+        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
