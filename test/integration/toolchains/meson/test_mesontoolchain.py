@@ -823,3 +823,35 @@ def test_conf_extra_apple_flags():
         assert f"{flags} = ['-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
     for flags in ["objcpp_args", "objc_args"]:
         assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("MesonToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conan_meson_cross.ini")
+    assert f"c_args = ['{flags}']" in toolchain
+    assert f"c_link_args = ['{flags}']" in toolchain
+    assert f"cpp_args = ['{flags}', '-stdlib=libc++']" in toolchain
+    assert f"cpp_link_args = ['{flags}', '-stdlib=libc++']" in toolchain

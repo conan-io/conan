@@ -16,19 +16,19 @@ def _generate_flags(self, conanfile):
     template = textwrap.dedent(
         """\
         {% if extra_cflags %}
-        -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags) and extra_cflags
+        -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags), extra_cflags and compiler settings
         filter { files { "**.c" } }
             buildoptions { {{ extra_cflags }} }
         filter {}
         {% endif %}
         {% if extra_cxxflags %}
-        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
+        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags), extra_cxxflags and compiler settings
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { {{ extra_cxxflags }} }
         filter {}
         {% endif %}
         {% if extra_ldflags %}
-        -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags) and extra_cxxflags
+        -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags), extra_cxxflags and compiler settings
         linkoptions { {{ extra_ldflags }} }
         {% endif %}
         {% if extra_defines %}

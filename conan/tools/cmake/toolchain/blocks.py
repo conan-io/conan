@@ -237,8 +237,8 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""\
-        # Define C++ flags, C flags and linker flags from 'settings.arch'
         {% if arch_flag %}
+        # Define C++ flags, C flags and linker flags from 'settings.arch'
         message(STATUS "Conan toolchain: Defining architecture flag: {{ arch_flag }}")
         string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
