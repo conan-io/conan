@@ -205,7 +205,6 @@ def test_extra_flags_via_toolchain():
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_args = ['-flag0', '-other=val', '-m64', '-flag1', '-flag2', '-Ddefine1=0', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
     assert "c_args = ['-flag0', '-other=val', '-m64', '-flag3', '-flag4', '-Ddefine1=0']" in content
-    print(content)
     assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
     assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6']" in content
 
