@@ -135,28 +135,22 @@ class TestCacheRef:
         t, recipe_layout, pkg_layout = created_package
 
         t.run(f'cache ref "{os.path.dirname(recipe_layout.export())}"')
-        assert f"Recipe: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: base" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{recipe_layout.export()}"')
-        assert f"Recipe: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: export" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{recipe_layout.source()}"')
-        assert f"Recipe: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: source" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{os.path.dirname(pkg_layout.package())}"')
-        assert f"Package: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: base" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{pkg_layout.build()}"')
-        assert f"Package: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: build" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{pkg_layout.package()}"')
-        assert f"Package: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: package" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
     def test_downloaded_paths(self):
         t = TestClient(light=True, default_server_user=True)
@@ -171,30 +165,16 @@ class TestCacheRef:
         pkg_layout = t.get_latest_pkg_layout(pref)
 
         t.run(f'cache ref "{os.path.dirname(recipe_layout.export())}"')
-        assert f"Recipe: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: base" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{recipe_layout.export()}"')
-        assert f"Recipe: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: export" in t.out
-
-        t.run(f'cache ref "{recipe_layout.export()}" --format=json')
-        contents = json.loads(t.stdout)
-        assert contents["folder"] == "export"
-        assert "ref" in contents
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{os.path.dirname(pkg_layout.package())}"')
-        assert f"Package: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: base" in t.out
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
         t.run(f'cache ref "{pkg_layout.package()}"')
-        assert f"Package: foo/1.0#{recipe_layout.reference.revision}" in t.out
-        assert "Folder: package" in t.out
-
-        t.run(f'cache ref "{pkg_layout.package()}" --format=json')
-        contents = json.loads(t.stdout)
-        assert contents["folder"] == "package"
-        assert "pref" in contents
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
     def test_errors(self):
         t = TestClient(light=True)

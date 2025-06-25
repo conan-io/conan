@@ -265,11 +265,6 @@ class CacheAPI:
         if result is None:
             base, folder = os.path.split(path)
             result = cache.path_to_ref(base)
-            if result is None:
-                return None
-            result["folder"] = {"s": "source", "b": "build", "p": "package",
-                                "f": "finalize package", "e": "export", "es": "export sources",
-                                "d": "download", "m": "metadata"}.get(folder, folder)
         return result
 
 

@@ -15,23 +15,6 @@ def json_export(data):
     cli_out_write(json.dumps({"cache_path": data}))
 
 
-def _cache_ref_text(result):
-    if "ref" in result:
-        cli_out_write(f"Recipe: {result['ref'].repr_humantime()}")
-    else:
-        cli_out_write(f"Package: {result['pref'].repr_humantime()}")
-    folder = result.get("folder", "base")
-    cli_out_write(f"Folder: {folder}")
-
-
-def _cache_ref_json(result):
-    if "ref" in result:
-        result["ref"] = repr(result["ref"])
-    if "pref" in result:
-        result["pref"] = repr(result["pref"])
-    cli_out_write(json.dumps(result))
-
-
 @conan_command(group="Consumer")
 def cache(conan_api: ConanAPI, parser, *args):
     """
@@ -81,17 +64,17 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     return path
 
 
-@conan_subcommand(formatters={"text": _cache_ref_text, "json": _cache_ref_json})
+@conan_subcommand(formatters={"text": cli_out_write})
 def cache_ref(conan_api: ConanAPI, parser, subparser, *args):
     """
     Show the reference for a given Conan cache folder
     """
     subparser.add_argument("path", help="Path to a Conan cache folder")
     args = parser.parse_args(*args)
-    result = conan_api.cache.path_to_ref(args.path)
-    if result is None:
+    ref = conan_api.cache.path_to_ref(args.path)
+    if ref is None:
         raise ConanException("Reference for this path not found in cache")
-    return result
+    return ref.repr_notime()
 
 
 @conan_subcommand()

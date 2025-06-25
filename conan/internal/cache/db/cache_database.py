@@ -103,7 +103,5 @@ class CacheDatabase:
     def path_to_ref(self, path):
         ref = self._recipes.path_to_ref(path)
         if ref is not None:
-            return {"ref": ref}
-        ref = self._packages.path_to_ref(path)
-        if ref is not None:
-            return {"pref": ref}
+            return ref
+        return self._packages.path_to_ref(path)
