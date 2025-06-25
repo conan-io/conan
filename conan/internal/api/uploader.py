@@ -1,18 +1,19 @@
 import fnmatch
+import gzip
 import os
 import shutil
+import tarfile
 import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
-from conans.client.source import retrieve_exports_sources
+from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size)
+from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
+                                       set_dirty_context_manager, mkdir, human_size)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -255,17 +256,32 @@ class UploadExecutor:
         output.debug(f"Upload {pref} in {duration} time")
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
+def gzopen_without_timestamps(name, fileobj, compresslevel=None):
+    """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
+        setted in Gzip file causing md5 to change. Not possible using the
+        previous tarfile open because arguments are not passed to GzipFile constructor
+    """
+    compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
+    fileobj = gzip.GzipFile(name, "w", compresslevel, fileobj, mtime=0)
+    # Format is forced because in Python3.8, it changed and it generates different tarfiles
+    # with different checksums, which break hashes of tgzs
+    # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+    t = tarfile.TarFile.taropen(name, "w", fileobj, format=tarfile.PAX_FORMAT)
+    t._extfileobj = False
+    return t
+
+
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref)).info(f"Compressing {name}")
+    if ref:
+        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
-                                        compresslevel=compresslevel)
+        tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
-            # recursive is False in case it is a symlink to a folder
-            tgz.add(abs_path, filename, recursive=False)
+            # recursive is False by default in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
     duration = time.time() - t1

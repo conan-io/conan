@@ -14,7 +14,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.profiles import create_profile as _create_profile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 conanfile_scope_env = """
 from conan import ConanFile
@@ -636,3 +636,12 @@ def test_consumer_invalid_profile_multiple_groups():
                assert_error=True)
     assert ("ERROR: Error reading 'myprofs/myprofile' profile: ConfigParser: "
             "Duplicated section: [settings]") in client.out
+
+def test_compose_numeric_values_scoped_pkg():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("hello", "0.1")
+                .with_package("self.output.info('user.var.value: ' + str(self.conf.get('user.var:value')))"),
+             "profile": """[conf]\nuser.var:value=8.1\nhello/*:user.var:value=10\n"""})
+
+    tc.run("create . -pr=profile")
+    assert "user.var.value: 10" in tc.out

@@ -13,7 +13,11 @@ from conan.errors import ConanException
 
 
 def _print_remotes_json(remotes):
-    info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
+    info = [{"name": r.name,
+             "url": r.url,
+             "verify_ssl": r.verify_ssl,
+             "enabled": not r.disabled,
+             "allowed_packages": r.allowed_packages,}
             for r in remotes]
     cli_out_write(json.dumps(info, indent=4))
 
@@ -166,6 +170,7 @@ def remote_list_users(conan_api, parser, subparser, *args):  # noqa
     """
     List the users logged into all the remotes.
     """
+    parser.parse_args(*args)
     remotes = conan_api.remotes.list()
     ret = OrderedDict()
     if not remotes:

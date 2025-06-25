@@ -11,7 +11,7 @@ from conan.internal.errors import RecipeNotFoundException
 from conan.api.model import RecipeReference
 from conans.server.revision_list import RevisionList
 from conan.test.utils.tools import TestServer, GenConanfile, TestClient
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def _create(c_v2, ref, conanfile=None, args=None, assert_error=False):

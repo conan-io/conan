@@ -12,16 +12,16 @@ from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.default_settings import default_settings_yml
-from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import consumer_definer
+from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
-from conans.client.hook_manager import HookManager
-from conans.util.files import load, save, rmdir, remove
+from conan.internal.hook_manager import HookManager
+from conan.internal.util.files import load, save, rmdir, remove
 
 
 class ConfigAPI:
@@ -66,11 +66,11 @@ class ConfigAPI:
 
         # Basic checks of the package: correct package_type and no-dependencies
         deps_graph.report_graph_error()
-        pkg = deps_graph.root.dependencies[0].dst
+        pkg = deps_graph.root.edges[0].dst
         ConanOutput().info(f"Configuration from package: {pkg}")
         if pkg.conanfile.package_type is not PackageType.CONF:
             raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
-        if pkg.dependencies:
+        if pkg.edges:
             raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
         # The computation of the "package_id" and the download of the package is done as usual

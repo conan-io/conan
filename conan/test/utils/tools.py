@@ -11,6 +11,7 @@ import textwrap
 import traceback
 import uuid
 import zipfile
+import subprocess
 from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
@@ -43,7 +44,7 @@ from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.server_launcher import (TestServerLauncher)
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir, save_files, save, load
+from conan.internal.util.files import mkdir, save_files, save, load
 
 NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
@@ -451,6 +452,22 @@ class TestClient:
         except IOError:
             return None
 
+    def open(self, filename):
+        # CI is set by default by GitHub Actions
+        if os.environ.get("CI", False):
+            assert False, "TestClient::open should not be used in CI"
+
+        current_path = os.path.join(self.current_folder, filename)
+        if platform.system() == "Windows":
+            os.startfile(os.path.normpath(current_path))
+        elif platform.system() == "Darwin":
+            subprocess.call(["open", current_path])
+        else:
+            subprocess.call(["xdg-open", current_path])
+
+    def open_home(self, filename):
+        return self.open(os.path.join(self.cache_folder, filename))
+
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
@@ -505,7 +522,7 @@ class TestClient:
     @contextmanager
     def mocked_servers(self, requester=None):
         _req = requester or TestRequester(self.servers)
-        with mock.patch("conans.client.rest.conan_requester.requests", _req):
+        with mock.patch("conan.internal.rest.conan_requester.requests", _req):
             yield
 
     @contextmanager
@@ -591,7 +608,7 @@ class TestClient:
         self.stderr = RedirectedTestOutput()
         try:
             with redirect_output(self.stderr, self.stdout):
-                from conans.util.runners import conan_run
+                from conan.internal.util.runners import conan_run
                 ret = conan_run(command, cwd=cwd or self.current_folder)
         finally:
             self.stdout = str(self.stdout)

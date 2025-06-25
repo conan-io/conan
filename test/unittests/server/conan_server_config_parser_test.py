@@ -5,7 +5,7 @@ import unittest
 from conan.errors import ConanException
 from conans.server.conf import ConanServerConfigParser
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir, save
+from conan.internal.util.files import mkdir, save
 
 
 class ServerConfigParseTest(unittest.TestCase):

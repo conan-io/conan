@@ -1,12 +1,12 @@
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp, ConanBasicApp
 from conan.internal.model.recipe_ref import ref_matches
-from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
-    CONTEXT_BUILD, BINARY_MISSING
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.install_graph import InstallGraph, ProfileArgs
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
+from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
+    CONTEXT_BUILD, BINARY_MISSING, DepsGraph
+from conan.internal.graph.graph_binaries import GraphBinariesAnalyzer
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.install_graph import InstallGraph, ProfileArgs
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
 
@@ -129,6 +129,12 @@ class GraphAPI:
                                                       update=update,
                                                       python_requires=python_requires)
 
+        if not requires and not tool_requires and python_requires is not None:
+            # This only happens at `conan create` for python-requires, the graph is not needed
+            # in fact, it can cause errors, if tool-requires injected
+            dep_graph = DepsGraph()
+            dep_graph.add_node(root_node)
+            return dep_graph
         # check_updates = args.check_updates if "check_updates" in args else False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build,

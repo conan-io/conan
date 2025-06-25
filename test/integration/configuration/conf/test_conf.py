@@ -9,7 +9,7 @@ from conan import conan_version
 from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 from conan.test.utils.tools import TestClient
 
 
@@ -108,6 +108,25 @@ def test_composition_conan_conf(client):
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
+
+
+def test_core_global_conf_not_in_profile(client):
+    client.save_home({"global.conf": "core.upload:retry=1"})
+    profile = textwrap.dedent("""\
+        [conf]
+        tools.build:verbosity=quiet
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+    # also with -cc command line argument
+    client.run("install . -pr=profile -cc core.upload:retry=1")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
 
 
 def test_new_config_file(client):

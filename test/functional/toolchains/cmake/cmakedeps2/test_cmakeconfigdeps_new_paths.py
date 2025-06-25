@@ -141,7 +141,7 @@ class TestCMakeDepsPaths:
         """)
         consumer = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(MyHello)
+            project(MyHello NONE)
             find_program(HELLOPROG hello)
             if(HELLOPROG)
                 message(STATUS "Found hello prog: ${HELLOPROG}")
@@ -172,8 +172,7 @@ class TestCMakeDepsPaths:
         """)
         c.save({"conanfile.py": conanfile,
                 "hello.h": "", "hello.lib": "", "libhello.a": "",
-                "libhello.so": "", "libhello.dll": ""
-        })
+                "libhello.so": "", "libhello.dll": ""})
         c.run("create .")
         conanfile = textwrap.dedent(f"""
             from conan import ConanFile
@@ -188,7 +187,7 @@ class TestCMakeDepsPaths:
         """)
         consumer = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(MyHello)
+            project(MyHello NONE)
             find_file(HELLOINC hello.h)
             find_library(HELLOLIB hello)
             if(HELLOINC)
@@ -202,3 +201,88 @@ class TestCMakeDepsPaths:
         c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
         assert "Found hello header" in c.out
         assert "Found hello lib" in c.out
+
+    @pytest.mark.parametrize("require_type", ["requires", "tool_requires"])
+    def test_include_modules(self, require_type):
+        """Test that cmake module files in builddirs of requires and tool_requires
+        are accessible with include() in consumer CMakeLists
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                exports_sources = "*"
+                def package(self):
+                    copy(self, "*", self.source_folder, self.package_folder)
+                def package_info(self):
+                    self.cpp_info.builddirs.append("cmake")
+        """)
+        c.save({"conanfile.py": conanfile,
+                "cmake/myowncmake.cmake": 'MESSAGE("MYOWNCMAKE FROM hello!")'})
+        c.run("create . --name=hello --version=0.1")
+
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class PkgConan(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                {require_type} = "hello/0.1"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+        consumer = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(MyHello NONE)
+            include(myowncmake)
+        """)
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": consumer}, clean_first=True)
+        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "MYOWNCMAKE FROM hello!" in c.out
+
+    def test_include_modules_both_build_host(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                exports_sources = "*"
+                def package(self):
+                    copy(self, "*", self.source_folder, self.package_folder)
+                def package_info(self):
+                    self.cpp_info.builddirs.append("cmake")
+            """)
+        c.save({"conanfile.py": conanfile,
+                "cmake/myowncmake.cmake": 'MESSAGE("MYOWNCMAKE FROM hello!")'})
+        c.run("create . --name=hello --version=0.1")
+
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class PkgConan(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "hello/0.1"
+                tool_requires = "hello/0.1"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+        consumer = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(MyHello NONE)
+            include(myowncmake)
+            """)
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": consumer}, clean_first=True)
+        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        assert "conanfile.py: There is already a 'hello/0.1' package " \
+               "contributing to CMAKE_MODULE_PATH" in c.out
+        assert "MYOWNCMAKE FROM hello!" in c.out

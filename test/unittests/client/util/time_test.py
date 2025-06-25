@@ -3,7 +3,7 @@ import unittest
 
 from dateutil.tz import tzutc
 
-from conans.util.dates import from_timestamp_to_iso8601, _from_iso8601_to_datetime, \
+from conan.internal.util.dates import from_timestamp_to_iso8601, _from_iso8601_to_datetime, \
     from_iso8601_to_timestamp
 
 

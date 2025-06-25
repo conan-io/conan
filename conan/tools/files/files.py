@@ -10,10 +10,10 @@ from fnmatch import fnmatch
 from shutil import which
 
 
-from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
+from conan.internal.rest.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.client.rest.file_uploader import FileProgress
-from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
+from conan.internal.rest.file_uploader import FileProgress
+from conan.internal.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -366,7 +366,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
-    output.info(f"Unzipping {filename} to {destination}")
+    output.info(f"Uncompressing {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):

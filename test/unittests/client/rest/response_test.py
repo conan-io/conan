@@ -2,7 +2,7 @@
 
 import unittest
 from collections import namedtuple
-from conans.client import rest
+from conan.internal import rest
 
 
 class RestStringTest(unittest.TestCase):

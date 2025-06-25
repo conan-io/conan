@@ -4,10 +4,10 @@ import traceback
 import importlib
 
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.subsystems import deduce_subsystem, subsystem_path
+from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import save, mkdir, chdir
+from conan.internal.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -30,6 +30,7 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "XcodeDeps": "conan.tools.apple",
                "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
+               "PremakeToolchain": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
                "QbsDeps": "conan.tools.qbs",
@@ -58,7 +59,7 @@ def _get_generator_class(generator_name):
 
 
 def load_cache_generators(path):
-    from conans.client.loader import load_python_file
+    from conan.internal.loader import load_python_file
     result = {}  # Name of the generator: Class
     if not os.path.isdir(path):
         return result
@@ -167,7 +168,8 @@ def _receive_generators(conanfile):
             names = [c.__name__ if not isinstance(c, str) else c for c in build_req.generator_info]
             conanfile.output.warning(f"Tool-require {build_req} adding generators: {names}",
                                      warn_tag="experimental")
-            conanfile.generators = build_req.generator_info + conanfile.generators
+            # Generators can be defined as a tuple in recipes, ensure we don't break if so
+            conanfile.generators = build_req.generator_info + list(conanfile.generators)
 
 
 def _generate_aggregated_env(conanfile):

@@ -16,8 +16,8 @@ from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import GenConanfile
-from conans.util.dates import revision_timestamp_now
-from conans.util.files import save
+from conan.internal.util.dates import revision_timestamp_now
+from conan.internal.util.files import save
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -134,7 +134,7 @@ class GraphManagerTest(unittest.TestCase):
         if conanfile:
             self.assertEqual(conanfile.name, ref.name)
 
-        self.assertEqual(len(node.dependencies), len(deps))
+        self.assertEqual(len(node.edges), len(deps))
         for d in node.neighbors():
             assert d in deps
 

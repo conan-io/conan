@@ -1,11 +1,14 @@
 import os
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
-def test_cache_integrity():
+@pytest.mark.parametrize("use_pkglist", [True, False])
+def test_cache_integrity(use_pkglist):
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
@@ -22,7 +25,11 @@ def test_cache_integrity():
     conaninfo = os.path.join(layout.package(), "conaninfo.txt")
     save(conaninfo, "[settings]")
 
-    t.run("cache check-integrity *", assert_error=True)
+    if use_pkglist:
+        t.run("list *:*#* -f=json", redirect_stdout="pkglist.json")
+    arg = "--list=pkglist.json" if use_pkglist else "*"
+
+    t.run(f"cache check-integrity {arg}", assert_error=True)
     assert "pkg1/1.0: Integrity checked: ok" in t.out
     assert "pkg1/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Integrity checked: ok" in t.out
     assert "ERROR: pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: Manifest mismatch" in t.out

@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conan.test.utils.tools import TestClient, GenConanfile
@@ -55,3 +56,32 @@ def test_install_order_infinite_loop():
            "['tool/1.0:044d18636d2b7da86d3aa46a2aabf1400db525b1']" in c.out
     assert "tool/1.0:044d18636d2b7da86d3aa46a2aabf1400db525b1 (Build) -> " \
            "['fmt/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709']" in c.out
+
+
+def test_build_require_undetected_loop():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class DemoRecipe(ConanFile):
+            name = "test"
+            version = "1.0"
+
+            def requirements(self):
+                self.requires("cmake/3.31.6", build=True)
+
+            def build_requirements(self):
+                self.tool_requires("cmake/3.31.6", options={
+                    "bad": True # this doesn't need to be a valid option
+                })
+
+            def generate(self):
+                self.output.info(f"NUM DEPS: {len(self.dependencies.items())}")
+        """)
+    c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.31.6").with_shared_option(True),
+            "app/conanfile.py": conanfile})
+
+    c.run("create cmake")
+    c.run("install app")
+    # It doesn't hang, and it sees correctly just 1 dependency
+    assert "conanfile.py (test/1.0): NUM DEPS: 1" in c.out

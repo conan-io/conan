@@ -7,7 +7,7 @@ from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvi
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode
 from conan.internal.model.recipe_ref import RecipeReference
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
 CYPHER_KEY = "private"
@@ -160,3 +160,5 @@ def _load_providers(providers_path):
 
 def _save_providers(providers_path, providers):
     save(providers_path, json.dumps(providers, indent=4))
+    # Make readable & writeable only by current user
+    os.chmod(providers_path, 0o600)

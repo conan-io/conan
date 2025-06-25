@@ -5,7 +5,8 @@ from unittest.mock import patch
 import pytest
 from parameterized import parameterized
 
-from conan.internal.api.detect.detect_api import _cc_compiler
+from conan.internal.api.detect.detect_api import _cc_compiler, detect_suncc_compiler, \
+    detect_intel_compiler
 from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.internal.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -64,6 +65,9 @@ class DetectTest(unittest.TestCase):
 @pytest.mark.parametrize("version_return,expected_version", [
     ["cc.exe (Rev3, Built by MSYS2 project) 14.1.0", "14.1.0"],
     ["g++ (Conan-Build-gcc--binutils-2.42) 14.1.0", "14.1.0"],
+    ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.1.0", "15.1.0"],
+    ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.15.0", "15.15.0"],
+    ["gcc (GCC) 4.8.1", "4.8.1"],
     ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
     ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
@@ -73,4 +77,15 @@ class DetectTest(unittest.TestCase):
 def test_detect_cc_versionings(detect_runner_mock, version_return, expected_version):
     detect_runner_mock.return_value = 0, version_return
     compiler, installed_version, compiler_exe = _cc_compiler()
+    # Using private _value attribute to compare the str that reaches it, so no space issues arise
+    assert installed_version._value == Version(expected_version)._value
     assert installed_version == Version(expected_version)
+
+@pytest.mark.parametrize("function,version_return,expected_version", [
+    [detect_suncc_compiler, "Sun C 5.13", ('sun-cc', Version("5.13"), 'cc')],
+    [detect_intel_compiler, "Intel C++ Compiler 2025.0", ('intel-cc', Version("2025.0"), 'icx')],
+])
+def test_detect_compiler(function, version_return, expected_version):
+    with mock.patch("conan.internal.api.detect.detect_api.detect_runner", mock.MagicMock(return_value=(0, version_return))):
+        ret = function()
+        assert ret == expected_version

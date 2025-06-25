@@ -5,7 +5,7 @@ import bottle
 from webtest import TestApp
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class TestFileServer:
@@ -40,7 +40,7 @@ class TestFileServer:
         def head(folder, file):
             exists = os.path.exists(os.path.join(store, folder, file))
             if exists:
-                return True
+                return bottle.HTTPResponse(status=200)
             return bottle.HTTPError(404, "Not found")
 
         @app.route("/forbidden", method=["GET"])
