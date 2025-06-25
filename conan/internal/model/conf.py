@@ -150,8 +150,7 @@ USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
-    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
+    return TOOLS_CONF_PATTERN.match(module_name) or USER_CONF_PATTERN.match(module_name)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -542,9 +541,10 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            if conf.startswith("user"):
+        if conf.startswith("user"):
+            if USER_CONF_PATTERN.match(conf) is None:
                 raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+        elif conf not in BUILT_IN_CONFS:
             raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
                                  "Run 'conan config list' to see all the available confs.")
 

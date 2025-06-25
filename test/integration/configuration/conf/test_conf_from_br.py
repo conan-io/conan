@@ -325,4 +325,3 @@ def test_error_missing_colon_consume():
     c.save({"conanfile.py": conanfile})
     c.run("install .", assert_error=True)
     assert "User conf 'user.myorg.myconf' invalid format, not 'user.org.group:conf'" in c.out
-
