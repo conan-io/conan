@@ -41,14 +41,32 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
+        # Usage: get_name_extension(<input_filepath_var> <output_extension_var>)
+        #   <input_filepath_var>: The name of the variable containing the full file path (e.g., "MY_PATH").
+        #   <output_extension_var>: The name of the variable to store the full extension (including the first dot).
+        function(get_name_extension INPUT_VAR_NAME OUTPUT_EXTENSION_VAR)
+            set(FULL_FILE_PATH "${${INPUT_VAR_NAME}}")
+            string(FIND "${FULL_FILE_PATH}" "." FIRST_DOT_POS)
+            if(FIRST_DOT_POS EQUAL -1)
+                set(EXTENSION "")
+            else()
+                # Extract full extension (from first dot to end)
+                string(SUBSTRING "${FULL_FILE_PATH}" "${FIRST_DOT_POS}" -1 EXTENSION) # -1 means to the end
+            endif()
+            set(${OUTPUT_EXTENSION_VAR} "${EXTENSION}" PARENT_SCOPE)
+        endfunction()
 
        function(conan_package_library_targets libraries package_libdir package_bindir library_type
                 is_host_windows deps_target out_libraries_target config_suffix package_name no_soname_mode)
            set(_out_libraries_target "")
 
            foreach(_LIBRARY_NAME ${libraries})
+               get_name_extension(_LIBRARY_NAME _LIBRARY_EXT)
                set(_OLD_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-               set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
+               if(_LIBRARY_EXT)
+                message(INFO "New extension: ${_LIBRARY_EXT}")
+                set(CMAKE_FIND_LIBRARY_SUFFIXES ${_LIBRARY_EXT} ${CMAKE_FIND_LIBRARY_SUFFIXES})
+               endif()
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                set(CMAKE_FIND_LIBRARY_SUFFIXES ${_OLD_CMAKE_FIND_LIBRARY_SUFFIXES})
