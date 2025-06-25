@@ -543,9 +543,10 @@ class Conf:
     @staticmethod
     def _check_conf_name(conf):
         if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
-                                 f"the conf format introduced is not valid. Run 'conan config list' "
-                                 f"to see all the available confs.")
+            if conf.startswith("user"):
+                raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 "Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
