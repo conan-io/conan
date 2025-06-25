@@ -179,7 +179,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
         self.assertIn("ERROR:     'include/hello.h'", client.out)
         self.assertIn("ERROR:     'added.txt'", client.out)
-        self.assertIn("ERROR: There are corrupted artifacts, check the error logs", client.out)
+        self.assertIn("ERROR: There are corrupted artifacts. Check the error logs", client.out)
 
     @pytest.mark.artifactory_ready
     def test_upload_modified_recipe(self):
