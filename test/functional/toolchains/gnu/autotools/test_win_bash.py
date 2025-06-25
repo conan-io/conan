@@ -130,7 +130,6 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
                  "main.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
-    print(client.out)
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__18" in client.out

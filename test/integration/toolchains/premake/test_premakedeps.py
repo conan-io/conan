@@ -62,3 +62,4 @@ def test_premakedeps():
     # Assert package per configuration files
     assert_vars_file(client, 'debug')
     assert_vars_file(client, 'release')
+

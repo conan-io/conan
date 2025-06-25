@@ -384,6 +384,12 @@ class Conf:
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
+    def filter_core(self):
+        c = Conf()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
+                                if not CORE_CONF_PATTERN.match(k))
+        return c
+
     def dumps(self):
         """
         Returns a string with the format ``name=conf-value``
@@ -630,7 +636,9 @@ class ConfDefinition:
         :type global_conf: ConfDefinition
         """
         result = ConfDefinition()
-        result._pattern_confs = global_conf._pattern_confs.copy()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
         result.update_conf_definition(self)
         self._pattern_confs = result._pattern_confs
         return
