@@ -272,30 +272,10 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
 
 
 def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False, compression_plugin=None):
-    tgz_path = os.path.join(dest_dir, name)
     if compression_plugin:
-        t1 = time.time()
-        compressed_path = compression_plugin.tar_compress(
-            archive_path=os.path.join(dest_dir, COMPRESSED_PLUGIN_TAR_NAME),
-            files=files,
-            recursive=recursive,
-            conf=conf,
-            ref=ref,
-        )
-        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time in plugin")
-        ConanOutput(scope=str(ref or "")).info(f"Compressing {compressed_path}")
-        t1 = time.time()
-        ConanOutput().debug(f"Wrapping {compressed_path} in {name}")
-        with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=0)
-            tgz.add(compressed_path, arcname=os.path.basename(compressed_path), recursive=recursive)
-            tgz.close()
-        ConanOutput().debug(f"{name} wrapped in {time.time() - t1} time")
-        # Only remove wrapped if it is different from the tgz_path
-        if compressed_path != os.path.basename(tgz_path):
-            remove(compressed_path)
-        return tgz_path
+        return _compress_files_with_plugin(files, name, dest_dir, conf, ref, recursive, compression_plugin)
 
+    tgz_path = os.path.join(dest_dir, name)
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     ConanOutput(scope=str(ref or "")).info(f"Compressing {name}")
@@ -311,6 +291,35 @@ def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False, 
     ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path
 
+def _compress_files_with_plugin(files, name, dest_dir, conf, ref, recursive, compression_plugin):
+    t1 = time.time()
+    abs_path_without_extension = os.path.join(dest_dir, COMPRESSED_PLUGIN_TAR_NAME)
+    ConanOutput(scope=str(ref or "")).info(f"Compressing {name} using compression plugin")
+    compressed_path = compression_plugin.tar_compress(
+        archive_path=abs_path_without_extension,
+        files=files,
+        recursive=recursive,
+        conf=conf,
+        ref=ref,
+    )
+    ConanOutput().debug(f"Compressed {compressed_path} in {time.time() - t1} time")
+    # Check if compressed_path == abs_path_without_extension + .* (any extension)
+    path, extension = os.path.splitext(compressed_path)
+    if path != abs_path_without_extension or not extension:
+        raise ConanException("The 'compression.py' plugin returned an unexpected path. Plugin should return the 'archive_path' with an extra extension")
+
+    t1 = time.time()
+    ConanOutput().debug(f"Wrapping {compressed_path} in {name}")
+    tgz_path = os.path.join(dest_dir, name)
+    with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=0)
+        tgz.add(compressed_path, arcname=os.path.basename(compressed_path), recursive=recursive)
+        tgz.close()
+    ConanOutput().debug(f"{name} wrapped in {time.time() - t1} time")
+    # Only remove wrapped if it is different from the tgz_path
+    if compressed_path != os.path.basename(tgz_path):
+        remove(compressed_path)
+    return tgz_path
 
 def _total_size(cache_files):
     total_size = 0

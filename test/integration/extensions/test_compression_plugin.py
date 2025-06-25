@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from conan.internal.util.files import COMPRESSED_PLUGIN_TAR_NAME, tar_extract
+from conan.internal.util.files import COMPRESSED_PLUGIN_TAR_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -29,6 +29,34 @@ def test_compression_plugin_not_valid():
     c.run("cache save 'pkg/*:*'", assert_error=True)
     assert (
         "ERROR: The 'compression.py' plugin does not contain required `tar_extract` or `tar_compress` functions"
+        in c.out
+    )
+
+def test_compression_plugin_returning_invalid_path():
+    """Test an error is raised if the compression plugin does not return expected path"""
+
+    c = TestClient()
+    compression_plugin = textwrap.dedent(
+        """
+        def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
+            return archive_path
+        def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
+            pass
+    """
+    )
+
+    c.save(
+        {
+            os.path.join(
+                c.cache_folder, "extensions", "plugins", "compression.py"
+            ): compression_plugin,
+            "conanfile.py": GenConanfile("pkg", "1.0"),
+        }
+    )
+    c.run("create .")
+    c.run("cache save 'pkg/*:*'", assert_error=True)
+    assert (
+        "ERROR: The 'compression.py' plugin returned an unexpected path. Plugin should return the 'archive_path' with an extra extension"
         in c.out
     )
 
@@ -78,7 +106,6 @@ def test_compression_plugin_correctly_load():
     )
     c.run("create .")
     c.run("cache save 'pkg/*:*'")
-    print(c.out)
     assert f"Compressing {COMPRESSED_PLUGIN_TAR_NAME}.xz using compression plugin (xz)" in c.out
     c.run("remove pkg/* -c")
     c.run("cache restore conan_cache_save.tgz")

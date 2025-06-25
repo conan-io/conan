@@ -265,6 +265,7 @@ def tar_extract(fileobj, destination_dir, compression_plugin=None, conf=None):
     if compression_plugin:
         _tar_extract_with_plugin(fileobj, destination_dir, compression_plugin, conf)
         return
+
     the_tar = tarfile.open(fileobj=fileobj)
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
@@ -284,12 +285,13 @@ def _tar_extract_with_plugin(fileobj, destination_dir, compression_plugin, conf)
         the_tar = tarfile.open(fileobj=fileobj)
         the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
         the_tar.extractall(path=temp_dir)
+        extracted_file = the_tar.getnames()[0]
+        the_tar.close()
         # Check if the tar was compressed with the compression plugin by checking the existence of
         # our constant COMPRESSED_PLUGIN_TAR_NAME (without extension as extension is added by the plugin)
         if list(Path(temp_dir).glob(f"{COMPRESSED_PLUGIN_TAR_NAME}.*")):
             # Get the only extracted file: the plugin tar
-            plugin_tar_path = os.path.join(temp_dir, the_tar.getnames()[0])
-            the_tar.close()
+            plugin_tar_path = os.path.join(temp_dir, extracted_file)
             ConanOutput().debug(f"Unwrapped in {time.time() - t1} time")
             t1 = time.time()
             compression_plugin.tar_extract(archive_path=plugin_tar_path, dest_dir=destination_dir, conf=conf)
