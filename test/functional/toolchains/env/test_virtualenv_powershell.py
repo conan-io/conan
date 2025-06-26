@@ -251,3 +251,19 @@ def test_powershell_quoting(powershell):
     client.save({"conanfile.py": conanfile})
     client.run(f'create . -c tools.env.virtualenv:powershell={powershell}')
     assert "Hello World" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.parametrize("ps", ["powershell.exe", None])
+def test_verbosity_flag(ps):
+    tc = TestClient()
+    ps_arg = f'-c tools.env.virtualenv:powershell={ps}' if ps else ""
+    tc.run("new cmake_lib -d name=pkg -d version=1.0")
+    tc.run(f'create . -tf="" -c tools.build:verbosity=verbose {ps_arg}')
+
+    if ps:
+        assert "/verbosity:Detailed" in tc.out
+        assert "-verbosity:Detailed" not in tc.out
+    else:
+        assert "/verbosity:Detailed" not in tc.out
+        assert "-verbosity:Detailed" in tc.out
