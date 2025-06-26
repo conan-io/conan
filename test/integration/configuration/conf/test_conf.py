@@ -110,6 +110,25 @@ def test_composition_conan_conf(client):
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
 
 
+def test_core_global_conf_not_in_profile(client):
+    client.save_home({"global.conf": "core.upload:retry=1"})
+    profile = textwrap.dedent("""\
+        [conf]
+        tools.build:verbosity=quiet
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+    # also with -cc command line argument
+    client.run("install . -pr=profile -cc core.upload:retry=1")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+
 def test_new_config_file(client):
     conf = textwrap.dedent("""\
         tools.build:verbosity=quiet
@@ -131,7 +150,7 @@ def test_new_config_file(client):
             """)
     save(client.paths.new_config_path, conf)
     client.run("install .", assert_error=True)
-    assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
+    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
 
 
 @patch("conan.__version__", "1.26.0")
@@ -288,10 +307,12 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
+    c.run("install . -c user.some.var=value", assert_error=True)
+    assert "ERROR: User conf 'user.some.var' invalid format, not 'user.org.group:conf'" in c.out
     c.run("install . -c tool.build:verbosity=v", assert_error=True)
-    assert "ERROR: [conf] Either 'tool.build:verbosity' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration" in c.out
 
 
 def test_nonexisting_conf_global_conf():
@@ -299,7 +320,7 @@ def test_nonexisting_conf_global_conf():
     save(c.paths.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration" in c.out
 
 
 def test_global_conf_auto_created():
