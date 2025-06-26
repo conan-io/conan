@@ -45,11 +45,11 @@ class IntegrityChecker:
                                        if not k.startswith("export_source")}
 
         if read_manifest != expected_manifest:
-            output.error("Manifest mismatch", error_type="exception")
-            output.error(f"Folder: {layout.export()}", error_type="exception")
+            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.package()}"]
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"{fname} (manifest: {h1}, file: {h2})", error_type="exception")
+                output_lines.append(f"        {fname} (manifest: {h1}, file: {h2})")
+            output.error("\n".join(output_lines), error_type="exception")
             return True
         output.info("Integrity check: ok")
 
@@ -63,10 +63,10 @@ class IntegrityChecker:
             return True
 
         if read_manifest != expected_manifest:
-            output.error("Manifest mismatch", error_type="exception")
-            output.error(f"Folder: {layout.package()}", error_type="exception")
+            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.package()}"]
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"{fname} (manifest: {h1}, file: {h2})", error_type="exception")
+                output_lines.append(f"        {fname} (manifest: {h1}, file: {h2})")
+            output.error("\n".join(output_lines), error_type="exception")
             return True
         output.info("Integrity check: ok")
