@@ -58,11 +58,8 @@ def test_pkg_sign():
 
 
 def test_pkg_sign_no_verify_function():
-    c = TestClient()
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
-            .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
-            "export/file1.txt": "file1!",
-            "export_sources/file2.txt": "file2!"})
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     signer = textwrap.dedent(r"""
         import os
 
@@ -80,7 +77,54 @@ def test_pkg_sign_no_verify_function():
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
+    c.run("upload pkg/0.1 -r default -c --dry-run")
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature creation: ok" in c.out
     c.run("cache check-integrity pkg/0.1")
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature verification: ok" not in c.out
+    assert "pkg/0.1: Integrity checked: ok" in c.out
+
+
+def test_pkg_sign_no_sign_function():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    signer = textwrap.dedent(r"""
+        import os
+        from conan.api.model.refs import PkgReference
+        from conan.errors import ConanException
+
+        def verify(ref, artifacts_folder, signature_folder, files, output):
+            output.info("Verifying reference")
+            output.info(f"Verifying folder: {artifacts_folder}")
+            signature = os.path.join(signature_folder, "signature.asc")
+
+            # This is to check if the package was signed or not
+            if isinstance(ref, PkgReference):
+                download_file_path = os.path.join(artifacts_folder, "conan_package.tgz")
+            else:
+                download_file_path = os.path.join(artifacts_folder, "conanfile.py")
+
+            if not os.path.isfile(download_file_path) and not os.path.isfile(signature):
+                output.warning("Could not verify unsigned package")
+                return
+
+            if not os.path.isfile(signature):
+                raise ConanException("Missing signature file!")
+
+            contents = open(signature).read()
+            output.info(f"Verifying contents: {contents}")
+            for f in files:
+                output.info(f"Verifying file: {f}")
+                if os.path.isfile(os.path.join(artifacts_folder, f)):
+                    if f not in contents:
+                        raise ConanException(f"File {f} not found in signature contents")
+            output.info("Package signature verification: ok")
+        """)
+    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.run("create .")
+    c.run("upload pkg/0.1 -r default -c --dry-run")
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature creation: ok" not in c.out
+    c.run("cache check-integrity pkg/0.1", assert_error=True)
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: ERROR: Missing signature file!" in c.out
     assert "pkg/0.1: Integrity checked: ok" in c.out
 
 

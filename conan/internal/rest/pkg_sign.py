@@ -16,6 +16,9 @@ class PkgSignaturesPlugin:
             mod, _ = load_python_file(signer)
             try:
                 self._plugin_sign_function = mod.sign
+            except AttributeError:
+                pass
+            try:
                 self._plugin_verify_function = mod.verify
             except AttributeError:
                 pass
