@@ -254,7 +254,7 @@ def test_powershell_quoting(powershell):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_verbosity_flag(ps):
+def test_verbosity_flag():
     tc = TestClient()
     tc.run("new cmake_lib -d name=pkg -d version=1.0")
     tc.run('create . -tf="" -c tools.build:verbosity=verbose '
