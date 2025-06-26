@@ -119,6 +119,18 @@ def test_cache_integrity_missing_package_conaninfo():
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
 
 
+def test_cache_integrity_missing_package_file():
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile().with_package_file("myfile", "mycontents!")})
+    t.run("create . --name pkg --version 1.0")
+    layout = t.created_layout()
+    os.remove(os.path.join(layout.package(), "myfile"))
+
+    t.run("cache check-integrity *", assert_error=True)
+    assert "pkg/1.0#2f2609c8e5c87bf836c3fdaa6096b55d:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: ERROR: \nManifest mismatch" in t.out
+
+
 def test_cache_integrity_export_sources():
     # https://github.com/conan-io/conan/issues/14840
     t = TestClient(default_server_user=True)
