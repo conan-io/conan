@@ -57,6 +57,33 @@ def test_pkg_sign():
     assert "VERIFYING  conan_sources.tgz" in c.out
 
 
+def test_pkg_sign_no_verify_function():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
+            .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
+            "export/file1.txt": "file1!",
+            "export_sources/file2.txt": "file2!"})
+    signer = textwrap.dedent(r"""
+        import os
+
+        def sign(ref, artifacts_folder, signature_folder, output):
+            output.info("Signing reference")
+            output.info(f"Signing folder: {artifacts_folder}")
+            files = []
+            for f in sorted(os.listdir(artifacts_folder)):
+                if os.path.isfile(os.path.join(artifacts_folder, f)):
+                    files.append(f)
+            output.info(f"Signing files: {sorted(files)}")
+            signature = os.path.join(signature_folder, "signature.asc")
+            open(signature, "w").write("\n".join(files))
+            output.info("Package signature creation: ok")
+        """)
+    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.run("create .")
+    c.run("cache check-integrity pkg/0.1")
+    assert "pkg/0.1: Integrity checked: ok" in c.out
+
+
 def test_pkg_sign_check_integrity():
     c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
@@ -65,7 +92,6 @@ def test_pkg_sign_check_integrity():
             "export_sources/file2.txt": "file2!"})
     signer = textwrap.dedent(r"""
         import os
-        from conan.api.output import ConanOutput
         from conan.api.model.refs import PkgReference
         from conan.errors import ConanException
 

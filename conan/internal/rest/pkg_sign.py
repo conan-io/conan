@@ -11,16 +11,14 @@ class PkgSignaturesPlugin:
     def __init__(self, cache, home_folder):
         self._cache = cache
         signer = HomePaths(home_folder).sign_plugin_path
+        self._plugin_sign_function = self._plugin_verify_function = None
         if os.path.isfile(signer):
             mod, _ = load_python_file(signer)
-            # TODO: At the moment it requires both methods sign and verify, but that might be relaxed
-            self._plugin_sign_function = mod.sign
-            self._plugin_verify_function = mod.verify
-        else:
-            self._plugin_sign_function = self._plugin_verify_function = None
-
-    def is_plugin_configured(self):
-        return self._plugin_verify_function is not None or self._plugin_sign_function is not None
+            try:
+                self._plugin_sign_function = mod.sign
+                self._plugin_verify_function = mod.verify
+            except AttributeError:
+                pass
 
     def sign(self, upload_data):
         if self._plugin_sign_function is None:

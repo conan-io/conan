@@ -46,8 +46,6 @@ class IntegrityChecker:
         layout = self._cache.recipe_layout(ref) if is_recipe else self._cache.pkg_layout(ref)
         folder = layout.download_export() if is_recipe else layout.download_package()
         files = os.listdir(folder)
-        if not self._pkg_signatures_plugin.is_plugin_configured():
-            return
         try:
             self._pkg_signatures_plugin.verify(ref, folder, files)
         except ConanException as e:
