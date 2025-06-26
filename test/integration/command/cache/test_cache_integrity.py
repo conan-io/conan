@@ -34,11 +34,11 @@ def test_cache_integrity(use_pkglist):
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
     assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
     assert "pkg4/4.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
 
     t.run("remove pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
     t.run("remove pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
@@ -111,7 +111,7 @@ def test_cache_integrity_missing_package_conaninfo():
     t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
 
     t.run("remove pkg2* -c")
     t.run("cache check-integrity *")
