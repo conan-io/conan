@@ -457,6 +457,10 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+        try:
+            conanfile.conf_info.validate()
+        except ConanException as e:
+            raise ConanException(f"{conanfile}: Error in package_info() method:\n\t{str(e)}")
 
     @staticmethod
     def _call_finalize_method(conanfile, finalize_folder):
