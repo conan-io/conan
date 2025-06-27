@@ -158,7 +158,7 @@ class _PCFilesDeps:
     def _get_lib_flags(self, libdirvars, cpp_info):
         framework_flags = self._get_framework_flags(cpp_info)
         libdirsflags = ['-L"${%s}"' % d for d in libdirvars]
-        system_libs = [f"-l{li}" for li in (cpp_info.libs + cpp_info.system_libs)]
+        system_libs = ["-l%s" % li for li in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)
 
