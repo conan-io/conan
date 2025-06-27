@@ -41,34 +41,29 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-        # Usage: get_name_extension(<input_filepath_var> <output_extension_var>)
-        #   <input_filepath_var>: The name of the variable containing the full file path (e.g., "MY_PATH").
-        #   <output_extension_var>: The name of the variable to store the full extension (including the first dot).
-        function(get_name_extension INPUT_VAR_NAME OUTPUT_EXTENSION_VAR)
-            set(FULL_FILE_PATH "${${INPUT_VAR_NAME}}")
-            string(FIND "${FULL_FILE_PATH}" "." FIRST_DOT_POS)
-            if(FIRST_DOT_POS EQUAL -1)
-                set(EXTENSION "")
-            else()
-                # Extract full extension (from first dot to end)
-                string(SUBSTRING "${FULL_FILE_PATH}" "${FIRST_DOT_POS}" -1 EXTENSION) # -1 means to the end
-            endif()
-            set(${OUTPUT_EXTENSION_VAR} "${EXTENSION}" PARENT_SCOPE)
-        endfunction()
-
        function(conan_package_library_targets libraries package_libdir package_bindir library_type
                 is_host_windows deps_target out_libraries_target config_suffix package_name no_soname_mode)
            set(_out_libraries_target "")
 
            foreach(_LIBRARY_NAME ${libraries})
-               get_name_extension(_LIBRARY_NAME _LIBRARY_EXT)
-               set(_OLD_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-               if(_LIBRARY_EXT)
-                set(CMAKE_FIND_LIBRARY_SUFFIXES ${_LIBRARY_EXT} ${CMAKE_FIND_LIBRARY_SUFFIXES})
+               if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT DEFINED MINGW AND CMAKE_VERSION VERSION_LESS "3.29")
+                   # Backport logic from https://github.com/Kitware/CMake/commit/c6efbd78d86798573654d1a791f76de0e71bd93f
+                   # which is only needed on versions older than 3.29
+                   # this allows finding static library files created by meson
+                   # We are not affected by PATH-derived folders, because we call find_library with NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
+                   set(_original_find_library_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+                   set(_original_find_library_prefixes "${CMAKE_FIND_LIBRARY_PREFIXES}")
+                   set(CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
+                   set(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.lib" ".lib" ".a")
                endif()
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
-                            NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-               set(CMAKE_FIND_LIBRARY_SUFFIXES ${_OLD_CMAKE_FIND_LIBRARY_SUFFIXES})
+                           NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+               if(DEFINED _original_find_library_suffixes)
+                   set(CMAKE_FIND_LIBRARY_SUFFIXES "${_original_find_library_suffixes}")
+                   set(CMAKE_FIND_LIBRARY_PREFIXES "${_original_find_library_prefixes}")
+                   unset(_original_find_library_suffixes)
+                   unset(_original_find_library_prefixes)
+               endif()
                if(CONAN_FOUND_LIBRARY)
                    message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
 
