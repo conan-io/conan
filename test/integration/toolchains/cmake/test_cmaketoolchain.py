@@ -1773,6 +1773,7 @@ def test_cmake_presets_compiler():
     assert cache_variables["CMAKE_C_COMPILER"] == "cl"
     assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
@@ -1804,3 +1805,40 @@ def test_thread_flags(threads, flags):
     assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain
+
+
+def test_msvc_runtime():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "compiler", "build_type")
+                                                      .with_generator("CMakeToolchain")})
+    msvc = "-s os=Windows -s compiler=msvc -s compiler.version=193"
+
+    # the addition of the Debug happens automatically
+    c.run(f"install . {msvc} -s compiler.runtime=dynamic -s build_type=Release")
+    toolchain = c.load("conan_toolchain.cmake")
+    assert ('set(CMAKE_MSVC_RUNTIME_LIBRARY "$<$<CONFIG:Release>:MultiThreadedDLL>'
+            '$<$<CONFIG:Debug>:MultiThreadedDebugDLL>")') in toolchain
+
+    # Explicit installation can overwrite it
+    c.run(f"install . {msvc} -s compiler.runtime=static -s build_type=Debug")
+    toolchain = c.load("conan_toolchain.cmake")
+    assert ('set(CMAKE_MSVC_RUNTIME_LIBRARY "$<$<CONFIG:Release>:MultiThreadedDLL>'
+            '$<$<CONFIG:Debug>:MultiThreadedDebug>")') in toolchain
+
+    # installing Release again with other type, will still respect the previous
+    c.run(f"install . {msvc} -s compiler.runtime=static -s build_type=Release")
+    toolchain = c.load("conan_toolchain.cmake")
+    assert ('set(CMAKE_MSVC_RUNTIME_LIBRARY "$<$<CONFIG:Release>:MultiThreaded>'
+            '$<$<CONFIG:Debug>:MultiThreadedDebug>")') in toolchain
+
+    # A clean initial Debug installation will define only that
+    os.remove(os.path.join(c.current_folder, "conan_toolchain.cmake"))
+    c.run(f"install . {msvc} -s compiler.runtime=static -s build_type=Debug")
+    toolchain = c.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_MSVC_RUNTIME_LIBRARY "$<$<CONFIG:Debug>:MultiThreadedDebug>")' in toolchain
+
+    # installing Release after, will respect the initial value
+    c.run(f"install . {msvc} -s compiler.runtime=dynamic -s build_type=Release")
+    toolchain = c.load("conan_toolchain.cmake")
+    assert ('set(CMAKE_MSVC_RUNTIME_LIBRARY "$<$<CONFIG:Debug>:MultiThreadedDebug>'
+            '$<$<CONFIG:Release>:MultiThreadedDLL>")') in toolchain

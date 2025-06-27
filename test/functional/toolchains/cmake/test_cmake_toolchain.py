@@ -485,7 +485,6 @@ def test_cmake_toolchain_runtime_types():
     # everything works with the default cmake_minimum_required version 3.15 in the template
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("install . -s compiler.runtime=static -s build_type=Debug")
     client.run("build . -s compiler.runtime=static -s build_type=Debug")
 
     vcvars = vcvars_command(version="15", architecture="x64")
@@ -507,7 +506,6 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     assert cmake != cmake2
     client.save({"CMakeLists.txt": cmake2})
 
-    client.run("install . -s compiler.runtime=static -s build_type=Debug")
     client.run("build . -s compiler.runtime=static -s build_type=Debug")
 
     vcvars = vcvars_command(version="15", architecture="x64")
