@@ -1,5 +1,6 @@
 import os
 import platform
+import shutil
 import textwrap
 
 import pytest
@@ -7,7 +8,9 @@ import pytest
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.tools.files import replace_in_file
 
 
 @pytest.fixture
@@ -728,3 +731,79 @@ def test_quiet():
     client.run_command('cmake . -DCMAKE_BUILD_TYPE=Release')
     # Because we used QUIET, not in output
     assert "Target declared 'test::test'" not in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows and MSVC")
+@pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")
+def test_meson_and_cmakedeps_and_static_builds():
+    """
+    Testing when library is built with Meson + MSVC as a static library (lib + name + .a)
+    and consumed using CMakeDeps (and CMakeConfigDeps) or PkgConfigDeps.
+
+    Issues related:
+        - https://github.com/conan-io/conan/issues/11866
+        - https://github.com/mesonbuild/meson/issues/7378
+    """
+    client = TestClient()
+    profile = textwrap.dedent("""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=msvc
+    compiler.version=191
+    compiler.runtime=dynamic
+    build_type=Release
+    """)
+    client.run("new meson_lib -d name=hello -d version=1.0")
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(PackageTest CXX)
+
+    find_package(hello CONFIG REQUIRED)
+
+    add_executable(example src/example.cpp)
+    target_link_libraries(example hello::hello)
+    """)
+    cmake_conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, cmake_layout
+    from conan.tools.build import can_run
+    class pkgTestConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeDeps", "CMakeToolchain"
+
+        def requirements(self):
+            self.requires(self.tested_reference_str)
+
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+
+        def layout(self):
+            cmake_layout(self)
+
+        def test(self):
+            if can_run(self):
+                cmd = os.path.join(self.cpp.build.bindir, "example")
+                self.run(cmd, env="conanrun")
+        """)
+    client.save({
+        "win": profile,
+        "test_package_cmake/conanfile.py": cmake_conanfile,
+        "test_package_cmake/CMakeLists.txt": cmakelists
+    })
+    shutil.copytree(os.path.join(client.current_folder, "test_package", "src"),
+                    os.path.join(client.current_folder, "test_package_cmake", "src"))
+    client.run("create . -pr:a win")  # meson + pkgconfigdeps (test_package) runs OK
+    client.run("test --profile:all=win test_package_cmake hello/1.0")  # meson + CMakeDeps (test_package_cmake) runs OK
+    # Now, let's use the CMakeConfigDeps to demonstrate that it works with/without changing
+    replace_in_file(ConanFileMock(),
+                    os.path.join(client.current_folder, "test_package_cmake", "conanfile.py"),
+                    '"CMakeDeps"',
+                    '"CMakeConfigDeps"')
+    client.run("test --profile:all=win test_package_cmake hello/1.0 "
+               "-c tools.cmake.cmakedeps:new=will_break_next") # meson + CMakeConfigDeps (test_package_cmake) runs OK
