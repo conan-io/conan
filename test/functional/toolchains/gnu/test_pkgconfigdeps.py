@@ -139,7 +139,7 @@ def test_pkgconfigdeps_component_matches_package_name():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows and MSVC")
 @pytest.mark.tool("meson")
 @pytest.mark.tool("ninja")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 def test_pkgconfigdeps_and_libs_with_extension():
     """
     Testing when library is built with Meson + MSVC as a static library (lib + name + .a)
@@ -207,3 +207,17 @@ def test_pkgconfigdeps_and_libs_with_extension():
                     'self.cpp_info.libs = ["libhello.a"]')
     client.run("create . -pr:a win")  # meson + pkgconfigdeps (test_package) runs OK
     client.run("test --profile:all=win test_package_cmake hello/1.0")  # meson + CMakeDeps (test_package_cmake) runs OK
+    # Now, let's use the CMakeConfigDeps to demonstrate that it works with/without changing
+    replace_in_file(ConanFileMock(),
+                    os.path.join(client.current_folder, "test_package_cmake", "conanfile.py"),
+                    '"CMakeDeps"',
+                    '"CMakeConfigDeps"')
+    client.run("test --profile:all=win test_package_cmake hello/1.0 "
+               "-c tools.cmake.cmakedeps:new=will_break_next")
+    replace_in_file(ConanFileMock(),
+                    os.path.join(client.current_folder, "conanfile.py"),
+                    'self.cpp_info.libs = ["libhello.a"]',
+                    'self.cpp_info.libs = ["hello"]')  # Reverting the change
+    client.run("create . -pr:a win")  # meson + pkgconfigdeps (test_package) runs OK
+    client.run("test --profile:all=win test_package_cmake hello/1.0 "
+               "-c tools.cmake.cmakedeps:new=will_break_next")  # meson + CMakeConfigDeps (test_package_cmake) runs OK
