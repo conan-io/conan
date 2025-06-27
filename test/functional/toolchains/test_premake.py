@@ -3,12 +3,13 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.tools import TestClient
 from conan.test.assets.sources import gen_function_cpp
 
-
-@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Premake only installed on Linux CI machines")
+@pytest.mark.skipif(platform.machine() != "x86_64", reason="Premake Legacy generator only supports x86_64 machines")
 @pytest.mark.tool("premake")
-def test_premake(matrix_client):
+def test_premake_legacy(matrix_client):
     c = matrix_client
     conanfile = textwrap.dedent("""
         import os
@@ -72,3 +73,29 @@ def test_premake(matrix_client):
     c.run("build . -s build_type=Debug --build=missing")
     assert "main: Debug!" in c.out
     assert "matrix/1.0: Hello World Debug!" in c.out
+
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
+def test_premake_new_generator():
+    c = TestClient()
+    c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
+    c.run("create lib")
+    c.run("new premake_exe -d name=example -d requires=lib/0.1 -d version=1.0 -o exe")
+    c.run("create exe")
+
+    assert "example/1.0 (test package): RUN: example" in c.out
+    assert "lib/0.1: Hello World Release!" in c.out
+    assert "example/1.0: Hello World Release!" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
+def test_premake_shared_lib():
+    c = TestClient()
+    c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
+    c.run("create lib -o '&:shared=True'")
+    assert "lib/0.1: package(): Packaged 1 '.so' file: liblib.so" in c.out
+    assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
+

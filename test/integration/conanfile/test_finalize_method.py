@@ -364,5 +364,6 @@ class TestRemoteFlows:
         client.run("create dep")
         dep_layout = client.created_layout()
         client.run("upload * -r=default -c --check")
-        assert f"dep/1.0:{dep_layout.reference.package_id}: Integrity checked: ok" in client.out
+        assert f"dep/1.0#{dep_layout.reference.ref.revision}:{dep_layout.reference.package_id}" \
+               f"#{dep_layout.reference.revision}: Integrity check: ok" in client.out
         assert "There are corrupted artifacts" not in client.out

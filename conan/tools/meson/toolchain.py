@@ -9,7 +9,7 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import libcxx_flags, architecture_flag
+from conan.tools.build.flags import architecture_link_flag, libcxx_flags, architecture_flag, threads_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.meson.helpers import get_apple_subsystem
@@ -216,6 +216,10 @@ class MesonToolchain:
         self.extra_defines = []
         #: Architecture flag deduced by Conan and added to ``c_args``, ``cpp_args``, ``c_link_args`` and ``cpp_link_args``
         self.arch_flag = architecture_flag(self._conanfile)  # https://github.com/conan-io/conan/issues/17624
+        #: Architecture link flag deduced by Conan and added to ``c_link_args`` and ``cpp_link_args``
+        self.arch_link_flag = architecture_link_flag(self._conanfile)
+        #: Threads flags deduced by Conan and added to ``c_args``, ``cpp_args``, ``c_link_args`` and ``cpp_link_args``
+        self.threads_flags = threads_flags(self._conanfile)
         #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
@@ -403,11 +407,18 @@ class MesonToolchain:
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
+        flags = []
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
-        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        fobj_arc = ""
+        if enable_arc:
+            fobj_arc = "-fobjc-arc"
+        if enable_arc is False:
+            fobj_arc = "-fno-objc-arc"
+        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', [])) + [fobj_arc]
         self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
-        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
+        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', [])) + [fobj_arc]
         self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
     def _resolve_android_cross_compilation(self):
@@ -444,15 +455,15 @@ class MesonToolchain:
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
-        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags
+        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags + self.threads_flags
         # Apple extra flags from confs (visibilty, bitcode, arc)
         cxxflags += self.apple_extra_flags
         cflags += self.apple_extra_flags
         ld += self.apple_extra_flags
         return {
-            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags,
-            "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags,
-            "ldflags": [self.arch_flag] + ld,
+            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags + self.threads_flags,
+            "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags + self.threads_flags,
+            "ldflags": [self.arch_flag] + [self.arch_link_flag] + ld,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
         }
 
@@ -474,6 +485,7 @@ class MesonToolchain:
         ret = [x.strip() for x in value.split() if x]
         return ret[0] if len(ret) == 1 else ret
 
+    @property
     def _context(self):
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
@@ -483,11 +495,11 @@ class MesonToolchain:
         self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
         # Objective C/C++
-        self.objc_args.extend(self.c_args + extra_flags["defines"])
-        self.objcpp_args.extend(self.cpp_args + extra_flags["defines"])
+        self.objc_args.extend(self.c_args)
+        self.objcpp_args.extend(self.cpp_args)
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
-        self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
-        self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+        self.objc_link_args.extend(self.c_link_args)
+        self.objcpp_link_args.extend(self.cpp_link_args)
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
@@ -502,7 +514,6 @@ class MesonToolchain:
                     raise ConanException("MesonToolchain.subproject_options must be a list of dicts")
                 subproject_options[subproject] = [{k: to_meson_value(v) for k, v in keypair.items()}
                                                   for keypair in listkeypair]
-
         return {
             # https://mesonbuild.com/Machine-files.html#properties
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
@@ -567,7 +578,7 @@ class MesonToolchain:
 
         :return: ``str`` whole Meson context content.
         """
-        context = self._context()
+        context = self._context
         content = Template(self._meson_file_template, trim_blocks=True, lstrip_blocks=True,
                            undefined=StrictUndefined).render(context)
         return content

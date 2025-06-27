@@ -168,6 +168,7 @@ compiler:
         # There is no ABI compatibility guarantee between versions
         version: [ANY]
         libcxx: [null, libstdc++, libstdc++11, libc++]
+        threads: [null, posix, wasm_workers]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23, 26, gnu26]
         cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
 

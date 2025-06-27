@@ -259,6 +259,14 @@ class CacheAPI:
         download_cache = DownloadCache(download_cache_path)
         return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
+    def path_to_ref(self, path):
+        cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        result = cache.path_to_ref(path)
+        if result is None:
+            base, folder = os.path.split(path)
+            result = cache.path_to_ref(base)
+        return result
+
 
 def _resolve_latest_ref(cache, ref):
     if ref.revision is None or ref.revision == "latest":
