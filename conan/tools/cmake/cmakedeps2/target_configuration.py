@@ -78,9 +78,11 @@ class TargetConfigurationTemplate2:
                     dep_comp = dep.cpp_info.components.get(required_comp)
                     if dep_comp is None:
                         # It must be the interface pkgname::pkgname target
-                        assert required_pkg == required_comp, \
-                            (f"{self._conanfile}: Required package '{required_pkg}' != "
-                             f"Required component: {required_comp} for not found component")
+                        if required_pkg != required_comp:
+                            msg = (f"{self._conanfile} recipe cpp_info did .requires to "
+                                   f"'{required_pkg}::{required_comp}' but component "
+                                   f"'{required_comp}' not found in {required_pkg}")
+                            raise ConanException(msg)
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED
