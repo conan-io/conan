@@ -1,8 +1,6 @@
 import re
 import textwrap
 
-import pytest
-
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -85,8 +83,10 @@ def test_cmakedeps_transitive_paths():
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/libb.*/p/binb\"\)", cmake_paths)
     assert not re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH /bina\"", cmake_paths)
-    assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/libb.*/p/libb\" \".*/liba.*/p/liba\"\)", cmake_paths)
-    assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/libb.*/p/includeb\" \".*/liba.*/p/includea\"\)", cmake_paths)
+    assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/libb.*/p/libb\" \".*/liba.*/p/liba\"\)",
+                     cmake_paths)
+    assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/libb.*/p/includeb\" "
+                     r"\".*/liba.*/p/includea\"\)", cmake_paths)
 
 
 def test_cmakedeps_deployer_relative_paths():
@@ -253,7 +253,7 @@ def test_autolink_pragma():
                                                        .with_generator("CMakeDeps")})
     c.run("create . --name=pkg --version=0.1")
     assert "CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary" in c.out
-    c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run(f"create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
     assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
            "The package 'package_info()' must correctly define the (CPS) information" in c.out
 
@@ -271,7 +271,7 @@ def test_consuming_cpp_info_with_components_dependency_from_same_package():
             "test_package/conanfile.py": GenConanfile().with_settings("build_type")
                                                        .with_test("pass")
                                                        .with_generator("CMakeDeps")})
-    c.run("create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run(f"create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
     # it doesn't break
     assert "find_package(pkg)" in c.out
 
@@ -300,12 +300,34 @@ def test_consuming_cpp_info_with_components_dependency_from_other_package():
                                                            .with_test("pass")
                                                            .with_generator("CMakeDeps")})
     c.run("create dep")
-    c.run("create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run(f"create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
     # it doesn't break
     assert "find_package(pkg)" in c.out
 
 
-def test_consuming_cpp_info_transitively_by_requiring_root_component_in_another_component_from_another_package():
+def test_error_incorrect_component():
+    # https://github.com/conan-io/conan/issues/18554
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.requires = ['dep::lib']
+        """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": conanfile,
+            "pkg/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                           .with_generator("CMakeDeps")
+                                                           .with_test("pass")})
+    c.run("create dep")
+    c.run(f"create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}",
+          assert_error=True)
+    assert ("ERROR: Error in generator 'CMakeDeps': pkg/0.1 recipe cpp_info did .requires to "
+            "'dep::lib' but component 'lib' not found in dep") in c.out
+
+
+def test_consuming_cpp_info_transitively_by_requiring_root_component():
     c = TestClient()
     dependent_conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -339,8 +361,9 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component_in_another_
     c.save({"dependent/conanfile.py": dependent_conanfile,
             "main/conanfile.py": conanfile,
             "main/test_package/conanfile.py":test_package})
-    c.run("create ./dependent/ --name=dependent --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
-    c.run("create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run("create ./dependent/ --name=dependent --version=0.1 "
+          f"-c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
 
 
 def test_cmake_find_mode_deprecated():
