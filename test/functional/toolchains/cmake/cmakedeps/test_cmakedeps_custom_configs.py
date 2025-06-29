@@ -157,6 +157,7 @@ class CustomSettingsTest(unittest.TestCase):
 
         cmake = cmake.replace("cmake_minimum_required", """
             set(CMAKE_CONFIGURATION_TYPES Debug MyRelease Release CACHE STRING "Types")
+            set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES CMAKE_CONFIGURATION_TYPES)
 
             cmake_minimum_required""")
         cmake = cmake.replace("add_library", textwrap.dedent("""
