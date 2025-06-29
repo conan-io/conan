@@ -239,7 +239,7 @@ def test_msbuilddeps_consume_meson():
     c.save({"pkga/conanfile.py": pkga,
             "app/conanfile.py": GenConanfile().with_requires("pkga/0.1")
                                               .with_settings("arch", "build_type")})
-    c.run("create pkga")
-    c.run("install app -g MSBuildDeps")
+    c.run("create pkga -s arch=x86_64")
+    c.run("install app -g MSBuildDeps -s arch=x86_64")
     deps = c.load("app/conan_pkga_vars_release_x64.props")
     assert "<ConanpkgaLibraries>libpkga.a;</ConanpkgaLibraries>" in deps
