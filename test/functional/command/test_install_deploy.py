@@ -601,3 +601,21 @@ def test_deploy_relative_paths():
     c.run("install consumer --build=missing --deployer=mydeploy.py")
     data = c.load("consumer/some/sub/folders/generators/pkg-release-data.cmake")
     assert 'set(pkg_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../installed/pkg")' in data
+
+
+@pytest.mark.parametrize("absolute_path", [True, False])
+def test_deploy_output_absolute(absolute_path):
+    # https://github.com/conan-io/conan/issues/18560
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_package_file("myfile.txt", "c"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("create pkg")
+
+    # It is important to use the forward /myout in Windows, this was the breaking input
+    out_path = f"{c.current_folder}/myout" if absolute_path else "myout"
+    c.run("install consumer/conanfile.txt -s arch=x86_64 --deployer=full_deploy -g CMakeDeps "
+          f'-of="{out_path}"')
+    assert c.load("myout/full_deploy/host/pkg/0.1/myfile.txt") == "c"
+    data = c.load("myout/pkg-release-x86_64-data.cmake")
+    assert ('set(pkg_PACKAGE_FOLDER_RELEASE '
+            '"${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/pkg/0.1")') in data
