@@ -894,7 +894,10 @@ class TryCompileBlock(Block):
         """)
 
     def context(self):
-        return {"config": self._conanfile.settings.get_safe("build_type")}
+        # Only for well known CMake configurations, but not for custom ones
+        bt = self._conanfile.settings.get_safe("build_type")
+        config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        return {"config": config}
 
 
 class CompilersBlock(Block):
