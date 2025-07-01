@@ -55,6 +55,13 @@ jobs:
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
 
+  windows_arm64_suite:
+    needs: set_python_versions
+    uses: ./.github/workflows/win-arm64-installer.yml
+    name: Windows arm64 test suite
+    with:
+      python-versions: '["3.11"]' # python versions from 3.11 or above supports win-arm64
+
   code_coverage:
     runs-on: ubuntu-latest
     name: Code coverage
