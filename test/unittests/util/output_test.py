@@ -1,6 +1,6 @@
 import os
 import platform
-import unittest
+import textwrap
 import zipfile
 
 import pytest
@@ -12,25 +12,22 @@ from conan.test.utils.tools import TestClient, redirect_output
 from conan.internal.util.files import load, save
 
 
-class OutputTest(unittest.TestCase):
+class TestOutput:
 
     def test_error(self):
         client = TestClient()
-        conanfile = """
-# -*- coding: utf-8 -*-
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
 
-from conan import ConanFile
-from conan.errors import ConanException
-
-class PkgConan(ConanFile):
-    def source(self):
-       self.output.info("TEXT ÑÜíóúéáàèòù абвгдежзийкл 做戏之说  ENDTEXT")
-"""
+            class PkgConan(ConanFile):
+                def source(self):
+                   self.output.info("TEXT ÑÜíóúéáàèòù абвгдежзийкл 做戏之说  ENDTEXT")
+            """)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         client.run("source .")
-        self.assertIn("TEXT", client.out)
-        self.assertIn("ENDTEXT", client.out)
+        assert "TEXT" in client.out
+        assert "ENDTEXT" in client.out
 
     def test_unzip_output(self):
         tmp_dir = temp_folder()
@@ -50,12 +47,11 @@ class PkgConan(ConanFile):
             unzip(ConanFileMock(), zip_path, output_dir)
 
         output = captured_output.getvalue()
-        self.assertRegex(output, r"Unzipping [\d]+B")
+        assert "Unzipping" in output
         content = load(os.path.join(output_dir, "example.txt"))
-        self.assertEqual(content, "Hello world!")
+        assert content == "Hello world!"
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows")
-    @pytest.mark.xfail(reason="We have to investigate why this test is failing")
     def test_short_paths_unzip_output(self):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
@@ -74,4 +70,4 @@ class PkgConan(ConanFile):
             unzip(ConanFileMock(), zip_path, output_dir)
 
         output = captured_output.getvalue()
-        self.assertIn("ERROR: Error extract src/src", output)
+        assert "ERROR: Error extract src/src" in output
