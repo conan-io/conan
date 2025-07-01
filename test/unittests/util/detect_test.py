@@ -1,9 +1,6 @@
-import unittest
-
 import mock
 from unittest.mock import patch
 import pytest
-from parameterized import parameterized
 
 from conan.internal.api.detect.detect_api import _cc_compiler, detect_suncc_compiler, \
     detect_intel_compiler
@@ -14,14 +11,14 @@ from conan.test.utils.tools import redirect_output
 from conan.test.utils.env import environment_update
 
 
-class DetectTest(unittest.TestCase):
+class TestDetect:
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
         result = detect_defaults_settings()
         result = dict(result)
-        self.assertTrue("arch" not in result)
+        assert "arch" not in result
 
-    @parameterized.expand([
+    @pytest.mark.parametrize("processor,bitness,version,expected_arch", [
         ['powerpc', '64', '7.1.0.0', 'ppc64'],
         ['powerpc', '32', '7.1.0.0', 'ppc32'],
         ['rs6000', None, '4.2.1.0', 'ppc32']
@@ -34,10 +31,10 @@ class DetectTest(unittest.TestCase):
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
             result = detect_defaults_settings()
             result = dict(result)
-            self.assertEqual("AIX", result['os'])
-            self.assertEqual(expected_arch, result['arch'])
+            assert "AIX" == result['os']
+            assert expected_arch == result['arch']
 
-    @parameterized.expand([
+    @pytest.mark.parametrize("machine,expected_arch", [
         ['arm64', 'armv8'],
         ['i386', 'x86'],
         ['i686', 'x86'],
@@ -50,7 +47,7 @@ class DetectTest(unittest.TestCase):
         with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
             result = detect_defaults_settings()
             result = dict(result)
-            self.assertEqual(expected_arch, result['arch'])
+            assert expected_arch == result['arch']
 
     @mock.patch("conan.internal.api.detect.detect_api.detect_clang_compiler",
                 return_value=("clang", Version("9"), "clang"))
@@ -59,7 +56,7 @@ class DetectTest(unittest.TestCase):
         with redirect_output(output):
             with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
                 detect_defaults_settings()
-                self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
+                assert "CC and CXX: clang-9 --gcc-toolchain" in output
 
 
 @pytest.mark.parametrize("version_return,expected_version", [
