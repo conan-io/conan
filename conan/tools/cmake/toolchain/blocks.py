@@ -883,12 +883,23 @@ class TryCompileBlock(Block):
     template = textwrap.dedent("""\
         # Blocks after this one will not be added when running CMake try/checks
 
+        {% if config %}
+        if(NOT DEFINED CMAKE_TRY_COMPILE_CONFIGURATION)  # to allow user command line override
+            set(CMAKE_TRY_COMPILE_CONFIGURATION {{config}})
+        endif()
+        {% endif %}
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(_CMAKE_IN_TRY_COMPILE)
             message(STATUS "Running toolchain IN_TRY_COMPILE")
             return()
         endif()
         """)
+
+    def context(self):
+        # Only for well known CMake configurations, but not for custom ones
+        bt = self._conanfile.settings.get_safe("build_type")
+        config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        return {"config": config}
 
 
 class CompilersBlock(Block):

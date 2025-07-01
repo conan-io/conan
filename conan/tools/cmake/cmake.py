@@ -26,6 +26,11 @@ def _cmake_cmd_line_args(conanfile, generator):
     if "Visual Studio" in generator:
         verbosity = msbuild_verbosity_cmd_line_arg(conanfile)
         if verbosity:
+            # trying to avoid issues with powershell and - : characters preceded by --
+            # -verbosity -> /verbosity
+            # https://github.com/PowerShell/PowerShell/issues/17399
+            if conanfile.conf.get("tools.env.virtualenv:powershell"):
+                verbosity = verbosity.replace('-', '/', 1)
             args.append(verbosity)
 
     return args

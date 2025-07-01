@@ -254,7 +254,7 @@ def relativize_path(path, conanfile, placeholder, normalize=True):
         return path
     try:
         common_path = os.path.commonpath([path, conanfile.generators_folder, base_common_folder])
-        if common_path == base_common_folder:
+        if common_path.replace("\\", "/") == base_common_folder.replace("\\", "/"):
             rel_path = os.path.relpath(path, conanfile.generators_folder)
             new_path = os.path.join(placeholder, rel_path)
             return new_path.replace("\\", "/") if normalize else new_path

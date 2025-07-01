@@ -51,6 +51,7 @@ def test_cross_build():
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+    assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
     client.run("install . --profile:build=windows --profile:host=embedwin")
     toolchain = client.load("conan_toolchain.cmake")
@@ -87,6 +88,7 @@ def test_cross_build_linux_to_macos():
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
+    assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
 
 def test_cross_build_user_toolchain():
