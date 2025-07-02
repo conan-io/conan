@@ -255,12 +255,16 @@ class RemoteManager:
                                            headers=headers)
                 cached_method[pref] = result
                 return result
+            except NotFoundException as e:
+                # Don't store e in the cache, as raising and storing it
+                # would make the memory footprint grow unnecessarily
+                cached_method[pref] = None
+                raise e
             except Exception as e:
-                cached_method[pref] = e
                 raise e
         else:
-            if isinstance(result, Exception):
-                raise result
+            if result is None:
+                raise NotFoundException(pref)
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
