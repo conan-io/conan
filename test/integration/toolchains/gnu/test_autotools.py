@@ -24,5 +24,5 @@ def test_autotools_make_parameters():
 
     client.save({"conanfile.py": conanfile})
     client.run("build .")
-    assert "make --makefile=MyMake test -j4 VERBOSE=1" in client.out
-    assert "make --makefile=OtherMake install" in client.out
+    assert "make -f MyMake test -j4 VERBOSE=1" in client.out
+    assert "make -f OtherMake install" in client.out

@@ -79,7 +79,7 @@ class Autotools(object):
             njobs = build_jobs(self._conanfile)
             if njobs:
                 jobs = "-j{}".format(njobs)
-        str_makefile = f"--makefile={makefile}" if makefile else None
+        str_makefile = f"-f {makefile}" if makefile else None
 
         command = join_arguments([make_program, str_makefile, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
