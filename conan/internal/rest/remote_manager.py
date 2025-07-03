@@ -245,8 +245,21 @@ class RemoteManager:
         try:
             return cached_method[pref]
         except KeyError:
-            result = self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
-            cached_method[pref] = result
+            try:
+                result = self._call_remote(remote, "get_latest_package_reference", pref,
+                                           headers=headers)
+                cached_method[pref] = result
+                return result
+            except Exception as e:
+                # Let's avoid leaking memory by saving all the exception objects,
+                # which translates to a 2x memory increase. Now, it only saves the type and the final
+                # message
+                cached_method[pref] = (type(e), str(e))
+                raise e
+        else:
+            if isinstance(result, tuple) and issubclass(result[0], Exception):
+                # Let's raise it
+                raise result[0](result[1])
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
