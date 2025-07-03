@@ -260,8 +260,6 @@ class RemoteManager:
                 # would make the memory footprint grow unnecessarily
                 cached_method[pref] = None
                 raise e
-            except Exception as e:
-                raise e
         else:
             if result is None:
                 raise NotFoundException(pref)
