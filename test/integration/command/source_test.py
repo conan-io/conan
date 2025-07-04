@@ -9,7 +9,6 @@ import pytest
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
-from conan.internal.util.files import save
 
 
 class SourceTest(unittest.TestCase):
@@ -153,11 +152,11 @@ class ConanLib(ConanFile):
             from conan.tools.files import save, load
 
             class ConanLib(ConanFile):
-                
+
                 def layout(self):
                     self.folders.root = ".."
                     self.folders.source = "src"
-                
+
                 def source(self):
                     self.output.info(f"In the source() method the Source folder is: {self.source_folder}")
                     save(self, "source_file.c", "conent")
@@ -168,9 +167,9 @@ class ConanLib(ConanFile):
             ''')
         client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
-        
+
         client.run("source .")
-        # The build method will fail if source() and build() don't 
+        # The build method will fail if source() and build() don't
         # both use the correct source_folder
         client.run("build .")
         assert "conanfile.py: Calling build()" in client.out  # doesn't fail
@@ -279,7 +278,7 @@ class TestSourceWithoutDefaultProfile:
     def client(self):
         c = TestClient()
         # The ``source()`` should still receive necessary configuration
-        save(c.paths.new_config_path, "tools.files.download:retry=MYCACHE")
+        c.save_home({"global.conf": "tools.files.download:retry=MYCACHE"})
         # Make sure we don't have default profile
         os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         return c
