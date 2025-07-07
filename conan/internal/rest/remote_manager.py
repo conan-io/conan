@@ -38,11 +38,13 @@ class RemoteManager:
     def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
+        remote.invalidate_cache()
         self._call_remote(remote, "upload_recipe", ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
+        remote.invalidate_cache()
         self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote, metadata=None):
@@ -204,12 +206,15 @@ class RemoteManager:
         return packages
 
     def remove_recipe(self, ref, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, prefs, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_packages", prefs)
 
     def remove_all_packages(self, ref, remote):
+        remote.invalidate_cache()
         return self._call_remote(remote, "remove_all_packages", ref)
 
     def authenticate(self, remote, name, password):
@@ -243,21 +248,21 @@ class RemoteManager:
 
         cached_method = remote._caching.setdefault("get_latest_package_reference", {})
         try:
-            return cached_method[pref]
+            result = cached_method[pref]
         except KeyError:
             try:
                 result = self._call_remote(remote, "get_latest_package_reference", pref,
                                            headers=headers)
                 cached_method[pref] = result
                 return result
-            except Exception as e:
+            except NotFoundException as e:
                 # Let's avoid leaking memory by saving all the exception objects,
-                # which translates to a 2x memory increase. Now, it only saves the type and the final
-                # message
+                # which translates to a ~2x memory increase. Now, it only saves the type and the
+                # final message. For now, let's cache only the NotFoundException one.
                 cached_method[pref] = (type(e), str(e))
                 raise e
         else:
-            if isinstance(result, tuple) and issubclass(result[0], Exception):
+            if isinstance(result, tuple) and issubclass(result[0], NotFoundException):
                 # Let's raise it
                 raise result[0](result[1])
             return result
