@@ -109,7 +109,8 @@ class Premake:
         :param msbuild_platform: ``str`` Specify the platform for the internal MSBuild generator (only used by ``MSBuild``).
         """
         if not self._premake_conan_toolchain.exists():
-            raise ConanException("Premake.build() method requires PrmakeToolchain to work properly")
+            raise ConanException("Premake.build() method requires PremakeToolchain to work properly")
+
         if self.action.startswith("vs"):
             msbuild = MSBuild(self._conanfile)
             if msbuild_platform:

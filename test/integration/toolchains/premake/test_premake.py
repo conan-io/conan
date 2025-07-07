@@ -51,7 +51,7 @@ def test_premake_build_without_toolchain():
         "build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic",
         assert_error=True,
     )
-    assert "Premake.build() method requires PrmakeToolchain to work properly" in tc.out
+    assert "Premake.build() method requires PremakeToolchain to work properly" in tc.out
 
 
 def test_premake_build():
