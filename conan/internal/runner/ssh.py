@@ -49,10 +49,13 @@ class SSHRunner:
         if ssh_config and ssh_config.lookup(hostname):
             hostname = ssh_config.lookup(hostname)['hostname']
 
+        # this self.client manages the main ssh connection
         self.client = SSHClient()
         self.client.load_system_host_keys()
         self.client.connect(hostname)
         self.runner_output = RunnerOutput(hostname)
+        # This client manages just the sftp transfers
+        # TODO: Integrate both client calls in one
         self.remote_conn = RemoteConnection(self.client, self.runner_output)
 
 
