@@ -24,7 +24,10 @@ class SSHRunner:
             from paramiko.config import SSHConfig
             from paramiko.client import SSHClient
         except ImportError:
-            raise ConanException("Paramiko is required for SSH runner, try installing it with 'pip install paramiko'")
+            raise ConanException(
+                "Paramiko is required for SSH runner. If conan is installed in a virtual environment, try to install "
+                "the 'paramiko' package, or consider installing conan package with extra requires 'conan[runners]'"
+            )
         self.conan_api = conan_api
         self.command = command
         self.host_profile = host_profile
