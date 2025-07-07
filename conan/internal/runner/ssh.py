@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import Iterable
+import fnmatch
 import pathlib
 import tempfile
 
@@ -8,6 +10,8 @@ from conan.errors import ConanException
 import os
 from io import BytesIO
 import sys
+
+from conan.internal.runner.output import RunnerOutput
 
 def ssh_info(msg, error=False):
     fg=Color.BRIGHT_MAGENTA
@@ -48,6 +52,8 @@ class SSHRunner:
         self.client = SSHClient()
         self.client.load_system_host_keys()
         self.client.connect(hostname)
+        self.runner_output = RunnerOutput(hostname)
+        self.remote_conn = RemoteConnection(self.client, self.runner_output)
 
 
     def run(self, use_cache=True):
@@ -138,14 +144,7 @@ class SSHRunner:
         ssh_info(f"Expected remote conan command: {conan_cmd}")
 
         # Check if remote Conan executable exists, otherwise invoke pip inside venv
-        sftp = self.client.open_sftp()
-        try:
-            sftp.stat(conan_cmd)
-            has_remote_conan = True
-        except FileNotFoundError:
-            has_remote_conan = False
-        finally:
-            sftp.close()
+        has_remote_conan = self.remote_conn.check_file_exists(conan_cmd)
 
         if not has_remote_conan:
             _, _stdout, _stderr = self.client.exec_command(f"{python_command} -m venv {conan_venv}")
@@ -183,26 +182,15 @@ class SSHRunner:
         _, _stdout, _stderr = self.client.exec_command(f"{self.remote_conan} config home")
         ssh_info(f"Remote conan config home returned: {_stdout.read().decode().strip()}")
         _, _stdout, _stderr = self.client.exec_command(f"{self.remote_conan} profile detect --force")
-        self._copy_profiles()
+        self._sync_conan_config()
 
-
-    def _copy_profiles(self):
-        sftp = self.client.open_sftp()
-
-        # TODO: very questionable choices here
-        try:
-            profiles = {
-                self.args.profile_host[0]: self.host_profile.dumps(),
-                self.args.profile_build[0]: self.build_profile.dumps()
-            }
-
-            for name, contents in profiles.items():
-                dest_filename = self.remote_conan_home + f"/profiles/{name}"
-                sftp.putfo(BytesIO(contents.encode()), dest_filename)
-        except:
-            raise ConanException("Unable to copy profiles to remote")
-        finally:
-            sftp.close()
+    def _sync_conan_config(self):
+        # Transfer conan config to remote
+        self.remote_conn.put_dir(
+            self.conan_api.config.home(),
+            self.remote_conan_home,
+            exclude_patterns=["p", ".conan.db", "*.pyc", "__pycache__", ".DS_Store", ".git"]
+        )
 
     def copy_working_conanfile_path(self):
         resolved_path = Path(self.args.path).resolve()
@@ -220,6 +208,7 @@ class SSHRunner:
         self.remote_create_dir = _stdout.read().decode().strip().replace("\\", '/')
 
         # Copy current folder to destination using sftp
+        # self.remote_conn.put_dir(resolved_path.as_posix(), self.remote_create_dir)
         _Path = pathlib.PureWindowsPath if self.remote_is_windows else pathlib.PurePath
         sftp = self.client.open_sftp()
         for root, dirs, files in os.walk(resolved_path.as_posix()):
@@ -265,8 +254,67 @@ class SSHRunner:
         if stdout.channel.recv_exit_status() != 0:
             raise ConanException("Unable to save remote conan cache state")
 
-        sftp = self.client.open_sftp()
         with tempfile.TemporaryDirectory() as tmp:
             local_cache_tgz = os.path.join(tmp, 'cache.tgz')
-            sftp.get(conan_cache_tgz, local_cache_tgz)
-            package_list = self.conan_api.cache.restore(local_cache_tgz)
+            self.remote_conn.get(conan_cache_tgz, local_cache_tgz)
+            self.conan_api.cache.restore(local_cache_tgz)
+
+
+class RemoteConnection:
+    def __init__(self, client, runner_output: RunnerOutput):
+        from paramiko.client import SSHClient
+        self.client: SSHClient = client
+        self.runner_output = runner_output
+
+    def put(self, src: str, dst: str) -> None:
+        try:
+            sftp = self.client.open_sftp()
+            sftp.put(src, dst)
+            sftp.close()
+        except IOError as e:
+            self.runner_output.error(f"Unable to copy {src} to {dst}:\n{e}")
+
+    def put_dir(self, src: str, dst: str, exclude_patterns: Iterable[str] = []) -> None:
+        source_folder = Path(src)
+        destination_folder = Path(dst)
+        for item in source_folder.iterdir():
+            dest_item = (destination_folder / item.name).as_posix()
+            # Check if item matches any exclude pattern
+            if any(fnmatch.fnmatch(item.name, pattern) for pattern in exclude_patterns):
+                continue
+            if item.is_file():
+                self.runner_output.verbose(f"Copying file {item.as_posix()} to {dest_item}")
+                self.put(item.as_posix(), dest_item)
+            elif item.is_dir():
+                self.runner_output.verbose(f"Copying directory {item.as_posix()} to {dest_item}")
+                self.mkdir(dest_item, ignore_existing=True)
+                self.put_dir(item.as_posix(), dest_item, exclude_patterns)
+
+    def get(self, src: str, dst: str) -> None:
+        try:
+            sftp = self.client.open_sftp()
+            sftp.get(src, dst)
+            sftp.close()
+        except IOError as e:
+            self.runner_output.error(f"Unable to copy from remote {src} to {dst}:\n{e}")
+
+    def mkdir(self, folder: str, ignore_existing=False) -> None:
+        sftp = self.client.open_sftp()
+        try:
+            sftp.mkdir(folder)
+        except IOError:
+            if ignore_existing:
+                pass
+            else:
+                raise
+        finally:
+            sftp.close()
+
+    def check_file_exists(self, file: str) -> bool:
+        try:
+            sftp = self.client.open_sftp()
+            sftp.stat(file)
+            sftp.close()
+            return True
+        except FileNotFoundError:
+            return False
