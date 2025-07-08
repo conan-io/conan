@@ -44,7 +44,7 @@ graph_info_html = r"""
                     <label for="show_package_type">Show package type</label>
                 </div>
                  <div>
-                    <input type="search" placeholder="Search packages..." oninput="searchPackages(this)">
+                    <input type="search" placeholder="Search packages..." oninput="searchPackages(this)" onkeydown="onSearchKeyDown(event)">
                 </div>
                  <div>
                     <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
@@ -64,6 +64,7 @@ graph_info_html = r"""
             let hide_build = false;
             let hide_test = false;
             let search_pkgs = null;
+            let focus_search = false;
             let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
@@ -135,6 +136,9 @@ graph_info_html = r"""
                         if (patterns.some(pattern => label.match(pattern))) {
                             borderWidth = 3;
                             borderColor = "Magenta";
+                            if (focus_search) {
+                                focus_search = node_id;
+                            }
                         }
                     }
                     if (node.test) {
@@ -311,7 +315,11 @@ graph_info_html = r"""
                 data = define_data();
                 network.setData(data);
                 network.redraw();
-                network.moveTo({position: viewPos, scale: scale});
+                if (focus_search) {
+                    network.focus(focus_search, {animation: true, locked: false});
+                } else {
+                    network.moveTo({position: viewPos, scale: scale});
+                }
             }
             function switchBuild() {
                 hide_build = !hide_build;
@@ -325,13 +333,28 @@ graph_info_html = r"""
                 collapse_packages = !collapse_packages;
                 draw();
             }
+            const debounce = (func, delay) => {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            };
+            const debouncedDraw = debounce(draw, 300);
             function searchPackages(e) {
                 search_pkgs = e.value;
-                draw();
+                debouncedDraw();
+            }
+            function onSearchKeyDown(event) {
+                if (event.key === "Enter") {
+                    focus_search = true;
+                    debouncedDraw();
+                    focus_search = false;
+                }
             }
             function excludePackages(e) {
                 excluded_pkgs = e.value;
-                draw();
+                debouncedDraw();
             }
             function showPackageType(e) {
                 show_package_type = !show_package_type;
