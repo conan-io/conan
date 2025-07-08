@@ -84,9 +84,9 @@ class Autotools(object):
         command = join_arguments([make_program, str_makefile, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def install(self, args=None, target="install", makefile=None):
+    def install(self, args=None, target=None, makefile=None):
         """
-        This is just an "alias" of ``self.make(target="install")``
+        This is just an "alias" of ``self.make(target="install")`` or ``self.make(target="install-strip")``
 
         :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
                      ``make`` call. By default an argument ``DESTDIR=unix_path(self.package_folder)``
@@ -95,6 +95,11 @@ class Autotools(object):
         :param target: (Optional, Defaulted to ``None``): Choose which target to install.
         :param makefile: (Optional, Defaulted to ``None``): Allow specifying a custom makefile to use instead of default "Makefile"
         """
+        if target is None:
+            target = "install"
+            do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+            if do_strip:
+                target += "-strip"
         args = args if args else []
         str_args = " ".join(args)
         if "DESTDIR=" not in str_args:
