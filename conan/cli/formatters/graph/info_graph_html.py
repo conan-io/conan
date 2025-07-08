@@ -315,10 +315,10 @@ graph_info_html = r"""
                 data = define_data();
                 network.setData(data);
                 network.redraw();
-                if (focus_search) {
+                network.moveTo({position: viewPos, scale: scale});
+                // If we have found a package to focus, we need to move the view
+                if (typeof focus_search === "string") {
                     network.focus(focus_search, {animation: true, locked: false});
-                } else {
-                    network.moveTo({position: viewPos, scale: scale});
                 }
             }
             function switchBuild() {
@@ -348,7 +348,7 @@ graph_info_html = r"""
             function onSearchKeyDown(event) {
                 if (event.key === "Enter") {
                     focus_search = true;
-                    debouncedDraw();
+                    draw();
                     focus_search = false;
                 }
             }
