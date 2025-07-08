@@ -76,6 +76,10 @@ def print_graph_basic(graph):
         output.info("Overrides", Color.BRIGHT_YELLOW)
         for req, override_info in overrides.serialize().items():
             output.info("    {}: {}".format(req, override_info), Color.BRIGHT_CYAN)
+    if overrides._useless:
+        msg = "  " + "  ".join(f"{ref} -> {reqs}\n" for ref, reqs in overrides._useless.items())
+        output.warning(f"The following overrides have no effect in the graph:\n{msg}",
+                       warn_tag="risk")
 
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)

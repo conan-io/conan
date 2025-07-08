@@ -40,3 +40,8 @@ class TestRequireOverride:
         c.assert_listed_require({"lib/1.0+xyz": "Cache",
                                  "pkg/1.0": "Cache"})
 
+    def test_discarded_override(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("lib").with_requirement("pkg/1.0", override=True)})
+        tc.run("graph info .")
+        assert "The following overrides have no effect in the graph" in tc.out

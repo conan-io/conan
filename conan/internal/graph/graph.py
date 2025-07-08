@@ -319,6 +319,7 @@ class Edge:
 class Overrides:
     def __init__(self):
         self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
+        self._useless = {}  # {ref: {require_ref1, require_ref2}}  # overrides that have no effect
 
     def __bool__(self):
         return bool(self._overrides)
@@ -329,9 +330,11 @@ class Overrides:
     @staticmethod
     def create(nodes):
         overrides = {}
+        useless = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
                 if r.override and not r.overriden_ref:  # overrides are not real graph edges
+                    useless.setdefault(n.ref, set()).add(r.ref)
                     continue
                 if r.overriden_ref:
                     overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
@@ -344,6 +347,7 @@ class Overrides:
         for require, override_info in overrides.items():
             if len(override_info) != 1 or None not in override_info:
                 result._overrides[require] = override_info
+        result._useless = useless
         return result
 
     def get(self, require):
