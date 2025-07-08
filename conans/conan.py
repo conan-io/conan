@@ -1,5 +1,6 @@
 import sys
-
+import multiprocessing
+multiprocessing.freeze_support()
 from conan.cli.cli import main
 
 
