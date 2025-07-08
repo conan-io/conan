@@ -71,6 +71,8 @@ class TestDetect:
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
     ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14", "14"],
+    ["cc.exe 14.2", "14.2"],
+    ["cc1 14.2", "14.2"],
 ])
 @patch("conan.internal.api.detect.detect_api.detect_runner")
 def test_detect_cc_versioning(detect_runner_mock, version_return, expected_version):
