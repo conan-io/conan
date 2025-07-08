@@ -1,6 +1,5 @@
 import os
 import tarfile
-import unittest
 import zipfile
 
 from conan.internal.api.uploader import gzopen_without_timestamps
@@ -15,7 +14,7 @@ from conan.internal.util.files import chdir, save
 from conan.internal.util.files import rmdir
 
 
-class ZipExtractPlainTest(unittest.TestCase):
+class TestZipExtractPlain:
 
     def _zipdir(self, path, zipfilename, folder_entry=None):
         with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -52,23 +51,23 @@ class ZipExtractPlainTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=False)
-        self.assertNotIn("ERROR: Error extract", output)
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "folder",
-                                                    "file2")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file3")))
+        assert "ERROR: Error extract" not in output
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "folder",
+                                           "file2"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file3"))
 
         # Extract without the subfolder
         extract_folder = temp_folder()
         output = RedirectedTestOutput()
         with redirect_output(output):
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
-        self.assertNotIn("ERROR: Error extract", output)
-        self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "file3")))
+        assert "ERROR: Error extract" not in output
+        assert not os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3"))
+        assert os.path.exists(os.path.join(extract_folder, "file1"))
+        assert os.path.exists(os.path.join(extract_folder, "folder", "file2"))
+        assert os.path.exists(os.path.join(extract_folder, "file3"))
 
     def test_invalid_flat(self):
         tmp_folder = temp_folder()
@@ -86,9 +85,11 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "The zip file contains more than 1 folder "
-                                                         "in the root"):
+        try:
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
+            assert False, "Expected ConanException"
+        except ConanException as e:
+            assert "The zip file contains more than 1 folder in the root" in str(e)
 
     def test_invalid_flat_single_file(self):
         tmp_folder = temp_folder()
@@ -101,11 +102,14 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "The zip file contains a file in the root"):
+        try:
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
+            assert False, "Expected ConanException"
+        except ConanException as e:
+            assert "The zip file contains a file in the root" in str(e)
 
 
-class TarExtractPlainTest(unittest.TestCase):
+class TestTarExtractPlain:
 
     def _compress_folder(self, folder, tgz_path, folder_entry=None):
         # Create a tar.gz file with the files in the folder and an additional TarInfo entry
@@ -186,19 +190,19 @@ class TarExtractPlainTest(unittest.TestCase):
         # Tgz unzipped regularly
         extract_folder = temp_folder()
         untargz(tgz_file, destination=extract_folder, strip_root=False)
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "folder",
-                                                    "file2")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file3")))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "folder",
+                                           "file2"))
+        assert os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file3"))
 
         # Extract without the subfolder
         extract_folder = temp_folder()
         untargz(tgz_file, destination=extract_folder, strip_root=True)
-        self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "file3")))
+        assert not os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3"))
+        assert os.path.exists(os.path.join(extract_folder, "file1"))
+        assert os.path.exists(os.path.join(extract_folder, "folder", "file2"))
+        assert os.path.exists(os.path.join(extract_folder, "file3"))
 
     def test_plain_tgz_common_base(self):
 
@@ -221,10 +225,10 @@ class TarExtractPlainTest(unittest.TestCase):
         # Tgz unzipped regularly
         extract_folder = temp_folder()
         untargz(tgz_file, destination=extract_folder, strip_root=True)
-        self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file1")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
-        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file3")))
+        assert not os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3"))
+        assert os.path.exists(os.path.join(extract_folder, "folder", "file1"))
+        assert os.path.exists(os.path.join(extract_folder, "folder", "file2"))
+        assert os.path.exists(os.path.join(extract_folder, "folder", "file3"))
 
     def test_invalid_flat(self):
         tmp_folder = temp_folder()
@@ -241,9 +245,11 @@ class TarExtractPlainTest(unittest.TestCase):
         self._compress_folder(tmp_folder, tgz_file)
 
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "The tgz file contains more than 1 folder "
-                                                         "in the root"):
+        try:
             untargz(tgz_file, destination=extract_folder, strip_root=True)
+            assert False, "Expected ConanException"
+        except ConanException as e:
+            assert "The tgz file contains more than 1 folder in the root" in str(e)
 
     def test_invalid_flat_single_file(self):
         tmp_folder = temp_folder()
@@ -256,8 +262,11 @@ class TarExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "Can't untar a tgz containing files in the root with strip_root enabled"):
+        try:
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
+            assert False, "Expected ConanException"
+        except ConanException as e:
+            assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
 
     def test_invalid_flat_multiple_file(self):
         tmp_folder = temp_folder()
@@ -271,8 +280,11 @@ class TarExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with self.assertRaisesRegex(ConanException, "Can't untar a tgz containing files in the root with strip_root enabled"):
+        try:
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
+            assert False, "Expected ConanException"
+        except ConanException as e:
+            assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
 
 
 def _compress_root_folder(folder, tgz_path, root_folder_name="root"):

@@ -411,10 +411,12 @@ def test_makedeps_tool_requires():
     assert "CONAN_NAME_OTHER" not in make_content
 
 
-@pytest.mark.xfail(platform.system() == "Windows", reason="Test uses Unix-style paths not compatible with Windows filesystem.")
 @pytest.mark.parametrize("pattern, result, expected",
                          [("libs = []", False, 'SYSROOT'),
-                          ("sysroot = ['/foo/bar/sysroot']", True, 'CONAN_SYSROOT_PACKAGE = /foo/bar/sysroot')])
+                          ("sysroot = ['/foo/bar/sysroot']", True, 'CONAN_SYSROOT_PACKAGE = /foo/bar/sysroot')
+                          if platform.system() != "Windows" else
+                          ("sysroot = ['C:/my_sysroot']", True, 'CONAN_SYSROOT_PACKAGE = C:/my_sysroot')])
+
 def test_makefile_sysroot(pattern, result, expected):
     """
     The MakeDeps should not enforce sysroot in case not defined

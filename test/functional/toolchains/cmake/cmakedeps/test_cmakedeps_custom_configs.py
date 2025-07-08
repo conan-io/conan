@@ -189,6 +189,9 @@ class CustomSettingsTest(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
+            toolchain = self.client.load("conan_toolchain.cmake")
+            # As it is a custom configuration, the TRY_COMPILE_CONFIFURATION not defined
+            assert "CMAKE_TRY_COMPILE_CONFIGURATION" not in toolchain
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 

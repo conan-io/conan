@@ -2,7 +2,6 @@ import json
 import textwrap
 
 from conan.test.utils.tools import TestClient, GenConanfile
-from conan.internal.util.files import save
 
 
 class TestCompatibleIDsTest:
@@ -137,8 +136,8 @@ class TestCompatibleIDsTest:
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.paths.new_config_path,
-             "core.package_id:default_unknown_mode=recipe_revision_mode")
+        client.save_home({"global.conf":
+                              "core.package_id:default_unknown_mode=recipe_revision_mode"})
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8

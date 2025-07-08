@@ -38,13 +38,11 @@ class RemoteManager:
     def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
-        remote.invalidate_cache()
         self._call_remote(remote, "upload_recipe", ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
-        remote.invalidate_cache()
         self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote, metadata=None):
@@ -206,15 +204,12 @@ class RemoteManager:
         return packages
 
     def remove_recipe(self, ref, remote):
-        remote.invalidate_cache()
         return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, prefs, remote):
-        remote.invalidate_cache()
         return self._call_remote(remote, "remove_packages", prefs)
 
     def remove_all_packages(self, ref, remote):
-        remote.invalidate_cache()
         return self._call_remote(remote, "remove_all_packages", ref)
 
     def authenticate(self, remote, name, password):
@@ -248,19 +243,10 @@ class RemoteManager:
 
         cached_method = remote._caching.setdefault("get_latest_package_reference", {})
         try:
-            result = cached_method[pref]
+            return cached_method[pref]
         except KeyError:
-            try:
-                result = self._call_remote(remote, "get_latest_package_reference", pref,
-                                           headers=headers)
-                cached_method[pref] = result
-                return result
-            except Exception as e:
-                cached_method[pref] = e
-                raise e
-        else:
-            if isinstance(result, Exception):
-                raise result
+            result = self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+            cached_method[pref] = result
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:

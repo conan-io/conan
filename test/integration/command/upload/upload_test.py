@@ -177,8 +177,13 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
-        self.assertIn("ERROR:     'include/hello.h'", client.out)
-        self.assertIn("ERROR:     'added.txt'", client.out)
+        self.assertIn("hello0/1.2.1@frodo/stable#3afd661184b94bdac7fb2057e7bd9baa"
+                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                      "#e70e86439dec07a0d5d3414648b0b16c: ERROR", client.out)
+        self.assertIn("include/hello.h (manifest: d41d8cd98f00b204e9800998ecf8427e, file: None)",
+                      client.out)
+        self.assertIn("added.txt (manifest: None, file: d41d8cd98f00b204e9800998ecf8427e)",
+                      client.out)
         self.assertIn("ERROR: There are corrupted artifacts, check the error logs", client.out)
 
     @pytest.mark.artifactory_ready

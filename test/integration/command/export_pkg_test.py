@@ -3,7 +3,6 @@ import os
 import re
 
 import textwrap
-import unittest
 from textwrap import dedent
 
 from conan.internal.paths import CONANFILE
@@ -11,7 +10,7 @@ from conan.test.utils.tools import TestClient, GenConanfile
 from conan.internal.util.files import load
 
 
-class ExportPkgTest(unittest.TestCase):
+class TestExportPkg:
 
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
@@ -34,22 +33,22 @@ class ExportPkgTest(unittest.TestCase):
         client.run("build pkga -bf=build")
         client.run("export-pkg pkga ")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        self.assertIn(f"conanfile.py (pkga/0.1): Package '{package_id}' created", client.out)
+        assert f"conanfile.py (pkga/0.1): Package '{package_id}' created" in client.out
 
         # we can export-pkg without the dependencies binaries if we need to optimize
         client.run("remove pkgc*:* -c")
         client.run("remove pkgb*:* -c")
         client.run("export-pkg pkga --skip-binaries")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        self.assertIn(f"conanfile.py (pkga/0.1): Package '{package_id}' created", client.out)
+        assert f"conanfile.py (pkga/0.1): Package '{package_id}' created" in client.out
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
-        self.assertIn("conanfile.py (hello/0.1@lasote/stable): package(): "
-                      "WARN: No files in this package!", client.out)
+        assert ("conanfile.py (hello/0.1@lasote/stable): package(): "
+                "WARN: No files in this package!") in client.out
 
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
@@ -65,19 +64,19 @@ class ExportPkgTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export-pkg .")
         client.run("list hello/0.1:*")
-        self.assertIn("optionOne: True", client.out)
-        self.assertNotIn("optionOne: False", client.out)
-        self.assertNotIn("optionOne: 123", client.out)
+        assert "optionOne: True" in client.out
+        assert "optionOne: False" not in client.out
+        assert "optionOne: 123" not in client.out
         client.run("export-pkg . -o optionOne=False")
         client.run("list hello/0.1:*")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        self.assertNotIn("optionOne: 123", client.out)
+        assert "optionOne: True" in client.out
+        assert "optionOne: False" in client.out
+        assert "optionOne: 123" not in client.out
         client.run("export-pkg . -o hello/*:optionOne=123")
         client.run("list hello/0.1:*")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        self.assertIn("optionOne: 123", client.out)
+        assert "optionOne: True" in client.out
+        assert "optionOne: False" in client.out
+        assert "optionOne: 123" in client.out
 
     def test_profile_environment(self):
         # https://github.com/conan-io/conan/issues/4832
@@ -100,26 +99,25 @@ class ExportPkgTest(unittest.TestCase):
                      "myprofile": profile})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    " -pr=myprofile")
-        self.assertIn("conanfile.py (hello/0.1@lasote/stable): ENV-VALUE: MYCUSTOMVALUE!!!",
-                      client.out)
+        assert "conanfile.py (hello/0.1@lasote/stable): ENV-VALUE: MYCUSTOMVALUE!!!" in client.out
 
     def test_build_folders(self):
         client = TestClient()
-        conanfile = """
-import os
-from conan import ConanFile
-from conan.tools.files import save, copy
-class TestConan(ConanFile):
-    name = "hello"
-    version = "0.1"
-    settings = "os"
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                name = "hello"
+                version = "0.1"
+                settings = "os"
 
-    def package(self):
-        copy(self, "*.h", os.path.join(self.source_folder, "include"),
-             os.path.join(self.package_folder, "inc"))
-        copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
-             os.path.join(self.package_folder, "lib"))
-"""
+                def package(self):
+                    copy(self, "*.h", os.path.join(self.source_folder, "include"),
+                         os.path.join(self.package_folder, "inc"))
+                    copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
+                         os.path.join(self.package_folder, "lib"))
+            """)
         client.save({CONANFILE: conanfile,
                      "include/header.h": "//Windows header",
                      "include/header.txt": "",
@@ -131,26 +129,26 @@ class TestConan(ConanFile):
         assert "copy(pattern=*.lib) copied 1 files" in client.out
         package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
-        self.assertEqual(os.listdir(inc), ["header.h"])
-        self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
+        assert os.listdir(inc) == ["header.h"]
+        assert load(os.path.join(inc, "header.h")) == "//Windows header"
         lib = os.path.join(package_folder, "lib")
-        self.assertEqual(os.listdir(lib), ["hello.lib"])
-        self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
+        assert os.listdir(lib) == ["hello.lib"]
+        assert load(os.path.join(lib, "hello.lib")) == "My Lib"
 
     def test_default_source_folder(self):
         client = TestClient()
-        conanfile = """
-import os
-from conan import ConanFile
-from conan.tools.files import copy
-class TestConan(ConanFile):
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
 
-    def package(self):
-        copy(self, "*.h", os.path.join(self.source_folder, "src"),
-             os.path.join(self.package_folder, "include"))
-        copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"),
-             keep_path=False)
-"""
+                def package(self):
+                    copy(self, "*.h", os.path.join(self.source_folder, "src"),
+                         os.path.join(self.package_folder, "include"))
+                    copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"),
+                         keep_path=False)
+            """)
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
@@ -159,32 +157,32 @@ class TestConan(ConanFile):
 
         package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
-        self.assertTrue(os.path.exists(header))
+        assert os.path.exists(header)
 
         hello_path = os.path.join(package_folder, "lib", "hello.lib")
-        self.assertTrue(os.path.exists(hello_path))
+        assert os.path.exists(hello_path)
 
     def test_build_source_folders(self):
         client = TestClient()
-        conanfile = """
-import os
-from conan import ConanFile
-from conan.tools.files import copy
-class TestConan(ConanFile):
-    settings = "os"
-    name = "hello"
-    version = "0.1"
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                settings = "os"
+                name = "hello"
+                version = "0.1"
 
-    def layout(self):
-        self.folders.build = "build"
-        self.folders.source = "src"
+                def layout(self):
+                    self.folders.build = "build"
+                    self.folders.source = "src"
 
-    def package(self):
-        copy(self, "*.h", os.path.join(self.source_folder, "include"),
-             os.path.join(self.package_folder, "inc"))
-        copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
-             os.path.join(self.package_folder, "lib"))
-"""
+                def package(self):
+                    copy(self, "*.h", os.path.join(self.source_folder, "include"),
+                         os.path.join(self.package_folder, "inc"))
+                    copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
+                         os.path.join(self.package_folder, "lib"))
+            """)
         client.save({CONANFILE: conanfile,
                      "src/include/header.h": "//Windows header",
                      "src/include/header.txt": "",
@@ -195,52 +193,52 @@ class TestConan(ConanFile):
 
         package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
-        self.assertEqual(os.listdir(inc), ["header.h"])
-        self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
+        assert os.listdir(inc) == ["header.h"]
+        assert load(os.path.join(inc, "header.h")) == "//Windows header"
         lib = os.path.join(package_folder, "lib")
-        self.assertEqual(os.listdir(lib), ["hello.lib"])
-        self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
+        assert os.listdir(lib) == ["hello.lib"]
+        assert load(os.path.join(lib, "hello.lib")) == "My Lib"
 
     def test_partial_references(self):
         client = TestClient()
-        conanfile = """
-from conan import ConanFile
-from conan.tools.files import copy
-class TestConan(ConanFile):
-    name = "hello"
-    version = "0.1"
-    settings = "os"
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                name = "hello"
+                version = "0.1"
+                settings = "os"
 
-    def package(self):
-        copy(self, "*", self.source_folder, self.package_folder)
-"""
+                def package(self):
+                    copy(self, "*", self.source_folder, self.package_folder)
+            """)
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --user=conan --channel=stable")
-        self.assertIn("conanfile.py (hello/0.1@conan/stable): package(): "
-                      "Packaged 1 '.txt' file: file.txt", client.out)
+        assert ("conanfile.py (hello/0.1@conan/stable): package(): "
+                "Packaged 1 '.txt' file: file.txt") in client.out
 
         # Specify different name or version is not working
         client.run("export-pkg . --name=lib", assert_error=True)
-        self.assertIn("ERROR: Package recipe with name lib!=hello", client.out)
+        assert "ERROR: Package recipe with name lib!=hello" in client.out
 
         client.run("export-pkg . --version=1.1", assert_error=True)
-        self.assertIn("ERROR: Package recipe with version 1.1!=0.1", client.out)
+        assert "ERROR: Package recipe with version 1.1!=0.1" in client.out
 
-        conanfile = """
-from conan import ConanFile
-from conan.tools.files import copy
-class TestConan(ConanFile):
-    settings = "os"
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                settings = "os"
 
-    def package(self):
-        copy(self, "*", self.source_folder, self.package_folder)
-"""
+                def package(self):
+                    copy(self, "*", self.source_folder, self.package_folder)
+            """)
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --name=anyname --version=1.222 --user=conan --channel=stable")
-        self.assertIn("conanfile.py (anyname/1.222@conan/stable): package(): "
-                      "Packaged 1 '.txt' file: file.txt", client.out)
+        assert ("conanfile.py (anyname/1.222@conan/stable): package(): "
+                "Packaged 1 '.txt' file: file.txt") in client.out
 
     def test_with_deps(self):
         client = TestClient()
@@ -265,20 +263,16 @@ class TestConan(ConanFile):
         client.run("export-pkg . --name=hello1 --version=0.1 --user=lasote --channel=stable %s"
                    % settings)
 
-        # consumer
-        consumer = """
-from conan import ConanFile
-class TestConan(ConanFile):
-    requires = "hello1/0.1@lasote/stable"
-    settings = "os", "build_type"
-"""
+        consumer = (GenConanfile().with_requires("hello1/0.1@lasote/stable")
+                    .with_settings("os", "build_type"))
+
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install conanfile.py -g CMakeDeps")
-        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("hello1/0.1@lasote/stable: Already installed!", client.out)
+        assert "hello/0.1@lasote/stable: Already installed!" in client.out
+        assert "hello1/0.1@lasote/stable: Already installed!" in client.out
 
         cmakeinfo = client.load("hello1-release-data.cmake")
-        self.assertIn("set(hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
+        assert "set(hello1_LIBS_RELEASE mycoollib)" in cmakeinfo
 
     def test_export_pkg_version_type(self):
         client = TestClient(light=True)
@@ -318,23 +312,24 @@ class TestConan(ConanFile):
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
-        conanfile = """import os
-from conan import ConanFile
-from conan.tools.files import copy
-class TestConan(ConanFile):
-    name = "hello"
-    version = "0.1"
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class TestConan(ConanFile):
+                name = "hello"
+                version = "0.1"
 
-    def package(self):
-        copy(self, "*.h", os.path.join(self.source_folder, "src"),
-             os.path.join(self.package_folder, "include"))
-"""
+                def package(self):
+                    copy(self, "*.h", os.path.join(self.source_folder, "src"),
+                         os.path.join(self.package_folder, "include"))
+            """)
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
         package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
-        self.assertTrue(os.path.exists(header))
+        assert os.path.exists(header)
 
 
 def test_build_policy_never():
