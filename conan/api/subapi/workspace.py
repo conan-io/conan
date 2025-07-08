@@ -12,7 +12,6 @@ from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
 from conan.internal.graph.install_graph import ProfileArgs
-from conan.internal.methods import run_configure_method
 from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
 from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
@@ -246,12 +245,6 @@ class WorkspaceAPI:
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
             consumer_definer(conanfile, profile_host, profile_build)
-            from conan.internal.model.options import Options
-            conanfile._conan_is_consumer = True
-            run_configure_method(conanfile, Options(), profile_host.options, ref=None)
-            conanfile.build_requires = None
-            conanfile.test_requires = None
-            conanfile.tool_requires = None
             root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                         path=self._folder)  # path lets use the conanws.py folder
             root.should_build = True  # It is a consumer, this is something we are building
@@ -268,10 +261,12 @@ class WorkspaceAPI:
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)
+        conanfile.workspace_options = {}
         for node in deps_graph.nodes[1:]:  # Exclude the current root
             if node.recipe != RECIPE_EDITABLE:
                 result.add_node(node)
                 continue
+            conanfile.workspace_options[node.ref] = node.conanfile.options.serialize()
             for r, t in node.transitive_deps.items():
                 if t.node.recipe == RECIPE_EDITABLE:
                     continue
