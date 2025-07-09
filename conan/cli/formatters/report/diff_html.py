@@ -110,7 +110,7 @@ diff_html = r"""
                 <h2>File list:</h2>
                 <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                 <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                <span id="searching_icon" style="display:none">⏳</span>
+                <span id="searching_icon" style="display:none">...</span>
                 <ul>
                     {%- for filename in content.keys() %}
                         <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ replace_cache_paths(filename) }}</a></li>
