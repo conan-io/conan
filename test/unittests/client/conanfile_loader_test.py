@@ -1,7 +1,6 @@
 import os
 import sys
 import textwrap
-import unittest
 
 import pytest
 from parameterized import parameterized
@@ -12,17 +11,17 @@ from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import save, chdir
 
 
-class ConanLoaderTxtTest(unittest.TestCase):
+class TestConanLoaderTxt:
     def test_conanfile_txt_errors(self):
         # Invalid content
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
 '''
-        with self.assertRaisesRegex(ConanException, "Bad syntax"):
+        with pytest.raises(ConanException, match="Bad syntax"):
             ConanFileTextLoader(file_content)
 
         file_content = '{hello}'
-        with self.assertRaisesRegex(ConanException, "Unexpected line"):
+        with pytest.raises(ConanException, match="Unexpected line"):
             ConanFileTextLoader(file_content)
 
     def test_plain_text_parser(self):
@@ -44,7 +43,7 @@ OpenCV2:other_option=Cosa #
         exp = ['OpenCV/2.4.10@phil/stable',
                'OpenCV2/2.4.10@phil/stable',
                'OpenCV3/2.4.10@phil/stable']
-        self.assertEqual(parser.requirements, exp)
+        assert parser.requirements == exp
 
     def test_revision_parsing(self):
         # Valid content
@@ -53,7 +52,7 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
 '''
         parser = ConanFileTextLoader(file_content)
         exp = ['OpenCV/2.4.10@user/stable#RREV1']
-        self.assertEqual(parser.requirements, exp)
+        assert parser.requirements == exp
 
     def test_load_conan_txt(self):
         file_content = '''[requires]
@@ -76,12 +75,12 @@ OpenCV2/*:other_option=Cosa
         loader = ConanFileLoader(None, None)
         ret = loader.load_conanfile_txt(file_path)
 
-        self.assertEqual(len(ret.requires.values()), 3)
-        self.assertEqual(ret.generators, ["one", "two"])
-        self.assertEqual(ret.options.dumps(), 'OpenCV/*:other_option=False\n'
-                                              'OpenCV/*:use_python=True\n'
-                                              'OpenCV2/*:other_option=Cosa\n'
-                                              'OpenCV2/*:use_python2=1')
+        assert len(ret.requires.values()) == 3
+        assert ret.generators == ["one", "two"]
+        assert ret.options.dumps() == 'OpenCV/*:other_option=False\n' \
+                                              'OpenCV/*:use_python=True\n' \
+                                              'OpenCV2/*:other_option=Cosa\n' \
+                                              'OpenCV2/*:use_python2=1'
 
     def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
@@ -92,8 +91,8 @@ OpenCV2/*:other_option=Cosa
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, None)
-        with self.assertRaisesRegex(ConanException,
-                                    r"Error while parsing \[options\] in conanfile.txt\n"
+        with pytest.raises(ConanException,
+                                    match=r"Error while parsing \[options\] in conanfile.txt\n" \
                                     r"Options should be specified as 'pkg/\*:option=value'"):
             loader.load_conanfile_txt(file_path)
 
@@ -126,7 +125,7 @@ OpenCV2/*:other_option=Cosa
                in str(exc.value)
 
 
-class ImportModuleLoaderTest(unittest.TestCase):
+class TestImportModuleLoader:
     @staticmethod
     def _create_and_load(myfunc, value, subdir_name, add_subdir_init):
         subdir_content = textwrap.dedent("""
@@ -165,16 +164,16 @@ class ImportModuleLoaderTest(unittest.TestCase):
         loaded, module_id = load_python_file(os.path.join(tmp, "conanfile.py"))
         return loaded, module_id, expected_return
 
-    @parameterized.expand([(True, False), (False, True), (False, False)])
+    @pytest.mark.parametrize("sub1,sub2", [(True, False), (False, True), (False, False)])
     def test_py3_recipe_colliding_init_filenames(self, sub1, sub2):
         myfunc1, value1 = "recipe1", 42
         myfunc2, value2 = "recipe2", 23
         loaded1, module_id1, exp_ret1 = self._create_and_load(myfunc1, value1, "subdir", sub1)
         loaded2, module_id2, exp_ret2 = self._create_and_load(myfunc2, value2, "subdir", sub2)
 
-        self.assertNotEqual(module_id1, module_id2)
-        self.assertEqual(loaded1.conanfile_func(), exp_ret1)
-        self.assertEqual(loaded2.conanfile_func(), exp_ret2)
+        assert module_id1 != module_id2
+        assert loaded1.conanfile_func() == exp_ret1
+        assert loaded2.conanfile_func() == exp_ret2
 
     def test_recipe_colliding_filenames(self):
         myfunc1, value1 = "recipe1", 42
@@ -182,21 +181,21 @@ class ImportModuleLoaderTest(unittest.TestCase):
         loaded1, module_id1, exp_ret1 = self._create_and_load(myfunc1, value1, "subdir", True)
         loaded2, module_id2, exp_ret2 = self._create_and_load(myfunc2, value2, "subdir", True)
 
-        self.assertNotEqual(module_id1, module_id2)
-        self.assertEqual(loaded1.conanfile_func(), exp_ret1)
-        self.assertEqual(loaded2.conanfile_func(), exp_ret2)
+        assert module_id1 != module_id2
+        assert loaded1.conanfile_func() == exp_ret1
+        assert loaded2.conanfile_func() == exp_ret2
 
-    @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.parametrize("add_subdir_init", [(True, ), (False, )])
     def test_wrong_imports(self, add_subdir_init):
         myfunc1, value1 = "recipe1", 42
 
         # Item imported does not exist, but file exists
         # We use some existing and imported Python stdlib import
-        with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):
+        with pytest.raises(ConanException, match="Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "textwrap", add_subdir_init)
 
         # File does not exists in already existing module
-        with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):
+        with pytest.raises(ConanException, match="Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "conans", add_subdir_init)
 
     def test_helpers_python_library(self):
@@ -219,7 +218,7 @@ def append(data):
             sys.path.append(temp)
             loaded1, _ = load_python_file(os.path.join(temp1, "conanfile.py"))
             loaded2, _ = load_python_file(os.path.join(temp2, "conanfile.py"))
-            self.assertIs(loaded1.myconanlogger, loaded2.myconanlogger)
-            self.assertIs(loaded1.myconanlogger.value, loaded2.myconanlogger.value)
+            assert loaded1.myconanlogger == loaded2.myconanlogger
+            assert loaded1.myconanlogger.value == loaded2.myconanlogger.value
         finally:
             sys.path.remove(temp)
