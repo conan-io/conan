@@ -1,11 +1,10 @@
-import unittest
 import os
 
 from conan.internal.api.config.config_installer import tmp_config_install_folder
 from conan.test.utils.test_files import temp_folder
 
 
-class InstallFolderTests(unittest.TestCase):
+class TestInstallFolder:
 
     def test_unique_install_folder(self):
         """ Validate if tmp_config_install_folder is removing old folder before creating a new one
@@ -19,5 +18,5 @@ class InstallFolderTests(unittest.TestCase):
             temp_file = os.path.join(tmp_folder_first, "foobar.txt")
             open(temp_file, "w+")
             with tmp_config_install_folder(cache_folder) as tmp_folder_second:
-                self.assertEqual(tmp_folder_first, tmp_folder_second)
-                self.assertFalse(os.path.exists(temp_file))
+                assert tmp_folder_first == tmp_folder_second
+                assert not os.path.exists(temp_file)
