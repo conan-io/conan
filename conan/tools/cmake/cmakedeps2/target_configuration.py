@@ -51,6 +51,8 @@ class TargetConfigurationTemplate2:
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
             for d in transitive_reqs.values():
+                if d.package_type is PackageType.APP:
+                    continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
