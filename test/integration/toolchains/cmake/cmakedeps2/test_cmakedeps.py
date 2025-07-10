@@ -383,3 +383,102 @@ def test_cmake_find_mode_deprecated():
     args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
     tc.run(f"install --requires=dep/0.1 {args}")
     assert "CMakeConfigDeps does not support module find mode"
+
+
+def test_requires_to_application():
+    c = TestClient()
+    automake = textwrap.dedent("""
+        from conan import ConanFile
+        class Dependent(ConanFile):
+            name = "automake"
+            version = "0.1"
+            package_type = "application"
+        """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "libtool"
+            version = "0.1"
+            package_type = "static-library"
+
+            def requirements(self):
+                self.requires('automake/0.1')
+        """)
+    test_package = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class TestPkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+        """)
+
+    c.save({"automake/conanfile.py": automake,
+            "libtool/conanfile.py": conanfile,
+            "libtool/test_package/conanfile.py":test_package})
+    c.run("create automake")
+    c.run(f"create libtool -c tools.cmake.cmakedeps:new={new_value}")
+    targets = c.load("libtool/test_package/libtool-Targets-release.cmake")
+    # The libtool shouldn't depend on the automake::automake target
+    assert "automake::automake" not in targets
+
+
+def test_requires_to_application_component():
+    c = TestClient()
+    automake = textwrap.dedent("""
+        from conan import ConanFile
+        class Dependent(ConanFile):
+            name = "automake"
+            version = "0.1"
+            package_type = "application"
+
+            def package_info(self):
+                self.cpp_info.components["myapp"].exe = "myapp"
+                self.cpp_info.components["myapp"].location = "path/to/myapp"
+                self.cpp_info.components["mylibapp"].type = "header-library"
+        """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "libtool"
+            version = "0.1"
+            package_type = "static-library"
+
+            def requirements(self):
+                self.requires('automake/0.1')
+            def package_info(self):
+                self.cpp_info.requires = ["automake::mylibapp"]
+        """)
+    test_package = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class TestPkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+        """)
+
+    c.save({"automake/conanfile.py": automake,
+            "libtool/conanfile.py": conanfile,
+            "libtool/test_package/conanfile.py":test_package})
+    c.run("create automake")
+    c.run(f"create libtool -c tools.cmake.cmakedeps:new={new_value}")
+    targets = c.load("libtool/test_package/libtool-Targets-release.cmake")
+    # The libtool shouldn't depend on the automake::automake target
+    assert "automake::automake" not in targets
+    assert "# Requirement automake::mylibapp => Full link: True" in targets
+    assert "$<$<CONFIG:RELEASE>:automake::mylibapp>" in targets

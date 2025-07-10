@@ -1,13 +1,12 @@
-import unittest
-from parameterized.parameterized import parameterized
+import pytest
 
 from conan.tools.build.flags import architecture_flag, build_type_flags, threads_flags
 from conan.test.utils.mocks import MockSettings, ConanFileMock
 
 
-class CompilerFlagsTest(unittest.TestCase):
+class TestCompilerFlags:
 
-    @parameterized.expand([("gcc", "x86", None, "-m32"),
+    @pytest.mark.parametrize("compiler,arch,the_os,flag", [("gcc", "x86", None, "-m32"),
                            ("clang", "x86", None, "-m32"),
                            ("sun-cc", "x86", None, "-m32"),
                            ("gcc", "x86_64", None, "-m64"),
@@ -35,10 +34,10 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "os": the_os})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), flag)
+        assert architecture_flag(conanfile) == flag
 
 
-    @parameterized.expand([("clang", None, []),
+    @pytest.mark.parametrize("compiler,threads,flag", [("clang", None, []),
                            ("emcc", None, []),
                            ("emcc", "posix", ["-pthread"]),
                            ("emcc", "wasm_workers", ["-sWASM_WORKERS=1"]),
@@ -48,9 +47,9 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "compiler.threads": threads})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(threads_flags(conanfile), flag)
+        assert threads_flags(conanfile) == flag
 
-    @parameterized.expand([("clang", "x86", "Windows", ""),
+    @pytest.mark.parametrize("compiler,arch,the_os,flag", [("clang", "x86", "Windows", ""),
                            ("clang", "x86_64", "Windows", "")
                            ])
     def test_arch_flag_clangcl(self,  compiler, arch, the_os, flag):
@@ -60,7 +59,7 @@ class CompilerFlagsTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.conf.define("tools.build:compiler_executables", {"c": "clang-cl"})
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), flag)
+        assert architecture_flag(conanfile) == flag
 
     def test_catalyst(self):
         settings = MockSettings({"compiler": "apple-clang",
@@ -70,17 +69,18 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "os.subsystem.ios_version": "13.1"})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), "--target=x86_64-apple-ios13.1-macabi")
+        assert architecture_flag(conanfile) == "--target=x86_64-apple-ios13.1-macabi"
 
         settings = MockSettings({"compiler": "apple-clang",
                                  "arch": "armv8",
                                  "os": "Macos",
                                  "os.subsystem": "catalyst",
                                  "os.subsystem.ios_version": "13.1"})
+        conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), "--target=arm64-apple-ios13.1-macabi")
+        assert architecture_flag(conanfile) == "--target=arm64-apple-ios13.1-macabi"
 
-    @parameterized.expand([("Linux", "x86", "-m32"),
+    @pytest.mark.parametrize("os_,arch,flag", [("Linux", "x86", "-m32"),
                            ("Linux", "x86_64", "-m64"),
                            ("Windows", "x86", "/Qm32"),
                            ("Windows", "x86_64", "/Qm64"),
@@ -91,9 +91,9 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "arch": arch})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), flag)
+        assert architecture_flag(conanfile) == flag
 
-    @parameterized.expand([("e2k-v2", "-march=elbrus-v2"),
+    @pytest.mark.parametrize("arch,flag", [("e2k-v2", "-march=elbrus-v2"),
                            ("e2k-v3", "-march=elbrus-v3"),
                            ("e2k-v4", "-march=elbrus-v4"),
                            ("e2k-v5", "-march=elbrus-v5"),
@@ -105,9 +105,9 @@ class CompilerFlagsTest(unittest.TestCase):
         settings = MockSettings({"compiler": "mcst-lcc",
                                  "arch": arch})
         conanfile.settings = settings
-        self.assertEqual(architecture_flag(conanfile), flag)
+        assert architecture_flag(conanfile) == flag
 
-    @parameterized.expand([("msvc", "Debug", None, "-Zi -Ob0 -Od"),
+    @pytest.mark.parametrize("compiler,build_type,vs_toolset,flags", [("msvc", "Debug", None, "-Zi -Ob0 -Od"),
                            ("msvc", "Release", None, "-O2 -Ob2"),
                            ("msvc", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
                            ("msvc", "MinSizeRel", None, "-O1 -Ob1"),
@@ -138,9 +138,9 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "compiler.toolset": vs_toolset})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        self.assertEqual(' '.join(build_type_flags(conanfile)), flags)
+        assert ' '.join(build_type_flags(conanfile)) == flags
 
-    @parameterized.expand([("clang", "Debug", "-Zi -Ob0 -Od"),
+    @pytest.mark.parametrize("compiler,build_type,flags", [("clang", "Debug", "-Zi -Ob0 -Od"),
                            ("clang", "Release", "-O2 -Ob2"),
                            ("clang", "RelWithDebInfo", "-Zi -O2 -Ob1"),
                            ("clang", "MinSizeRel", "-O1 -Ob1"),
@@ -151,4 +151,4 @@ class CompilerFlagsTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.conf.define("tools.build:compiler_executables", {"c": "clang-cl"})
         conanfile.settings = settings
-        self.assertEqual(' '.join(build_type_flags(conanfile)), flags)
+        assert ' '.join(build_type_flags(conanfile)) == flags
