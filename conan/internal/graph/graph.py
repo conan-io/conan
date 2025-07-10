@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
-from conan.internal.graph.graph_error import GraphError
+from conan.internal.graph.graph_error import GraphError, GraphConflictError
+from conan.api.output import ConanOutput
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -42,6 +43,7 @@ class TransitiveRequirement:
 
 
 class Node:
+
     def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
@@ -61,14 +63,21 @@ class Node:
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
-        self.dependencies = []  # Ordered Edges
+        self.edges = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
         self.is_conf = False
-        self.replaced_requires = {}  # To track the replaced requires for self.dependencies[old-ref]
+        self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+
+    @property
+    def dependencies(self):
+        ConanOutput().warning("Node.dependencies is private and shouldn't be used. It is now "
+                              "node.edges. Please fix your code, Node.dependencies will be removed "
+                              "in future versions", warn_tag="deprecated")
+        return self.edges
 
     def subgraph(self):
         nodes = [self]
@@ -94,26 +103,32 @@ class Node:
         # TODO: Remove this order, shouldn't be necessary
         return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
 
-    def propagate_closing_loop(self, require, prev_node):
-        self.propagate_downstream(require, prev_node)
+    def propagate_closing_loop(self, require, prev_node, visibility_conflicts):
+        self.propagate_downstream(require, prev_node, visibility_conflicts)
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
             if transitive.require.override:
                 continue
-            prev_node.propagate_downstream(transitive.require, transitive.node, self)
+            prev_node.propagate_downstream(transitive.require, transitive.node, visibility_conflicts,
+                                           self)
 
-    def propagate_downstream(self, require, node, src_node=None):
+    def propagate_downstream(self, require, node, visibility_conflicts, src_node=None):
         # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
         existing = self.transitive_deps.get(require)
+        ill_formed = False
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
-                return True
+                raise GraphConflictError(self, require, existing.node, existing.require, node)
+            ill_formed = ((require.direct or existing.require.direct)
+                          and require.visible != existing.require.visible)
+            if ill_formed:
+                visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
             require.aggregate(existing.require)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
@@ -125,6 +140,9 @@ class Node:
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
+        if ill_formed:  # remove dead .edges, to avoid orphans
+            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
+            self.edges = [e for e in self.edges if e.dst in direct_nodes]
 
         if self.conanfile.vendor:
             return
@@ -149,7 +167,7 @@ class Node:
         if down_require.files:
             down_require.required_nodes = require.required_nodes.copy()
         down_require.required_nodes.add(self)
-        return d.src.propagate_downstream(down_require, node)
+        d.src.propagate_downstream(down_require, node, visibility_conflicts)
 
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
@@ -233,12 +251,12 @@ class Node:
 
     def add_edge(self, edge):
         if edge.src == self:
-            self.dependencies.append(edge)
+            self.edges.append(edge)
         else:
             self.dependants.append(edge)
 
     def neighbors(self):
-        return [edge.dst for edge in self.dependencies]
+        return [edge.dst for edge in self.edges]
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -363,6 +381,7 @@ class DepsGraph:
         self.resolved_ranges = {}
         self.replaced_requires = {}
         self.options_conflicts = {}
+        self.visibility_conflicts = {}
         self.error = False
 
     def lockfile(self):

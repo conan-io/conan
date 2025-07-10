@@ -53,7 +53,7 @@ def test_build_modules_alias_target():
         """)
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.0)
-        project(test)
+        project(test NONE)
         find_package(hello CONFIG)
         get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
         message("otherhello link libraries: ${tmp}")
@@ -113,7 +113,7 @@ def test_build_modules_custom_script():
         """)
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.0)
-        project(test)
+        project(test NONE)
         find_package(myfunctions MODULE REQUIRED)
         myfunction()
         """)
@@ -189,7 +189,7 @@ def test_build_modules_components_is_not_possible():
 
     cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
-            project(test)
+            project(test NONE)
             find_package(openssl CONFIG)
             crypto_message("hello!")
             root_message("hello!")
@@ -269,7 +269,7 @@ def test_build_modules_custom_script_editable(editable):
         """)
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(test)
+        project(test NONE)
         find_package(myfunctions CONFIG REQUIRED)
         myfunction()
         otherfunc()
@@ -356,7 +356,7 @@ def test_build_modules_custom_script_editable_package(editable):
         """)
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(test)
+        project(test NONE)
         find_package(myfunctions CONFIG REQUIRED)
         myfunction()
         otherfunc()

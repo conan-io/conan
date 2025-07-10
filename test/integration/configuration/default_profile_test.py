@@ -45,7 +45,7 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(tmp, "myprofile")
         save(default_profile_path, "[buildenv]\nValue1=A")
         client = TestClient()
-        save(client.paths.new_config_path, "core:default_profile={}".format(default_profile_path))
+        client.save_home({"global.conf": "core:default_profile={}".format(default_profile_path)})
 
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
@@ -54,7 +54,7 @@ class MyConanfile(ConanFile):
         # Now use a name, in the default profile folder
         os.unlink(default_profile_path)
         save(os.path.join(client.paths.profiles_path, "other"), "[buildenv]\nValue1=A")
-        save(client.paths.new_config_path, "core:default_profile=other")
+        client.save_home({"global.conf": "core:default_profile=other"})
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
         client.run('install --requires=mylib/0.1@lasote/stable --build="*"')
@@ -153,7 +153,7 @@ def test_conf_default_two_profiles():
         core:default_profile=mydefault
         core:default_build_profile=mydefault_build
         """)
-    save(client.paths.new_config_path, global_conf)
+    client.save_home({"global.conf": global_conf})
     client.save({"conanfile.txt": ""})
     client.run("install .")
     assert "Profile host:" in client.out

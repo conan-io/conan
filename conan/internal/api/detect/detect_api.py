@@ -488,13 +488,13 @@ def _cc_compiler(compiler_exe="cc"):
         compiler = "clang" if "clang" in out else "gcc"
         # clang and gcc have version after a space, first try to find that to skip extra numbers
         # that might appear in the first line of the output before the version
-        installed_version = re.search(r" ([0-9]+(\.[0-9])+)", out)
+        installed_version = re.search(r" ([0-9]+(\.[0-9]+)+)", out)
         # Try only major but with spaces next
-        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9])?)", out)
+        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9]+)?)", out)
         # Fallback to the first number we find optionally followed by other version fields
-        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9])?)", out)
-        if installed_version and installed_version.group():
-            installed_version = installed_version.group()
+        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9]+)?)", out)
+        if installed_version and installed_version.group(1):
+            installed_version = installed_version.group(1)
             ConanOutput(scope="detect_api").info("Found cc=%s-%s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
@@ -515,7 +515,7 @@ def detect_gcc_compiler(compiler_exe="gcc"):
         if ret != 0:
             return None, None, None
         compiler = "gcc"
-        installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
+        installed_version = re.search(r"([0-9]+(\.[0-9]+)?)", out).group()
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
             return compiler, Version(installed_version), compiler_exe
@@ -628,9 +628,13 @@ def default_compiler_version(compiler, version):
     if compiler == "clang" and major >= 8:
         output.info("clang>=8, using the major as version")
         return major
-    elif compiler == "gcc" and major >= 5:
-        output.info("gcc>=5, using the major as version")
-        return major
+    elif compiler == "gcc":
+        if major >= 5:
+            output.info("gcc>=5, using the major as version")
+            return major
+        else:
+            output.info("gcc<5, using the major.minor as version")
+            return Version(f"{major}.{minor}")
     elif compiler == "apple-clang" and major >= 13:
         output.info("apple-clang>=13, using the major as version")
         return major

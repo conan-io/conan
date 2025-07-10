@@ -202,7 +202,8 @@ class _PCFilesDeps:
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = self._get_name(req_conanfile, pkg_ref_name, comp_ref_name)
-            ret.append(comp_name)
+            if comp_name not in ret:
+                ret.append(comp_name)
         return ret
 
     def items(self):
@@ -258,10 +259,11 @@ class _PCFilesDeps:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        if pkg_name not in pc_files:
+        should_skip_main = self._get_property("pkg_config_name", self._dep) == "none"
+        if pkg_name not in pc_files and not should_skip_main:
             cpp_info = self._dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
-            # Note: If DEP has components,, they'll be the requirements == pc_files.keys()
+            # Note: If DEP has components, they'll be the requirements == pc_files.keys()
             requires = list(pc_files.keys()) or self._get_component_requirement_names(cpp_info)
             # If we have found some component requirements it would be enough
             if not requires:

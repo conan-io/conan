@@ -1,6 +1,7 @@
 import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
+from conan.internal.api.detect.detect_api import default_cstd as default_cstd_
 from conan.internal.model.version import Version
 
 
@@ -73,6 +74,21 @@ def valid_max_cstd(conanfile, cstd, gnu_extensions=False):
         return False
     return True
 
+def default_cstd(conanfile, compiler=None, compiler_version=None):
+    """
+    Get the default ``compiler.cstd`` for the "conanfile.settings.compiler" and "conanfile
+    settings.compiler_version" or for the parameters "compiler" and "compiler_version" if specified.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param compiler: Name of the compiler e.g. gcc
+    :param compiler_version: Version of the compiler e.g. 12
+    :return: The default ``compiler.cstd`` for the specified compiler
+    """
+    compiler = compiler or conanfile.settings.get_safe("compiler")
+    compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
+    if not compiler or not compiler_version:
+        raise ConanException("Called default_cppstd with no compiler or no compiler.version")
+    return default_cstd_(compiler, Version(compiler_version))
 
 def supported_cstd(conanfile, compiler=None, compiler_version=None):
     """
@@ -94,6 +110,7 @@ def supported_cstd(conanfile, compiler=None, compiler_version=None):
             "gcc": _gcc_supported_cstd,
             "msvc": _msvc_supported_cstd,
             "clang": _clang_supported_cstd,
+            "emcc": _emcc_supported_cstd,
             }.get(compiler)
     if func:
         return func(Version(compiler_version))
@@ -174,3 +191,18 @@ def _clang_supported_cstd(version):
     if version < "18":
         return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]
+
+def _emcc_supported_cstd(version):
+    """
+    emcc is based on clang but follow different versioning scheme.
+    """
+    if version <= "3.0.1":
+        return _clang_supported_cstd(Version("14"))
+    if version <= "3.1.50":
+        return _clang_supported_cstd(Version("18"))
+    if version <= "4.0.1":
+        return _clang_supported_cstd(Version("20"))
+    # Since emcc 4.0.2 clang version is 21
+    return _clang_supported_cstd(Version("21"))
+
+

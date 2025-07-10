@@ -128,7 +128,7 @@ def pyinstall(source_folder, onefile=False):
     hidden_imports.append("pathlib")
     # inclusion of full conan package (with exclusion of irrelevant modules)
     command_args.append("--collect-submodules=conan")
-    command_args.append("--exclude-module=conan.test")
+    command_args.append("--exclude-module=conan.test.*")
 
     command_args.extend(f"--hidden-import={name}" for name in hidden_imports)
 

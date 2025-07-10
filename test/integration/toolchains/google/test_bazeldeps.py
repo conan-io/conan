@@ -644,7 +644,7 @@ def test_with_editable_layout():
         # Bazel 7.x
         content = client.load("conan_deps_module_extension.bzl")
         assert textwrap.dedent(f"""\
-        def _load_dependenies_impl(mctx):
+        def _load_dependencies_impl(mctx):
             conan_dependency_repo(
                 name = "dep",
                 package_path = "{recipes_folder}/dep",
@@ -1215,3 +1215,45 @@ def test_shared_windows_find_libraries():
     assert zlib_expected in zlib_bazel_build
     assert openssl_expected in openssl_bazel_build
     assert iconv_expected in libiconv_bazel_build and charset_expected in libiconv_bazel_build
+
+
+def test_pkg_with_duplicated_component_requires():
+    """
+    Testing that even having duplicated component requires, the PC does not include them.
+    Issue: https://github.com/conan-io/conan/issues/18283
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].libs = []
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+                # Duplicate one
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g BazelDeps")
+    build_content = load(None, os.path.join(client.current_folder, "mylib", "BUILD.bazel"))
+    myfirstcomp_expected = textwrap.dedent("""\
+    cc_library(
+        name = "mylib-myfirstcomp",
+        hdrs = glob([
+            "include/**",
+        ]),
+        includes = [
+            "include",
+        ],
+        visibility = ["//visibility:public"],
+        deps = [
+            # do not sort
+            ":mylib-mycomponent",
+        ],
+    )
+    """)
+    assert myfirstcomp_expected in build_content

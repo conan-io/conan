@@ -1,4 +1,5 @@
 import argparse
+import os
 import textwrap
 from contextlib import redirect_stdout
 
@@ -96,6 +97,8 @@ class BaseConanCommand:
                 formatarg, ", ".join(self._help_formatters)))
 
         if out_file:
+            if os.path.dirname(out_file):
+                os.makedirs(os.path.dirname(out_file), exist_ok=True)
             with open(out_file, 'w') as f:
                 with redirect_stdout(f):
                     formatter(info)

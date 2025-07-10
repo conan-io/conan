@@ -11,6 +11,7 @@ def version(conan_api, parser, *args):
     """
     Give information about the Conan client version.
     """
+    parser.parse_args(*args)
 
     return {
             'version': str(conan_version),
