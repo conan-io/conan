@@ -15,6 +15,7 @@ from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
+from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
@@ -55,13 +56,9 @@ class ConfigAPI:
     def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
         if os.path.isdir(path):
             path = os.path.join(path, "conanconfig.yml")
-        try:
-            requires = yaml.safe_load(open(path))["packages"]
-        except Exception as e:
-            raise ConanException(f"Error while loading config file {path}: {str(e)}")
+        requires = loadconanconfig(path)
         refs = []
         for require in requires:
-            print("Require", require)
             ref = self._install_pkg(require["ref"], lockfile, force, remotes, profile)
             refs.append(ref)
         self.conan_api.reinit()
@@ -105,7 +102,7 @@ class ConfigAPI:
         config_versions = []
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
-            config_versions = yaml.safe_load(load(config_version_file))["packages"]
+            config_versions = loadconanconfig(config_version_file)
             if any(config_pref == r["ref"] for r in config_versions):
                 if force:
                     ConanOutput().info(f"Package '{pkg}' already configured, "

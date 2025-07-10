@@ -15,6 +15,7 @@ from conan.internal.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
+from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import RecipeReference
 from conan.internal.util.files import load
@@ -379,7 +380,7 @@ class GraphBinariesAnalyzer:
             return
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
-            config_refs = yaml.safe_load(load(config_version_file))["packages"]
+            config_refs = loadconanconfig(config_version_file)
             result = {}
             for r in config_refs:
                 config_ref = RecipeReference.loads(r["ref"])
