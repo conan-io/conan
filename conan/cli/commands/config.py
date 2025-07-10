@@ -94,12 +94,12 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     remotes = [Remote("_tmp_conan_config", url=args.url)] if args.url else None
     if args.path:
         path = make_abs_path(args.path)
-        prefs = conan_api.config.install_pkg_file(path, lockfile=lockfile, force=args.force,
-                                                  remotes=remotes, profile=profile)
+        refs = conan_api.config.install_pkg_file(path, lockfile=lockfile, force=args.force,
+                                                 remotes=remotes, profile=profile)
     else:
-        prefs = conan_api.config.install_pkg(args.requires, lockfile=lockfile, force=args.force,
-                                             remotes=remotes, profile=profile)
-    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[p.ref for p in prefs])
+        refs = conan_api.config.install_pkg(args.requires, lockfile=lockfile, force=args.force,
+                                            remotes=remotes, profile=profile)
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=refs)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 

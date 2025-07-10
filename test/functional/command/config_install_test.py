@@ -6,6 +6,7 @@ import textwrap
 import unittest
 
 import pytest
+import yaml
 from mock import patch
 
 from conan.api.model import Remote, RecipeReference
@@ -771,27 +772,31 @@ class TestConfigInstallPkgLockfiles:
     def test_install_from_file(self, servers):
         c = TestClient(servers=servers)
         conanconfig = textwrap.dedent("""
-            config_version: ["myconf_a/0.1", "myconf_b/0.1", "myconf_a/0.2"]
+            packages:
+                - ref: myconf_a/0.1
+                - ref: myconf_b/0.1
             """)
         c.save({"conanconfig.yml": conanconfig})
         c.run("config install-pkg .")
-        path = HomePaths(c.cache_folder).config_version_path
         # First are the newest installed
-        configs = json.loads(load(path))["config_version"]
-        configs = [str(RecipeReference.loads(r)) for r in configs]
-        assert configs == ["myconf_b/0.1", "myconf_a/0.2"]
+        configs = yaml.safe_load(c.load_home("conanconfig.yml"))["packages"]
+        configs = [str(RecipeReference.loads(r["ref"])) for r in configs]
+        assert configs == ["myconf_a/0.1", "myconf_b/0.1"]
 
     def test_install_from_file_with_lockfile(self, servers):
         # it should stay in version 0.1
         c = TestClient(servers=servers)
         c.run("config install-pkg --requires=myconf_a/0.1 --lockfile-out=conan.lock")
-        conanconfig = 'config_version: ["myconf_a/[>=0.1 <1.0]"]'
+        conanconfig = textwrap.dedent("""
+            packages:
+                - ref: myconf_a/[>=0.1 <1.0]
+            """)
         c.save({"conanconfig.yml": conanconfig})
         c.run("config install-pkg .")
         path = HomePaths(c.cache_folder).config_version_path
         # First are the newest installed
-        configs = json.loads(load(path))["config_version"]
-        configs = [str(RecipeReference.loads(r)) for r in configs]
+        configs = yaml.safe_load(load(path))["packages"]
+        configs = [str(RecipeReference.loads(r["ref"])) for r in configs]
         assert configs == ["myconf_a/0.1"]
 
 
@@ -835,7 +840,7 @@ class TestConfigInstallPkgSettings:
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -s os=Linux")
+        c.run("config install-pkg --requires=myconf/[*] -s os=Linux --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -859,7 +864,7 @@ class TestConfigInstallPkgSettings:
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile")
+        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -876,7 +881,7 @@ class TestConfigInstallPkgSettings:
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.save_home({"profiles/default": "[settings]\nos=Linux"})
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg --requires=myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -924,7 +929,7 @@ class TestConfigInstallPkgOptions:
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -o &:project=project2")
+        c.run("config install-pkg --requires=myconf/[*] -o &:project=project2 --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -949,7 +954,7 @@ class TestConfigInstallPkgOptions:
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile")
+        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -966,7 +971,7 @@ class TestConfigInstallPkgOptions:
         assert "user.myteam:myconf: my1value" in c.out
 
         c.save_home({"profiles/default": "[options]\n&:project=project2"})
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg --requires=myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")

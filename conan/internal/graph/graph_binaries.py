@@ -1,6 +1,5 @@
-import json
 import os
-from collections import OrderedDict
+import yaml
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -17,7 +16,6 @@ from conan.internal.errors import conanfile_exception_formatter, ConanConnection
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
-from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.files import load
 
@@ -381,15 +379,11 @@ class GraphBinariesAnalyzer:
             return
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
-            config_refs = json.loads(load(config_version_file))["config_version"]
-            result = OrderedDict()
+            config_refs = yaml.safe_load(load(config_version_file))["packages"]
+            result = {}
             for r in config_refs:
-                try:
-                    config_ref = PkgReference.loads(r)
-                    req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-                except ConanException:
-                    config_ref = RecipeReference.loads(r)
-                    req_info = RequirementInfo(config_ref, None, config_mode)
+                config_ref = RecipeReference.loads(r["ref"])
+                req_info = RequirementInfo(config_ref, None, config_mode)
                 result[config_ref] = req_info
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "

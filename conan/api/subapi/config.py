@@ -1,4 +1,3 @@
-import json
 import os
 import platform
 import textwrap
@@ -56,13 +55,17 @@ class ConfigAPI:
     def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
         if os.path.isdir(path):
             path = os.path.join(path, "conanconfig.yml")
-        requires = yaml.safe_load(open(path))["config_version"]
-        prefs = []
+        try:
+            requires = yaml.safe_load(open(path))["packages"]
+        except Exception as e:
+            raise ConanException(f"Error while loading config file {path}: {str(e)}")
+        refs = []
         for require in requires:
-            pref = self._install_pkg(require, lockfile, force, remotes, profile)
-            prefs.append(pref)
+            print("Require", require)
+            ref = self._install_pkg(require["ref"], lockfile, force, remotes, profile)
+            refs.append(ref)
         self.conan_api.reinit()
-        return prefs
+        return refs
 
     def _install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
@@ -98,34 +101,31 @@ class ConfigAPI:
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
         # We check if this specific version is already installed
-        config_pref = pkg.pref.repr_notime()
+        config_pref = pkg.ref.repr_notime()
         config_versions = []
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
-            config_versions = json.loads(load(config_version_file))
-            config_versions = config_versions["config_version"]
-            if config_pref in config_versions:
+            config_versions = yaml.safe_load(load(config_version_file))["packages"]
+            if any(config_pref == r["ref"] for r in config_versions):
                 if force:
                     ConanOutput().info(f"Package '{pkg}' already configured, "
                                        "but re-installation forced")
                 else:
                     ConanOutput().info(f"Package '{pkg}' already configured, "
                                        "skipping configuration install")
-                    return pkg.pref  # Already installed, we can skip repeating the install
+                    return pkg.ref  # Already installed, we can skip repeating the install
 
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self.conan_api.cache_folder
         requester = self.conan_api.remotes.requester
         configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
                               config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
-        # We save the current package full reference in the file for future
-        # And for ``package_id`` computation
-        config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
-        # TODO: We need to define how to manage the list of installed configs
-        config_versions.pop(pkg.pref.ref.name, None)  # To make it latest
-        config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
-        save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
-        return pkg.pref
+        # We save the current reference in the file for future
+        # To make it latest
+        config_versions = [c for c in config_versions if c["ref"].split("/", 1)[0] != pkg.ref.name]
+        config_versions.append({"ref": pkg.ref.repr_notime()})
+        save(config_version_file, yaml.dump({"packages": config_versions}))
+        return pkg.ref
 
     def get(self, name, default=None, check_type=None):
         return self.global_conf.get(name, default=default, check_type=check_type)
