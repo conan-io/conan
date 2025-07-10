@@ -11,7 +11,11 @@ from conan.cli import make_abs_path
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conan.errors import ConanException
 from conan.internal.conan_app import ConanApp
+from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.install_graph import ProfileArgs
+from conan.internal.methods import auto_language, auto_shared_fpic_config_options, \
+    auto_shared_fpic_configure
+from conan.internal.model.options import Options
 from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
 from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
@@ -238,6 +242,24 @@ class WorkspaceAPI:
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 
+    def _init_options(self, conanfile, options):
+        if hasattr(conanfile, "config_options"):
+            with conanfile_exception_formatter(conanfile, "config_options"):
+                conanfile.config_options()
+        elif "auto_shared_fpic" in conanfile.implements:
+            auto_shared_fpic_config_options(conanfile)
+
+        auto_language(conanfile)  # default implementation removes `compiler.cstd`
+
+        # Assign only the current package options values, but none of the dependencies
+        conanfile.options.apply_downstream(Options(), options, None, True)
+
+        if hasattr(conanfile, "configure"):
+            with conanfile_exception_formatter(conanfile, "configure"):
+                conanfile.configure()
+        elif "auto_shared_fpic" in conanfile.implements:
+            auto_shared_fpic_configure(conanfile)
+
     def super_build_graph(self, deps_graph, profile_host, profile_build):
         ConanOutput().title("Collapsing workspace packages")
 
@@ -245,6 +267,7 @@ class WorkspaceAPI:
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
             consumer_definer(conanfile, profile_host, profile_build)
+            self._init_options(conanfile, profile_host.options)
             root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                         path=self._folder)  # path lets use the conanws.py folder
             root.should_build = True  # It is a consumer, this is something we are building

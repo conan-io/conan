@@ -567,7 +567,31 @@ class TestMeta:
             assert "dep1-config.cmake" in files
             assert "dep2-config.cmake" not in files
 
-    def test_conanfilews_options(self):
+    def test_workspace_options(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+            class MyWs(ConanFile):
+                settings = "arch", "build_type"
+                options = {"myoption": [1, 2, 3]}
+                def generate(self):
+                    self.output.info(f"Generating with my option {self.options.myoption}!!!!")
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace super-install -of=build")
+        assert "conanws.py base project Conanfile: Generating with my option None!!!!" in c.out
+        c.run("workspace super-install -of=build -o *:myoption=1")
+        assert "conanws.py base project Conanfile: Generating with my option 1!!!!" in c.out
+
+    def test_workspace_pkg_options(self):
         c = TestClient()
         conanfilews = textwrap.dedent("""
             from conan import ConanFile
@@ -589,9 +613,9 @@ class TestMeta:
                 "conanws.py": conanfilews})
         c.run("workspace add dep")
         c.run("workspace super-install -of=build")
-        assert "conanws.py base project Conanfile: Generating with opt dep/0.1:myoption=None!!!!" in c.out
+        assert "project Conanfile: Generating with opt dep/0.1:myoption=None!!!!" in c.out
         c.run("workspace super-install -of=build -o *:myoption=1")
-        assert "conanws.py base project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
+        assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
 
 
 def test_workspace_with_local_recipes_index():
