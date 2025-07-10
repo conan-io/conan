@@ -1,56 +1,55 @@
-# coding=utf-8
-
 import os
-import unittest
-
+import pytest
 
 from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import set_dirty, clean_dirty, set_dirty_context_manager, _DIRTY_FOLDER
 
 
-class DirtyTest(unittest.TestCase):
+class TestDirty:
 
-    def setUp(self):
+    @pytest.fixture
+    def setup_dirty(self):
         """ Create temporary folder to save dirty state
-
         """
-        self.temp_folder = temp_folder()
-        self.dirty_folder = self.temp_folder + _DIRTY_FOLDER
+        tempfolder = temp_folder()
+        dirty_folder = tempfolder + _DIRTY_FOLDER
+        return tempfolder, dirty_folder
 
-    def test_set_dirty(self):
+    def test_set_dirty(self, setup_dirty):
         """ Dirty flag must be created by set_dirty
-
         """
-        set_dirty(self.temp_folder)
-        self.assertTrue(os.path.exists(self.dirty_folder))
+        folder, dirty_folder = setup_dirty
+        set_dirty(folder)
+        assert os.path.exists(dirty_folder)
 
-    def test_clean_dirty(self):
+    def test_clean_dirty(self, setup_dirty):
         """ Dirty flag must be cleaned by clean_dirty
-
         """
-        set_dirty(self.temp_folder)
-        self.assertTrue(os.path.exists(self.dirty_folder))
-        clean_dirty(self.temp_folder)
-        self.assertFalse(os.path.exists(self.dirty_folder))
+        folder, dirty_folder = setup_dirty
+        set_dirty(folder)
+        assert os.path.exists(dirty_folder)
+        clean_dirty(folder)
+        assert not os.path.exists(dirty_folder)
 
-    def test_set_dirty_context(self):
+    def test_set_dirty_context(self, setup_dirty):
         """ Dirty context must remove lock before exiting
-
         """
-        with set_dirty_context_manager(self.temp_folder):
-            self.assertTrue(os.path.exists(self.dirty_folder))
-        self.assertFalse(os.path.exists(self.dirty_folder))
+        folder, dirty_folder = setup_dirty
+        with set_dirty_context_manager(folder):
+            assert os.path.exists(dirty_folder)
+        assert not os.path.exists(dirty_folder)
 
-    def test_interrupted_dirty_context(self):
+    def test_interrupted_dirty_context(self, setup_dirty):
         """ Broken context must preserve dirty state
 
             Raise an exception in middle of context. By default,
             dirty file is not removed.
         """
+        folder, dirty_folder = setup_dirty
         try:
-            with set_dirty_context_manager(self.temp_folder):
-                self.assertTrue(os.path.exists(self.dirty_folder))
+            with set_dirty_context_manager(folder):
+                assert os.path.exists(dirty_folder)
                 raise RuntimeError()
         except RuntimeError:
             pass
-        self.assertTrue(os.path.exists(self.dirty_folder))
+        assert os.path.exists(dirty_folder)
