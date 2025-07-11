@@ -97,20 +97,21 @@ def _calc_revision(scoped_output, path, manifest, revision_mode, conanfile):
     if revision_mode == "hash":
         revision = manifest.summary_hash
     else:
+        repository = (revision_mode == "scm")
         # Exception to the rule that tools should only be used in recipes, this Git helper is ok
         excluded = getattr(conanfile, "revision_mode_excluded", None)
         git = Git(conanfile, folder=path, excluded=excluded)
         try:
-            revision = git.get_commit(repository=(revision_mode == "scm"))
+            revision = git.get_commit(repository=repository)
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
-        if git.is_dirty():
-            raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
+        if git.is_dirty(repository=repository):
+            raise ConanException("Can't have a dirty repository using revision_mode='scm'/'scm_folder' and doing"
                                  " 'conan export', please commit the changes and run again, or "
-                                 "use 'git_excluded = []' attribute")
+                                 "use 'revision_mode_excluded' config")
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
