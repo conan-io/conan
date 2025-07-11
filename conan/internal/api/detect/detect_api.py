@@ -652,6 +652,6 @@ def detect_sdk_version(sdk):
     if platform.system() != "Darwin":
         return
     cmd = f'xcrun -sdk {sdk} --show-sdk-version'
-    result = check_output_runner(cmd)
+    _, result = detect_runner(cmd)
     result = result.strip()
     return result
