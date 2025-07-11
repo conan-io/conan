@@ -1,5 +1,6 @@
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -63,3 +64,54 @@ def test_premakedeps():
     assert_vars_file(client, 'debug')
     assert_vars_file(client, 'release')
 
+
+def test_premakedeps_link_order():
+    client = TestClient()
+    client.save(
+        {
+            "liba/conanfile.py": GenConanfile("liba")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_generator("PremakeDeps")
+            .with_generator("PremakeToolchain")
+            .with_package_info(cpp_info={"libs": ["liba"]}),
+
+            "libb/conanfile.py": GenConanfile("libb")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("liba/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(
+                cpp_info={
+                    "components": {
+                        "libb1": {"requires": ["liba::liba"]},
+                        "libb2": {"requires": ["libb1"]},
+                    }
+                }
+            ),
+
+            "libc/conanfile.py": GenConanfile("libc")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libb/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(cpp_info={"libs": ["libc"]}),
+
+            "consumer/conanfile.py": GenConanfile("consumer")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libc/1.0")
+            .with_generator("PremakeDeps")
+        }
+    )
+    client.run("create liba")
+    client.run("create libb")
+    client.run("create libc")
+    client.run("install consumer")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert contents
+    start_idx = contents.find('"')
+    path = contents[start_idx+1:contents.find('"', start_idx + 1)]
+    contents = client.load(f"consumer/{path}")
+    # Check correct order of dependencies: more dependent libs should be linked first
+    assert 't_conan_deps_order["release_arm64"] = {"libc", "libb", "liba"}' in contents
