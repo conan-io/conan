@@ -4,7 +4,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 class TestMetadataCommands:
@@ -151,7 +151,7 @@ class TestMetadataCommands:
         c2 = TestClient(servers=c.servers)
         tmp_folder = temp_folder()
         # MOST important part: activate cache
-        save(c2.cache.new_config_path, f"core.download:download_cache={tmp_folder}\n")
+        c2.save_home({"global.conf": f"core.download:download_cache={tmp_folder}\n"})
 
         # download package and metadata
         c2.run("download pkg/0.1 -r=default --metadata=*")

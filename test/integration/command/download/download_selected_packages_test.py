@@ -2,10 +2,10 @@ import os
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 @pytest.fixture(scope="module")

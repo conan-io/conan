@@ -1,18 +1,47 @@
+import copy
 import os
 from collections import OrderedDict
 from typing import Dict
 
-from conan.api.model import PackagesList
+from conan.api.model import PackagesList, MultiPackagesList, ListPattern
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
+from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.paths import CONANINFO
-from conans.errors import ConanException, NotFoundException
-from conans.model.info import load_binary_info
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference, ref_matches
-from conans.util.dates import timelimit
-from conans.util.files import load
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
+from conan.internal.model.info import load_binary_info
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
+from conan.internal.util.dates import timestamp_now
+from conan.internal.util.files import load
+
+
+def _timelimit(expression):
+    """ convert an expression like "2d" (2 days) or "3h" (3 hours) to a timestamp in the past
+    with respect to current time
+    """
+    time_value = expression[:-1]
+    try:
+        time_value = int(time_value)
+    except TypeError:
+        raise ConanException(f"Time value '{time_value}' must be an integer")
+    time_units = expression[-1]
+    units = {"y": 365 * 24 * 60 * 60,
+             "M": 30 * 24 * 60 * 60,
+             "w": 7 * 24 * 60 * 60,
+             "d": 24 * 60 * 60,
+             "h": 60 * 60,
+             "m": 60,
+             "s": 1}
+    try:
+        lru_value = time_value * units[time_units]
+    except KeyError:
+        raise ConanException(f"Unrecognized time unit: '{time_units}'. Use: {list(units)}")
+
+    limit = timestamp_now() - lru_value
+    return limit
 
 
 class ListAPI:
@@ -25,7 +54,7 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if remote:
             ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
         else:
@@ -35,7 +64,7 @@ class ListAPI:
 
     def recipe_revisions(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
@@ -49,7 +78,7 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if remote:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
@@ -59,7 +88,7 @@ class ListAPI:
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanApp(self.conan_api)
+        app = ConanBasicApp(self.conan_api)
         if remote:
             results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
@@ -70,12 +99,11 @@ class ListAPI:
                                 remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
+        app = ConanBasicApp(self.conan_api)
         if not remote:
-            app = ConanApp(self.conan_api)
             prefs = app.cache.get_package_references(ref)
             packages = _get_cache_packages_binary_info(app.cache, prefs)
         else:
-            app = ConanApp(self.conan_api)
             if ref.revision == "latest":
                 ref.revision = None
                 ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
@@ -142,14 +170,13 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanApp(self.conan_api)
-        limit_time = timelimit(lru) if lru else None
+        app = ConanBasicApp(self.conan_api)
+        limit_time = _timelimit(lru) if lru else None
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
-            refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:
@@ -225,6 +252,8 @@ class ListAPI:
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
+        """ (Experimental) Explain why a binary is missing in the cache
+        """
         ConanOutput().info(f"Missing binary: {ref}")
         ConanOutput().info(f"With conaninfo.txt (package_id):\n{conaninfo.dumps()}")
         conaninfo = load_binary_info(conaninfo.dumps())
@@ -240,7 +269,7 @@ class ListAPI:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
                 pkg_configurations = self.packages_configurations(ref, remote=remote)
             except Exception as e:
-                ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
+                ConanOutput().error(f"Error in remote '{remote.name}': {e}")
             else:
                 candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
                                   for pref, data in pkg_configurations.items())
@@ -263,6 +292,82 @@ class ListAPI:
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
         return pkglist
+
+    def find_remotes(self, package_list, remotes):
+        """
+        (Experimental) Find the remotes where the current package lists can be found
+        """
+        result = MultiPackagesList()
+        for r in remotes:
+            result_pkg_list = PackagesList()
+            for ref, recipe_bundle in package_list.refs().items():
+                ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
+                ref_no_rev.revision = None
+                try:
+                    revs = self.recipe_revisions(ref_no_rev, remote=r)
+                except NotFoundException:
+                    continue
+                if ref not in revs:  # not found
+                    continue
+                result_pkg_list.add_refs([ref])
+                for pref, pref_bundle in package_list.prefs(ref, recipe_bundle).items():
+                    pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
+                    pref_no_rev.revision = None
+                    try:
+                        prevs = self.package_revisions(pref_no_rev, remote=r)
+                    except NotFoundException:
+                        continue
+                    if pref in prevs:
+                        result_pkg_list.add_prefs(ref, [pref])
+                        info = recipe_bundle["packages"][pref.package_id]["info"]
+                        result_pkg_list.add_configurations({pref: info})
+            if result_pkg_list.recipes:
+                result.add(r.name, result_pkg_list)
+        return result
+
+    def outdated(self, deps_graph, remotes):
+        # DO NOT USE YET
+        # Data structure to store info per library
+        dependencies = deps_graph.nodes[1:]
+        dict_nodes = {}
+
+        # When there are no dependencies command should stop
+        if len(dependencies) == 0:
+            return dict_nodes
+
+        ConanOutput().title("Checking remotes")
+
+        for node in dependencies:
+            dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
+                                              "latest_remote": None})["cache_refs"].add(node.ref)
+
+        for version_range in deps_graph.resolved_ranges.keys():
+            dict_nodes[version_range.name]["version_ranges"].append(version_range)
+
+        # find in remotes
+        for node_name, node_info in dict_nodes.items():
+            ref_pattern = ListPattern(node_name, rrev=None, prev=None)
+            for remote in remotes:
+                try:
+                    remote_ref_list = self.select(ref_pattern, package_query=None, remote=remote)
+                except NotFoundException:
+                    continue
+                if not remote_ref_list.recipes:
+                    continue
+                str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+                recipe_ref = RecipeReference.loads(str_latest_ref)
+                if (node_info["latest_remote"] is None
+                        or node_info["latest_remote"]["ref"] < recipe_ref):
+                    node_info["latest_remote"] = {"ref": recipe_ref, "remote": remote.name}
+
+        # Filter nodes with no outdated versions
+        filtered_nodes = {}
+        for node_name, node in dict_nodes.items():
+            if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
+                    node['latest_remote']['ref']:
+                filtered_nodes[node_name] = node
+
+        return filtered_nodes
 
 
 class _BinaryDistance:
@@ -392,10 +497,12 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
-                                 f"without conaninfo.txt in: {info_path}")
-        conan_info_content = load(info_path)
-        info = load_binary_info(conan_info_content)
+            ConanOutput().error(f"Corrupted package '{pkg_layout.reference}' "
+                                f"without conaninfo.txt in: {info_path}")
+            info = {}
+        else:
+            conan_info_content = load(info_path)
+            info = load_binary_info(conan_info_content)
         pref = pkg_layout.reference
         # The key shoudln't have the latest package revision, we are asking for package configs
         pref.revision = None

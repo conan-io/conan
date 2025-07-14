@@ -11,7 +11,7 @@ def test_conanfile_txt_deps_revisions(requires):
     """
     conanfile.txt locking it dependencies (with revisions)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
@@ -37,7 +37,7 @@ def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     """
     conanfile.txt locking it dependencies and its transitive dependencies (with revisions)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "pkg/conanfile.py": GenConanfile().with_requires(f"dep/{req_version}@user/testing"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/{req_version}@user/testing"})
@@ -67,7 +67,7 @@ def test_conanfile_txt_strict_revisions(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
@@ -91,7 +91,7 @@ def test_conditional_os(requires):
     conanfile.txt can lock conditional dependencies (conditional on OS for example),
     with consecutive calls to "conan lock create", augmenting the lockfile
     """
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent(f"""
         from conan import ConanFile
@@ -151,7 +151,7 @@ def test_conditional_os(requires):
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_same_package_revisions(requires):
     # What happens when a conditional requires different versions of the same package?
-    client = TestClient()
+    client = TestClient(light=True)
 
     pkg_conanfile = textwrap.dedent("""
         from conan import ConanFile

@@ -1,15 +1,14 @@
 import os
 import re
 import tempfile
-import unittest
 
 import pytest
 
-from conans.client.downloaders.file_downloader import FileDownloader
-from conans.errors import ConanException
+from conan.internal.rest.file_downloader import FileDownloader
+from conan.errors import ConanException
 
 
-class MockResponse(object):
+class MockResponse:
     def __init__(self, data, headers, status_code=200):
         self.data = data
         self.ok = True
@@ -25,9 +24,7 @@ class MockResponse(object):
         pass
 
 
-class MockRequester(object):
-    retry = 0
-    retry_wait = 0
+class MockRequester:
 
     def __init__(self, data, chunk_size=None, accept_ranges=True, echo_header=None):
         self._data = data
@@ -44,15 +41,11 @@ class MockRequester(object):
         headers = {"Content-Length": len(self._data), "Accept-Ranges": "bytes"}
         if match and self._accept_ranges:
             start = int(match.groups()[0])
-            if start < len(self._data):
-                status = 206
-                headers.update({"Content-Length": str(len(self._data) - start),
-                                "Content-Range": "bytes {}-{}/{}".format(start, len(self._data) - 1,
-                                                                         len(self._data))})
-            else:
-                status = 416
-                headers.update({"Content-Length": "0",
-                                "Content-Range": "bytes */{}".format(len(self._data))})
+            assert start < len(self._data)
+            status = 206
+            headers.update({"Content-Length": str(len(self._data) - start),
+                            "Content-Range": "bytes {}-{}/{}".format(start, len(self._data) - 1,
+                                                                     len(self._data))})
         else:
             headers.update(self._echo_header)
         response = MockResponse(self._data[start:start + self._chunk_size], status_code=status,
@@ -60,8 +53,9 @@ class MockRequester(object):
         return response
 
 
-class DownloaderUnitTest(unittest.TestCase):
-    def setUp(self):
+class TestDownloaderUnit:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         d = tempfile.mkdtemp()
         self.target = os.path.join(d, "target")
 
@@ -71,7 +65,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_resume_download_to_file_if_interrupted(self):
         expected_content = b"some data"
@@ -80,7 +74,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader.download("fake_url", file_path=self.target, verify_ssl=None,
                             retry=0, retry_wait=0)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_fail_interrupted_download_to_file_if_no_progress(self):
         expected_content = b"some data"
@@ -103,7 +97,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_download_with_compressed_content_and_smaller_content_length(self):
         expected_content = b"some data"
@@ -112,4 +106,4 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content

@@ -3,12 +3,12 @@ import os
 import re
 from fnmatch import translate
 
-from conans.errors import ForbiddenException, RecipeNotFoundException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.errors import ForbiddenException, RecipeNotFoundException
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANINFO
 from conans.server.utils.files import list_folder_subdirs
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def _get_local_infos_min(server_store, ref):
@@ -75,20 +75,18 @@ class SearchService(object):
         def underscore_to_none(field):
             return field if field != "_" else None
 
+        ret = set()
         if not pattern:
-            ret = []
             for folder in subdirs:
                 fields_dir = [underscore_to_none(d) for d in folder.split("/")]
                 r = RecipeReference(*fields_dir)
                 r.revision = None
-                ret.append(r)
-            return sorted(ret)
+                ret.add(r)
         else:
             # Conan references in main storage
             pattern = str(pattern)
             b_pattern = translate(pattern)
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
-            ret = set()
             for subdir in subdirs:
                 fields_dir = [underscore_to_none(d) for d in subdir.split("/")]
                 new_ref = RecipeReference(*fields_dir)
@@ -96,7 +94,7 @@ class SearchService(object):
                 if new_ref.partial_match(b_pattern):
                     ret.add(new_ref)
 
-            return sorted(ret)
+        return sorted(ret)
 
     def search(self, pattern=None, ignorecase=True):
         """ Get all the info about any package

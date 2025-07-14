@@ -14,7 +14,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.profiles import create_profile as _create_profile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 conanfile_scope_env = """
 from conan import ConanFile
@@ -33,9 +33,8 @@ class AConan(ConanFile):
 """
 
 
-def create_profile(folder, name, settings=None, package_settings=None, env=None,
-                   package_env=None, options=None):
-    _create_profile(folder, name, settings, package_settings, env, package_env, options)
+def create_profile(folder, name, settings=None, package_settings=None, options=None):
+    _create_profile(folder, name, settings, package_settings, options)
     content = load(os.path.join(folder, name))
     content = "include(default)\n    \n" + content
     save(os.path.join(folder, name), content)
@@ -61,7 +60,7 @@ class ProfileTest(unittest.TestCase):
         profile = '''
         [settings
         '''
-        clang_profile_path = os.path.join(self.client.cache.profiles_path, "clang")
+        clang_profile_path = os.path.join(self.client.paths.profiles_path, "clang")
         save(clang_profile_path, profile)
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
@@ -117,7 +116,7 @@ class ProfileTest(unittest.TestCase):
                                         ("compiler.runtime", "dynamic"),
                                         ("arch", "x86")])
 
-        create_profile(self.client.cache.profiles_path, "vs_12_86",
+        create_profile(self.client.paths.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
         self.client.save({"conanfile.py": conanfile_scope_env})
@@ -142,7 +141,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"hello0/*": tmp_settings}
-        create_profile(self.client.cache.profiles_path,
+        create_profile(self.client.paths.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
         # Try to override some settings in install command
@@ -153,13 +152,13 @@ class ProfileTest(unittest.TestCase):
 
         # If other package is specified compiler is not modified
         package_settings = {"NoExistsRecipe": tmp_settings}
-        create_profile(self.client.cache.profiles_path,
+        create_profile(self.client.paths.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
 
         # Mix command line package settings with profile
         package_settings = {"hello0/*": tmp_settings}
-        create_profile(self.client.cache.profiles_path, "vs_12_86_hello0_gcc",
+        create_profile(self.client.paths.profiles_path, "vs_12_86_hello0_gcc",
                        settings=profile_settings, package_settings=package_settings)
 
         # Try to override some settings in install command
@@ -197,7 +196,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"*@lasote/*": tmp_settings}
-        _create_profile(self.client.cache.profiles_path,
+        _create_profile(self.client.paths.profiles_path,
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
@@ -207,7 +206,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("(hello0/0.1@lasote/testing): 4.8", info)
 
         package_settings = {"*@other/*": tmp_settings}
-        _create_profile(self.client.cache.profiles_path,
+        _create_profile(self.client.paths.profiles_path,
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
@@ -243,7 +242,7 @@ class ProfileTest(unittest.TestCase):
         assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
     def test_install_profile_options(self):
-        create_profile(self.client.cache.profiles_path, "vs_12_86",
+        create_profile(self.client.paths.profiles_path, "vs_12_86",
                        options={"hello0*:language": 1,
                                 "hello0*:static": False})
 
@@ -272,7 +271,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("remove '*' -c")
         # Create a simple recipe to require
         winreq_conanfile = '''
-from conans.model.conan_file import ConanFile
+from conan import ConanFile
 
 class winrequireDefaultNameConan(ConanFile):
     name = "winrequire"
@@ -286,7 +285,7 @@ class winrequireDefaultNameConan(ConanFile):
         self.client.run("export . --user=lasote --channel=stable")
 
         # Now require the first recipe depending on OS=windows
-        conanfile = '''from conans.model.conan_file import ConanFile
+        conanfile = '''from conan import ConanFile
 import os
 
 class DefaultNameConan(ConanFile):
@@ -304,7 +303,7 @@ class DefaultNameConan(ConanFile):
         self.client.run("export . --user=lasote --channel=stable")
 
         # Create a profile that doesn't activate the require
-        create_profile(self.client.cache.profiles_path, "scopes_env",
+        create_profile(self.client.paths.profiles_path, "scopes_env",
                        settings={"os": "Linux"})
 
         # Install with the previous profile
@@ -313,7 +312,7 @@ class DefaultNameConan(ConanFile):
                 winrequire/0.1@lasote/stable''', self.client.out)
 
         # Create a profile that activate the require
-        create_profile(self.client.cache.profiles_path, "scopes_env",
+        create_profile(self.client.paths.profiles_path, "scopes_env",
                        settings={"os": "Windows"})
 
         # Install with the previous profile
@@ -339,7 +338,7 @@ class ProfileAggregationTest(unittest.TestCase):
     """)
 
     conanfile = dedent("""
-    from conans.model.conan_file import ConanFile
+    from conan import ConanFile
     import os
 
     class DefaultNameConan(ConanFile):
@@ -352,7 +351,7 @@ class ProfileAggregationTest(unittest.TestCase):
     """)
 
     consumer = dedent("""
-    from conans.model.conan_file import ConanFile
+    from conan import ConanFile
     import os
 
     class DefaultNameConan(ConanFile):
@@ -414,7 +413,7 @@ def test_profile_from_cache_path():
         https://github.com/conan-io/conan/pull/8685
     """
     client = TestClient()
-    path = os.path.join(client.cache.profiles_path, "android", "profile1")
+    path = os.path.join(client.paths.profiles_path, "android", "profile1")
     save(path, "[settings]\nos=Android")
     client.save({"conanfile.txt": ""})
     client.run("install . -pr=android/profile1")
@@ -557,6 +556,30 @@ def test_create_and_priority_of_consumer_specific_setting():
     assert "I'm None and my build type is Debug" in client.out
 
 
+def test_package_consumer_is_only_the_tested_one():
+    """
+    the &:xxx pattern applies only to the package being tested, not other requires
+    """
+    c = TestClient(light=True)
+    test = textwrap.dedent("""
+        from conan import ConanFile
+        class Tool(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.requires("dep/1.0")
+
+            def test(self):
+                pass
+        """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_option("myoption", [1, 2]),
+            "pkg/test_package/conanfile.py": test})
+    c.run("create dep")
+    c.run("create pkg -o &:myoption=1")
+    # This would crash if myoption is applied to dep
+    assert 'pkg/0.1 (test package): Running test()' in c.out
+
+
 def test_consumer_specific_settings_from_profile():
     client = TestClient()
     conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
@@ -613,3 +636,12 @@ def test_consumer_invalid_profile_multiple_groups():
                assert_error=True)
     assert ("ERROR: Error reading 'myprofs/myprofile' profile: ConfigParser: "
             "Duplicated section: [settings]") in client.out
+
+def test_compose_numeric_values_scoped_pkg():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("hello", "0.1")
+                .with_package("self.output.info('user.var.value: ' + str(self.conf.get('user.var:value')))"),
+             "profile": """[conf]\nuser.var:value=8.1\nhello/*:user.var:value=10\n"""})
+
+    tc.run("create . -pr=profile")
+    assert "user.var.value: 10" in tc.out

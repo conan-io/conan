@@ -1,9 +1,9 @@
 import pytest
 
-from conan.internal.api.detect_api import detect_cppstd
+from conan.internal.api.detect.detect_api import detect_cppstd
 from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd
-from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.version import Version
+from conan.errors import ConanException, ConanInvalidConfiguration
+from conan.internal.model.version import Version
 from conan.test.utils.mocks import MockSettings, ConanFileMock
 
 
@@ -128,6 +128,7 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
     ("qcc", "4.4", ['98', 'gnu98']),
     ("qcc", "5.4", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
     ("qcc", "8.3", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
+    ("qcc", "12.2", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17", "20", "gnu20"]),
 ])
 def test_supported_cppstd_qcc(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})

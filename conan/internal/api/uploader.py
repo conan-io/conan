@@ -1,16 +1,19 @@
+import fnmatch
+import gzip
 import os
 import shutil
+import tarfile
 import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
-from conans.client.source import retrieve_exports_sources
-from conans.errors import ConanException, NotFoundException
+from conan.internal.source import retrieve_exports_sources
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                                   EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size)
+from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
+                                       set_dirty_context_manager, mkdir, human_size)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -80,9 +83,9 @@ class PackagePreparator:
         self._app = app
         self._global_conf = global_conf
 
-    def prepare(self, upload_bundle, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle in upload_bundle.refs().items():
+        for ref, bundle in pkg_list.refs().items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -95,7 +98,7 @@ class PackagePreparator:
 
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in upload_bundle.prefs(ref, bundle).items():
+            for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
@@ -179,7 +182,7 @@ class PackagePreparator:
             clean_dirty(package_tgz)
 
         # Get all the files in that directory
-        # existing package, will use short paths if defined
+        # existing package
         package_folder = layout.package()
         files, symlinked_folders = gather_files(package_folder)
         files.update(symlinked_folders)
@@ -253,17 +256,32 @@ class UploadExecutor:
         output.debug(f"Upload {pref} in {duration} time")
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
+def gzopen_without_timestamps(name, fileobj, compresslevel=None):
+    """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
+        setted in Gzip file causing md5 to change. Not possible using the
+        previous tarfile open because arguments are not passed to GzipFile constructor
+    """
+    compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
+    fileobj = gzip.GzipFile(name, "w", compresslevel, fileobj, mtime=0)
+    # Format is forced because in Python3.8, it changed and it generates different tarfiles
+    # with different checksums, which break hashes of tgzs
+    # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+    t = tarfile.TarFile.taropen(name, "w", fileobj, format=tarfile.PAX_FORMAT)
+    t._extfileobj = False
+    return t
+
+
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref)).info(f"Compressing {name}")
+    if ref:
+        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
-                                        compresslevel=compresslevel)
+        tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
-            # recursive is False in case it is a symlink to a folder
-            tgz.add(abs_path, filename, recursive=False)
+            # recursive is False by default in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
     duration = time.time() - t1
@@ -277,3 +295,37 @@ def _total_size(cache_files):
         stat = os.stat(file)
         total_size += stat.st_size
     return human_size(total_size)
+
+
+def _metadata_files(folder, metadata):
+    result = {}
+    for root, _, files in os.walk(folder):
+        for f in files:
+            abs_path = os.path.join(root, f)
+            relpath = os.path.relpath(abs_path, folder)
+            if metadata and not relpath.startswith("conan"):
+                if not any(fnmatch.fnmatch(relpath, m) for m in metadata):
+                    continue
+            path = os.path.join("metadata", relpath).replace("\\", "/")
+            result[path] = abs_path
+    return result
+
+
+def gather_metadata(package_list, cache, metadata):
+    for rref, recipe_bundle in package_list.refs().items():
+        if metadata or recipe_bundle["upload"]:
+            metadata_folder = cache.recipe_layout(rref).metadata()
+            files = _metadata_files(metadata_folder, metadata)
+            if files:
+                ConanOutput(scope=str(rref)).info(f"Recipe metadata: {len(files)} files")
+                recipe_bundle.setdefault("files", {}).update(files)
+                recipe_bundle["upload"] = True
+
+        for pref, pkg_bundle in package_list.prefs(rref, recipe_bundle).items():
+            if metadata or pkg_bundle["upload"]:
+                metadata_folder = cache.pkg_layout(pref).metadata()
+                files = _metadata_files(metadata_folder, metadata)
+                if files:
+                    ConanOutput(scope=str(pref)).info(f"Package metadata: {len(files)} files")
+                    pkg_bundle.setdefault("files", {}).update(files)
+                    pkg_bundle["upload"] = True

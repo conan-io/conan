@@ -4,7 +4,7 @@ import unittest
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
@@ -29,7 +29,7 @@ class HelloConan(ConanFile):
 
     def test_runtime_auto(self):
         # Ensure that compiler.runtime is not declared
-        default_profile = load(self.client.cache.default_profile_path)
+        default_profile = self.client.load_home("profiles/default")
         self.assertNotIn(default_profile, "compiler.runtime")
         self.client.run("install --requires=hello0/0.1@lasote/channel --build missing")
         self.assertIn("Runtime_type: Release", self.client.out)
@@ -38,12 +38,13 @@ class HelloConan(ConanFile):
 
     def test_runtime_not_present_ok(self):
         self.client.run("install .")
-        default_settings = load(self.client.cache.settings_path)
+        default_settings = load(self.client.paths.settings_path)
         default_settings = default_settings.replace("runtime:", "# runtime:")
         default_settings = default_settings.replace("runtime_type:", "# runtime_type:")
-        save(self.client.cache.settings_path, default_settings)
-        save(self.client.cache.default_profile_path,
-             "[settings]\nos=Windows\ncompiler=msvc\ncompiler.version=191")
+        save(self.client.paths.settings_path, default_settings)
+        self.client.save_home({
+            "profiles/default": "[settings]\nos=Windows\ncompiler=msvc\ncompiler.version=191"
+        })
         # Ensure the runtime setting is not there anymore
         self.client.run('install --requires=hello0/0.1@lasote/channel --build missing '
                         '-s compiler.runtime="dynamic"', assert_error=True)

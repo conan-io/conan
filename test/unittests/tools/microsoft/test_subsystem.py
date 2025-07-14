@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from conan.tools.microsoft import unix_path, unix_path_package_info_legacy
-from conans.model.conf import ConfDefinition
+from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import MockSettings, ConanFileMock
 
 expected_results = [

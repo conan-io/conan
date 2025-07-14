@@ -8,12 +8,12 @@ import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.microsoft.visual import vcvars_command
-from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save, load, rmdir
+from conan.test.utils.tools import TestClient
+from conan.internal.util.files import save, load, rmdir
+from test.conftest import tools_locations
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -50,7 +50,7 @@ def test_cmake_toolchain_user_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake")
+    client.save_home({"global.conf": "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake"})
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -62,7 +62,7 @@ def test_cmake_toolchain_custom_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake")
+    client.save_home({"global.conf": "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake"})
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -105,7 +105,7 @@ def test_cmake_user_presets_load(existing_user_presets):
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
-        project(PackageTest CXX)
+        project(PackageTest NONE)
         find_package(mylib REQUIRED CONFIG)
         """)
 
@@ -229,6 +229,8 @@ def test_cmake_toolchain_cmake_vs_debugger_environment():
                            f"$<$<CONFIG:Release>:{release_bindir}>" \
                            f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
     assert debugger_environment in toolchain
+
+
 @pytest.mark.tool("cmake")
 def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
     client = TestClient()
@@ -240,7 +242,6 @@ def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
     client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
-
 
 
 @pytest.mark.tool("cmake")
@@ -310,9 +311,7 @@ def test_cmaketoolchain_no_warnings():
         """)
     consumer = textwrap.dedent("""
        cmake_minimum_required(VERSION 3.15)
-       set(CMAKE_CXX_COMPILER_WORKS 1)
-       set(CMAKE_CXX_ABI_COMPILED 1)
-       project(MyHello CXX)
+       project(MyHello NONE)
 
        find_package(dep CONFIG REQUIRED)
        """)
@@ -334,26 +333,20 @@ def test_install_output_directories():
     If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
     for the libraries is changed
     """
-    ref = RecipeReference.loads("zlib/1.2.11")
-    client = TurboTestClient()
+    client = TestClient()
     client.run("new cmake_lib -d name=zlib -d version=1.2.11")
-    cf = client.load("conanfile.py")
-    pref = client.create(ref, conanfile=cf)
-    p_folder = client.get_latest_pkg_layout(pref).package()
-    assert not os.path.exists(os.path.join(p_folder, "mylibs"))
-    assert os.path.exists(os.path.join(p_folder, "lib"))
-
     # Edit the cpp.package.libdirs and check if the library is placed anywhere else
     cf = client.load("conanfile.py")
     cf = cf.replace("cmake_layout(self)",
                     'cmake_layout(self)\n        self.cpp.package.libdirs = ["mylibs"]')
-
-    pref = client.create(ref, conanfile=cf)
-    p_folder = client.get_latest_pkg_layout(pref).package()
+    client.save({"conanfile.py": cf})
+    client.run("create . -tf=")
+    layout = client.created_layout()
+    p_folder = layout.package()
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
     assert not os.path.exists(os.path.join(p_folder, "lib"))
 
-    b_folder = client.get_latest_pkg_layout(pref).build()
+    b_folder = layout.build()
     if platform.system() != "Windows":
         gen_folder = os.path.join(b_folder, "build", "Release", "generators")
     else:
@@ -447,6 +440,8 @@ def test_cmake_toolchain_definitions_complex_strings():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         set(CMAKE_CXX_STANDARD 11)
@@ -483,101 +478,6 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'spaces_debug=debug me you' in client.out
     assert 'foobar_debug=debug bazbuz' in client.out
     assert 'answer_debug=21' in client.out
-
-
-class TestAutoLinkPragma:
-    # TODO: This is a CMakeDeps test, not a CMakeToolchain test, move it to the right place
-
-    test_cf = textwrap.dedent("""
-        import os
-
-        from conan import ConanFile
-        from conan.tools.cmake import CMake, cmake_layout, CMakeDeps
-        from conan.tools.build import cross_building
-
-
-        class HelloTestConan(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
-            generators = "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-            apply_env = False
-            test_type = "explicit"
-
-            def generate(self):
-                deps = CMakeDeps(self)
-                deps.generate()
-
-            def requirements(self):
-                self.requires(self.tested_reference_str)
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-
-            def layout(self):
-                cmake_layout(self)
-
-            def test(self):
-                if not cross_building(self):
-                    cmd = os.path.join(self.cpp.build.bindirs[0], "example")
-                    self.run(cmd, env="conanrun")
-        """)
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
-    @pytest.mark.tool("cmake")
-    def test_autolink_pragma_components(self):
-        """https://github.com/conan-io/conan/issues/10837
-
-        NOTE: At the moment the property cmake_set_interface_link_directories is only read at the
-        global cppinfo, not in the components"""
-
-        client = TestClient()
-        client.run("new cmake_lib -d name=hello -d version=1.0")
-        cf = client.load("conanfile.py")
-        cf = cf.replace('self.cpp_info.libs = ["hello"]', """
-            self.cpp_info.components['my_component'].includedirs.append('include')
-            self.cpp_info.components['my_component'].libdirs.append('lib')
-            self.cpp_info.components['my_component'].libs = []
-            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
-        """)
-        hello_h = client.load("include/hello.h")
-        hello_h = hello_h.replace("#define HELLO_EXPORT __declspec(dllexport)",
-                                  '#define HELLO_EXPORT __declspec(dllexport)\n'
-                                  '#pragma comment(lib, "hello")')
-
-        test_cmakelist = client.load("test_package/CMakeLists.txt")
-        test_cmakelist = test_cmakelist.replace("target_link_libraries(example hello::hello)",
-                                                "target_link_libraries(example hello::my_component)")
-        client.save({"conanfile.py": cf,
-                     "include/hello.h": hello_h,
-                     "test_package/CMakeLists.txt": test_cmakelist,
-                     "test_package/conanfile.py": self.test_cf})
-
-        client.run("create .")
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
-    @pytest.mark.tool("cmake")
-    def test_autolink_pragma_without_components(self):
-        """https://github.com/conan-io/conan/issues/10837"""
-        client = TestClient()
-        client.run("new cmake_lib -d name=hello -d version=1.0")
-        cf = client.load("conanfile.py")
-        cf = cf.replace('self.cpp_info.libs = ["hello"]', """
-            self.cpp_info.includedirs.append('include')
-            self.cpp_info.libdirs.append('lib')
-            self.cpp_info.libs = []
-            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
-        """)
-        hello_h = client.load("include/hello.h")
-        hello_h = hello_h.replace("#define HELLO_EXPORT __declspec(dllexport)",
-                                  '#define HELLO_EXPORT __declspec(dllexport)\n'
-                                  '#pragma comment(lib, "hello")')
-
-        client.save({"conanfile.py": cf,
-                     "include/hello.h": hello_h,
-                     "test_package/conanfile.py": self.test_cf})
-
-        client.run("create .")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -619,6 +519,9 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class TestWinSDKVersion:
+
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version(self):
         # This test passes also with CMake 3.28, as long as cmake_minimum_required(VERSION 3.27)
         # is not defined
@@ -628,13 +531,13 @@ class TestWinSDKVersion:
         cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1")
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+        client.run("create . -s arch=x86_64 -s compiler.version=194 "
+                   "-c tools.microsoft:winsdk_version=10.0")
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 10.0" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
         assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
 
-    @pytest.mark.tool("cmake", "3.28")
+    @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.tool("visual_studio", "17")
     def test_cmake_toolchain_winsdk_version2(self):
         # https://github.com/conan-io/conan/issues/15372
@@ -646,11 +549,11 @@ class TestWinSDKVersion:
         cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
                  '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
         client.save({"CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86_64 -s compiler.version=193 "
-                   "-c tools.microsoft:winsdk_version=8.1 "
+        client.run("create . -s arch=x86_64 -s compiler.version=194 "
+                   "-c tools.microsoft:winsdk_version=10.0 "
                    '-c tools.cmake.cmaketoolchain:generator="Visual Studio 17"')
-        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
-        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=8.1" in client.out
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 10.0" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=10.0" in client.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -1014,8 +917,7 @@ def test_cmaketoolchain_sysroot():
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        project(app CXX)
+        project(app NONE)
         message("sysroot: '${CMAKE_SYSROOT}'")
         message("osx_sysroot: '${CMAKE_OSX_SYSROOT}'")
         """)
@@ -1159,8 +1061,7 @@ def test_resdirs_cmake_install():
 
     cmake = """
     cmake_minimum_required(VERSION 3.15)
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    project(foo)
+    project(foo NONE)
     if(NOT CMAKE_INSTALL_DATAROOTDIR)
         message(FATAL_ERROR "Cannot install stuff")
     endif()
@@ -1204,8 +1105,7 @@ def test_resdirs_none_cmake_install():
 
     cmake = """
     cmake_minimum_required(VERSION 3.15)
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    project(foo)
+    project(foo NONE)
     if(NOT CMAKE_INSTALL_DATAROOTDIR)
         message(FATAL_ERROR "Cannot install stuff")
     endif()
@@ -1216,6 +1116,7 @@ def test_resdirs_none_cmake_install():
     assert "Cannot install stuff" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_toolchain_vars_when_option_declared():
     t = TestClient()
 
@@ -1430,7 +1331,7 @@ def test_cmaketoolchain_and_pkg_config_path():
     """)
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
-    project(pkg CXX)
+    project(pkg NONE)
 
     find_package(PkgConfig REQUIRED)
     # We should have PKG_CONFIG_PATH created in the current environment
@@ -1505,8 +1406,8 @@ def test_inject_user_toolchain():
         include(default)
         [conf]
         tools.cmake.cmaketoolchain:user_toolchain+={{profile_dir}}/myvars.cmake""")
-    save(os.path.join(client.cache.profiles_path, "myprofile"), profile)
-    save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
+    save(os.path.join(client.paths.profiles_path, "myprofile"), profile)
+    save(os.path.join(client.paths.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
     client.run("build . -pr=myprofile")
@@ -1515,7 +1416,7 @@ def test_inject_user_toolchain():
     # Now test with the global.conf
     global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
                   '["{{conan_home_folder}}/my.cmake"]'
-    save(client.cache.new_config_path, global_conf)
+    client.save_home({"global.conf": global_conf})
     save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
     client.run("build .")
     # The toolchain is found and can be used
@@ -1677,8 +1578,10 @@ class TestEnvironmentInPresets:
         """)
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(MyProject)
+            project(MyProject CXX)
 
             if(WIN32)
                 set(MYTOOL_SCRIPT "mytool.bat")
@@ -1884,6 +1787,8 @@ def test_cmake_toolchain_cxxflags_multi_config():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         add_executable(example src/main.cpp)
@@ -1979,6 +1884,8 @@ def test_cmake_toolchain_ninja_multi_config():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Test CXX)
         add_executable(example src/main.cpp)
@@ -2041,3 +1948,118 @@ def test_cxx_version_not_overriden_if_hardcoded():
     tc.run("create . -s=compiler.cppstd=17")
     assert "Conan toolchain: C++ Standard 17 with extensions OFF" in tc.out
     assert "Warning: Standard CMAKE_CXX_STANDARD value defined in conan_toolchain.cmake to 17 has been modified to 17" not in tc.out
+
+
+@pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+def test_cmake_toolchain_crossbuild_set_cmake_compiler():
+    # To reproduce https://github.com/conan-io/conan/issues/16960
+    # the issue happens when you set CMAKE_CXX_COMPILER and CMAKE_C_COMPILER as cache variables
+    # and then cross-build
+    c = TestClient()
+
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
+    bin_path = ndk_path + (
+        "/toolchains/llvm/prebuilt/darwin-x86_64/bin" if platform.machine() == "x86_64" else
+        "/toolchains/llvm/prebuilt/darwin-arm64/bin"
+    )
+
+    android = textwrap.dedent(f"""
+       [settings]
+       os=Android
+       os.api_level=23
+       arch=x86_64
+       compiler=clang
+       compiler.version=12
+       compiler.libcxx=c++_shared
+       build_type=Release
+       [conf]
+       tools.android:ndk_path={ndk_path}
+       tools.build:compiler_executables = {{"c": "{bin_path}/x86_64-linux-android23-clang", "cpp": "{bin_path}/x86_64-linux-android23-clang++"}}
+       """)
+
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+        from conan.tools.build import check_min_cppstd
+        class SDKConan(ConanFile):
+            name = "sdk"
+            version = "1.0"
+            generators = "CMakeDeps", "VirtualBuildEnv"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt"
+            def layout(self):
+                cmake_layout(self)
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.cache_variables["SDK_VERSION"] = str(self.version)
+                tc.generate()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+    """)
+
+    cmake = textwrap.dedent(f"""
+        cmake_minimum_required(VERSION 3.23)
+        project(sdk VERSION ${{SDK_VERSION}}.0 LANGUAGES NONE)
+        message("sdk: ${{SDK_VERSION}}.0")
+    """)
+
+    c.save({"android": android,
+            "conanfile.py": conanfile,
+            "CMakeLists.txt": cmake,})
+    # first run works ok
+    c.run('build . --profile:host=android')
+    assert 'sdk: 1.0.0' in c.out
+    # in second run CMake says that you have changed variables that require your cache to be deleted.
+    # and deletes the cache and fails
+    c.run('build . --profile:host=android')
+    assert 'VERSION ".0" format invalid.' not in c.out
+    assert 'sdk: 1.0.0' in c.out
+
+
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_language_c():
+    client = TestClient()
+
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+            languages = "C"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg NONE)
+        """)
+
+    client.save(
+        {
+            "conanfile.py": conanfile,
+            "CMakeLists.txt": cmakelists,
+        },
+        clean_first=True,
+    )
+
+    if platform.system() == "Windows":
+        # compiler.version=191 is already the default now
+        client.run("build . -s compiler.cstd=11 -s compiler.version=191", assert_error=True)
+        assert "The provided compiler.cstd=11 is not supported by msvc 191. Supported values are: []" \
+               in client.out
+    else:
+        client.run("build . -s compiler.cppstd=11")
+        # It doesn't fail

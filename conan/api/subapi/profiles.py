@@ -3,10 +3,11 @@ import os
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conan.internal.api.profile.profile_loader import ProfileLoader
-from conans.errors import ConanException, scoped_traceback
-from conans.model.profile import Profile
+from conan.internal.errors import scoped_traceback
+from conan.errors import ConanException
+from conan.internal.model.profile import Profile
 
 DEFAULT_PROFILE_NAME = "default"
 
@@ -63,12 +64,12 @@ class ProfilesAPI:
         cwd = os.getcwd()
         profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
                                           args.conf_build, cwd, cache_settings,
-                                          profile_plugin, global_conf)
+                                          profile_plugin, global_conf, context="build")
         profile_host = self._get_profile(host_profiles, args.settings_host, args.options_host, args.conf_host,
-                                         cwd, cache_settings, profile_plugin, global_conf)
+                                         cwd, cache_settings, profile_plugin, global_conf, context="host")
         return profile_host, profile_build
 
-    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None, context=None):
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
@@ -80,13 +81,13 @@ class ProfilesAPI:
         profile_plugin = self._load_profile_plugin()
 
         profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,
-                                    profile_plugin, global_conf)
+                                    profile_plugin, global_conf, context=context)
         return profile
 
     def _get_profile(self, profiles, settings, options, conf, cwd, cache_settings,
-                     profile_plugin, global_conf):
+                     profile_plugin, global_conf, context):
         loader = ProfileLoader(self._conan_api.cache_folder)
-        profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile = loader.from_cli_args(profiles, settings, options, conf, cwd, context)
         if profile_plugin is not None:
             try:
                 profile_plugin(profile)
@@ -103,6 +104,11 @@ class ProfilesAPI:
                                   f"Use '&:{k}={v}' to refer to the current package.\n"
                                   f"Use '*:{k}={v}' or other pattern if the intent was to apply to "
                                   f"dependencies", warn_tag="legacy")
+        if profile.conf.get("tools.graph:skip_test", check_type=bool):
+            ConanOutput().warning("Usage of 'tools.graph:skip_test'", warn_tag="experimental")
+            if not profile.conf.get("tools.build:skip_test", check_type=bool):
+                ConanOutput().warning("tools.graph:skip_test set, but tools.build:skip_test is not, "
+                                      "probably you need to define it too")
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):

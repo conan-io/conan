@@ -75,6 +75,9 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
+    # It's important not to have uname in Path, that could
+    # mean that we have Git bash or MingW in the Path and
+    # we mistakenly use tools from there when we want to use msys2 tools
     def test_tool_not_available(self):
         client = TestClient()
         client.run_command('uname', assert_error=True)
@@ -373,6 +376,8 @@ class TestSubsystemsCMakeBuild:
 
     """
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(app CXX)
         message(STATUS "MYCMAKE VERSION=${CMAKE_VERSION}")
@@ -510,3 +515,49 @@ class TestSubsystemsCMakeBuild:
         self._build(client, generator="Visual Studio 17 2022", toolset="ClangCL")
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None, subsystem=None)
         check_vs_runtime("Debug/app.exe", client, "15", "Debug", subsystem=None)
+
+
+@pytest.mark.tool("msys2")
+def test_msys2_env_vars_paths():
+    c = TestClient()
+    # A tool-requires injecting PATHs for native, should not use "_path" calls, and use
+    # 'separator=;' explicitly
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                self.buildenv_info.append("INCLUDE", "C:/mytool/path", separator=";")
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class HelloConan(ConanFile):
+            win_bash = True
+            tool_requires = "tool/0.1"
+
+            def build(self):
+                self.run('echo "INCLUDE=$INCLUDE"')
+        """)
+    profile = textwrap.dedent("""
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+
+        [buildenv]
+        INCLUDE=+(sep=;)C:/prepended/path
+        INCLUDE+=(sep=;)C:/appended/path
+        """)
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": conanfile,
+            "profile": profile})
+    c.run("create tool")
+    with environment_update({"INCLUDE": "C:/my/abs path/folder;C:/other path/subfolder"}):
+        c.run("build consumer -pr=profile")
+
+    # Check the profile is outputed correctly
+    assert "INCLUDE=+(sep=;)C:/prepended/path" in c.out
+    assert "INCLUDE+=(sep=;)C:/appended/path" in c.out
+    # check the composition is correct
+    assert "INCLUDE=C:/prepended/path;C:/my/abs path/folder;C:/other path/subfolder;" \
+           "C:/mytool/path;C:/appended/path" in c.out

@@ -3,6 +3,9 @@
 
 import os
 
+import pytest
+
+from conan.errors import ConanException
 from conan.tools.files import replace_in_file, save, load
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
@@ -36,18 +39,18 @@ def test_replace_in_file():
 
     # By default utf-8 is used
     save(conanfile, file_path, "你很重，伙計")
-    replace_in_file(conanfile, file_path, "重", "0")
+    assert replace_in_file(conanfile, file_path, "重", "0")
     contents = load(conanfile, file_path)
     assert contents == "你很0，伙計"
 
     # Replacing with other encodings is also possible
     save(conanfile, file_path, "Ö¼", encoding="cp1252")
-    replace_in_file(conanfile, file_path, "¼", "0", encoding="cp1252")
+    assert replace_in_file(conanfile, file_path, "¼", "0", encoding="cp1252")
     contents = load(conanfile, file_path, encoding="cp1252")
     assert contents == "Ö0"
 
     save(conanfile, file_path, "Ö¼", encoding="ISO-8859-1")
-    replace_in_file(conanfile, file_path, "¼", "0", encoding="ISO-8859-1")
+    assert replace_in_file(conanfile, file_path, "¼", "0", encoding="ISO-8859-1")
     contents = load(conanfile, file_path, encoding="ISO-8859-1")
     assert contents == "Ö0"
 
@@ -57,3 +60,9 @@ def test_replace_in_file():
     replace_in_file(conanfile, file_path, "重", "0", encoding="utf-16")
     contents = load(conanfile, file_path, encoding="utf-16")
     assert contents == "你很0，伙計"
+
+    with pytest.raises(ConanException, match="didn't find pattern"):
+        replace_in_file(conanfile, file_path, "not existing", "0", encoding="utf-16")
+
+    assert not replace_in_file(conanfile, file_path, "not existing", "0",
+                               encoding="utf-16", strict=False)

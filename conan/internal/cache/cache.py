@@ -10,11 +10,12 @@ from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLay
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, renamedir, mkdir
+from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+from conan.errors import ConanException
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
+from conan.internal.util.dates import revision_timestamp_now
+from conan.internal.util.files import rmdir, renamedir, mkdir
 
 
 class PkgCache:
@@ -110,10 +111,8 @@ class PkgCache:
     def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
         """
-        if ref.revision is None:  # Latest one
-            ref_data = self._db.get_latest_recipe(ref)
-        else:
-            ref_data = self._db.get_recipe(ref)
+        assert ref.revision is not None
+        ref_data = self._db.get_recipe(ref)
         ref_path = ref_data.get("path")
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
@@ -178,10 +177,7 @@ class PkgCache:
             pattern = translate(pattern)
             pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
 
-        refs = self._db.list_references()
-        if pattern:
-            refs = [r for r in refs if r.partial_match(pattern)]
-        return refs
+        return self._db.list_references(pattern)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
@@ -281,3 +277,11 @@ class PkgCache:
 
     def update_package_lru(self, pref):
         self._db.update_package_lru(pref)
+
+    def path_to_ref(self, path):
+        try:
+            path = os.path.relpath(path, self._base_folder)
+            path = path.replace("\\", "/")  # Uniform for Windows and Linux
+        except ValueError:
+            raise ConanException(f"Invalid path: {path}")
+        return self._db.path_to_ref(path)

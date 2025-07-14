@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class RemoteServerTest(unittest.TestCase):
@@ -200,7 +200,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote add my-remote2 http://someurl2 --insecure")
         client.run("remote add my-remote3 http://someurl3")
 
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote")
         self.assertEqual(data["remotes"][0]["url"], "http://someurl")
@@ -226,7 +226,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote disable my-remote3")
         assert "my-remote3" in client.out
         assert "Enabled: False" in client.out
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote0")
         self.assertEqual(data["remotes"][0]["url"], "http://someurl0")
@@ -242,7 +242,7 @@ class RemoteModificationTest(unittest.TestCase):
 
         client.run("remote disable * --format=json")
 
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertEqual(remote["disabled"], True)
@@ -252,7 +252,7 @@ class RemoteModificationTest(unittest.TestCase):
             assert remote["enabled"] is False
 
         client.run("remote enable *")
-        registry = load(client.cache.remotes_path)
+        registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
@@ -292,7 +292,7 @@ class RemoteModificationTest(unittest.TestCase):
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         self.assertIn("unrecognized arguments: some_invalid_option=foo", client.out)
-        data = json.loads(load(client.cache.remotes_path))
+        data = json.loads(load(client.paths.remotes_path))
         self.assertEqual(data["remotes"], [])
 
 
@@ -337,11 +337,37 @@ def test_add_wrong_conancenter():
     c = TestClient(light=True)
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
-    assert "the correct remote API is https://center.conan.io" in c.out
-    c.run("remote add conancenter https://center.conan.io")
+    assert "the correct remote API is https://center2.conan.io" in c.out
+    c.run("remote add conancenter https://center2.conan.io")
     c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
-    assert "the correct remote API is https://center.conan.io" in c.out
+    assert "the correct remote API is https://center2.conan.io" in c.out
+
+
+def test_using_frozen_center():
+    """ If the legacy center.conan.io is in the remote list warn about it.
+    """
+    c = TestClient(light=True)
+    c.run("remote add whatever https://center.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+    assert 'conan remote update whatever --url="https://center2.conan.io"' in c.out
+
+    c.run("remote list")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+
+    c.run("remote remove whatever")
+
+    c.run("remote add conancenter https://center2.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+
+    c.run("remote list")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+
+    c.run("remote update conancenter --url=https://center.conan.io")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+
+    c.run("remote disable conancenter")
+    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
 
 
 def test_wrong_remotes_json_file():
@@ -378,6 +404,9 @@ def test_allowed_packages_remotes():
     tc.run("remove * -c")
 
     tc.run('remote update default --allowed-packages="liba/*" --allowed-packages="app/*"')
+    tc.run("remote list -f=json")
+    assert "app/*" in tc.out
+
     tc.run("install --requires=app/1.0 -r=default", assert_error=True)
     assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
     assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out

@@ -21,8 +21,7 @@ import platform
 import shutil
 import sys
 
-from conans import __version__
-from conans.util.files import save
+from conan import __version__
 
 
 def _run_bin(pyinstaller_path):
@@ -101,31 +100,20 @@ def pyinstall(source_folder, onefile=False):
         print("Unable to remove old folder", e)
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
-    hidden = ("--hidden-import=glob "  # core stdlib
-              "--hidden-import=pathlib "
-              # Modules that can be imported in ConanFile conan.tools and errors
-              "--collect-submodules=conan.cli.commands "
-              "--hidden-import=conan.errors "
-              "--hidden-import=conan.tools.microsoft "
-              "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
-              "--hidden-import=conan.tools.meson --hidden-import=conan.tools.apple "
-              "--hidden-import=conan.tools.build --hidden-import=conan.tools.env "
-              "--hidden-import=conan.tools.files "
-              "--hidden-import=conan.tools.google --hidden-import=conan.tools.intel "
-              "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
-              "--hidden-import=conan.tools.qbs --hidden-import=conan.tools.scm "
-              "--hidden-import=conan.tools.system --hidden-import=conan.tools.system.package_manager")
+    hidden_imports = []
+
+    if not os.path.exists(pyinstaller_path):
+        os.mkdir(pyinstaller_path)
+
     if platform.system() != "Windows":
-        hidden += " --hidden-import=setuptools.msvc"
+        hidden_imports.append("setuptools.msvc")
         win_ver = ""
     else:
         win_ver_file = os.path.join(pyinstaller_path, 'windows-version-file')
         content = _windows_version_file(__version__)
-        save(win_ver_file, content)
+        with open(win_ver_file, 'w') as file:
+            file.write(content)
         win_ver = ["--version-file", win_ver_file]
-
-    if not os.path.exists(pyinstaller_path):
-        os.mkdir(pyinstaller_path)
 
     if onefile:
         distpath = os.path.join(pyinstaller_path, "dist", "conan")
@@ -134,7 +122,16 @@ def pyinstall(source_folder, onefile=False):
 
     command_args = [conan_path, "--noconfirm", f"--paths={source_folder}",
                     "--console", f"--distpath={distpath}"]
-    command_args.extend(hidden.split(" "))
+
+    # Python standard library modules to ensure in the bundle
+    hidden_imports.append("glob")
+    hidden_imports.append("pathlib")
+    # inclusion of full conan package (with exclusion of irrelevant modules)
+    command_args.append("--collect-submodules=conan")
+    command_args.append("--exclude-module=conan.test.*")
+
+    command_args.extend(f"--hidden-import={name}" for name in hidden_imports)
+
     if win_ver:
         command_args.extend(win_ver)
     if onefile:

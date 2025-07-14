@@ -2,9 +2,9 @@ import textwrap
 
 import pytest
 
-from conans.errors import ConanException
-from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conan.errors import ConanException
+from conan.internal.model.options import Options
+from conan.api.model import RecipeReference
 
 
 class TestOptions:

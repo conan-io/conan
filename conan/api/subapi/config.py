@@ -7,19 +7,21 @@ from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
 from conan.api.output import ConanOutput
-from conans.client.conf import default_settings_yml
-from conan.internal.api import detect_api
+
+from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import consumer_definer
-from conans.errors import ConanException
-from conans.model.conf import ConfDefinition, BUILT_IN_CONFS
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
-from conans.util.files import load, save
+from conan.internal.default_settings import default_settings_yml
+from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.profile_node_definer import consumer_definer
+from conan.errors import ConanException
+from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
+from conan.internal.model.pkg_type import PackageType
+from conan.api.model import RecipeReference
+from conan.internal.model.settings import Settings
+from conan.internal.hook_manager import HookManager
+from conan.internal.util.files import load, save, rmdir, remove
 
 
 class ConfigAPI:
@@ -27,6 +29,8 @@ class ConfigAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
         self._new_config = None
+        self._cli_core_confs = None
+        self.hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
 
     def home(self):
         return self.conan_api.cache_folder
@@ -35,23 +39,24 @@ class ConfigAPI:
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conan.internal.api.config.config_installer import configuration_install
-        app = ConanApp(self.conan_api)
-        configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
+        cache_folder = self.conan_api.cache_folder
+        requester = self.conan_api.remotes.requester
+        configuration_install(cache_folder, requester, path_or_url, verify_ssl, config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
+        self.conan_api.reinit()
 
-    def install_pkg(self, ref, lockfile=None, force=False, remotes=None):
+    def install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
         conan_api = self.conan_api
         remotes = conan_api.remotes.list() if remotes is None else remotes
-        # Ready to use profiles as inputs, but NOT using profiles yet, empty ones
-        profile_host = profile_build = conan_api.profiles.get_profile([])
+        profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
         app = ConanApp(self.conan_api)
 
         # Computation of a very simple graph that requires "ref"
         conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
-        consumer_definer(conanfile, profile_build, profile_host)
+        consumer_definer(conanfile, profile_host, profile_build)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         root_node.is_conf = True
         update = ["*"]
@@ -61,11 +66,11 @@ class ConfigAPI:
 
         # Basic checks of the package: correct package_type and no-dependencies
         deps_graph.report_graph_error()
-        pkg = deps_graph.root.dependencies[0].dst
+        pkg = deps_graph.root.edges[0].dst
         ConanOutput().info(f"Configuration from package: {pkg}")
         if pkg.conanfile.package_type is not PackageType.CONF:
             raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
-        if pkg.dependencies:
+        if pkg.edges:
             raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
         # The computation of the "package_id" and the download of the package is done as usual
@@ -90,13 +95,16 @@ class ConfigAPI:
                     return pkg.pref  # Already installed, we can skip repeating the install
 
         from conan.internal.api.config.config_installer import configuration_install
-        configuration_install(app, uri=pkg.conanfile.package_folder, verify_ssl=False,
+        cache_folder = self.conan_api.cache_folder
+        requester = self.conan_api.remotes.requester
+        configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
                               config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
         # We save the current package full reference in the file for future
         # And for ``package_id`` computation
         config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
         config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
         save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
+        self.conan_api.reinit()
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):
@@ -111,10 +119,18 @@ class ConfigAPI:
         configuration defined with the new syntax as in profiles, this config will be composed
         to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
         """
+        # Lazy loading
         if self._new_config is None:
-            cache_folder = self.conan_api.cache_folder
-            self._new_config = self.load_config(cache_folder)
+            self._new_config = ConfDefinition()
+            self._populate_global_conf()
         return self._new_config
+
+    def _populate_global_conf(self):
+        cache_folder = self.conan_api.cache_folder
+        new_config = self.load_config(cache_folder)
+        self._new_config.update_conf_definition(new_config)
+        if self._cli_core_confs is not None:
+            self._new_config.update_conf_definition(self._cli_core_confs)
 
     @staticmethod
     def load_config(home_folder):
@@ -188,3 +204,36 @@ class ConfigAPI:
             appending_recursive_dict_update(settings, settings_user)
 
         return Settings(settings)
+
+    def clean(self):
+        contents = os.listdir(self.home())
+        packages_folder = self.global_conf.get("core.cache:storage_path") or os.path.join(self.home(), "p")
+        for content in contents:
+            content_path = os.path.join(self.home(), content)
+            if content_path == packages_folder:
+                continue
+            ConanOutput().debug(f"Removing {content_path}")
+            if os.path.isdir(content_path):
+                rmdir(content_path)
+            else:
+                remove(content_path)
+        self.conan_api.reinit()
+        # CHECK: This also generates a remotes.json that is not there after a conan profile show?
+        self.conan_api.migrate()
+
+    def set_core_confs(self, core_confs):
+        confs = ConfDefinition()
+        for c in core_confs:
+            if not CORE_CONF_PATTERN.match(c):
+                raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
+        confs.loads("\n".join(core_confs))
+        confs.validate()
+        self._cli_core_confs = confs
+        # Last but not least, apply the new configuration
+        self.conan_api.reinit()
+
+    def reinit(self):
+        if self._new_config is not None:
+            self._new_config.clear()
+            self._populate_global_conf()
+        self.hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)

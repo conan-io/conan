@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.errors import ConanException
 
 

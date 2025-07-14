@@ -6,8 +6,8 @@ from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
-from conans.util.files import load, save
+from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
@@ -109,7 +109,6 @@ class XcodeDeps(object):
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
         arch = conanfile.settings.get_safe("arch")
-        self.os_version = conanfile.settings.get_safe("os.version")
         self.architecture = _to_apple_arch(arch, default=arch)
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")

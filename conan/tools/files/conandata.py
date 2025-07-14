@@ -3,7 +3,7 @@ import os
 import yaml
 
 from conan.errors import ConanException
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 def update_conandata(conanfile, data):
@@ -68,6 +68,9 @@ def trim_conandata(conanfile, raise_if_missing=True):
         version_data = v.get(version)
         if version_data is not None:
             result[k] = {version: version_data}
+
+    # Update the internal conanfile data too
+    conanfile.conan_data = result
 
     new_conandata_yml = yaml.safe_dump(result, default_flow_style=False)
     save(path, new_conandata_yml)

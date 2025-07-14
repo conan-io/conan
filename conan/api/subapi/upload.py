@@ -3,12 +3,14 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
+from conan.internal.api.upload import add_urls
 from conan.internal.conan_app import ConanApp
-from conan.internal.upload_metadata import gather_metadata
-from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
-from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.client.rest.file_uploader import FileUploader
-from conans.errors import ConanException, AuthenticationException, ForbiddenException
+from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker, \
+    gather_metadata
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
+from conan.internal.rest.file_uploader import FileUploader
+from conan.internal.errors import AuthenticationException, ForbiddenException
+from conan.errors import ConanException
 
 
 class UploadAPI:
@@ -99,6 +101,7 @@ class UploadAPI:
             thread_pool.join()
         elapsed = time.time() - t
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
+        add_urls(package_list, remote)
 
     def upload_backup_sources(self, files):
         config = self.conan_api.config.global_conf
@@ -113,9 +116,8 @@ class UploadAPI:
             output.info("No backup sources files to upload")
             return files
 
-        app = ConanApp(self.conan_api)
-        # TODO: verify might need a config to force it to False
-        uploader = FileUploader(app.requester, verify=True, config=config, source_credentials=True)
+        requester = self.conan_api.remotes.requester
+        uploader = FileUploader(requester, verify=True, config=config, source_credentials=True)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general
         for file in files:

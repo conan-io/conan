@@ -6,6 +6,7 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient, GenConanfile
 
@@ -90,7 +91,7 @@ def test_conanfile_txt(client):
     assert "mycmake/1.0" in client.out
     assert "openssl/1.0" in client.out
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuild", client.current_folder, "mycmake.{}".format(ext))
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder, "mycmake.{}".format(ext))
     client.run_command(cmd)
 
     assert "MYCMAKE=Release!!" in client.out
@@ -120,14 +121,14 @@ def test_complete(client):
     client.run("install . -s build_type=Debug --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuild", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder,
                                    cmd="mycmake.{}".format(ext))
     client.run_command(cmd)
     assert "MYCMAKE=Release!!" in client.out
     assert "MYOPENSSL=Release!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command("conanrun", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(),"conanrun", client.current_folder,
                                    cmd="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                       sep=os.sep))
     client.run_command(cmd)
@@ -594,4 +595,39 @@ def test_requirement_in_wrong_method():
                 self.requires("foo/1.0")
         """)})
     tc.run('create . -cc="core:warnings_as_errors=[\'*\']"', assert_error=True)
-    assert "ERROR: deprecated: Requirements should only be added in the requirements()/build_requirements() methods, not configure()/config_options(), which might raise errors in the future." in tc.out
+    assert ("ERROR: deprecated: Requirements should only be added in the requirements()/"
+            "build_requirements() methods, not configure()/config_options(), which might "
+            "raise errors in the future.") in tc.out
+
+
+def test_transitive_build_scripts_error():
+    # https://github.com/conan-io/conan/issues/18235
+    c = TestClient()
+    meta = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Meta(ConanFile):
+            name = "meta"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("dep/0.1")
+        """)
+    product = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Product(ConanFile):
+            name = "product"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("meta/0.1")
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "meta/conanfile.py": meta,
+            "product/conanfile.py": product})
+    c.run("create dep")
+    c.run("create meta")
+    c.run("install product")
+    # It doesn't crash

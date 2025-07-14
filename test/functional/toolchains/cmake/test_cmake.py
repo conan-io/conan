@@ -11,7 +11,6 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.mark.tool("cmake", "3.15")
@@ -87,6 +86,10 @@ class Base(unittest.TestCase):
     main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
@@ -201,28 +204,22 @@ class Base(unittest.TestCase):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
+    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", True),
+                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", False)]
                           )
-    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
-                           shared):
+    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, shared):
         settings = {"compiler": compiler,
                     "compiler.version": version,
-                    "compiler.toolset": toolset,
                     "compiler.runtime": runtime,
                     "compiler.cppstd": cppstd,
                     "arch": arch,
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path, "tools.build:jobs=1")
+        self.client.save_home({"global.conf": "tools.build:jobs=1"})
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if toolset == "v140":
-            self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
-        else:
-            self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch_flag = "x64" if arch == "x86_64" else "X86"
@@ -255,25 +252,17 @@ class WinTest(Base):
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
-        if runtime == "MTd":
-            settings["compiler.runtime"] = "MT"
-        if runtime == "MD":
-            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
-        if compiler == "msvc":
-            visual_version = version
-        else:
-            visual_version = "190" if toolset == "v140" else "191"
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_RELEASE"
                        })
         self._run_app("Debug", bin_folder=True)
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Debug", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_DEBUG",
                        "MYDEFINE": "MYDEF_VALUE",
@@ -473,20 +462,16 @@ class AppleTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("version, vs_version",
-                         [("190", "15"),
-                          ("191", "15")])
-def test_msvc_vs_versiontoolset(version, vs_version):
+def test_msvc_vs_versiontoolset():
     settings = {"compiler": "msvc",
-                "compiler.version": version,
+                "compiler.version": "191",
                 "compiler.runtime": "static",
                 "compiler.cppstd": "14",
                 "arch": "x86_64",
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.cache.new_config_path,
-         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+    client.save_home({"global.conf": "tools.microsoft.msbuild:vs_version=15"})
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -501,7 +486,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run("Release\\myapp.exe")
+                    self.run(r"Release\\myapp.exe")
             """)
     cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
     main = gen_function_cpp(name="main")
@@ -513,7 +498,8 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
-    check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
+    check_exe_run(client.out, "main", "msvc", "191",
+                  "Release", "x86_64", "14")
 
 
 @pytest.mark.tool("cmake")
@@ -539,7 +525,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -578,7 +564,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -596,8 +582,8 @@ class TestCmakeTestMethod:
     """
     test the cmake.test() helper
     """
-    def test_test(self):
-
+    def test_test(self, matrix_client_shared):
+        c = matrix_client_shared
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -607,7 +593,7 @@ class TestCmakeTestMethod:
                 exports_sources = "CMakeLists.txt", "example.cpp"
 
                 def build_requirements(self):
-                    self.test_requires("test/0.1")
+                    self.test_requires("matrix/1.0")
 
                 def build(self):
                     cmake = CMake(self)
@@ -618,27 +604,26 @@ class TestCmakeTestMethod:
             """)
 
         cmakelist = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(App CXX)
-            find_package(test CONFIG REQUIRED)
+            find_package(matrix CONFIG REQUIRED)
             add_executable(example example.cpp)
-            target_link_libraries(example test::test)
+            target_link_libraries(example matrix::matrix)
 
             enable_testing()
             add_test(NAME example
                       COMMAND example)
             """)
-        c = TestClient()
-        c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,
-                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+                "example.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
                clean_first=True)
 
         # The create flow must work
-        c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
+        c.run("create . --name=pkg --version=0.1 -pr:b=default -o matrix*:shared=True")
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
         assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
@@ -665,7 +650,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.7)
-            project(my_project)
+            project(my_project NONE)
             set(my_config_string "default value" CACHE STRING "my config string")
             message(STATUS "VALUE OF CONFIG STRING: ${my_config_string}")
             """)
@@ -692,10 +677,8 @@ class TestCMakeFindPackagePreferConfig:
             """)
 
         cmakelist = textwrap.dedent("""
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(my_project C)
+            project(my_project NONE)
             find_package(Comandante REQUIRED)
             """)
 
@@ -724,4 +707,3 @@ class TestCMakeFindPackagePreferConfig:
 
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
-

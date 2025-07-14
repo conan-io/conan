@@ -23,7 +23,7 @@ class TestMesonBase(unittest.TestCase):
         if platform.system() == "Darwin":
             self.assertIn(f"main {arch_macro['gcc'][host_arch]} defined", self.t.out)
             self.assertIn("main __apple_build_version__", self.t.out)
-            self.assertIn("main __clang_major__13", self.t.out)
+            self.assertIn("main __clang_major__15", self.t.out)
             # TODO: check why __clang_minor__ seems to be not defined in XCode 12
             # commented while migrating to XCode12 CI
             # self.assertIn("main __clang_minor__0", self.t.out)

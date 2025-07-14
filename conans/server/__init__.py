@@ -1,4 +1,4 @@
-from conans import REVISIONS
+from conan.internal import REVISIONS
 
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 

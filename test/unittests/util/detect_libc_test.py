@@ -1,6 +1,6 @@
 from parameterized import parameterized
 
-from conan.internal.api.detect_api import _parse_gnu_libc, _parse_musl_libc
+from conan.internal.api.detect.detect_api import _parse_gnu_libc, _parse_musl_libc
 
 
 class TestDetectLibc:

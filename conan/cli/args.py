@@ -7,18 +7,22 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     '--build' options on one command line is allowed.
     Possible values:
 
-    --build="*"        Force build from source for all packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
                        package is not found, it cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
     --build=cascade    Build packages from source that have at least one dependency being built from
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
-                       pattern uses 'fnmatch' style wildcards.
+                       pattern uses 'fnmatch' style wildcards, so '--build="*"' will build everything
+                       from source.
     --build=~[pattern] Excluded packages, which will not be built from the source, whose package
                        reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
     --build=missing:[pattern] Build from source if a compatible binary does not exist, only for
                               packages matching pattern.
+    --build=compatible:[pattern] (Experimental) Build from source if a compatible binary does not
+                                 exist, and the requested package is invalid, the closest package
+                                 binary following the defined compatibility policies (method and
+                                 compatibility.py)
 '''
 
 
@@ -48,9 +52,9 @@ def add_common_install_arguments(parser):
                        help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
-                   "for the given reference, or all in case no argument is supplied. "
+                   "for the given reference name, or all references in the graph if no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
-                   "satisfies the range. Also, if using revisions, it will update to the "
+                   "satisfies the range. It will update to the "
                    "latest revision for the resolved version range.")
 
     parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
@@ -96,9 +100,9 @@ def add_profiles_args(parser):
                             help="")
 
     create_config("pr", "profile")
-    create_config("o", "options", "-o pkg:with_qt=true")
-    create_config("s", "settings", "-s compiler=gcc")
-    create_config("c", "conf", "-c tools.cmake.cmaketoolchain:generator=Xcode")
+    create_config("o", "options", '-o="pkg/*:with_qt=True"')
+    create_config("s", "settings", '-s="compiler=gcc"')
+    create_config("c", "conf", '-c="tools.cmake.cmaketoolchain:generator=Xcode"')
 
 
 def add_reference_args(parser):

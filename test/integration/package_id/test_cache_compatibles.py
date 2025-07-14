@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
+from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
 
 
 class TestCacheCompatibles:
@@ -26,9 +26,8 @@ class TestCacheCompatibles:
                     return
                 return debug_compat(conanfile)
             """)
-        compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
-        save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
-        save(os.path.join(compatible_folder, "debug_compat.py"), debug_compat)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles,
+                          "extensions/plugins/compatibility/debug_compat.py": debug_compat})
         return client
 
     def test_compatible_build_type(self, client):
@@ -74,8 +73,7 @@ def test_cppstd():
                                                 ("build_type", "Release")]})
             return result
         """)
-    compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
-    save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+    client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
 
     conanfile = GenConanfile("dep", "0.1").with_settings("compiler", "build_type")
     client.save({"dep/conanfile.py": conanfile,
@@ -106,8 +104,7 @@ def test_cppstd_validated():
         def compatibility(conanfile):
             return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
         """)
-    compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
-    save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+    client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -139,8 +136,7 @@ def test_cppstd_server():
         def compatibility(conanfile):
             return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
         """)
-    compatible_folder = os.path.join(c.cache.plugins_path, "compatibility")
-    save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+    c.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
 
     conanfile = GenConanfile("dep", "0.1").with_settings("compiler")
     c.save({"dep/conanfile.py": conanfile,
@@ -189,7 +185,7 @@ class TestDefaultCompat:
 
     def test_default_cppstd_compatibility(self):
         c = TestClient()
-        save(c.cache.default_profile_path, "")
+        c.save_home({"profiles/default": ""})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -316,7 +312,7 @@ class TestDefaultCompat:
         assert "pkg/0.1: CPPSTD: 17" in c.out
 
     def test_check_min_cstd(self):
-        """ test that the check_min_cstd works fine wiht compatibility
+        """ test that the check_min_cstd works fine with compatibility
         """
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -335,7 +331,7 @@ class TestDefaultCompat:
 
         c = TestClient()
         c.save({"conanfile.py": conanfile})
-        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        settings = "-s compiler=gcc -s compiler.version=14 -s compiler.libcxx=libstdc++11"
         c.run(f"create .  {settings} -s compiler.cstd=17")
         assert "pkg/0.1: valid standard!!" in c.out
         assert "pkg/0.1: CSTD: 17" in c.out
@@ -400,7 +396,7 @@ class TestDefaultCompat:
         c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
                 "dep/conanfile.py": GenConanfile("dep", "0.1").with_tool_requires("tool/0.1"),
                 "app/conanfile.py": GenConanfile("app", "0.1").with_requires("dep/0.1")
-                                                              .with_tool_requires("tool/0.1"),})
+                                                              .with_tool_requires("tool/0.1")})
         c.run("create tool")
         c.run("create dep ")
         c.run("create app ")
@@ -414,7 +410,7 @@ class TestDefaultCompat:
 
     def test_msvc_194_fallback(self):
         c = TestClient()
-        save(c.cache.default_profile_path, "")
+        c.save_home({"profiles/default": ""})
         c.save({"conanfile.py": GenConanfile("mylib", "1.0").with_settings("os", "arch",
                                                                            "compiler", "build_type"),
                 "profile_build": "[settings]\nos=Windows\narch=x86_64"})
@@ -458,9 +454,8 @@ class TestErrorsCompatibility:
             def compatibility(conanfile):
                 return debug_compat(conanfile)
             """)
-        compatible_folder = os.path.join(c.cache.plugins_path, "compatibility")
-        save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
-        save(os.path.join(compatible_folder, "debug_compat.py"), debug_compat)
+        c.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles,
+                     "extensions/plugins/compatibility/debug_compat.py": debug_compat})
 
         conanfile = GenConanfile("dep", "0.1")
         c.save({"dep/conanfile.py": conanfile,
@@ -475,7 +470,8 @@ class TestErrorsCompatibility:
     def test_remove_plugin_file(self):
         c = TestClient()
         c.run("version")  # to trigger the creation
-        os.remove(os.path.join(c.cache.plugins_path, "compatibility", "compatibility.py"))
+        os.remove(os.path.join(HomePaths(c.cache_folder).compatibility_plugin_path,
+                               "compatibility.py"))
         c.save({"conanfile.txt": ""})
         c.run("install .", assert_error=True)
         assert "ERROR: The 'compatibility.py' plugin file doesn't exist" in c.out

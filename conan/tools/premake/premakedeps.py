@@ -3,10 +3,11 @@ import glob
 import re
 
 from conan.internal import check_duplicated_generator
-from conans.util.files import save
+from conan.internal.util.files import save
+from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
 
 # Filename format strings
-PREMAKE_VAR_FILE = "conan_{pkgname}_vars{config}.premake5.lua"
+PREMAKE_VAR_FILE = "conan_{pkgname}_vars_{config}.premake5.lua"
 PREMAKE_CONF_FILE = "conan_{pkgname}{config}.premake5.lua"
 PREMAKE_PKG_FILE = "conan_{pkgname}.premake5.lua"
 PREMAKE_ROOT_FILE = "conandeps.premake5.lua"
@@ -110,7 +111,7 @@ class _PremakeTemplate(object):
             if dep_cpp_info.sysroot else ""
 
 
-class PremakeDeps(object):
+class PremakeDeps:
     """
     PremakeDeps class generator
     conandeps.premake5.lua: unconditional import of all *direct* dependencies only
@@ -145,10 +146,7 @@ class PremakeDeps(object):
             save(generator_file, content)
 
     def _config_suffix(self):
-        props = [("Configuration", self.configuration),
-                 ("Platform", self.architecture)]
-        name = "".join("_%s" % v for _, v in props)
-        return name.lower()
+        return f"{self.configuration}_{CONAN_TO_PREMAKE_ARCH[str(self.architecture)]}".lower()
 
     def _output_lua_file(self, filename, content):
         self.output_files[filename] = "\n".join(["#!lua", *content])
@@ -180,8 +178,7 @@ class PremakeDeps(object):
         check_duplicated_generator(self, self._conanfile)
 
         self.output_files = {}
-        conf_suffix = str(self._config_suffix())
-        conf_name = conf_suffix[1::]
+        conf_name = self._config_suffix()
 
         # Global utility file
         self._output_lua_file("conanutils.premake5.lua", [PREMAKE_TEMPLATE_UTILS])
@@ -192,9 +189,7 @@ class PremakeDeps(object):
         build_req = self._conanfile.dependencies.build
 
         # Merge into one list
-        full_req = list(host_req.items()) \
-                   + list(test_req.items()) \
-                   + list(build_req.items())
+        full_req = list(host_req.items()) + list(test_req.items()) + list(build_req.items())
 
         # Process dependencies and accumulate globally required data
         pkg_files = []
@@ -208,15 +203,15 @@ class PremakeDeps(object):
             dep_aggregate = dep.cpp_info.aggregated_components()
 
             # Generate config dependent package variable and setup premake file
-            var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_suffix)
+            var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_name)
             self._output_lua_file(var_filename, [
                 PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name,
                     config=conf_name, deps=_PremakeTemplate(dep_aggregate))
             ])
 
             # Create list of all available profiles by searching on disk
-            file_pattern = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="_*")
-            file_regex = PREMAKE_VAR_FILE.format(pkgname=re.escape(dep_name), config="_(([^_]*)_(.*))")
+            file_pattern = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="*")
+            file_regex = PREMAKE_VAR_FILE.format(pkgname=re.escape(dep_name), config="(([^_]*)_(.*))")
             available_files = glob.glob(file_pattern)
             # Add filename of current generations var file if not already present
             if var_filename not in available_files:

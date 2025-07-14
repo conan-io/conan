@@ -1,30 +1,22 @@
 import os
 import unittest
 
-import pytest
-from mock import Mock
-
-from conans import REVISIONS
-from conans.client.remote_manager import Remote
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClientFactory
-from conans.model.conf import ConfDefinition
-from conan.test.utils.env import environment_update
-from conans.client.userio import UserInput
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import Remote
+from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.manifest import FileTreeManifest
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.mocks import LocalDBMock
+from conan.test.utils.env import environment_update
 from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import get_free_port
-from conans.util.files import md5, save
+from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.rest_client import RestApiClient
+from conan.internal.util.files import md5, save
 
 
-@pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
 
@@ -35,29 +27,19 @@ class RestApiTest(unittest.TestCase):
     def setUpClass(cls):
         if not cls.server:
             with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
-                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
+                read_perms = [("*/*@*/*", "private_user")]
+                write_perms = [("*/*@*/*", "private_user")]
+                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
+                                                read_permissions=read_perms,
+                                                write_permissions=write_perms)
                 cls.server.start()
 
-                filename = os.path.join(temp_folder(), "conan.conf")
-                save(filename, "")
                 config = ConfDefinition()
                 requester = ConanRequester(config)
-                client_factory = RestApiClientFactory(requester=requester,
-                                                      config=config)
-                localdb = LocalDBMock()
 
-                mocked_user_input = UserInput(non_interactive=False)
-                mocked_user_input.get_username = Mock(return_value="private_user")
-                mocked_user_input.get_password = Mock(return_value="private_pass")
-
-                # FIXME: Missing mock
-                cls.auth_manager = ConanApiAuthManager(client_factory, temp_folder(), localdb, config)
-                cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
-                                    True)
-                cls.auth_manager._authenticate(cls.remote, user="private_user",
-                                               password="private_pass")
-                cls.api = client_factory.new(cls.remote, localdb.access_token, localdb.refresh_token,
-                                             {})
+                remote = Remote("myremote", f"http://127.0.0.1:{cls.server.port}", True, True)
+                cls.api = RestApiClient(remote, None, requester, config)
+                cls.api._token = cls.api.authenticate(user="private_user", password="private_pass")
 
     @classmethod
     def tearDownClass(cls):
@@ -65,10 +47,6 @@ class RestApiTest(unittest.TestCase):
 
     def tearDown(self):
         RestApiTest.server.clean()
-
-    def test_server_capabilities(self):
-        capabilities = self.api.server_capabilities()
-        self.assertEqual(capabilities, ["ImCool", "TooCool", REVISIONS])
 
     def test_get_conan(self):
         # Upload a conans

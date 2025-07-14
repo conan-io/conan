@@ -1,80 +1,46 @@
-import unittest
 from collections import OrderedDict
 
-from conans.model.recipe_ref import RecipeReference
-from conan.test.utils.tools import TestServer, TurboTestClient, GenConanfile
+from conan.test.utils.tools import TestServer, GenConanfile, TestClient
 
 
-class InstallCascadeTest(unittest.TestCase):
+def test_cascade():
+    """
+    app -> E -> D -> B -> A
+      \\-> F -> C -------/
+    """
+    server = TestServer()
+    servers = OrderedDict([("default", server)])
+    c = TestClient(servers=servers)
+    c.save({"a/conanfile.py": GenConanfile("liba", "1.0"),
+            "b/conanfile.py": GenConanfile("libb", "1.0").with_requires("liba/1.0"),
+            "c/conanfile.py": GenConanfile("libc", "1.0").with_requires("liba/1.0"),
+            "d/conanfile.py": GenConanfile("libd", "1.0").with_requires("libb/1.0"),
+            "e/conanfile.py": GenConanfile("libe", "1.0").with_requires("libd/1.0"),
+            "f/conanfile.py": GenConanfile("libf", "1.0").with_requires("libc/1.0", "libd/1.0"),
+            "app/conanfile.py": GenConanfile().with_requires("libe/1.0", "libf/1.0")})
 
-    def setUp(self):
-        """
-         A
-        / \
-       B   C
-       |    \
-       D    |
-      / \   |
-      |  \ /
-      E   F
-        """
-        server = TestServer()
-        servers = OrderedDict([("default", server)])
-        self.client = TurboTestClient(servers=servers)
+    for pkg in ("a", "b", "c", "d", "e", "f"):
+        c.run(f"create {pkg}")
 
-        self.ref_a = RecipeReference.loads("liba/1.0@conan/stable")
-        self.client.create(self.ref_a, conanfile=GenConanfile())
-
-        self.ref_b = RecipeReference.loads("libb/1.0@conan/stable")
-        self.client.create(self.ref_b, conanfile=GenConanfile().with_requirement(self.ref_a))
-
-        self.ref_c = RecipeReference.loads("libc/1.0@conan/stable")
-        self.client.create(self.ref_c, conanfile=GenConanfile().with_requirement(self.ref_a))
-
-        self.ref_d = RecipeReference.loads("libd/1.0@conan/stable")
-        self.client.create(self.ref_d, conanfile=GenConanfile().with_requirement(self.ref_b))
-
-        self.ref_e = RecipeReference.loads("libe/1.0@conan/stable")
-        self.client.create(self.ref_e, conanfile=GenConanfile().with_requirement(self.ref_d))
-
-        self.ref_f = RecipeReference.loads("libf/1.0@conan/stable")
-        conanfile = GenConanfile().with_requirement(self.ref_c).with_requirement(self.ref_d)
-        self.client.create(self.ref_f, conanfile=conanfile)
-
-    def _assert_built(self, refs):
+    def _assert_built(refs):
         for ref in refs:
-            self.assertIn("{}: Copying sources to build folder".format(ref), self.client.out)
-        for ref in [self.ref_a, self.ref_b, self.ref_c, self.ref_d, self.ref_e, self.ref_f]:
+            assert "{}: Copying sources to build folder".format(ref) in c.out
+        for ref in ["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"]:
             if ref not in refs:
-                self.assertNotIn("{}: Copying sources to build folder".format(ref),
-                                 self.client.out)
+                assert "{}: Copying sources to build folder".format(ref) not in c.out
 
-    def test_install_cascade_only_affected(self):
-        project = RecipeReference.loads("project/1.0@conan/stable")
-        project_cf = GenConanfile().with_requirement(self.ref_e).with_requirement(self.ref_f)
+    # Building A everything is built
+    c.run("install app --build=liba* --build cascade")
+    _assert_built(["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"])
 
-        # Building A everything is built
-        self.client.create(project, conanfile=project_cf,
-                           args="--build {} --build cascade".format(self.ref_a))
-        self._assert_built([self.ref_a, self.ref_b, self.ref_c, self.ref_d,
-                            self.ref_e, self.ref_f, project])
+    c.run("install app --build=libd* --build cascade")
+    _assert_built(["libd/1.0", "libe/1.0", "libf/1.0"])
 
-        # Building D builds E, F and project
-        self.client.create(project, conanfile=project_cf,
-                           args="--build {} --build cascade".format(self.ref_d))
-        self._assert_built([self.ref_d, self.ref_e, self.ref_f, project])
+    c.run("install app --build=libe* --build cascade")
+    _assert_built(["libe/1.0"])
 
-        # Building E only builds E and project
-        self.client.create(project, conanfile=project_cf,
-                           args="--build {} --build cascade".format(self.ref_e))
-        self._assert_built([self.ref_e, project])
+    c.run("install app  --build cascade")
+    _assert_built([])
 
-        # Building project only builds project
-        self.client.create(project, conanfile=project_cf,
-                           args="--build {} --build cascade".format(project))
-        self._assert_built([project])
-
-        # Building C => builds F and project
-        self.client.create(project, conanfile=project_cf,
-                           args="--build {} --build cascade".format(self.ref_c))
-        self._assert_built([project, self.ref_f, self.ref_c])
+    c.run("install app --build=libc* --build cascade")
+    _assert_built(["libc/1.0", "libf/1.0"])

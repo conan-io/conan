@@ -44,6 +44,8 @@ def test_cmake_virtualenv(matrix_client):
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
@@ -115,6 +117,9 @@ def test_complete():
     client.run("create . --name=mycmake --version=1.0", assert_error=True)
     assert "The usage of package names `myopenssl:shared` in options is deprecated, " \
            "use a pattern like `myopenssl/*:shared` instead" in client.out
+
+    client.run("create . --name=mycmake --version=1.0 -o=:shared=True", assert_error=True)
+    assert "Invalid empty package" in client.out
 
     # Fix the default options and repeat the create
     fixed_cf = mycmake_conanfile.replace('default_options = {"myopenssl:shared": True}',

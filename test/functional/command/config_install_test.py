@@ -10,13 +10,13 @@ from mock import patch
 
 from conan.api.model import Remote
 from conan.internal.api.config.config_installer import _hide_password
-from conans.client.downloaders.file_downloader import FileDownloader
+from conan.internal.rest.file_downloader import FileDownloader
 from conan.internal.paths import DEFAULT_CONAN_HOME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conan.test.utils.tools import TestClient, zipdir
-from conans.util.files import load, mkdir, save, save_files
+from conan.internal.util.files import load, mkdir, save, save_files
 
 
 def make_file_read_only(file_path):
@@ -79,8 +79,8 @@ myfuncpy = """def mycooladd(a, b):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
-        save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
+        save(os.path.join(self.client.paths.profiles_path, "default"), "#default profile empty")
+        save(os.path.join(self.client.paths.profiles_path, "linux"), "#empty linux profile")
 
     @staticmethod
     def _create_profile_folder(folder=None):
@@ -134,7 +134,7 @@ class ConfigInstallTest(unittest.TestCase):
         return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
-        settings_path = self.client.cache.settings_path
+        settings_path = self.client.paths.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         api = self.client.api
         cache_remotes = api.remotes.list()
@@ -142,11 +142,11 @@ class ConfigInstallTest(unittest.TestCase):
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),
         ])
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["default", "linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path,
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         self.assertEqual("#Custom pylint",
@@ -260,12 +260,12 @@ class ConfigInstallTest(unittest.TestCase):
         assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
 
     def test_without_profile_folder(self):
-        shutil.rmtree(self.client.cache.profiles_path)
+        shutil.rmtree(self.client.paths.profiles_path)
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.paths.profiles_path)),
                          sorted(["linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.paths.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
 
     def test_install_url(self):
@@ -496,7 +496,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run('config install "%s/.git" --args "-b other_branch"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
-        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
+        file_path = os.path.join(self.client.paths.hooks_path, "cust", "cust.py")
         assert load(file_path) == ""
 
         # Add changes to that branch and update
@@ -525,12 +525,12 @@ class ConfigInstallTest(unittest.TestCase):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
-        make_file_read_only(self.client.cache.settings_path)
-        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+        make_file_read_only(self.client.paths.settings_path)
+        self.assertFalse(os.access(self.client.paths.settings_path, os.W_OK))
 
         # config install should overwrite the existing read-only file
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
     def test_dont_copy_file_permissions(self):
         source_folder = self._create_profile_folder()
@@ -538,7 +538,7 @@ class ConfigInstallTest(unittest.TestCase):
         make_file_read_only(os.path.join(source_folder, 'remotes.json'))
 
         self.client.run('config install "%s"' % source_folder)
-        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+        self.assertTrue(os.access(self.client.paths.settings_path, os.W_OK))
 
 
 class ConfigInstallSchedTest(unittest.TestCase):
@@ -587,7 +587,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
-        conf = load(client.cache.new_config_path)
+        client.load_home("global.conf")  # check it is there
         dirs = os.listdir(client.cache_folder)
         assert ".git" not in dirs
 
@@ -758,3 +758,181 @@ class TestConfigInstallPkg:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
+
+class TestConfigInstallPkgSettings:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            settings = "os"
+            package_type = "configuration"
+            def package(self):
+                f = "win" if self.settings.os == "Windows" else "nix"
+                copy(self, "*.conf", src=os.path.join(self.build_folder, f), dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "win/global.conf": "user.myteam:myconf=mywinvalue",
+                "nix/global.conf": "user.myteam:myconf=mynixvalue",
+                })
+        c.run("export-pkg . -s os=Windows")
+        c.run("export-pkg . -s os=Linux")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    @pytest.mark.parametrize("default_profile", [False, True])
+    def test_config_install_from_pkg(self, client, default_profile):
+        # Now install it
+        c = client
+        if not default_profile:
+            os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*] -s os=Windows")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -s os=Linux")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_error_no_settings_defined(self, client):
+        c = client
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*]", assert_error=True)
+        assert "There are invalid packages:" in c.out
+        assert "myconf/0.1: Invalid: 'settings.os' value not defined" in c.out
+
+    def test_config_install_from_pkg_profile(self, client):
+        # Now install it
+        c = client
+        c.save({"win.profile": "[settings]\nos=Windows",
+                "nix.profile": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+    def test_config_install_from_pkg_profile_default(self, client):
+        # Now install it
+        c = client
+        c.save_home({"profiles/default": "[settings]\nos=Windows"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mywinvalue" in c.out
+
+        c.save_home({"profiles/default": "[settings]\nos=Linux"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: mynixvalue" in c.out
+
+
+class TestConfigInstallPkgOptions:
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            options = {"project": ["project1", "project2"]}
+            default_options = {"project": "project1"}
+            package_type = "configuration"
+            def package(self):
+                copy(self, "*.conf", src=os.path.join(self.build_folder, str(self.options.project)),
+                     dst=self.package_folder)
+            """)
+
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "project1/global.conf": "user.myteam:myconf=my1value",
+                "project2/global.conf": "user.myteam:myconf=my2value",
+                })
+        c.run("export-pkg .")
+        c.run("export-pkg . -o project=project2")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        return c
+
+    @pytest.mark.parametrize("default_profile", [False, True])
+    def test_config_install_from_pkg(self, client, default_profile):
+        # Now install it
+        c = client
+        if not default_profile:
+            os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*] -o &:project=project1")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.run("config install-pkg myconf/[*] -o &:project=project2")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out
+
+    def test_no_option_defined(self, client):
+        c = client
+        os.remove(os.path.join(c.cache_folder, "profiles", "default"))
+        c.run("config install-pkg myconf/[*]")
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+    def test_config_install_from_pkg_profile(self, client):
+        # Now install it
+        c = client
+        c.save({"win.profile": "[options]\n&:project=project1",
+                "nix.profile": "[options]\n&:project=project2"})
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out
+
+    def test_config_install_from_pkg_profile_default(self, client):
+        # Now install it
+        c = client
+        c.save_home({"profiles/default": "[options]\n&:project=project1"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my1value" in c.out
+
+        c.save_home({"profiles/default": "[options]\n&:project=project2"})
+        c.run("config install-pkg myconf/[*]")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: my2value" in c.out

@@ -4,12 +4,12 @@ from collections import namedtuple, Counter
 
 from requests.exceptions import HTTPError
 
-from conans.client.rest.file_uploader import FileUploader
-from conans.errors import AuthenticationException, ForbiddenException
+from conan.internal.rest.file_uploader import FileUploader
+from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.test.utils.mocks import RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class _ResponseMock:
@@ -19,12 +19,8 @@ class _ResponseMock:
 
     def raise_for_status(self):
         """Raises stored :class:`HTTPError`, if one occurred."""
-
         http_error_msg = ''
-        if 400 <= self.status_code < 500:
-            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
-
-        elif 500 <= self.status_code < 600:
+        if 500 <= self.status_code < 600:
             http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
 
         if http_error_msg:
@@ -42,8 +38,6 @@ class _RequesterMock:
 
 
 class _ConfigMock:
-    def __getitem__(self, item):
-        return 0
 
     def get(self, conf_name, default=None, check_type=None):
         return 0
@@ -73,7 +67,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(ForbiddenException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
@@ -86,7 +80,7 @@ class RetryDownloadTests(unittest.TestCase):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
             with self.assertRaisesRegex(AuthenticationException, "content"):
-                auth = namedtuple("auth", "token")
+                auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)

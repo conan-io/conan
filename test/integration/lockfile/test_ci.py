@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -51,7 +51,7 @@ pkgapp_01_id = "f8e4cc2232dff5983eeb2e7403b9c2dc755be44f"
 
 @pytest.fixture()
 def client_setup():
-    c = TestClient()
+    c = TestClient(light=True)
     pkb_requirements = """
     def requirements(self):
         if self.settings.os == "Windows":
@@ -202,7 +202,7 @@ def test_single_config_centralized_change_dep(client_setup):
     c.run("install --requires=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
-    assert "pkga" not in c.out
+    assert "pkga/" not in c.out
     c.assert_listed_binary({"pkgj/0.1": (pkgawin_01_id, "Cache"),
                             "pkgb/0.2": ("79caa65bc5877c4ada84a2b454775f47a5045d59", "Cache"),
                             "pkgc/0.1": ("67e4e9b17f41a4c71ff449eb29eb716b8f83767b", "Build"),
@@ -505,8 +505,7 @@ def test_single_config_decentralized_overrides():
         for elem in level:
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                if binary != "Build":
-                    continue
+                assert binary == "Build"  # All nodes in this case have to be built
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
 

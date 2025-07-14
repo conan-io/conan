@@ -36,6 +36,8 @@ def test_msbuild_deps_components():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(myproject CXX)
 
@@ -128,6 +130,8 @@ def test_msbuild_deps_components():
     """
 
     cmakelists_chat = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(chat CXX)
         find_package(network REQUIRED CONFIG)

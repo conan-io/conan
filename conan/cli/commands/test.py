@@ -7,7 +7,7 @@ from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -55,12 +55,6 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
                                                          update=update,
                                                          lockfile=lockfile,
                                                          tested_python_requires=tested_python_requires)
-    if isinstance(tested_python_requires, str):  # create python-require
-        conanfile = root_node.conanfile
-        if not getattr(conanfile, "python_requires", None) == "tested_reference_str":
-            ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
-                                  " = \"tested_reference_str\"'", warn_tag="deprecated")
-
     out = ConanOutput()
     out.title("Launching test_package")
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,

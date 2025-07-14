@@ -1,14 +1,14 @@
 import os
 import platform
+import shutil
 import textwrap
-from conan.test.utils.mocks import ConanFileMock
 
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conan.tools.files import replace_in_file
 
@@ -40,8 +40,6 @@ def client():
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
 def test_transitive_multi_windows(client):
-    # TODO: Make a full linking example, with correct header transitivity
-
     # Save conanfile and example
     conanfile = textwrap.dedent("""
         [requires]
@@ -83,19 +81,6 @@ def test_transitive_multi_windows(client):
             assert "main: Release!" in client.out
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
-        else:
-            # The CMakePresets IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakePresets.json"),
-                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
-            for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
-                client.run_command('cmake --build . --clean-first')
-
-                client.run_command('./example')
-                assert "main: {}!".format(bt) in client.out
-                assert "MYVARliba: {}".format(bt) in client.out
-                assert "MYVARlibb: {}".format(bt) in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -463,8 +448,12 @@ def test_cpp_info_link_objects():
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(MyObject)
+        project(MyObject C CXX)
         file(GLOB HEADERS *.h)
         add_library(myobject OBJECT myobject.cpp)
         if( WIN32 )
@@ -481,8 +470,10 @@ def test_cpp_info_link_objects():
 
     test_package_cpp = gen_function_cpp(name="main", includes=["myobject"], calls=["myobject"])
     test_package_cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(example)
+        project(example CXX)
         find_package(myobject REQUIRED)
         add_executable(example example.cpp)
         target_link_libraries(example myobject::myobject)
@@ -532,25 +523,28 @@ def test_system_dep():
     - The toolchain set the CMAKE_LIBRARY_PATH to the "lib" of the package, so the library file is found
     """
     client = TestClient()
-    files = pkg_cmake("zlib", "0.1")
-    files["conanfile.py"] += """
-    def package_info(self):
+
+    client.run("new cmake_lib -d name=zlib -d version=0.1 -o zlib")
+    conanfile = client.load("zlib/conanfile.py")
+    conanfile += textwrap.indent(textwrap.dedent("""
         # This will use the FindZLIB from CMake but will find this library package
         self.cpp_info.set_property("cmake_file_name", "ZLIB")
         self.cpp_info.set_property("cmake_target_name", "ZLIB::ZLIB")
         self.cpp_info.set_property("cmake_find_mode", "none")
-    """
-    client.save({os.path.join("zlib", name): content for name, content in files.items()})
-    files = pkg_cmake("mylib", "0.1", requires=["zlib/0.1"])
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("find_package(zlib)",
-                                                              "find_package(ZLIB)")
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib", "ZLIB::ZLIB")
-    client.save({os.path.join("mylib", name): content for name, content in files.items()})
-    files = pkg_cmake("consumer", "0.1", requires=["mylib/0.1"])
-    client.save({os.path.join("consumer", name): content for name, content in files.items()})
-    client.run("create zlib")
-    client.run("create mylib")
-    client.run("create consumer")
+    """), "        ")
+    client.save({"zlib/conanfile.py": conanfile})
+
+    client.run("new cmake_lib -d name=mylib -d version=0.1 -d requires=zlib/0.1 -o mylib")
+    cmake = client.load("mylib/CMakeLists.txt")
+    cmake = cmake.replace("find_package(zlib CONFIG", "find_package(ZLIB")
+    cmake = cmake.replace("zlib::zlib", "ZLIB::ZLIB")
+    client.save({"mylib/CMakeLists.txt": cmake})
+
+    client.run("new cmake_lib -d name=consumer -d version=0.1 -d requires=mylib/0.1 -o=consumer")
+
+    client.run("create zlib -tf=")
+    client.run("create mylib -tf=")
+    client.run("create consumer -tf=")
     assert "Found ZLIB:" in client.out
 
     client.run("install consumer")
@@ -561,7 +555,8 @@ def test_system_dep():
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
 
-@pytest.mark.tool("cmake", "3.19")
+# needs at least 3.23.3 because of error with "empty identity"
+@pytest.mark.tool("cmake", "3.23")
 def test_error_missing_build_type(matrix_client):
     # https://github.com/conan-io/conan/issues/11168
     client = matrix_client
@@ -580,8 +575,10 @@ def test_error_missing_build_type(matrix_client):
     """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(app)
+        project(app CXX)
         find_package(matrix REQUIRED)
         add_executable(app)
         target_link_libraries(app matrix::matrix)
@@ -634,8 +631,10 @@ def test_map_imported_config(transitive_libraries):
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
-        project(app)
+        project(app CXX)
         set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
         find_package(engine REQUIRED)
         add_executable(app main.cpp)
@@ -672,6 +671,8 @@ def test_cmake_target_runtime_dlls(transitive_libraries):
 
     client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=engine/1.0 -f")
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(foo CXX)
     find_package(engine CONFIG REQUIRED)
@@ -730,3 +731,79 @@ def test_quiet():
     client.run_command('cmake . -DCMAKE_BUILD_TYPE=Release')
     # Because we used QUIET, not in output
     assert "Target declared 'test::test'" not in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows and MSVC")
+@pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")
+def test_meson_and_cmakedeps_and_static_builds():
+    """
+    Testing when library is built with Meson + MSVC as a static library (lib + name + .a)
+    and consumed using CMakeDeps (and CMakeConfigDeps) or PkgConfigDeps.
+
+    Issues related:
+        - https://github.com/conan-io/conan/issues/11866
+        - https://github.com/mesonbuild/meson/issues/7378
+    """
+    client = TestClient()
+    profile = textwrap.dedent("""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=msvc
+    compiler.version=191
+    compiler.runtime=dynamic
+    build_type=Release
+    """)
+    client.run("new meson_lib -d name=hello -d version=1.0")
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(PackageTest CXX)
+
+    find_package(hello CONFIG REQUIRED)
+
+    add_executable(example src/example.cpp)
+    target_link_libraries(example hello::hello)
+    """)
+    cmake_conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, cmake_layout
+    from conan.tools.build import can_run
+    class pkgTestConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeDeps", "CMakeToolchain"
+
+        def requirements(self):
+            self.requires(self.tested_reference_str)
+
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+
+        def layout(self):
+            cmake_layout(self)
+
+        def test(self):
+            if can_run(self):
+                cmd = os.path.join(self.cpp.build.bindir, "example")
+                self.run(cmd, env="conanrun")
+        """)
+    client.save({
+        "win": profile,
+        "test_package_cmake/conanfile.py": cmake_conanfile,
+        "test_package_cmake/CMakeLists.txt": cmakelists
+    })
+    shutil.copytree(os.path.join(client.current_folder, "test_package", "src"),
+                    os.path.join(client.current_folder, "test_package_cmake", "src"))
+    client.run("create . -pr:a win")  # meson + pkgconfigdeps (test_package) runs OK
+    client.run("test --profile:all=win test_package_cmake hello/1.0")  # meson + CMakeDeps (test_package_cmake) runs OK
+    # Now, let's use the CMakeConfigDeps to demonstrate that it works with/without changing
+    replace_in_file(ConanFileMock(),
+                    os.path.join(client.current_folder, "test_package_cmake", "conanfile.py"),
+                    '"CMakeDeps"',
+                    '"CMakeConfigDeps"')
+    client.run("test --profile:all=win test_package_cmake hello/1.0 "
+               "-c tools.cmake.cmakedeps:new=will_break_next") # meson + CMakeConfigDeps (test_package_cmake) runs OK

@@ -5,7 +5,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, set_dirty
+from conan.internal.util.files import save, set_dirty
 
 
 class TestDownloadCache:
@@ -66,12 +66,14 @@ class TestDownloadCache:
         client.run("install --requires=pkg/0.1@")
 
         # Make the cache dirty
-        for f in os.listdir(tmp_folder):
+        # The "c" internal folder must exist, it is the actual storage of blobs
+        cache_folder = os.path.join(tmp_folder, "c")
+        for f in os.listdir(cache_folder):
             # damage the file
-            path = os.path.join(tmp_folder, f)
-            if os.path.isfile(path):
-                save(path, "broken!")
-                set_dirty(path)
+            path = os.path.join(cache_folder, f)
+            assert os.path.isfile(path)
+            save(path, "broken!")
+            set_dirty(path)
 
         client.run("remove * -c")
         client.run("install --requires=pkg/0.1@")
@@ -138,7 +140,7 @@ class TestDownloadCache:
         assert "some content 3" in client.load("myfile3.txt")
 
         # disabling cache will make it fail
-        save(client.cache.new_config_path, "")
+        client.save_home({"global.conf": ""})
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
         assert "Not found" in client.out

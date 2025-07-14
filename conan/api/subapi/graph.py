@@ -1,12 +1,14 @@
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp
-from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
-    CONTEXT_BUILD
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
-from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.model.recipe_ref import ref_matches
+from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
+    CONTEXT_BUILD, BINARY_MISSING, DepsGraph
+from conan.internal.graph.graph_binaries import GraphBinariesAnalyzer
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.install_graph import InstallGraph, ProfileArgs
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
+from conan.errors import ConanException
+from conan.api.model import RecipeReference
 
 
 class GraphAPI:
@@ -127,6 +129,12 @@ class GraphAPI:
                                                       update=update,
                                                       python_requires=python_requires)
 
+        if not requires and not tool_requires and python_requires is not None:
+            # This only happens at `conan create` for python-requires, the graph is not needed
+            # in fact, it can cause errors, if tool-requires injected
+            dep_graph = DepsGraph()
+            dep_graph.add_node(root_node)
+            return dep_graph
         # check_updates = args.check_updates if "check_updates" in args else False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build,
@@ -196,7 +204,42 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanApp(self.conan_api)
+        conan_app = ConanBasicApp(self.conan_api)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)
+
+    @staticmethod
+    def find_first_missing_binary(graph, missing=None):
+        """ (Experimental) Given a dependency graph, will return the first node with a
+        missing binary package
+        """
+        for node in graph.ordered_iterate():
+            if ((not missing and node.binary == BINARY_MISSING)  # First missing binary or specified
+                    or (missing and ref_matches(node.ref, missing, is_consumer=None))):
+                return node.ref, node.conanfile.info
+        raise ConanException("There is no missing binary")
+
+    @staticmethod
+    def build_order(deps_graph, order_by="recipe", reduce=False, profile_args=None):
+        install_graph = InstallGraph(deps_graph, order_by=order_by,
+                                     profile_args=ProfileArgs.from_args(profile_args))
+        if reduce:
+            if order_by is None:
+                raise ConanException("--reduce needs --order-by argument defined")
+            install_graph.reduce()
+        return install_graph
+
+    @staticmethod
+    def build_order_merge(files, reduce=False):
+        result = InstallGraph.load(files[0])
+        if result.reduced:
+            raise ConanException(f"Reduced build-order file cannot be merged: {files[0]}")
+        for f in files[1:]:
+            install_graph = InstallGraph.load(f)
+            if install_graph.reduced:
+                raise ConanException(f"Reduced build-order file cannot be merged: {f}")
+            result.merge(install_graph)
+        if reduce:
+            result.reduce()
+        return result

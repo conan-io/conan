@@ -5,12 +5,11 @@ import unittest
 
 import pytest
 
-from conans.client.conf import get_default_settings_yml
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.tools import TestClient
 
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.tool("cmake")
@@ -45,6 +44,8 @@ class CustomConfigurationTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release ReleaseShared CACHE STRING
             "Available build-types: Debug, Release and ReleaseShared")
 
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
 
@@ -128,6 +129,10 @@ class CustomSettingsTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release MyRelease CACHE STRING
             "Available build-types: Debug, Release and MyRelease")
 
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
@@ -145,10 +150,8 @@ class CustomSettingsTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        settings = get_default_settings_yml()
-        settings = settings.replace("build_type: [null, Debug, Release, ",
-                                    "build_type: [null, Debug, MyRelease, ")
-        save(self.client.cache.settings_path, settings)
+        settings = "build_type: [MyRelease]"
+        save(self.client.paths.settings_path_user, settings)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")
 
@@ -186,6 +189,9 @@ class CustomSettingsTest(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
+            toolchain = self.client.load("conan_toolchain.cmake")
+            # As it is a custom configuration, the TRY_COMPILE_CONFIFURATION not defined
+            assert "CMAKE_TRY_COMPILE_CONFIGURATION" not in toolchain
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 

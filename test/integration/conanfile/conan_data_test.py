@@ -7,11 +7,11 @@ import unittest
 import pytest
 import yaml
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import tgz_with_contents
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import md5sum, sha1sum, sha256sum, load
+from conan.internal.util.files import md5sum, sha1sum, sha256sum, load
 
 
 class ConanDataTest(unittest.TestCase):
@@ -437,8 +437,7 @@ def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
 
     c.save({"conanfile.py": GenConanfile("pkg")})
     if raise_if_missing:
-        with pytest.raises(Exception, match="conandata.yml file doesn't exist") as exception:
-            c.run("export . --version=1.0")
+        c.run("export . --version=1.0", assert_error=True)
     else:
         c.run("export . --version=1.0")
         assert c.exported_recipe_revision() == "a9ec2e5fbb166568d4670a9cd1ef4b26"

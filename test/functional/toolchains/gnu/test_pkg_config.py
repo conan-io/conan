@@ -24,6 +24,8 @@ class TestPkgConfig:
                 """)
         c.save({"conanfile.py": conanfile})
         c.run("install .", assert_error=True)
+        assert "PkgConfig failed. Command: pkg-config --libs-only-l something_that_not_exist " \
+               "--print-errors" in c.out
         assert "Package something_that_not_exist was not found" in c.out
 
     def test_pc(self):
@@ -31,7 +33,7 @@ class TestPkgConfig:
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.gnu import PkgConfig
-            from conans.model.build_info import CppInfo
+            from conan.tools import CppInfo
 
             class Pkg(ConanFile):
                 def generate(self):
@@ -40,7 +42,7 @@ class TestPkgConfig:
                     self.output.info(f"VERSION: {pkg_config.version}")
                     self.output.info(f"VARIABLES: {pkg_config.variables['prefix']}")
 
-                    cpp_info = CppInfo()
+                    cpp_info = CppInfo(self)
                     pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
 
                     assert cpp_info.includedirs == ['/usr/local/include/libastral']

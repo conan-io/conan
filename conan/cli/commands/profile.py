@@ -6,38 +6,46 @@ from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.formatters import default_json_formatter
 from conan.cli.args import add_profiles_args
 from conan.errors import ConanException
-from conans.util.files import save
 
 
-def print_profiles(profiles):
-    host, build = profiles
-    cli_out_write("Host profile:")
-    cli_out_write(host.dumps())
-    cli_out_write("Build profile:")
-    cli_out_write(build.dumps())
+def _print_profiles(profiles):
+    if "host" in profiles:
+        ConanOutput().info("Host profile:")
+        cli_out_write(profiles["host"].dumps())
+    if "build" in profiles:
+        ConanOutput().info("Build profile:")
+        cli_out_write(profiles["build"].dumps())
 
 
 def profiles_list_cli_output(profiles):
-    cli_out_write("Profiles found in the cache:")
+    ConanOutput().info("Profiles found in the cache:")
     for p in profiles:
         cli_out_write(p)
 
 
-def json_profiles(profiles):
-    host, build = profiles
-    result = {"host": host.serialize(),
-              "build": build.serialize()}
+def _json_profiles(profiles):
+    result = {}
+    if "host" in profiles:
+        result["host"] = profiles["host"].serialize()
+    if "build" in profiles:
+        result["build"] = profiles["build"].serialize()
     cli_out_write(json.dumps(result))
 
 
-@conan_subcommand(formatters={"text": print_profiles, "json": json_profiles})
+@conan_subcommand(formatters={"text": _print_profiles, "json": _json_profiles})
 def profile_show(conan_api, parser, subparser, *args):
     """
     Show aggregated profiles from the passed arguments.
     """
     add_profiles_args(subparser)
+    subparser.add_argument("-cx", "--context", choices=["host", "build"])
     args = parser.parse_args(*args)
-    result = conan_api.profiles.get_profiles_from_args(args)
+    profiles = conan_api.profiles.get_profiles_from_args(args)
+    result = {}
+    if not args.context or args.context == "host":
+        result["host"] = profiles[0]
+    if not args.context or args.context == "build":
+        result["build"] = profiles[1]
     return result
 
 
@@ -83,20 +91,25 @@ def profile_detect(conan_api, parser, subparser, *args):
                           "change in future Conan versions.")
     ConanOutput().warning("Use your own profile files for stability.")
     ConanOutput().success(f"Saving detected profile to {profile_pathname}")
-    save(profile_pathname, contents)
+    dir_path = os.path.dirname(profile_pathname)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(profile_pathname, "w", encoding="utf-8", newline="") as f:
+        f.write(contents)
 
 
 @conan_subcommand(formatters={"text": profiles_list_cli_output, "json": default_json_formatter})
-def profile_list(conan_api, parser, subparser, *args):
+def profile_list(conan_api, parser, subparser, *args):  # noqa
     """
     List all profiles in the cache.
     """
+    parser.parse_args(*args)
     result = conan_api.profiles.list()
     return result
 
 
 @conan_command(group="Consumer")
-def profile(conan_api, parser, *args):
+def profile(conan_api, parser, *args):  # noqa
     """
     Manage profiles.
     """

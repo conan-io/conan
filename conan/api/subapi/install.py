@@ -1,12 +1,12 @@
 import os
 
 from conan.internal.api.install.generators import write_generators
-from conan.internal.conan_app import ConanApp
+from conan.internal.conan_app import ConanBasicApp
 from conan.internal.deploy import do_deploys
 
-from conans.client.graph.install_graph import InstallGraph
-from conans.client.installer import BinaryInstaller
-from conans.errors import ConanInvalidConfiguration
+from conan.internal.graph.install_graph import InstallGraph
+from conan.internal.graph.installer import BinaryInstaller
+from conan.errors import ConanInvalidConfiguration
 
 
 class InstallAPI:
@@ -19,9 +19,9 @@ class InstallAPI:
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
         """
-        app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
-                                    self.conan_api.local.editable_packages)
+        app = ConanBasicApp(self.conan_api)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+                                    self.conan_api.config.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
@@ -33,9 +33,9 @@ class InstallAPI:
         :param only_info: Only allow reporting and checking, but never install
         :param graph: Dependency graph to intall packages for
         """
-        app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
-                                    self.conan_api.local.editable_packages)
+        app = ConanBasicApp(self.conan_api)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+                                    self.conan_api.config.hook_manager)
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes):
@@ -44,14 +44,14 @@ class InstallAPI:
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
-        app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
-                                    self.conan_api.local.editable_packages)
+        app = ConanBasicApp(self.conan_api)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+                                    self.conan_api.config.hook_manager)
         installer.install_sources(graph, remotes)
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_package=None, deploy_folder=None):
+                         deploy=False, deploy_package=None, deploy_folder=None, envs_generation=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -76,7 +76,7 @@ class InstallAPI:
             # Issue related: https://github.com/conan-io/conan/issues/16543
             base_folder = os.path.abspath(deploy_folder) if deploy_folder \
                 else conanfile.folders.base_build
-            do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
+            do_deploys(self.conan_api.home_folder, deps_graph, deploy, deploy_package, base_folder)
 
         final_generators = []
         # Don't use set for uniqueness because order matters
@@ -87,5 +87,10 @@ class InstallAPI:
             if gen not in final_generators:
                 final_generators.append(gen)
         conanfile.generators = final_generators
-        app = ConanApp(self.conan_api)
-        write_generators(conanfile, app)
+        hook_manager = self.conan_api.config.hook_manager
+        write_generators(conanfile, hook_manager, self.conan_api.home_folder,
+                         envs_generation=envs_generation)
+
+    def deploy(self, graph, deployer, deploy_package=None, deploy_folder=None):
+        return do_deploys(self.conan_api.home_folder, graph, deployer, deploy_package=deploy_package,
+                          deploy_folder=deploy_folder)
