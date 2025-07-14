@@ -63,7 +63,7 @@ class DepsGraphBuilder:
                                  or new_node.recipe == RECIPE_EDITABLE or
                                  new_node.conanfile.conf.get("tools.graph:vendor",
                                                              choices=("build",))):
-                    newr = self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                    newr = self._initialize_requires(new_node, dep_graph, new_lock, profile_build,
                                                      profile_host)
                     open_requires.extendleft((r, new_node, new_lock) for r in reversed(newr))
             self._remove_overrides(dep_graph)
@@ -291,6 +291,7 @@ class DepsGraphBuilder:
                 from conan.api.output import ConanOutput
                 ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
                 if graph_lock is not None:  # For the export case only
+                    graph_lock = graph_lock.copy()
                     graph_lock.merge(exported_lockfile)
                 else:
                     graph_lock = exported_lockfile

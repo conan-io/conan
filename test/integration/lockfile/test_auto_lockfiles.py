@@ -116,6 +116,20 @@ def test_diamond():
     assert "dep/0.2" in c.out
     assert "dep/0.1" not in c.out
 
+    # we can package app itself
+    c.run("create app")
+    assert "pkga/0.1: Using lockfile from metadata" in c.out
+    assert "pkgb/0.1: Using lockfile from metadata" in c.out
+
+    # And when installed, it will recover the lockfile of app, but not pkga and pkgb
+    c.run("install --requires=app/0.1")
+    assert "app/0.1: Using lockfile from metadata" in c.out
+    assert "pkga/0.1: Using lockfile from metadata" not in c.out
+    assert "pkgb/0.1: Using lockfile from metadata" not in c.out
+
+    assert "dep/0.1" not in c.out
+    assert "dep/0.2" in c.out
+
 
 def test_tree():
     # app -> pkga/0.1 -> depa/*
@@ -157,7 +171,9 @@ def test_tree():
 
     # we can package app itself
     c.run("create app")
-
+    assert "pkga/0.1: Using lockfile from metadata" in c.out
+    assert "pkgb/0.1: Using lockfile from metadata" in c.out
+    # And when installed, it will recover the lockfile of app, but not pkga and pkgb
     c.run("install --requires=app/0.1")
     assert "app/0.1: Using lockfile from metadata" in c.out
     assert "pkga/0.1: Using lockfile from metadata" not in c.out
@@ -166,4 +182,3 @@ def test_tree():
     assert "depb/0.1" in c.out
     assert "depa/0.2" not in c.out
     assert "depb/0.2" not in c.out
-
