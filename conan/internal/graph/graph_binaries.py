@@ -19,7 +19,6 @@ from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.model.lockfile import Lockfile
 from conan.internal.util.files import load
 
 
@@ -236,23 +235,6 @@ class GraphBinariesAnalyzer:
                    for n in node.transitive_deps.values()):
                 conanfile.output.warning("Package is being built in the cache using editable "
                                          "dependencies, this is dangerous", warn_tag="risk")
-
-        # Bundle-Lockfile
-        if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
-                                                                 check_type=bool):
-            partial_lockfile = Lockfile(node.subgraph())
-            metadata_folder = node.conanfile.recipe_metadata_folder
-            bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
-            if os.path.isfile(bundled_lockfile):
-                node.conanfile.output.info("Updating existing metadata lockfile with current "
-                                           "graph information")
-                exported_lockfile = Lockfile.load(bundled_lockfile)
-                exported_lockfile.partial = True
-                exported_lockfile.merge(partial_lockfile)
-            else:
-                exported_lockfile = partial_lockfile
-            node.conanfile.output.info(f"Storing current lockfile in metadata: {bundled_lockfile}")
-            exported_lockfile.save(bundled_lockfile)
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked

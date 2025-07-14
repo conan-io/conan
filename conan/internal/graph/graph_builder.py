@@ -115,6 +115,7 @@ class DepsGraphBuilder:
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node, graph.visibility_conflicts)
+            return None, None
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report

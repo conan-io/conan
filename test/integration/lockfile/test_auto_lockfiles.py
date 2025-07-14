@@ -10,7 +10,7 @@ def test_auto_metadata_lockfile():
     """ POC: A conan.lock that is stored in recipe metadata and used later while resolving graph
     """
     c = TestClient(default_server_user=True)
-    c.save({"global.conf": "core.lockfile:auto=True"}, path=c.cache_folder)
+    c.save_home({"global.conf": "core.lockfile:auto=True"})
     c.save({"dep/conanfile.py": GenConanfile("dep"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
     c.run("create dep --version=0.1")
@@ -118,8 +118,10 @@ def test_diamond():
 
 
 def test_tree():
+    # app -> pkga/0.1 -> depa/*
+    #  \---> pkgb/0.1 -> depb/*
     c = TestClient()
-    c.save({"global.conf": "core.lockfile:auto=True"}, path=c.cache_folder)
+    c.save_home({"global.conf": "core.lockfile:auto=True"})
     c.save({"depa/conanfile.py": GenConanfile("depa"),
             "depb/conanfile.py": GenConanfile("depb"),
             "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("depa/[*]"),
@@ -135,7 +137,7 @@ def test_tree():
     c.run("create depa --version=0.2")  # This should never be used
     c.run("create depb --version=0.2")  # This should never be used
 
-    c.run("install app --build=missing")
+    c.run("install app")
     assert "pkga/0.1: Using lockfile from metadata" in c.out
     assert "pkgb/0.1: Using lockfile from metadata" in c.out
     assert "depa/0.1" in c.out
@@ -143,6 +145,7 @@ def test_tree():
     assert "depa/0.2" not in c.out
     assert "depb/0.2" not in c.out
 
+    # Swapping the order of requires, same result
     c.save({"app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgb/0.1", "pkga/0.1")})
     c.run("install app")
     assert "pkga/0.1: Using lockfile from metadata" in c.out
@@ -151,3 +154,16 @@ def test_tree():
     assert "depb/0.1" in c.out
     assert "depa/0.2" not in c.out
     assert "depb/0.2" not in c.out
+
+    # we can package app itself
+    c.run("create app")
+
+    c.run("install --requires=app/0.1")
+    assert "app/0.1: Using lockfile from metadata" in c.out
+    assert "pkga/0.1: Using lockfile from metadata" not in c.out
+    assert "pkgb/0.1: Using lockfile from metadata" not in c.out
+    assert "depa/0.1" in c.out
+    assert "depb/0.1" in c.out
+    assert "depa/0.2" not in c.out
+    assert "depb/0.2" not in c.out
+
