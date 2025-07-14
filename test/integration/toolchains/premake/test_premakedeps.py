@@ -67,6 +67,17 @@ def test_premakedeps():
 
 def test_premakedeps_link_order():
     client = TestClient()
+    profile = textwrap.dedent(
+        """
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+        """)
     client.save(
         {
             "liba/conanfile.py": GenConanfile("liba")
@@ -101,17 +112,19 @@ def test_premakedeps_link_order():
             .with_settings("os", "compiler", "build_type", "arch")
             .with_version("1.0")
             .with_requires("libc/1.0")
-            .with_generator("PremakeDeps")
+            .with_generator("PremakeDeps"),
+
+            "profile": profile
         }
     )
-    client.run("create liba")
-    client.run("create libb")
-    client.run("create libc")
-    client.run("install consumer")
+    client.run("create liba -pr profile")
+    client.run("create libb -pr profile")
+    client.run("create libc -pr profile")
+    client.run("install consumer -pr profile")
     contents = client.load("consumer/conanconfig.premake5.lua")
     assert contents
     start_idx = contents.find('"')
     path = contents[start_idx+1:contents.find('"', start_idx + 1)]
     contents = client.load(f"consumer/{path}")
     # Check correct order of dependencies: more dependent libs should be linked first
-    assert 't_conan_deps_order["release_arm64"] = {"libc", "libb", "liba"}' in contents
+    assert 't_conan_deps_order["release_x86_64"] = {"libc", "libb", "liba"}' in contents
