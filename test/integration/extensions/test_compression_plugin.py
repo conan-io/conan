@@ -1,7 +1,8 @@
 import os
 import textwrap
+import tarfile
 
-from conan.internal.util.files import COMPRESSED_PLUGIN_TAR_NAME
+from conan.internal.util.files import COMPRESSED_PLUGIN_TAR_NAME, mkdir
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -227,5 +228,42 @@ def test_compress_in_subdirectory():
     )
     c.run("create .")
     c.run("cache save 'pkg/*:*'")
+    tgz = os.path.join(c.current_folder, "conan_cache_save.tgz")
+    assert os.path.exists(tgz)
+
+    mkdir("extract_folder")
+    destination_dir = os.path.join(c.current_folder, "extract_folder")
+    extracted_files = _tar_extract(tgz, destination_dir)
+    assert extracted_files == [COMPRESSED_PLUGIN_TAR_NAME + ".tgz"]
+    # Create example files
+    c.save({os.path.join(destination_dir, "README.md"): "This is a readme file.",
+            os.path.join(destination_dir, "Cache-contents-graph-report.html"): "<html>Cache contents graph report</html>",
+            os.path.join(destination_dir, "Cache-contents-graph-report.exe"): "executable file...",
+            os.path.join(destination_dir, "conan_cache_save.tgz"): "this should also be ignored",
+            })
+    # Recompress the file with metadata
+    _tar_compress(os.path.join(c.current_folder, "conan_cache_save_rearchived.tgz"), destination_dir)
+
     c.run("remove pkg/* -c")
-    c.run("cache restore conan_cache_save.tgz")
+    c.run("cache restore conan_cache_save_rearchived.tgz")
+
+    # Check any of the metadata are present in the cache
+    assert any(item not in os.listdir(os.path.join(c.cache_folder, "p")) for item in ("README.md",
+                                                                                  "Cache-contents-graph-report.html",
+                                                                                  "Cache-contents-graph-report.exe"))
+
+
+def _tar_extract(tgz_path, destination_dir):
+    with open(tgz_path, "rb") as fileobj:
+        the_tar = tarfile.open(fileobj=fileobj)
+        the_tar.extraction_filter = (lambda member, path: member)
+        the_tar.extractall(path=destination_dir)
+        return the_tar.getnames()
+
+
+def _tar_compress(archive_path, folder):
+    with open(archive_path, "wb") as tgz_handle:
+        tgz = tarfile.open(os.path.basename(archive_path), "w", fileobj=tgz_handle)
+        for filename in os.listdir(folder):
+            tgz.add(os.path.join(folder, filename), filename, recursive=True)
+        tgz.close()

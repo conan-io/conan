@@ -303,6 +303,7 @@ def _compress_files_with_plugin(files, name, dest_dir, conf, ref, recursive, com
         ref=ref,
     )
     ConanOutput().debug(f"Compressed in {time.time() - t1} time")
+    ConanOutput().success(f"{time.time() - t1}")
     if not compressed_extension or not compressed_extension.startswith("."):
         raise ConanException("The 'compression.py' did not return the compressed extension.")
 
