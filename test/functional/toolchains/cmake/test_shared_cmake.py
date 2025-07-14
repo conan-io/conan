@@ -1,5 +1,6 @@
 import os.path
 import platform
+import sys
 import textwrap
 
 import pytest
@@ -88,6 +89,45 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
     # TODO Check that static builds too
     # client.run("create . --build=missing")
+
+
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="shutil.copytree with dirs_exists_ok")
+def test_virtualrunenv_relocator(transitive_shared_client):
+    client = TestClient(servers=transitive_shared_client.servers)
+    conanfile = textwrap.dedent("""
+        import os, shutil
+        from conan import ConanFile
+        from conan.tools.env import VirtualRunEnv
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+
+            def requirements(self):
+                self.requires("app/0.1")
+
+            def generate(self):
+                # Windows, *.dll
+                # Copy to generators folder + "imported-bin"
+                binpath = os.path.join(self.generators_folder, "imported-bin")
+
+                def handler(dep):
+                    shutil.copytree(dep.cpp_info.bindir, binpath, dirs_exist_ok=True)
+
+                runenv = VirtualRunEnv(self, handler=handler)
+                # Add it to PATH instead the original location
+                runenv.environment().prepend_path("PATH", binpath)
+                runenv.environment().prepend_path("LD_LIBRARY_PATH", binpath)
+                runenv.environment().prepend_path("DYLD_LIBRARY_PATH", binpath)
+                runenv.generate()
+
+            def build(self):
+                self.run("app", env="conanrun")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("build . -o *:shared=True")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")

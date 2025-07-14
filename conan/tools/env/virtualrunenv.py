@@ -29,7 +29,7 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile, auto_generate=False):
+    def __init__(self, conanfile, auto_generate=False, handler=None):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
@@ -45,6 +45,7 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
+        self._handler = handler
 
     @property
     def _filename(self):
@@ -78,7 +79,11 @@ class VirtualRunEnv:
                 self._runenv.compose_env(dep.runenv_info)
             if require.run:  # Only if the require is run (shared or application to be run)
                 _os = self._conanfile.settings.get_safe("os")
-                self._runenv.compose_env(runenv_from_cpp_info(dep, _os))
+                if self._handler:
+                    self._handler(dep)
+                else:
+                    runenv = runenv_from_cpp_info(dep, _os)
+                    self._runenv.compose_env(runenv)
 
         return self._runenv
 
