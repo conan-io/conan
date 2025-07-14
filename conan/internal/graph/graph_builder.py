@@ -5,25 +5,13 @@ from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
+from conan.internal.model.lockfile import Lockfile
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
-<<<<<<< HEAD:conans/client/graph/graph_builder.py
-from conans.client.graph.graph import RECIPE_PLATFORM
-from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
-    GraphRuntimeError, GraphError
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile
-from conans.client.graph.provides import check_graph_provides
-from conans.errors import ConanException
-from conans.model.conan_file import ConanFile
-from conans.model.graph_lock import Lockfile
-from conans.model.options import Options, _PackageOptions
-from conans.model.pkg_type import PackageType
-from conans.model.recipe_ref import RecipeReference, ref_matches
-from conans.model.requires import Requirement
-=======
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, GraphError
+from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
+                                              GraphError)
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.graph.provides import check_graph_provides
 from conan.errors import ConanException
@@ -32,7 +20,6 @@ from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
->>>>>>> develop2:conan/internal/graph/graph_builder.py
 
 
 class DepsGraphBuilder:
@@ -62,11 +49,7 @@ class DepsGraphBuilder:
         rs = self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
-<<<<<<< HEAD:conans/client/graph/graph_builder.py
-        open_requires = deque((r, root_node, graph_lock) for r in root_node.conanfile.requires.values())
-=======
-        open_requires = deque((r, root_node) for r in rs)
->>>>>>> develop2:conan/internal/graph/graph_builder.py
+        open_requires = deque((r, root_node, graph_lock) for r in rs)
         try:
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
@@ -80,16 +63,9 @@ class DepsGraphBuilder:
                                  or new_node.recipe == RECIPE_EDITABLE or
                                  new_node.conanfile.conf.get("tools.graph:vendor",
                                                              choices=("build",))):
-<<<<<<< HEAD:conans/client/graph/graph_builder.py
-                    self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
-                                              profile_host)
-                    open_requires.extendleft((r, new_node, new_lock)
-                                             for r in reversed(new_node.conanfile.requires.values()))
-=======
                     newr = self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                                      profile_host)
-                    open_requires.extendleft((r, new_node) for r in reversed(newr))
->>>>>>> develop2:conan/internal/graph/graph_builder.py
+                    open_requires.extendleft((r, new_node, new_lock) for r in reversed(newr))
             self._remove_overrides(dep_graph)
             self._remove_orphans(dep_graph)
             check_graph_provides(dep_graph)
@@ -138,12 +114,7 @@ class DepsGraphBuilder:
             self._save_options_conflicts(node, require, prev_node, graph)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
-<<<<<<< HEAD:conans/client/graph/graph_builder.py
-            node.propagate_closing_loop(require, prev_node)
-            return None, None
-=======
             node.propagate_closing_loop(require, prev_node, graph.visibility_conflicts)
->>>>>>> develop2:conan/internal/graph/graph_builder.py
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report
@@ -433,14 +404,7 @@ class DepsGraphBuilder:
             layout, dep_conanfile, recipe_status, remote = resolved
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
-<<<<<<< HEAD:conans/client/graph/graph_builder.py
-
-        # If the node is virtual or a test package, the require is also "root"
-        is_test_package = getattr(node.conanfile, "tested_reference_str", False)
-        if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
-=======
         if getattr(require, "is_consumer", None):
->>>>>>> develop2:conan/internal/graph/graph_builder.py
             dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref, parent=node.conanfile)

@@ -11,7 +11,7 @@ from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNL
                                         BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                         RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                         BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
-                                        BINARY_PLATFORM, DepsGraph)
+                                        BINARY_PLATFORM)
 from conan.internal.graph.proxy import should_update_reference
 from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
     PackageNotFoundException
@@ -240,7 +240,7 @@ class GraphBinariesAnalyzer:
         # Bundle-Lockfile
         if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
                                                                  check_type=bool):
-            partial_lockfile = Lockfile(DepsGraph.from_node(node))
+            partial_lockfile = Lockfile(node.subgraph())
             metadata_folder = node.conanfile.recipe_metadata_folder
             bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
             if os.path.isfile(bundled_lockfile):
