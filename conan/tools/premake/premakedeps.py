@@ -77,8 +77,6 @@ function {function_name}(conf, pkg)
     if conf == nil then
 {filter_call}
     elseif pkg == nil then
-        print(conf)
-        print(conan_deps_order[conf])
         local order = conan_deps_order[conf]
         for index, lib in ipairs(order) do
             {function_name}(conf, lib)
