@@ -97,7 +97,7 @@ def _configure_source(conan_api, conanfile_path, ref, remotes):
     conanfile.folders.set_base_source(source_folder)
     conanfile.folders.set_base_export_sources(export_source_folder)
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
-    config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
+    config_source(export_source_folder, conanfile, conan_api.hook_manager)
 
 def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
     ref = RecipeReference.loads(reference)

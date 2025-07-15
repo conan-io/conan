@@ -21,7 +21,7 @@ class InstallAPI:
         """
         app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
-                                    self.conan_api.config.hook_manager)
+                                    self.conan_api.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
@@ -35,7 +35,7 @@ class InstallAPI:
         """
         app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
-                                    self.conan_api.config.hook_manager)
+                                    self.conan_api.hook_manager)
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes):
@@ -46,7 +46,7 @@ class InstallAPI:
         """
         app = ConanBasicApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
-                                    self.conan_api.config.hook_manager)
+                                    self.conan_api.hook_manager)
         installer.install_sources(graph, remotes)
 
     # TODO: Look for a better name
@@ -87,7 +87,7 @@ class InstallAPI:
             if gen not in final_generators:
                 final_generators.append(gen)
         conanfile.generators = final_generators
-        hook_manager = self.conan_api.config.hook_manager
+        hook_manager = self.conan_api.hook_manager
         write_generators(conanfile, hook_manager, self.conan_api.home_folder,
                          envs_generation=envs_generation)
 

@@ -22,6 +22,8 @@ from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.hook_manager import HookManager
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
@@ -48,10 +50,14 @@ class ConanAPI:
         init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
-        self.migrate()
 
         # This API is depended upon by the subsequent ones, it should be initialized first
         self.config = ConfigAPI(self)
+        _check_conan_version(self)
+
+        self.migrate()
+
+        self.hook_manager = HookManager(HomePaths(self.home_folder).hooks_path)
 
         self.remotes = RemotesAPI(self)
         self.command = CommandAPI(self)
@@ -75,7 +81,6 @@ class ConanAPI:
         self.workspace = WorkspaceAPI(self)
         self.report = ReportAPI(self)
 
-        _check_conan_version(self)
 
     def reinit(self):
         """
@@ -84,6 +89,8 @@ class ConanAPI:
         self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()
+
+        self.hook_manager = HookManager(HomePaths(self.home_folder).hooks_path)
 
         _check_conan_version(self)
 

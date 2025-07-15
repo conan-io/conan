@@ -93,13 +93,13 @@ class LocalAPI:
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        hook_manager = self._conan_api.config.hook_manager
+        hook_manager = self._conan_api.hook_manager
         run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile):
         """ calls the 'build()' method of the current (user folder) conanfile.py
         """
-        hook_manager = self._conan_api.config.hook_manager
+        hook_manager = self._conan_api.hook_manager
         conanfile.folders.set_base_package(conanfile.folders.base_build)
         conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
         run_build_method(conanfile, hook_manager)
