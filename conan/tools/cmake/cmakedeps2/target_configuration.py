@@ -51,6 +51,8 @@ class TargetConfigurationTemplate2:
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
             for d in transitive_reqs.values():
+                if d.package_type is PackageType.APP:
+                    continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
@@ -78,7 +80,11 @@ class TargetConfigurationTemplate2:
                     dep_comp = dep.cpp_info.components.get(required_comp)
                     if dep_comp is None:
                         # It must be the interface pkgname::pkgname target
-                        assert required_pkg == required_comp
+                        if required_pkg != required_comp:
+                            msg = (f"{self._conanfile} recipe cpp_info did .requires to "
+                                   f"'{required_pkg}::{required_comp}' but component "
+                                   f"'{required_comp}' not found in {required_pkg}")
+                            raise ConanException(msg)
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED

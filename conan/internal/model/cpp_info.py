@@ -836,7 +836,7 @@ class CppInfo:
                 if r not in ret:
                     ret.append(r)
         # Then split the names
-        ret = [r.split("::") if "::" in r else (None, r) for r in ret]
+        ret = [r.split("::", 1) if "::" in r else (None, r) for r in ret]
         return ret
 
     def deduce_full_cpp_info(self, conanfile):

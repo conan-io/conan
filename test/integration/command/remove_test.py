@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import unittest
 
 import pytest
 
@@ -9,23 +8,8 @@ from conan.api.conan_api import ConanAPI
 from conan.internal.errors import NotFoundException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
+from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conan.test.utils.env import environment_update
-
-conaninfo = '''
-[settings]
-    arch=x64
-    os=Windows
-    compiler=Visual Studio
-    compiler.version=8.%s
-[options]
-    use_Qt=True
-[full_requires]
-  hello2/0.1@lasote/stable:11111
-  OpenSSL/2.10@lasote/testing:2222
-  HelloInfo1/0.45@myuser/testing:33333
-[recipe_revision]
-'''
 
 
 class TestRemoveWithoutUserChannel:
@@ -53,7 +37,6 @@ class TestRemoveWithoutUserChannel:
             assert "Removed recipe and all binaries" in client.out  # Output it printed for dry-run
         else:
             assert "Removed recipe and all binaries" not in client.out
-        print()
 
     @pytest.mark.artifactory_ready
     def test_remote(self):
@@ -82,79 +65,53 @@ class TestRemoveWithoutUserChannel:
         assert "Unable to find 'lib/1.0' in remotes" in client.out
 
 
-class RemovePackageRevisionsTest(unittest.TestCase):
-
-    NO_SETTINGS_RREF = "4d670581ccb765839f2239cc8dff8fbd"
-
-    def setUp(self):
-        self.test_server = TestServer(users={"admin": "password"},
-                                      write_permissions=[("foobar/0.1@*/*", "admin")])
-        servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["admin", "password"])
-        ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
-        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
-
-    def test_remove_local_package_id_argument(self):
-        """ Remove package ID based on recipe revision. The package must be deleted, but
-            the recipe must be preserved
-            Package ID is a separated argument: <package>#<rref> -p <pkgid>
-        """
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
-        assert self.client.package_exists(self.pref)
-
-        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
-                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        assert not self.client.package_exists(self.pref)
-
-    def test_remove_local_package_id_reference(self):
-        """ Remove package ID based on recipe revision. The package must be deleted, but
-            the recipe must be preserved.
-            Package ID is part of package reference: <package>#<rref>:<pkgid>
-        """
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
-        assert self.client.package_exists(self.pref)
-
-        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
-                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        assert not self.client.package_exists(self.pref)
+class TestRemovePackageRevisions:
 
     @pytest.mark.artifactory_ready
-    def test_remove_remote_package_id_reference(self):
-        """ Remove remote package ID based on recipe revision. The package must be deleted, but
-            the recipe must be preserved.
-            Package ID is part of package reference: <package>#<rref>:<pkgid>
+    def test_remove_package_revision(self):
+        """ Remove package ID based on recipe revision. The package must be deleted, but
+            the recipe must be preserved
         """
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
-        self.client.run("upload foobar/0.1@user/testing -r default -c")
-        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
-                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        assert not self.client.package_exists(self.pref)
-        self.client.run("remove -c foobar/0.1@user/testing#{}:{} -r default"
-                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        assert not self.client.package_exists(self.pref)
+        ref = RecipeReference.loads("foobar/0.1@user/testing#4d670581ccb765839f2239cc8dff8fbd")
+        pref_arg = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
+        c = TestClient(light=True, default_server_user=True)
+        c.save({"conanfile.py": GenConanfile()})
+        c.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
+        assert c.package_exists(pref)
+        c.run("upload * -r default -c")
+        c.run(f"list {ref}:*")
+        assert NO_SETTINGS_PACKAGE_ID in c.out
+
+        # remove from cache
+        c.run(f"remove -c {pref_arg.repr_notime()}")
+        assert not c.package_exists(pref)
+
+        # remove From server
+        c.run(f"remove -c {pref_arg.repr_notime()} -r=default")
+        c.run(f"list {ref}:*")
+        assert NO_SETTINGS_PACKAGE_ID not in c.out
 
     @pytest.mark.artifactory_ready
     def test_remove_all_packages_but_the_recipe_at_remote(self):
         """ Remove all the packages but not the recipe in a remote
         """
-        self.client.save({"conanfile.py": GenConanfile("foobar", "0.1").with_settings("arch")})
-        self.client.run("create . --user=user --channel=testing")
-        self.client.run("create . --user=user --channel=testing -s arch=x86")
-        self.client.run("upload foobar/0.1@user/testing -r default -c")
-        ref = self.client.cache.get_latest_recipe_reference(
-               RecipeReference.loads("foobar/0.1@user/testing"))
-        self.client.run("list foobar/0.1@user/testing#{}:* -r default".format(ref.revision))
-        default_arch = self.client.get_default_host_profile().settings['arch']
-        self.assertIn(f"arch: {default_arch}", self.client.out)
-        self.assertIn("arch: x86", self.client.out)
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("foobar", "0.1").with_settings("arch")})
+        c.run("create . --user=user --channel=testing -s arch=x86_64")
+        c.run("create . --user=user --channel=testing -s arch=x86")
+        c.run("upload * -r default -c")
 
-        self.client.run("remove -c foobar/0.1@user/testing:* -r default")
-        self.client.run("search foobar/0.1@user/testing -r default")
-        self.assertNotIn(f"arch: {default_arch}", self.client.out)
-        self.assertNotIn("arch: x86", self.client.out)
+        c.run("list *:* -r default")
+        assert "foobar/0.1@user/testing" in c.out
+        assert "arch: x86_64" in c.out
+        assert "arch: x86" in  c.out
+
+        c.run("remove -c foobar/0.1@user/testing:* -r default")
+        c.run("list *:* -r default")
+        assert "foobar/0.1@user/testing" in c.out
+        assert "arch: x86_64" not in c.out
+        assert "arch: x86" not in c.out
 
 
 # populated packages of bar

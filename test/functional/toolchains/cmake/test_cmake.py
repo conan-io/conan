@@ -11,7 +11,6 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 @pytest.mark.tool("cmake", "3.15")
@@ -217,7 +216,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.paths.new_config_path, "tools.build:jobs=1")
+        self.client.save_home({"global.conf": "tools.build:jobs=1"})
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
@@ -472,7 +471,7 @@ def test_msvc_vs_versiontoolset():
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.paths.new_config_path, "tools.microsoft.msbuild:vs_version=15")
+    client.save_home({"global.conf": "tools.microsoft.msbuild:vs_version=15"})
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake

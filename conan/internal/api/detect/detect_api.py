@@ -233,7 +233,7 @@ def detect_libcxx(compiler, version, compiler_exe=None):
         old_path = os.getcwd()
         os.chdir(t)
         try:
-            error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
+            error, out_str = detect_runner(f'"{executable}" main.cpp -std=c++11')
             if error:
                 if "using libstdc++" in out_str:
                     output.info("gcc C++ standard library: libstdc++")
@@ -482,7 +482,7 @@ def _detect_vs_ide_version():
 def _cc_compiler(compiler_exe="cc"):
     # Try to detect the "cc" linux system "alternative". It could point to gcc or clang
     try:
-        ret, out = detect_runner('%s --version' % compiler_exe)
+        ret, out = detect_runner(f'"{compiler_exe}" --version')
         if ret != 0:
             return None, None, None
         compiler = "clang" if "clang" in out else "gcc"
@@ -505,13 +505,13 @@ def detect_gcc_compiler(compiler_exe="gcc"):
     try:
         if platform.system() == "Darwin":
             # In Mac OS X check if gcc is a fronted using apple-clang
-            _, out = detect_runner("%s --version" % compiler_exe)
+            _, out = detect_runner(f'"{compiler_exe}" --version')
             out = out.lower()
             if "clang" in out:
                 return None, None, None
 
         # TODO: Add -dumpfullversion to always return major.minor
-        ret, out = detect_runner('%s -dumpversion' % compiler_exe)
+        ret, out = detect_runner(f'"{compiler_exe}" -dumpversion')
         if ret != 0:
             return None, None, None
         compiler = "gcc"
@@ -524,14 +524,15 @@ def detect_gcc_compiler(compiler_exe="gcc"):
 
 
 def detect_compiler():
-    ConanOutput(scope="detect_api").warning("detect_compiler() is deprecated, use detect_default_compiler()", warn_tag="deprecated")
+    ConanOutput(scope="detect_api").warning("detect_compiler() is deprecated, "
+                                            "use detect_default_compiler()", warn_tag="deprecated")
     compiler, version, _ = detect_default_compiler()
     return compiler, version
 
 
 def detect_intel_compiler(compiler_exe="icx"):
     try:
-        ret, out = detect_runner("%s --version" % compiler_exe)
+        ret, out = detect_runner(f'"{compiler_exe}" --version')
         if ret != 0:
             return None, None
         compiler = "intel-cc"
@@ -545,7 +546,7 @@ def detect_intel_compiler(compiler_exe="icx"):
 
 def detect_suncc_compiler(compiler_exe="cc"):
     try:
-        _, out = detect_runner('%s -V' % compiler_exe)
+        _, out = detect_runner(f'"{compiler_exe}" -V')
         compiler = "sun-cc"
         installed_version = re.search(r"Sun C.*([0-9]+\.[0-9]+)", out)
         if installed_version:
@@ -561,7 +562,7 @@ def detect_suncc_compiler(compiler_exe="cc"):
 
 def detect_clang_compiler(compiler_exe="clang"):
     try:
-        ret, out = detect_runner('%s --version' % compiler_exe)
+        ret, out = detect_runner(f'"{compiler_exe}" --version')
         if ret != 0:
             return None, None, None
         if "Apple" in out:
@@ -651,6 +652,6 @@ def detect_sdk_version(sdk):
     if platform.system() != "Darwin":
         return
     cmd = f'xcrun -sdk {sdk} --show-sdk-version'
-    result = check_output_runner(cmd)
+    _, result = detect_runner(cmd)
     result = result.strip()
     return result
