@@ -41,14 +41,16 @@ class IntegrityChecker:
             raise ConanException(" ".join(msgs))
 
     def _ref_invalid_signature(self, ref):
-        output = ConanOutput(scope=f"{ref.repr_notime()}")
+        output = ConanOutput(scope=f"{ref.repr_notime()} [Package-signing plugin]")
         is_recipe = isinstance(ref, RecipeReference)
         layout = self._cache.recipe_layout(ref) if is_recipe else self._cache.pkg_layout(ref)
         folder = layout.download_export() if is_recipe else layout.download_package()
         files = os.listdir(folder)
         try:
             self._pkg_signatures_plugin.verify(ref, folder, files)
-        except ConanException as e:
+        except (ConanException, AssertionError) as e:
+            output.error("Error verifying package signature",
+                         error_type="exception")
             output.error(str(e), error_type="exception")
             return True
 

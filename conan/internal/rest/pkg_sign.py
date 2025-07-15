@@ -27,8 +27,7 @@ class PkgSignaturesPlugin:
         if self._plugin_sign_function is None:
             return
 
-        def _sign(ref, files, folder):
-            output = ConanOutput(scope=f"{ref.repr_notime()}")
+        def _sign(ref, files, folder, output):
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
             self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
@@ -37,16 +36,21 @@ class PkgSignaturesPlugin:
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
         for rref, recipe_bundle in upload_data.refs().items():
+            output = ConanOutput(scope=f"{rref.repr_notime()} [Package-signing plugin]")
             if recipe_bundle["upload"]:
-                _sign(rref, recipe_bundle["files"], self._cache.recipe_layout(rref).download_export())
+                _sign(rref, recipe_bundle["files"],
+                      self._cache.recipe_layout(rref).download_export(), output)
             for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
                 if pkg_bundle["upload"]:
-                    _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
+                    _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package(),
+                          output)
+            output.info("Package signature creation: ok")
 
     def verify(self, ref, folder, files):
-        output = ConanOutput(scope=f"{ref.repr_notime()}")
         if self._plugin_verify_function is None:
             return
+        output = ConanOutput(scope=f"{ref.repr_notime()} [Package-signing plugin]")
         metadata_sign = os.path.join(folder, METADATA, "sign")
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
                                      files=files, output=output)
+        output.info("Package signature verification: ok")
