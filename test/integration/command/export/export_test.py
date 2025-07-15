@@ -34,6 +34,9 @@ class TestExportSettings:
         client.run("export . --user=lasote")
         assert "lib/1.0@lasote: Exporting package recipe" in client.out
 
+        client.run("export . --channel=channel", assert_error=True)
+        assert "Channel 'channel' specified without user" in client.out
+
     def test_export_read_only(self):
         client = TestClient(light=True)
         conanfile = textwrap.dedent("""
