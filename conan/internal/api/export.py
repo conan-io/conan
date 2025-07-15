@@ -19,6 +19,8 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
                        conanfile.py
     """
     loader, cache = app.loader, app.cache
+    if channel and not user:
+        raise ConanException(f"Channel '{channel}' specified without user")
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
                                    remotes=remotes)
 
