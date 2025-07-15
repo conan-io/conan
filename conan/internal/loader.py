@@ -134,7 +134,7 @@ class ConanFileLoader:
             conanfile.channel = channel
 
         if conanfile.channel and not conanfile.user:
-            raise ConanException(f"Channel '{conanfile.channel}' specified without user")
+            raise ConanException(f"{conanfile_path}: Can't specify channel '{conanfile.channel}' without user")
 
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):

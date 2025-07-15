@@ -34,11 +34,11 @@ class TestExportSettings:
         client.run("export . --user=lasote")
         assert "lib/1.0@lasote: Exporting package recipe" in client.out
         client.run("export . --channel=channel", assert_error=True)
-        assert "Channel 'channel' specified without user" in client.out
+        assert "Can't specify channel 'channel' without user" in client.out
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0").with_class_attribute('channel = "channel"')})
         client.run("export .", assert_error=True)
-        assert "Channel 'channel' specified without user" in client.out
+        assert "Can't specify channel 'channel' without user" in client.out
 
         client.run("export . --user=user")
         assert "Exported: lib/1.0@user/channel" in client.out
