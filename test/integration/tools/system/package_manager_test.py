@@ -428,7 +428,7 @@ def test_tools_install_archless_with_version(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info -e package'),
-    (Apt, 'dpkg-query -W -f=\'${Status}\' package | grep -q "ok installed"'),
+    (Apt, 'dpkg -l | grep -q -E "^ii\\s+\\bpackage\\s+\\b"'),
     (Yum, 'rpm -q package'),
     (Dnf, 'rpm -q package'),
     (Brew, 'test -n "$(brew ls --versions package)"'),
