@@ -452,7 +452,7 @@ def test_tools_check(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info package | grep "0.1"'),
-    (Apt, 'dpkg -s package | grep "Version: 0.1"'),
+    (Apt, 'dpkg -l | grep -E "^ii\\s+\\bpackage\\s+\\b" | grep -q "0.1"'),
     (Yum, 'rpm -q package-0.1'),
     (Dnf, 'rpm -q package-0.1'),
     (Brew, 'brew list --versions package | grep "0.1"'),
