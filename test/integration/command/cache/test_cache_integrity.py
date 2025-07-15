@@ -61,9 +61,9 @@ def test_cache_integrity_missing_recipe_manifest():
     t.run("create . --name pkg3 --version=3.0")
 
     t.run("cache check-integrity *", assert_error=True)
-    assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity checked: ok" in t.out
-    assert "ERROR: pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd: Manifest missing" in t.out
-    assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity checked: ok" in t.out
+    assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
+    assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd: ERROR: Manifest missing" in t.out
+    assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "ERROR: There are corrupted artifacts. Check the error logs" in t.out
 
     t.run("remove pkg2* -c")
@@ -85,11 +85,11 @@ def test_cache_integrity_missing_package_manifest():
     t.run("create . --name pkg3 --version=3.0")
 
     t.run("cache check-integrity *", assert_error=True)
-    assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity checked: ok" in t.out
-    assert "ERROR: pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd" \
+    assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
+    assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd" \
            ":da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: Manifest missing" in t.out
-    assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity checked: ok" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest missing" in t.out
+    assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "ERROR: There are corrupted artifacts. Check the error logs" in t.out
 
     t.run("remove pkg2* -c")

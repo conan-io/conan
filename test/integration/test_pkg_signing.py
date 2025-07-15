@@ -81,7 +81,7 @@ def test_pkg_sign_no_verify_function():
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature creation: ok" in c.out
     c.run("cache check-integrity pkg/0.1")
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature verification: ok" not in c.out
-    assert "pkg/0.1: Integrity checked: ok" in c.out
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Integrity check: ok" in c.out
 
 
 def test_pkg_sign_no_sign_function():
@@ -125,7 +125,7 @@ def test_pkg_sign_no_sign_function():
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Package signature creation: ok" not in c.out
     c.run("cache check-integrity pkg/0.1", assert_error=True)
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: ERROR: Missing signature file!" in c.out
-    assert "pkg/0.1: Integrity checked: ok" in c.out
+    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Integrity check: ok" in c.out
 
 
 def test_pkg_sign_check_integrity():
