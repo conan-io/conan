@@ -246,8 +246,9 @@ class Apt(_SystemPackageManagerTool):
     full_package_name = "{name}{arch_separator}{arch_name}{version_separator}{version}"
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
     update_command = "{sudo}{tool} update"
-    check_command = "dpkg-query -W -f='${{Status}}' {package} | grep -q \"ok installed\""
-    check_version_command = "dpkg -s {package} | grep \"Version: {version}\""
+    check_command = "dpkg -l | grep -q -E \"^ii\\s+\\b{package}\\s+\\b\""
+    check_version_command = "dpkg -l | grep -E \"^ii\\s+\\b{package}\\s+\\b\" | grep -q \"{version}\""
+
 
     def __init__(self, conanfile, arch_names=None):
         """
