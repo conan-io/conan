@@ -33,11 +33,11 @@ class UserInput:
         :param username If username is specified it only request password"""
         self._raise_if_non_interactive()
         if not username:
-            self._out.write("Remote '%s' username: " % remote_name)
+            self._out.login_msg(f"Remote '{remote_name}' username: ")
             username = self.get_username()
 
-        self._out.write("Please enter a password for user '%s' on remote '%s': "
-                        % (username, remote_name))
+        self._out.login_msg("Please enter a password for "
+                            f"user '{username}' on remote '{remote_name}': ")
         try:
             pwd = self.get_password()
         except ConanException:
