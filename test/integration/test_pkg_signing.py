@@ -75,25 +75,14 @@ def test_pkg_sign_assert_error():
            "#0ba8627bd47edc3a501e8f0eb9a79e5e [Package-signing plugin]: ERROR: " \
            "verify assertion error" in c.out
     assert "ERROR: There are artifacts with invalid signature. Check the error logs." in c.out
-    print(c.out)
 
 
 def test_pkg_sign_no_verify_function():
     c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     signer = textwrap.dedent(r"""
-        import os
-
         def sign(ref, artifacts_folder, signature_folder, output):
             output.info("Signing reference")
-            output.info(f"Signing folder: {artifacts_folder}")
-            files = []
-            for f in sorted(os.listdir(artifacts_folder)):
-                if os.path.isfile(os.path.join(artifacts_folder, f)):
-                    files.append(f)
-            output.info(f"Signing files: {sorted(files)}")
-            signature = os.path.join(signature_folder, "signature.asc")
-            open(signature, "w").write("\n".join(files))
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
@@ -101,8 +90,7 @@ def test_pkg_sign_no_verify_function():
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164 [Package-signing plugin]: " \
            "Package signature creation: ok" in c.out
     c.run("cache check-integrity pkg/0.1")
-    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164 [Package-signing plugin]: " \
-           "Package signature verification: ok" not in c.out
+    assert "Package signature verification: ok" not in c.out
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Integrity check: ok" in c.out
 
 
@@ -145,8 +133,7 @@ def test_pkg_sign_no_sign_function():
     c.run("upload pkg/0.1 -r default -c --dry-run")
     assert "Package signature creation: ok" not in c.out
     c.run("cache check-integrity pkg/0.1", assert_error=True)
-    assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164 [Package-signing plugin]: ERROR: " \
-           "Missing signature file!" in c.out
+    assert "Missing signature file!" in c.out
     assert "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164: Integrity check: ok" in c.out
 
 
@@ -210,16 +197,24 @@ def test_pkg_sign_check_integrity():
            "#d950d0cd76f6bba62c8add9c68d1aeb3 [Package-signing plugin]: WARN: " \
            "Could not verify unsigned package" in c.out
 
-    # Sign the packages and verify
-    c.run("upload pkg/0.1 -r=default -c --dry-run --force")
+    # prepare for upload, sign the packages and integrity check
+    c.run("upload pkg/0.1 -r=default -c --dry-run --force --check")
+    # Check order: integrity check, prepare (sign), verify, upload summary
+    subtitle_lines = [line for line in c.out.splitlines() if "--------" in line]
+    assert "Checking integrity of cache packages" in subtitle_lines[0]
+    assert "Checking server existing packages" in subtitle_lines[1]
+    assert "Preparing artifacts for upload" in subtitle_lines[2]
+    assert "[Package-signing plugin] Verifying packages" in subtitle_lines[3]
+    assert "Upload summary" in subtitle_lines[4]
+    # Check package was signed
     assert "Signing ref" in c.out
+    # Verify packages with check-integrity command
     c.run("cache check-integrity pkg/0.1")
     assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a [Package-signing plugin]: " \
            "Package signature verification: ok" in c.out
     assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#d950d0cd76f6bba62c8add9c68d1aeb3 [Package-signing plugin]: " \
            "Package signature verification: ok" in c.out
-    print(c.out)
 
     # Remove signature file to force error
     c.run("cache path pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a:da39a3ee5e6b4b0d3255bfef95601890afd80709")

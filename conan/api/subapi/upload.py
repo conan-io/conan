@@ -73,12 +73,17 @@ class UploadAPI:
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if check_integrity:
                 subtitle("Checking integrity of cache packages")
-                self.conan_api.cache.check_integrity(pkglist)
+                self.conan_api.cache.check_integrity(pkglist, check_package_signing=False)
+
             # Check if the recipes/packages are in the remote
             subtitle("Checking server existing packages")
             self.check_upstream(pkglist, remote, enabled_remotes, force)
             subtitle("Preparing artifacts for upload")
             self.prepare(pkglist, enabled_remotes, metadata)
+
+            if check_integrity:
+                subtitle("[Package-signing plugin] Verifying packages")
+                self.conan_api.cache.check_integrity(pkglist, check_corrupted=False)
 
             if not dry_run:
                 subtitle("Uploading artifacts")

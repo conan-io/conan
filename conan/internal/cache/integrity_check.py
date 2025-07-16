@@ -22,15 +22,21 @@ class IntegrityChecker:
         self._cache = cache
         self._pkg_signatures_plugin = PkgSignaturesPlugin(cache, home_folder)
 
-    def check(self, pkg_list):
+    def check(self, pkg_list, check_corrupted=True, check_package_signing=True):
+        assert check_corrupted or check_package_signing, \
+            "Integrity checked should perform at least one check"
         corrupted = False
         invalid_signature = False
         for ref, recipe_bundle in pkg_list.refs().items():
-            corrupted = self._recipe_corrupted(ref) or corrupted
-            invalid_signature = self._ref_invalid_signature(ref) or invalid_signature
+            if check_corrupted:
+                corrupted = self._recipe_corrupted(ref) or corrupted
+            if check_package_signing:
+                invalid_signature = self._ref_invalid_signature(ref) or invalid_signature
             for pref, prev_bundle in pkg_list.prefs(ref, recipe_bundle).items():
-                corrupted = self._package_corrupted(pref) or corrupted
-                invalid_signature = self._ref_invalid_signature(pref) or invalid_signature
+                if check_corrupted:
+                    corrupted = self._package_corrupted(pref) or corrupted
+                if check_package_signing:
+                    invalid_signature = self._ref_invalid_signature(pref) or invalid_signature
         msgs = []
         if corrupted:
             msgs.append("There are corrupted artifacts.")

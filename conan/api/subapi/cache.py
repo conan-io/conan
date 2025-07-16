@@ -69,11 +69,11 @@ class CacheAPI:
             return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
-    def check_integrity(self, package_list):
+    def check_integrity(self, package_list, check_corrupted=True, check_package_signing=True):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
         cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         checker = IntegrityChecker(cache, self.conan_api.home_folder)
-        checker.check(package_list)
+        checker.check(package_list, check_corrupted, check_package_signing)
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):
