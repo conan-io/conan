@@ -745,7 +745,8 @@ class TestDownloadCacheBackupSources:
         # Ensure we are testing for an already uploaded recipe
         assert f"Recipe 'pkg/1.0#{exported_rev}' already in server, skipping upload" in self.client.out
 
-    def test_source_then_upload_workflow(self):
+    @pytest.mark.parametrize("unknown", [True, False])
+    def test_source_then_upload_workflow(self, unknown):
         mkdir(os.path.join(self.download_cache_folder, "s"))
 
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -769,7 +770,12 @@ class TestDownloadCacheBackupSources:
                             f"core.sources:upload_url={self.file_server.fake_url}/backup/"})
 
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("source .")
+        ref_args = "" if unknown else "--name foo --version 1.0"
+        reference_key = "unknown" if unknown else "foo/1.0"
+        self.client.run(f"source . {ref_args}")
+        content = json.loads(load(os.path.join(self.download_cache_folder, "s", sha256 + ".json")))
+        assert len(content["references"][reference_key]) == 1
+
         self.client.run("cache backup-upload")
         # This used to crash because we were trying to list a missing dir if only exports were made
         assert "[Errno 2] No such file or directory" not in self.client.out
