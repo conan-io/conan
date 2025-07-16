@@ -54,7 +54,7 @@ class ConanAPI:
         self.config = ConfigAPI(self)
         _check_conan_version(self)
 
-        self._helpers = self._Helpers(self)
+        self._api_helpers = self._ApiHelpers(self)
         self.migrate()
 
         self.remotes = RemotesAPI(self)
@@ -64,20 +64,20 @@ class ConanAPI:
         # Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
         self.profiles = ProfilesAPI(self)
-        self.install = InstallAPI(self, self._helpers)
-        self.graph = GraphAPI(self, self._helpers)
-        self.export = ExportAPI(self, self._helpers)
+        self.install = InstallAPI(self, self._api_helpers)
+        self.graph = GraphAPI(self, self._api_helpers)
+        self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
         self.upload = UploadAPI(self)
         self.download = DownloadAPI(self)
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
-        self.local = LocalAPI(self, self._helpers)
+        self.local = LocalAPI(self, self._api_helpers)
         self.audit = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
-        self.report = ReportAPI(self, self._helpers)
+        self.report = ReportAPI(self, self._api_helpers)
 
 
     def reinit(self):
@@ -85,7 +85,7 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         # TODO: Think order of reinitialization for helpers
-        self._helpers.reinit()
+        self._api_helpers.reinit()
         self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()
@@ -99,13 +99,14 @@ class ConanAPI:
         migrator = ClientMigrator(self.cache_folder, conan_version)
         migrator.migrate()
 
-    class _Helpers:
+    class _ApiHelpers:
         def __init__(self, conan_api):
             self._conan_api = conan_api
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
 
         def reinit(self):
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+
 
 def _check_conan_version(conan_api):
     required_range_new = conan_api.config.global_conf.get("core:required_conan_version")
