@@ -198,9 +198,9 @@ def _calculate_licenses(component):
     ]
 
 def _calculate_bomref(component):
-    user, channel = component.ref.user, component.ref.channel
-    user_channel = f"?user={user}?channel={channel}" if user and channel else f"?user={user}" if user else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user_channel}"
+    user = "&user={component.ref.user}" if component.ref.user else ""
+    channel = "&channel={component.ref.channel}" if component.ref.channel else ""
+    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
 
 
 
