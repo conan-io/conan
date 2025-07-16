@@ -64,14 +64,18 @@ class TestDetect:
     ["g++ (Conan-Build-gcc--binutils-2.42) 14.1.0", "14.1.0"],
     ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.1.0", "15.1.0"],
     ["gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-Builds project) 15.15.0", "15.15.0"],
+    ["gcc (crosstool-NG 1.27.0) 13.3.0", "13.3.0"],
+    ["gcc (crosstool-NG 1.27.0) 13.3", "13.3"],
     ["gcc (GCC) 4.8.1", "4.8.1"],
     ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
     ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14", "14"],
+    ["cc.exe 14.2", "14.2"],
+    ["cc1 14.2", "14.2"],
 ])
 @patch("conan.internal.api.detect.detect_api.detect_runner")
-def test_detect_cc_versionings(detect_runner_mock, version_return, expected_version):
+def test_detect_cc_versioning(detect_runner_mock, version_return, expected_version):
     detect_runner_mock.return_value = 0, version_return
     compiler, installed_version, compiler_exe = _cc_compiler()
     # Using private _value attribute to compare the str that reaches it, so no space issues arise

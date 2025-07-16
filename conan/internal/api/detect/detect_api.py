@@ -488,11 +488,10 @@ def _cc_compiler(compiler_exe="cc"):
         compiler = "clang" if "clang" in out else "gcc"
         # clang and gcc have version after a space, first try to find that to skip extra numbers
         # that might appear in the first line of the output before the version
-        installed_version = re.search(r" ([0-9]+(\.[0-9]+)+)", out)
-        # Try only major but with spaces next
-        installed_version = installed_version or re.search(r" ([0-9]+(\.[0-9]+)?)", out)
+        # There might also be a leading parenthesis that contains build information, so we try to skip it
+        installed_version = re.search(r"(?:\(.*\))? ([0-9]+(\.[0-9]+)*)", out)
         # Fallback to the first number we find optionally followed by other version fields
-        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9]+)?)", out)
+        installed_version = installed_version or re.search(r"([0-9]+(\.[0-9]+)*)", out)
         if installed_version and installed_version.group(1):
             installed_version = installed_version.group(1)
             ConanOutput(scope="detect_api").info("Found cc=%s-%s" % (compiler, installed_version))
@@ -510,7 +509,6 @@ def detect_gcc_compiler(compiler_exe="gcc"):
             if "clang" in out:
                 return None, None, None
 
-        # TODO: Add -dumpfullversion to always return major.minor
         ret, out = detect_runner(f'"{compiler_exe}" -dumpversion')
         if ret != 0:
             return None, None, None
