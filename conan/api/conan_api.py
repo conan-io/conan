@@ -79,7 +79,6 @@ class ConanAPI:
         self.workspace = WorkspaceAPI(self)
         self.report = ReportAPI(self, self._api_helpers)
 
-
     def reinit(self):
         """
         Reinitialize the Conan API. This is useful when the configuration changes.
