@@ -400,6 +400,8 @@ class Requirement:
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode
 
+            if pkg_type is PackageType.MODULE:
+                self.package_id_mode = non_embed_mode
         # For cases like Application->Application, without headers or libs, package_id_mode=None
         # It will be independent by default
 
