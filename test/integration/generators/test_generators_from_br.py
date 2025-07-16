@@ -1,6 +1,7 @@
+import json
 import textwrap
 
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_inject_generators_conf():
@@ -23,12 +24,18 @@ def test_inject_generators_conf():
                 self.generator_info = ["CMakeToolchain", MyGenerator]
         """)})
 
+    tc.save({"consumer/conanfile.py": GenConanfile("consumer", "0.1")
+                .with_tool_requires("tool/0.1")
+                .with_class_attribute("generators = 'VirtualBuildEnv', 'VirtualRunEnv'")})
+
     tc.run("create tool")
-    tc.run("install --tool-requires=tool/0.1")
+    tc.run("create consumer")
     assert "WARN: experimental: Tool-require tool/0.1 adding generators: " \
            "['CMakeToolchain', 'MyGenerator']" in tc.out
     assert "Generator 'CMakeToolchain' calling 'generate()'" in tc.out
     assert "Generator 'MyGenerator' calling 'generate()'" in tc.out
+    assert "Generator 'VirtualBuildEnv' calling 'generate()'" in tc.out
+    assert "Generator 'VirtualRunEnv' calling 'generate()'" in tc.out
     assert "CMakeToolchain generated: conan_toolchain.cmake" in tc.out
     assert "MyGenerator generated" in tc.out
 
@@ -89,3 +96,30 @@ def test_inject_vars():
     content = tc.load("conanbuild.sh")
     assert "conantest.sh" in content
     assert "envars_generator2.sh" in content
+
+
+def test_json_serialization_error():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyGenerator:
+            def __init__(self, conanfile):
+                self._conanfile = conanfile
+
+            def generate(self):
+                pass
+
+        class MyToolReq(ConanFile):
+            name = "mygenerator-tool"
+            version = "1.0"
+
+            def package_info(self):
+                self.generator_info = [MyGenerator]
+        """)
+
+    c.save({"tool/conanfile.py": conanfile})
+    c.run("create tool")
+    c.run("install --tool-requires=mygenerator-tool/1.0 --format=json")
+    graph = json.loads(c.stdout)
+    assert graph["graph"]["nodes"]["0"]["generators"] == ["MyGenerator"]

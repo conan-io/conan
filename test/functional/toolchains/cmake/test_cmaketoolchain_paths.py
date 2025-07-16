@@ -89,7 +89,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello CXX)
+        project(MyHello NONE)
         find_package({package} REQUIRED)
         """).format(package=package)
 
@@ -137,7 +137,7 @@ def test_cmaketoolchain_path_find_package_editable():
 
     consumer = textwrap.dedent("""\
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello CXX)
+        project(MyHello NONE)
         find_package(hello REQUIRED)
         """)
     client.save({"dep/conanfile.py": conanfile,
@@ -293,7 +293,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
     """.format(require_type=require_type))
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         include(myowncmake)
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
@@ -340,7 +340,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_file(HELLOFILE hello.h)
         if(HELLOFILE)
             message("Found file hello.h")
@@ -409,7 +409,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     """)
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_library(HELLOLIB hello)
         if(HELLOLIB)
             message("Found hello lib: ${HELLOLIB}")
@@ -476,7 +476,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     """)
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_program(HELLOPROG hello)
         if(HELLOPROG)
             message("Found hello prog: ${HELLOPROG}")

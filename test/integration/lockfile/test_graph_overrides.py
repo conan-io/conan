@@ -35,8 +35,8 @@ def test_overrides_half_diamond(override, force):
     # apply the lockfile to pkgb, should it lock to pkga/0.2
     c.run("graph info pkgb --lockfile=pkgc/conan.lock --format=json")
     dependencies = json.loads(c.stdout)["graph"]["nodes"]["0"]["dependencies"]
-    assert "pkga/0.2" in str(dependencies)
-    assert "pkga/0.1" not in str(dependencies)
+    assert "pkga/0.2" == dependencies["1"]["ref"]
+    assert "pkga/0.1" == dependencies["1"]["require"]
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -140,9 +140,8 @@ def test_overrides_diamond(override, force):
     c.run("graph info pkgb --lockfile=pkgd/conan.lock --format=json")
     json_graph = json.loads(c.stdout)
     deps = json_graph["graph"]["nodes"]["0"]["dependencies"]
-    assert "pkga/0.3" in str(deps)
-    assert "pkga/0.2" not in str(deps)
-    assert "pkga/0.1" not in str(deps)
+    assert "pkga/0.3" == deps["1"]["ref"]
+    assert "pkga/0.1" == deps["1"]["require"]
     # Redundant assert, but checking "overrides" summary
     overrides = json_graph['graph']["overrides"]
     assert len(overrides) == 1

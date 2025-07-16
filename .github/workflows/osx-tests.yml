@@ -1,31 +1,24 @@
 name: OSX Tests
 
 on:
-  push:
-    branches:
-      - develop2
-      - release/*
-  pull_request:
-    branches:
-      - '*'
-      - 'release/*'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
-  setup-caches:
+  osx_setup:
     runs-on: macos-14
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.8
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: '3.10'
 
       - name: Cache pip packages
         id: cache-pip
@@ -43,7 +36,7 @@ jobs:
           pip install meson
 
       - name: Uninstall default CMake
-        run: brew uninstall cmake || true
+        run: brew uninstall --formula cmake || true
 
       - name: Cache Homebrew packages
         id: cache-brew
@@ -54,7 +47,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -64,6 +57,8 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
@@ -92,7 +87,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5")
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.0.0-rc3")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -118,18 +113,22 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
-  testing:
-    needs: setup-caches
+  osx_tests:
+    needs: osx_setup
+    runs-on: macos-14
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.8', '3.12', '3.13']
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
-
-    runs-on: macos-14
-
-    name: Conan (${{ matrix.test-type }}) (${{ matrix.python-version }})
-
+        include:
+        - test-type: unittests
+          test-name: Unit
+        - test-type: integration
+          test-name: Integration
+        - test-type: functional
+          test-name: Functional
+    name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,6 +146,8 @@ jobs:
             ~/Applications/CMake/3.15.7
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
+            ~/Applications/CMake/3.27.9
+            ~/Applications/CMake/4.0.0-rc3
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
@@ -167,12 +168,14 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
-
-      - name: Run Tests
-        run: |
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
 
-          python -m pytest test/${{ matrix.test-type }} --durations=20 -n auto
+      - name: Run tests
+        uses: ./.github/actions/test-coverage
+        with:
+          python-version: ${{ matrix.python-version }}
+          test-type: ${{ matrix.test-type }}
+          tests: test/${{ matrix.test-type }}

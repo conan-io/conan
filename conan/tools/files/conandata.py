@@ -3,7 +3,7 @@ import os
 import yaml
 
 from conan.errors import ConanException
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 def update_conandata(conanfile, data):

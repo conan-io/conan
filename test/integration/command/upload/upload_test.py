@@ -7,17 +7,17 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-import requests
 from mock import patch
 from requests import Response
 
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
-from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
+from conan.internal.util.files import is_dirty, save, set_dirty, sha1sum
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
@@ -149,10 +149,10 @@ class UploadTest(unittest.TestCase):
         pref = client.get_latest_package_reference(RecipeReference.loads("hello0/1.2.1@user/testing"),
                                                    NO_SETTINGS_PACKAGE_ID)
 
-        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
+        def gzopen_patched(name, fileobj, compresslevel=None):  # noqa
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
-            return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
+            return gzopen_without_timestamps(name, fileobj)
         with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm -r default", assert_error=True)
             self.assertIn("Error gzopen conan_package.tgz", client.out)
@@ -177,8 +177,13 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
-        self.assertIn("ERROR:     'include/hello.h'", client.out)
-        self.assertIn("ERROR:     'added.txt'", client.out)
+        self.assertIn("hello0/1.2.1@frodo/stable#3afd661184b94bdac7fb2057e7bd9baa"
+                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                      "#e70e86439dec07a0d5d3414648b0b16c: ERROR", client.out)
+        self.assertIn("include/hello.h (manifest: d41d8cd98f00b204e9800998ecf8427e, file: None)",
+                      client.out)
+        self.assertIn("added.txt (manifest: None, file: d41d8cd98f00b204e9800998ecf8427e)",
+                      client.out)
         self.assertIn("ERROR: There are corrupted artifacts, check the error logs", client.out)
 
     @pytest.mark.artifactory_ready
@@ -440,12 +445,6 @@ class UploadTest(unittest.TestCase):
                 self.status_code = 401
                 self.content = b''
 
-        class ErrorApiResponse(object):
-            def __init__(self):
-                self.ok = False
-                self.status_code = 400
-                self.content = "Unsupported Conan v1 repository request for 'conan'"
-
         class ServerCapabilitiesRequester(TestRequester):
             def __init__(self, *args, **kwargs):
                 self._first_ping = True
@@ -453,17 +452,14 @@ class UploadTest(unittest.TestCase):
 
             def get(self, url, **kwargs):
                 app, url = self._prepare_call(url, kwargs)
-                if app:
-                    if url.endswith("ping") and self._first_ping:
-                        self._first_ping = False
-                        return EmptyCapabilitiesResponse()
-                    elif "hello0" in url and "1.2.1" in url and "v1" in url:
-                        return ErrorApiResponse()
-                    else:
-                        response = app.get(url, **kwargs)
-                        return TestingResponse(response)
+                assert app
+                assert ("/v1/" in url and url.endswith("ping")) or "/v2" in url
+                if url.endswith("ping") and self._first_ping:
+                    self._first_ping = False
+                    return EmptyCapabilitiesResponse()
                 else:
-                    return requests.get(url, **kwargs)
+                    response = app.get(url, **kwargs)
+                    return TestingResponse(response)
 
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
@@ -552,4 +548,72 @@ def test_upload_json_output():
     list_pkgs = json.loads(c.stdout)
     revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
     pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    prev = pkg["revisions"]["f50f552c6e04b1f241e5f7864bc3957f"]
     assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}
+    assert revs["upload-urls"] == {
+        "conanfile.py": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanfile.py",
+            "checksum": sha1sum(revs["files"]["conanfile.py"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanmanifest.txt",
+            "checksum": sha1sum(revs["files"]["conanmanifest.txt"])
+        }
+    }
+    assert prev["upload-urls"] == {
+        "conan_package.tgz": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conan_package.tgz",
+            "checksum": sha1sum(prev["files"]["conan_package.tgz"])
+        },
+        "conaninfo.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conaninfo.txt",
+            "checksum": sha1sum(prev["files"]["conaninfo.txt"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conanmanifest.txt",
+            "checksum": sha1sum(prev["files"]["conanmanifest.txt"])
+        }
+    }
+
+
+def test_upload_dry_run_output():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
+                                                       .with_shared_option(False)})
+    c.run("create . -s os=Linux")
+    c.run("upload * -r=default -c --dry-run --format=json")
+    list_pkgs = json.loads(c.stdout)
+    revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
+    pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    prev = pkg["revisions"]["f50f552c6e04b1f241e5f7864bc3957f"]
+    assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}
+    assert revs["upload-urls"] == {
+        "conanfile.py": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanfile.py",
+            "checksum": sha1sum(revs["files"]["conanfile.py"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/files/conanmanifest.txt",
+            "checksum": sha1sum(revs["files"]["conanmanifest.txt"])
+        }
+    }
+    assert prev["upload-urls"] == {
+        "conan_package.tgz": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conan_package.tgz",
+            "checksum": sha1sum(prev["files"]["conan_package.tgz"])
+        },
+        "conaninfo.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conaninfo.txt",
+            "checksum": sha1sum(prev["files"]["conaninfo.txt"])
+        },
+        "conanmanifest.txt": {
+            "url": f"{c.servers['default']}/v2/conans/liba/0.1/_/_/revisions/a565bd5defd3a99e157698fcc6e23b25/packages/9e0f8140f0fe6b967392f8d5da9881e232e05ff8/revisions/f50f552c6e04b1f241e5f7864bc3957f/files/conanmanifest.txt",
+            "checksum": sha1sum(prev["files"]["conanmanifest.txt"])
+        }
+    }
+
+    # check we don't have anything about the upload-urls in the text formatter
+    c.run("upload * -r=default -c --dry-run")
+    assert "upload-urls" not in c.stdout
+    assert "url:" not in c.stdout
+    assert "checksum:" not in c.stdout

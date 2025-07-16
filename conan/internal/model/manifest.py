@@ -2,8 +2,8 @@ import os
 from collections import defaultdict
 
 from conan.internal.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.dates import timestamp_now, timestamp_to_str
-from conans.util.files import load, md5, md5sum, save, gather_files
+from conan.internal.util.dates import timestamp_now, timestamp_to_str
+from conan.internal.util.files import load, md5, md5sum, save, gather_files
 
 
 class FileTreeManifest(object):

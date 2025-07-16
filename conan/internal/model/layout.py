@@ -32,7 +32,7 @@ class Layouts(object):
         self.package = PartialLayout()
 
 
-class Folders(object):
+class Folders:
 
     def __init__(self):
         self._base_source = None
@@ -59,9 +59,6 @@ class Folders(object):
         # start from the subproject again
         self.subproject = None
         self.build_folder_vars = None
-
-    def __repr__(self):
-        return str(self.__dict__)
 
     def set_base_folders(self, conanfile_folder, output_folder):
         """ this methods can be used for defining all the base folders in the

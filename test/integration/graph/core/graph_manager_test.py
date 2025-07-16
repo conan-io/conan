@@ -1,8 +1,7 @@
 import pytest
 from parameterized import parameterized
 
-from conans.client.graph.graph import BINARY_SKIP
-from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
+from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conan.test.utils.tools import GenConanfile
@@ -11,24 +10,17 @@ from conan.test.utils.tools import GenConanfile
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    if len(values) != len(transitive_deps):
-        values = [r.require.ref for r in values]
-        raise Exception("{}: Number of deps don't match \n{}!=\n{}".format(node, values,
-                                                                           transitive_deps))
+    assert len(values) == len(transitive_deps), f"{node}: Number of deps don't match " \
+                                                f"\n{[r.require.ref for r in values]}" \
+                                                f"!=\n{transitive_deps}"
 
     for v1, v2 in zip(values, transitive_deps):
-        if v1.node is not v2[0]:
-            raise Exception(f"{v1.node}!={v2[0]}")
-        if v1.require.headers is not v2[1]:
-            raise Exception(f"{v1.node}!={v2[0]} headers")
-        if v1.require.libs is not v2[2]:
-            raise Exception(f"{v1.node}!={v2[0]} libs")
-        if v1.require.build is not v2[3]:
-            raise Exception(f"{v1.node}!={v2[0]} build")
-        if v1.require.run is not v2[4]:
-            raise Exception(f"{v1.node}!={v2[0]} run")
-        if len(v2) > 5:
-            assert v1.require.package_id_mode is v2[5]
+        assert v1.node is v2[0], f"{v1.node}!={v2[0]}"
+        assert v1.require.headers is v2[1], f"{v1.node}!={v2[0]} headers"
+        assert v1.require.libs is v2[2], f"{v1.node}!={v2[0]} libs"
+        assert v1.require.build is v2[3], f"{v1.node}!={v2[0]} build"
+        assert v1.require.run is  v2[4], f"{v1.node}!={v2[0]} run"
+        assert len(v2) <= 5
 
 
 class TestLinear(GraphManagerTest):
@@ -46,7 +38,7 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
@@ -74,8 +66,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -98,8 +90,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -120,8 +112,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         for r, t in libb.transitive_deps.items():
             assert r.package_id_mode == "minor_mode"
@@ -147,8 +139,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -169,8 +161,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -195,8 +187,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -218,8 +210,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -242,8 +234,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -264,8 +256,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -288,8 +280,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -311,8 +303,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -343,8 +335,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False)])
@@ -362,7 +354,7 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        cmake = app.dependencies[0].dst
+        cmake = app.edges[0].dst
 
         # node, headers, lib, build, run
         run = package_type in ("application", "shared-library", "build-scripts")
@@ -377,7 +369,7 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        liba = app.dependencies[0].dst
+        liba = app.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[app])
@@ -396,8 +388,8 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -421,9 +413,9 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        libb = liba.dependencies[0].dst
-        libc = liba.dependencies[1].dst
+        liba = app.edges[0].dst
+        libb = liba.edges[0].dst
+        libc = liba.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[liba])
         self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[app])
@@ -452,10 +444,10 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        liba = libd.dependencies[0].dst
-        libb = liba.dependencies[0].dst
-        libc = liba.dependencies[1].dst
+        libd = app.edges[0].dst
+        liba = libd.edges[0].dst
+        libb = liba.edges[0].dst
+        libc = liba.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
@@ -489,10 +481,10 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        liba = libd.dependencies[0].dst
-        libb = liba.dependencies[0].dst
-        libc = liba.dependencies[1].dst
+        libd = app.edges[0].dst
+        liba = libd.edges[0].dst
+        libb = liba.edges[0].dst
+        libc = liba.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
@@ -526,9 +518,9 @@ class TestLinear(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -553,9 +545,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -579,9 +571,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -615,9 +607,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -651,9 +643,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -686,9 +678,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -719,9 +711,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -753,9 +745,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -788,9 +780,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -824,9 +816,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -855,9 +847,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -888,9 +880,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -920,9 +912,9 @@ class TestLinearFourLevels(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc, liba])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -954,10 +946,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -988,10 +980,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1020,10 +1012,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1053,10 +1045,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1087,10 +1079,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1120,10 +1112,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1152,10 +1144,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1185,10 +1177,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1215,10 +1207,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1245,10 +1237,10 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1281,10 +1273,10 @@ class TestLinearFiveLevelsLibraries(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1315,10 +1307,10 @@ class TestLinearFiveLevelsLibraries(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = libd.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
@@ -1347,9 +1339,9 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb, libc])
@@ -1379,9 +1371,9 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb, libc])
@@ -1404,8 +1396,8 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
+        liba = app.edges[0].dst
+        libc = app.edges[1].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[liba, libc])
@@ -1431,8 +1423,8 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        liba = app.dependencies[1].dst
+        libc = app.edges[0].dst
+        liba = app.edges[1].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[liba, libc])
@@ -1458,10 +1450,10 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
-        liba1 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
+        liba1 = libc.edges[0].dst
 
         assert liba is liba1
 
@@ -1492,11 +1484,11 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libb = libd.dependencies[0].dst
-        libc = libd.dependencies[1].dst
-        liba = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
+        libd = app.edges[0].dst
+        libb = libd.edges[0].dst
+        libc = libd.edges[1].dst
+        liba = libb.edges[0].dst
+        liba2 = libc.edges[0].dst
 
         assert liba is liba2
 
@@ -1528,10 +1520,10 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
+        liba2 = libc.edges[0].dst
 
         assert liba1 is not liba2
 
@@ -1563,9 +1555,9 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
@@ -1587,9 +1579,9 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
@@ -1616,10 +1608,10 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libb = libd.dependencies[0].dst
-        libc = libd.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
+        libd = app.edges[0].dst
+        libb = libd.edges[0].dst
+        libc = libd.edges[1].dst
+        liba1 = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[app])
@@ -1643,10 +1635,10 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         libc = deps_graph.root
-        liba = libc.dependencies[0].dst
-        libb = libc.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        zlib = liba.dependencies[0].dst
+        liba = libc.edges[0].dst
+        libb = libc.edges[1].dst
+        liba1 = libb.edges[0].dst
+        zlib = liba.edges[0].dst
 
         assert liba is liba1
         # TODO: No Revision??? Because of consumer?
@@ -1678,10 +1670,10 @@ class TestDiamond(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        spdlog = liba.dependencies[0].dst
-        fmt01 = spdlog.dependencies[0].dst
-        fmt02 = app.dependencies[1].dst
+        liba = app.edges[0].dst
+        spdlog = liba.edges[0].dst
+        fmt01 = spdlog.edges[0].dst
+        fmt02 = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[liba, fmt02])
         self._check_node(liba, "liba/0.1#123", deps=[spdlog], dependents=[app])
@@ -1711,12 +1703,12 @@ class TestDiamondMultiple(GraphManagerTest):
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
-        libe = app.dependencies[0].dst
-        libf = app.dependencies[1].dst
-        libd = libe.dependencies[0].dst
-        libb = libd.dependencies[0].dst
-        libc = libd.dependencies[1].dst
-        liba = libc.dependencies[0].dst
+        libe = app.edges[0].dst
+        libf = app.edges[1].dst
+        libd = libe.edges[0].dst
+        libb = libd.edges[0].dst
+        libc = libd.edges[1].dst
+        liba = libc.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libe, libf])
         self._check_node(libe, "libe/0.1#123", deps=[libd], dependents=[app])
@@ -1750,12 +1742,12 @@ class TestDiamondMultiple(GraphManagerTest):
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
-        libe = app.dependencies[0].dst
-        libf = app.dependencies[1].dst
-        libd = libe.dependencies[0].dst
-        libb = libd.dependencies[0].dst
-        libc = libd.dependencies[1].dst
-        liba = libc.dependencies[0].dst
+        libe = app.edges[0].dst
+        libf = app.edges[1].dst
+        libd = libe.edges[0].dst
+        libb = libd.edges[0].dst
+        libc = libd.edges[1].dst
+        liba = libc.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libe, libf])
         self._check_node(libe, "libe/0.1#123", deps=[libd], dependents=[app])
@@ -1788,10 +1780,10 @@ class TestDiamondMultiple(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        libd = app.dependencies[2].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        libd = app.edges[2].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc, libd])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -1814,10 +1806,10 @@ class TestDiamondMultiple(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        libd = app.dependencies[2].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        libd = app.edges[2].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc, libd])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -1839,9 +1831,9 @@ class TestDiamondMultiple(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libd = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        libb = app.dependencies[2].dst
+        libd = app.edges[0].dst
+        libc = app.edges[1].dst
+        libb = app.edges[2].dst
 
         self._check_node(app, "app/0.1", deps=[libd, libc, libb])
         self._check_node(libd, "libd/0.1#123", dependents=[app, libc])
@@ -1864,9 +1856,9 @@ class TestDiamondMultiple(GraphManagerTest):
         self.assertEqual(4, len(deps_graph.nodes))
 
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -1888,9 +1880,9 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = app.dependencies[1].dst
-        liba2 = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = app.edges[1].dst
+        liba2 = libb.edges[0].dst
 
         assert liba is liba2
 
@@ -1913,7 +1905,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb])
@@ -1933,10 +1925,10 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
+        liba2 = libc.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
@@ -1964,8 +1956,8 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        dep1 = app.dependencies[0].dst
-        dep2 = app.dependencies[1].dst
+        dep1 = app.edges[0].dst
+        dep2 = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[dep1, dep2])
         self._check_node(dep1, "dep1/2.0#123", deps=[], dependents=[app, dep2])
@@ -1984,8 +1976,8 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        dep1 = app.dependencies[0].dst
-        dep2 = app.dependencies[1].dst
+        dep1 = app.edges[0].dst
+        dep2 = app.edges[1].dst
         self._check_node(app, "app/0.1", deps=[dep1, dep2])
         self._check_node(dep1, "dep1/2.0#123", deps=[], dependents=[app])
         # dep2 no dependency, it was not resolved due to conflict
@@ -2004,9 +1996,9 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba2 = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba2 = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb, liba2])
@@ -2029,8 +2021,8 @@ class PureOverrideTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb])
@@ -2060,8 +2052,8 @@ class PureOverrideTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb])
@@ -2085,9 +2077,9 @@ class PureOverrideTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libc])
@@ -2111,9 +2103,9 @@ class PureOverrideTest(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libc])
@@ -2136,9 +2128,9 @@ class PureOverrideTest(GraphManagerTest):
 
         self.assertEqual(3, len(deps_graph.nodes))
         libc = deps_graph.root
-        liba = libc.dependencies[0].dst
-        libb = libc.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
+        liba = libc.edges[0].dst
+        libb = libc.edges[1].dst
+        liba1 = libb.edges[0].dst
 
         assert liba is liba1
         # TODO: No Revision??? Because of consumer?
@@ -2170,10 +2162,10 @@ class PackageIDDeductions(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         project = deps_graph.root
-        app1 = project.dependencies[0].dst
-        app2 = project.dependencies[1].dst
-        lib = app1.dependencies[0].dst
-        lib2 = app2.dependencies[0].dst
+        app1 = project.edges[0].dst
+        app2 = project.edges[1].dst
+        lib = app1.edges[0].dst
+        lib2 = app2.edges[0].dst
 
         assert lib is lib2
 
@@ -2210,10 +2202,10 @@ class TestProjectApp(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         project = deps_graph.root
-        app1 = project.dependencies[0].dst
-        app2 = project.dependencies[1].dst
-        lib = app1.dependencies[0].dst
-        lib2 = app2.dependencies[0].dst
+        app1 = project.edges[0].dst
+        app2 = project.edges[1].dst
+        lib = app1.edges[0].dst
+        lib2 = app2.edges[0].dst
 
         assert lib is lib2
 
@@ -2260,10 +2252,10 @@ class TestProjectApp(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         project = deps_graph.root
-        app1 = project.dependencies[0].dst
-        app2 = project.dependencies[1].dst
-        lib = app1.dependencies[0].dst
-        lib2 = app2.dependencies[0].dst
+        app1 = project.edges[0].dst
+        app2 = project.edges[1].dst
+        lib = app1.edges[0].dst
+        lib2 = app2.edges[0].dst
 
         assert lib is lib2
 
@@ -2313,10 +2305,10 @@ class TestProjectApp(GraphManagerTest):
 
         self.assertEqual(5, len(deps_graph.nodes))
         project = deps_graph.root
-        app1 = project.dependencies[0].dst
-        app2 = project.dependencies[1].dst
-        lib1 = app1.dependencies[0].dst
-        lib2 = app2.dependencies[0].dst
+        app1 = project.edges[0].dst
+        app2 = project.edges[1].dst
+        lib1 = app1.edges[0].dst
+        lib2 = app2.edges[0].dst
 
         assert lib1 is not lib2
 

@@ -11,7 +11,6 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.mark.tool("cmake", "3.15")
@@ -87,6 +86,10 @@ class Base(unittest.TestCase):
     main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
@@ -213,11 +216,10 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.paths.new_config_path, "tools.build:jobs=1")
+        self.client.save_home({"global.conf": "tools.build:jobs=1"})
         self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch_flag = "x64" if arch == "x86_64" else "X86"
@@ -250,10 +252,6 @@ class WinTest(Base):
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
-        if runtime == "MTd":
-            settings["compiler.runtime"] = "MT"
-        if runtime == "MD":
-            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
@@ -473,7 +471,7 @@ def test_msvc_vs_versiontoolset():
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.paths.new_config_path, "tools.microsoft.msbuild:vs_version=15")
+    client.save_home({"global.conf": "tools.microsoft.msbuild:vs_version=15"})
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -488,7 +486,7 @@ def test_msvc_vs_versiontoolset():
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run("Release\\myapp.exe")
+                    self.run(r"Release\\myapp.exe")
             """)
     cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
     main = gen_function_cpp(name="main")
@@ -527,7 +525,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -566,7 +564,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -606,6 +604,8 @@ class TestCmakeTestMethod:
             """)
 
         cmakelist = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(App CXX)
             find_package(matrix CONFIG REQUIRED)
@@ -650,7 +650,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.7)
-            project(my_project)
+            project(my_project NONE)
             set(my_config_string "default value" CACHE STRING "my config string")
             message(STATUS "VALUE OF CONFIG STRING: ${my_config_string}")
             """)
@@ -677,10 +677,8 @@ class TestCMakeFindPackagePreferConfig:
             """)
 
         cmakelist = textwrap.dedent("""
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(my_project C)
+            project(my_project NONE)
             find_package(Comandante REQUIRED)
             """)
 

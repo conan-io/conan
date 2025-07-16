@@ -5,8 +5,8 @@ from conan.api.output import Color
 from conan.tools.files import chdir, update_conandata
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
-from conans.util.files import mkdir
-from conans.util.runners import check_output_runner
+from conan.internal.util.files import mkdir
+from conan.internal.util.runners import check_output_runner
 
 
 class Git:
@@ -24,7 +24,7 @@ class Git:
         self._conanfile = conanfile
         self.folder = folder
         self._excluded = excluded
-        global_conf = conanfile._conan_helpers.global_conf
+        global_conf = conanfile._conan_helpers.global_conf  # noqa _conan_helpers
         conf_excluded = global_conf.get("core.scm:excluded", check_type=list)
         if conf_excluded:
             if excluded:
@@ -88,6 +88,9 @@ class Git:
             name, url = r.split(maxsplit=1)
             if name == remote:
                 url, _ = url.rsplit(None, 1)
+                # if the url still has (fetch) or (push) at the end
+                if url.endswith("(fetch)") or url.endswith("(push)"):
+                    url, _ = url.rsplit(None, 1)
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
                 return url
@@ -114,11 +117,18 @@ class Git:
 
         try:
             # This will raise if commit not present.
-            self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
+            self.run(f"fetch {remote} --refetch --dry-run {commit}")
             return True
-        except Exception:
-            # Don't raise an error because the fetch could fail for many more reasons than the branch.
-            return False
+        except (Exception,):
+            # For example, if using an older git<2.36, see
+            # https://github.com/conan-io/conan/issues/18470, then lets try the old approach
+            try:
+                # This will raise if commit not present.
+                self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
+                return True
+            except (Exception,):
+                # Don't raise an error because it could fail for many more reasons.
+                return False
 
     def is_dirty(self, repository=False):
         """
@@ -260,22 +270,26 @@ class Git:
         files = files.splitlines()
         return files
 
-    def coordinates_to_conandata(self):
+    def coordinates_to_conandata(self, repository=False):
         """
         Capture the "url" and "commit" from the Git repo, calling ``get_url_and_commit()``, and then
         store those in the ``conandata.yml`` under the "scm" key. This information can be
         used later to clone and checkout the exact source point that was used to create this
         package, and can be useful even if the recipe uses ``exports_sources`` as mechanism to
         embed the sources.
+
+        :param repository: By default gets the commit of the defined folder, use repository=True to get
+                     the commit of the repository instead.
         """
-        scm_url, scm_commit = self.get_url_and_commit()
+        scm_url, scm_commit = self.get_url_and_commit(repository=repository)
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):
         """
         Reads the "scm" field from the ``conandata.yml``, that must contain at least "url" and
-        "commit" and then do a ``clone(url, target=".")`` followed by a ``checkout(commit)``.
+        "commit" and then do a ``clone(url, target=".")``, ``fetch <commit>``, followed by a ``checkout(commit)``.
         """
         sources = self._conanfile.conan_data["scm"]
-        self.clone(url=sources["url"], target=".")
+        self.clone(url=sources["url"], target=".", args=["--origin=origin"])
+        self.run(f"fetch origin {sources['commit']}")
         self.checkout(commit=sources["commit"])

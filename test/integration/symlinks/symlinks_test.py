@@ -10,7 +10,7 @@ from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, rmdir, chdir, save
+from conan.internal.util.files import load, rmdir, chdir, save
 
 links_conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -317,9 +317,7 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
 
     assert "link.txt" in " ".join(lines)
     for line in lines:
-        if ".txt" not in line:
-            continue
-
+        assert ".txt" in line
         size = int([i for i in line.split(" ") if i][2])
         if "link.txt" in line:
             assert int(size) == 0

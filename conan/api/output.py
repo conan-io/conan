@@ -19,7 +19,7 @@ LEVEL_DEBUG = 20  # -vv Closely related to internal implementation details
 LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementation details
 
 
-class Color(object):
+class Color:
     """ Wrapper around colorama colors that are undefined in importing
     """
     RED = Fore.RED  # @UndefinedVariable
@@ -175,18 +175,18 @@ class ConanOutput:
 
         return self
 
-    def rewrite_line(self, line):
-        tmp_color = self._color
-        self._color = False
-        total_size = 70
-        limit_size = total_size // 2 - 3
-        if len(line) > total_size:
-            line = line[0:limit_size] + " ... " + line[-limit_size:]
-        self.write("\r%s%s" % (line, " " * (total_size - len(line))))
-        self.stream.flush()
-        self._color = tmp_color
+    def box(self, msg):
+        color = Color.BRIGHT_GREEN
+        self.writeln("\n**************************************************", fg=color)
+        self.writeln(f'*{msg: ^48}*', fg=color)
+        self.writeln(f"**************************************************\n", fg=color)
 
-    def _write_message(self, msg, fg=None, bg=None):
+    def login_msg(self, msg, newline=False):
+        # unconditional to the error level, this has to show always
+        self._write_message(msg, newline=newline)
+        return self
+
+    def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
@@ -194,20 +194,22 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        ret = ""
         if self._scope:
             if self._color:
-                ret = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+                ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
             else:
-                ret = "{}: ".format(self._scope)
-
-        if self._color:
-            ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+                ret = f"{self._scope}: {msg}"
         else:
-            ret += "{}".format(msg)
+            if self._color:
+                ret = f"{fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
+            else:
+                ret = msg
+
+        if newline:
+            ret += "\n"
 
         with self.lock:
-            self.stream.write("{}\n".format(ret))
+            self.stream.write(ret)
             self.stream.flush()
 
     def trace(self, msg):
@@ -215,9 +217,9 @@ class ConanOutput:
             self._write_message(msg, fg=Color.BLUE)
         return self
 
-    def debug(self, msg):
+    def debug(self, msg, fg=Color.MAGENTA, bg=None):
         if self._conan_output_level <= LEVEL_DEBUG:
-            self._write_message(msg, fg=Color.MAGENTA)
+            self._write_message(msg, fg=fg, bg=bg)
         return self
 
     def verbose(self, msg, fg=None, bg=None):
@@ -262,7 +264,8 @@ class ConanOutput:
 
     def warning(self, msg, warn_tag=None):
         _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
-        if self._conan_output_level <= LEVEL_WARNING or (_treat_as_error and self._conan_output_level <= LEVEL_ERROR):
+        if (self._conan_output_level <= LEVEL_WARNING or
+                (_treat_as_error and self._conan_output_level <= LEVEL_ERROR)):
             if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
                 return self
             warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "

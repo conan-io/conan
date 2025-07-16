@@ -4,7 +4,7 @@ import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_transitive_py_requires():

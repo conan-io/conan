@@ -1,7 +1,6 @@
 import os
 import platform
 import textwrap
-import unittest
 
 import pytest
 
@@ -10,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="symlink need admin privileges")
-class FixSymlinksTestCase(unittest.TestCase):
+class TestFixSymlinks:
     name_ref = RecipeReference.loads("name/version")
 
     conanfile = textwrap.dedent("""
@@ -23,8 +22,6 @@ class FixSymlinksTestCase(unittest.TestCase):
                                                 remove_broken_symlinks)
 
         class Recipe(ConanFile):
-            options = {"raise_if_error": [True, False]}
-            default_options = {"raise_if_error": False}
 
             def build(self):
                 save(self, os.path.join(self.build_folder, "build.txt"), "contents")
@@ -76,33 +73,29 @@ class FixSymlinksTestCase(unittest.TestCase):
     def test_error_reported(self):
         t = TestClient()
         t.save({'conanfile.py': self.conanfile})
-        t.run("create . --name=name --version=version -o raise_if_error=False")
+        t.run("create . --name=name --version=version")
+        package_folder = t.created_layout().package()
 
-        # Check the work is done
-        pkg_ref = t.get_latest_package_reference(self.name_ref,
-                                                 '0e800d1d59927b8d9dcb8309a9ed120f01566b9d')
-        assert pkg_ref is not None
-        package_folder = t.get_latest_pkg_layout(pkg_ref).package()
-
-        self.assertListEqual(sorted(os.listdir(package_folder)),
-                             ['abs_to_file_in_folder.txt',
-                              'absolute',
-                              'absolute_symlink.txt',
-                              'conaninfo.txt',
-                              'conanmanifest.txt',
-                              'folder',
-                              'regular.txt',
-                              'relative',
-                              'relative_symlink.txt'])
+        assert sorted(os.listdir(package_folder)) == ['abs_to_file_in_folder.txt',
+                                                      'absolute',
+                                                      'absolute_symlink.txt',
+                                                      'conaninfo.txt',
+                                                      'conanmanifest.txt',
+                                                      'folder',
+                                                      'regular.txt',
+                                                      'relative',
+                                                      'relative_symlink.txt']
         # All the links in the package_folder are relative and contained into it
         for (dirpath, dirnames, filenames) in os.walk(package_folder):
             for filename in filenames:
+                filename = os.path.join(dirpath, filename)
                 if os.path.islink(filename):
-                    rel_path = os.readlink(filename)
-                    self.assertFalse(os.path.abspath(rel_path))
-                    self.assertFalse(rel_path.startswith('..'))
+                    rel_path = str(os.readlink(filename))
+                    assert not os.path.exists(os.path.abspath(rel_path))
+                    assert not rel_path.startswith('..')
             for dirname in dirnames:
+                dirname = os.path.join(dirpath, dirname)
                 if os.path.islink(dirname):
-                    rel_path = os.readlink(dirname)
-                    self.assertFalse(os.path.abspath(rel_path))
-                    self.assertFalse(rel_path.startswith('..'))
+                    rel_path = str(os.readlink(dirname))
+                    assert not os.path.exists(os.path.abspath(rel_path))
+                    assert not rel_path.startswith('..')

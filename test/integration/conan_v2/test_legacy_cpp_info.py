@@ -3,7 +3,7 @@ import textwrap
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 def test_legacy_names_filenames():
@@ -36,7 +36,7 @@ def test_legacy_names_filenames():
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
         assert f"WARN: deprecated:     '{name}' used in: pkg/1.0" in c.out
 
-    save(c.paths.new_config_path, 'core:skip_warnings=["deprecated"]')
+    c.save_home({"global.conf": 'core:skip_warnings=["deprecated"]'})
     c.run("create .")
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info",
                  "cpp_info.build_modules"]:

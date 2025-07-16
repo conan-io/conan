@@ -4,7 +4,7 @@ from conan.internal.cache.db.table import BaseDbTable
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.dates import timestamp_now
+from conan.internal.util.dates import timestamp_now
 
 
 class PackagesDBTable(BaseDbTable):
@@ -240,3 +240,16 @@ class PackagesDBTable(BaseDbTable):
             if row:
                 return self._as_dict(self.row_type(*row))
             return None
+
+    def path_to_ref(self, path):
+        query = f'SELECT * FROM {self.table_name} ' \
+                f"WHERE {self.columns.path}='{path}'"
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if not row:
+                return None
+            ref = RecipeReference.loads(row[0])
+            ref.revision = row[1]
+            pref = PkgReference(ref, row[2], row[3], row[5])
+            return pref

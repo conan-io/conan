@@ -6,7 +6,6 @@ from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.formatters import default_json_formatter
 from conan.cli.args import add_profiles_args
 from conan.errors import ConanException
-from conans.util.files import save
 
 
 def _print_profiles(profiles):
@@ -92,20 +91,25 @@ def profile_detect(conan_api, parser, subparser, *args):
                           "change in future Conan versions.")
     ConanOutput().warning("Use your own profile files for stability.")
     ConanOutput().success(f"Saving detected profile to {profile_pathname}")
-    save(profile_pathname, contents)
+    dir_path = os.path.dirname(profile_pathname)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(profile_pathname, "w", encoding="utf-8", newline="") as f:
+        f.write(contents)
 
 
 @conan_subcommand(formatters={"text": profiles_list_cli_output, "json": default_json_formatter})
-def profile_list(conan_api, parser, subparser, *args):
+def profile_list(conan_api, parser, subparser, *args):  # noqa
     """
     List all profiles in the cache.
     """
+    parser.parse_args(*args)
     result = conan_api.profiles.list()
     return result
 
 
 @conan_command(group="Consumer")
-def profile(conan_api, parser, *args):
+def profile(conan_api, parser, *args):  # noqa
     """
     Manage profiles.
     """

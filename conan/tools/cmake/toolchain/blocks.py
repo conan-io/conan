@@ -10,17 +10,17 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
-from conan.tools.build.flags import architecture_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
-from conans.client.subsystems import deduce_subsystem, WINDOWS
+from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 class Block:
@@ -237,21 +237,36 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""\
+        {% if arch_flag %}
         # Define C++ flags, C flags and linker flags from 'settings.arch'
-
         message(STATUS "Conan toolchain: Defining architecture flag: {{ arch_flag }}")
         string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
+        {% endif %}
+        {% if arch_link_flag %}
+        message(STATUS "Conan toolchain: Defining architecture linker flag: {{ arch_link_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_link_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_link_flag }}")
+        {% endif %}
+        {% if thread_flags_list %}
+        # Define C++ flags, C flags and linker flags from 'compiler.threads'
+        message(STATUS "Conan toolchain: Defining thread flags: {{ thread_flags_list }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_C_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ thread_flags_list }}")
+        {% endif %}
         """)
 
     def context(self):
         arch_flag = architecture_flag(self._conanfile)
-        if not arch_flag:
+        arch_link_flag = architecture_link_flag(self._conanfile)
+        thread_flags_list = " ".join(threads_flags(self._conanfile))
+        if not arch_flag and not arch_link_flag and not thread_flags_list:
             return
-        return {"arch_flag": arch_flag}
-
+        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag, "thread_flags_list": thread_flags_list}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
@@ -464,8 +479,11 @@ class AppleSystemBlock(Block):
         if(CMAKE_GENERATOR MATCHES "Xcode")
           message(DEBUG "Not setting any manual command-line buildflags, since Xcode is selected as generator.")
         else()
-            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
-            string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
+            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${VISIBILITY}")
+            string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY}")
+            # Objective-C/C++ specific flags
+            string(APPEND CONAN_OBJC_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
+            string(APPEND CONAN_OBJCXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
         endif()
         """)
 
@@ -852,6 +870,12 @@ class CMakeFlagsInitBlock(Block):
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
         endif()
+        if(DEFINED CONAN_OBJCXX_FLAGS)
+          string(APPEND CMAKE_OBJCXX_FLAGS_INIT " ${CONAN_OBJCXX_FLAGS}")
+        endif()
+        if(DEFINED CONAN_OBJC_FLAGS)
+          string(APPEND CMAKE_OBJC_FLAGS_INIT " ${CONAN_OBJC_FLAGS}")
+        endif()
         """)
 
 
@@ -859,12 +883,23 @@ class TryCompileBlock(Block):
     template = textwrap.dedent("""\
         # Blocks after this one will not be added when running CMake try/checks
 
+        {% if config %}
+        if(NOT DEFINED CMAKE_TRY_COMPILE_CONFIGURATION)  # to allow user command line override
+            set(CMAKE_TRY_COMPILE_CONFIGURATION {{config}})
+        endif()
+        {% endif %}
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(_CMAKE_IN_TRY_COMPILE)
             message(STATUS "Running toolchain IN_TRY_COMPILE")
             return()
         endif()
         """)
+
+    def context(self):
+        # Only for well known CMake configurations, but not for custom ones
+        bt = self._conanfile.settings.get_safe("build_type")
+        config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        return {"config": config}
 
 
 class CompilersBlock(Block):
@@ -991,11 +1026,7 @@ class GenericSystemBlock(Block):
             return settings.get_safe("os.platform")
 
         if compiler in ("msvc", "clang") and generator and "Visual" in generator:
-            return {"x86": "Win32",
-                    "x86_64": "x64",
-                    "armv7": "ARM",
-                    "armv8": "ARM64",
-                    "arm64ec": "ARM64EC"}.get(arch)
+            return msvc_platform_from_arch(arch)
         return None
 
     def _get_generic_system_name(self):

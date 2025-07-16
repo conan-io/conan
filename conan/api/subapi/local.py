@@ -1,17 +1,15 @@
 import os
 
 from conan.cli import make_abs_path
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.local.editable import EditablePackages
 from conan.internal.methods import run_build_method, run_source_method
-from conans.client.graph.graph import CONTEXT_HOST
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.client.hook_manager import HookManager
 from conan.api.model import RecipeReference
-from conans.util.files import chdir
+from conan.internal.util.files import chdir
 
 
 class LocalAPI:
@@ -84,7 +82,9 @@ class LocalAPI:
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-        folder = conanfile.recipe_folder
+        folder = conanfile.recipe_folder if conanfile.folders.root is None else \
+            os.path.normpath(os.path.join(conanfile.recipe_folder, conanfile.folders.root))
+
         conanfile.folders.set_base_source(folder)
         conanfile.folders.set_base_export_sources(folder)
         conanfile.folders.set_base_recipe_metadata(os.path.join(folder, "metadata"))
@@ -93,13 +93,13 @@ class LocalAPI:
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+        hook_manager = self._conan_api.config.hook_manager
         run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile):
         """ calls the 'build()' method of the current (user folder) conanfile.py
         """
-        hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+        hook_manager = self._conan_api.config.hook_manager
         conanfile.folders.set_base_package(conanfile.folders.base_build)
         conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
         run_build_method(conanfile, hook_manager)
@@ -118,3 +118,6 @@ class LocalAPI:
         conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
+
+    def reinit(self):
+        self.editable_packages = EditablePackages(self._conan_api.home_folder)

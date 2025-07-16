@@ -1,4 +1,5 @@
 from conan.errors import ConanException
+from conan.tools.microsoft.visual import msvc_platform_from_arch
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
@@ -13,18 +14,11 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
             "quiet": "Quiet",
             "verbose": "Detailed",
         }.get(verbosity)
-        return f'/verbosity:{verbosity}'
+        return f'-verbosity:{verbosity}'
     return ""
 
 
-def msbuild_arch(arch):
-    return {'x86': 'x86',
-            'x86_64': 'x64',
-            'armv7': 'ARM',
-            'armv8': 'ARM64'}.get(str(arch))
-
-
-class MSBuild(object):
+class MSBuild:
     """
     MSBuild build helper class
     """
@@ -39,23 +33,24 @@ class MSBuild(object):
         # if platforms:
         #    msvc_arch.update(platforms)
         arch = conanfile.settings.get_safe("arch")
-        msvc_arch = msbuild_arch(arch)
+        # MSVC default platform for VS projects is "x86", not "Win32" (but CMake default is "Win32")
+        msvc_platform = msvc_platform_from_arch(arch) if arch != "x86" else "x86"
         if conanfile.settings.get_safe("os") == "WindowsCE":
-            msvc_arch = conanfile.settings.get_safe("os.platform")
+            msvc_platform = conanfile.settings.get_safe("os.platform")
         #: Defines the platform name, e.g., ``ARM`` if ``settings.arch == "armv7"``.
-        self.platform = msvc_arch
+        self.platform = msvc_platform
 
     def command(self, sln, targets=None):
         """
         Gets the ``msbuild`` command line. For instance,
-        :command:`msbuild "MyProject.sln" /p:Configuration=<conf> /p:Platform=<platform>`.
+        :command:`msbuild.exe "MyProject.sln" -p:Configuration=<conf> -p:Platform=<platform>`.
 
         :param sln: ``str`` name of Visual Studio ``*.sln`` file
         :param targets: ``targets`` is an optional argument, defaults to ``None``, and otherwise it is a list of targets to build
         :return: ``str`` msbuild command line.
         """
         # TODO: Enable output_binary_log via config
-        cmd = ('msbuild "%s" /p:Configuration="%s" /p:Platform=%s'
+        cmd = ('msbuild.exe "%s" -p:Configuration="%s" -p:Platform=%s'
                % (sln, self.build_type, self.platform))
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
@@ -65,12 +60,12 @@ class MSBuild(object):
         maxcpucount = self._conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count",
                                                check_type=int)
         if maxcpucount is not None:
-            cmd += f" /m:{maxcpucount}" if maxcpucount > 0 else " /m"
+            cmd += f" -m:{maxcpucount}" if maxcpucount > 0 else " -m"
 
         if targets:
             if not isinstance(targets, list):
                 raise ConanException("targets argument should be a list")
-            cmd += " /target:{}".format(";".join(targets))
+            cmd += " -target:{}".format(";".join(targets))
 
         return cmd
 

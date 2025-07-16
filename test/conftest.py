@@ -82,8 +82,15 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
         },
-        "3.28": {
-            "disabled": True  # TODO: Still not in CI
+        "3.27": {
+            "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-3.27.9-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
+                     'Linux': "/usr/share/cmake-3.27.9/bin"}
+        },
+        "4.0": {
+            "path": {'Windows': 'C:/tools/cmake/4.0.0-rc3/cmake-4.0.0-rc3-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.0.0-rc3/bin',
+                     'Linux': "/usr/share/cmake-4.0.0-rc3/bin"}
         }
     },
     'ninja': {
@@ -158,11 +165,10 @@ tools_locations = {
                            'Darwin': '/Users/runner/Applications/bazel/8.0.0'}},
     },
     'premake': {
-        "disabled": True,
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {
-            "path": {'Linux': '/usr/local/bin/premake5'}
+            "path": {'Linux': '/usr/share/premake'}
         }
     },
     'xcodegen': {"platform": "Darwin"},
@@ -177,7 +183,15 @@ tools_locations = {
             # 'Windows': os.getenv("ANDROID_NDK_HOME"),
         }
     },
-    "qbs": {"disabled": True},
+    "qbs": {
+        "exe": "qbs",
+        "default": "2.6.0",
+        "2.6.0": {
+            "path": {'Linux': '/usr/share/qbs/bin'}
+        }
+    },
+    "emcc": {},
+    "node": {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

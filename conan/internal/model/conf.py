@@ -7,7 +7,9 @@ import fnmatch
 from collections import OrderedDict
 
 from conan.errors import ConanException
+from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
+from conan.internal.model.settings import SettingsItem
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -28,6 +30,7 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -77,12 +80,13 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmaketoolchain:extra_variables": "Dictionary with variables to be injected in CMakeToolchain (potential override of CMakeToolchain defined variables)",
     "tools.cmake.cmaketoolchain:enabled_blocks": "Select the specific blocks to use in the conan_toolchain.cmake",
+    "tools.cmake.cmaketoolchain:user_presets": "(Experimental) Select a different name instead of CMakeUserPresets.json, empty to disable",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
-    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -97,6 +101,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
@@ -130,6 +135,8 @@ BUILT_IN_CONFS = {
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
+    # Toolchain installation
+    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake and Meson",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -143,8 +150,7 @@ USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
-    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
+    return TOOLS_CONF_PATTERN.match(module_name) or USER_CONF_PATTERN.match(module_name)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -153,7 +159,7 @@ class _ConfVarPlaceHolder:
     pass
 
 
-class _ConfValue(object):
+class _ConfValue:
 
     def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
@@ -161,6 +167,8 @@ class _ConfValue(object):
         self._name = name
         self._value = value
         self._value_type = type(value)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
 
@@ -218,6 +226,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value.extend(value)
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.append(value)
 
     def prepend(self, value):
@@ -227,6 +237,8 @@ class _ConfValue(object):
         if isinstance(value, list):
             self._value = value + self._value
         else:
+            if isinstance(value, (_PackageOption, SettingsItem)):
+                raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
             self._value.insert(0, value)
 
     def compose_conf_value(self, other):
@@ -253,6 +265,9 @@ class _ConfValue(object):
                 new_value = other._value.copy()
                 new_value.update(self._value)
                 self._value = new_value
+        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
+            # They might be different kind of numbers, so skip the check below
+            pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
@@ -366,6 +381,12 @@ class Conf:
     def copy(self):
         c = Conf()
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        return c
+
+    def filter_core(self):
+        c = Conf()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
+                                if not CORE_CONF_PATTERN.match(k))
         return c
 
     def dumps(self):
@@ -520,10 +541,12 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
-                                 f"the conf format introduced is not valid. Run 'conan config list' "
-                                 f"to see all the available confs.")
+        if conf.startswith("user"):
+            if USER_CONF_PATTERN.match(conf) is None:
+                raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+        elif conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 "Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
@@ -608,18 +631,18 @@ class ConfDefinition:
         else:
             self._pattern_confs[pattern] = conf
 
-    def rebase_conf_definition(self, other):
+    def rebase_conf_definition(self, global_conf):
         """
         for taking the new global.conf and composing with the profile [conf]
-        :type other: ConfDefinition
+        :type global_conf: ConfDefinition
         """
-        for pattern, conf in other._pattern_confs.items():
-            new_conf = conf.filter_user_modules()  # Creates a copy, filtered
-            existing = self._pattern_confs.get(pattern)
-            if existing:
-                existing.compose_conf(new_conf)
-            else:
-                self._pattern_confs[pattern] = new_conf
+        result = ConfDefinition()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
+        result.update_conf_definition(self)
+        self._pattern_confs = result._pattern_confs
+        return
 
     def update(self, key, value, profile=False, method="define"):
         """
@@ -706,3 +729,6 @@ class ConfDefinition:
     def validate(self):
         for conf in self._pattern_confs.values():
             conf.validate()
+
+    def clear(self):
+        self._pattern_confs.clear()

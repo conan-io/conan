@@ -2,10 +2,13 @@ import os
 import shutil
 import textwrap
 
+import pytest
+
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_editable_cmake_components():
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", includes=["hello"])

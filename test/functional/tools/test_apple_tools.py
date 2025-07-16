@@ -8,7 +8,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conan.tools.apple.apple import XCRun
 from conan.test.utils.mocks import ConanFileMock, MockSettings
-from conans.util.runners import conan_run
+from conan.internal.util.runners import conan_run
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")

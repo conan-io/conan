@@ -9,7 +9,6 @@ import pytest
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
-from conans.util.files import save
 
 
 class SourceTest(unittest.TestCase):
@@ -118,14 +117,14 @@ class ConanLib(ConanFile):
     def test_local_source(self):
         conanfile = '''
 from conan import ConanFile
-from conans.util.files import save
+from conan.tools.files import save
 
 class ConanLib(ConanFile):
 
     def source(self):
         self.output.info("Running source!")
         err
-        save("file1.txt", "Hello World")
+        save(self, "file1.txt", "Hello World")
 '''
         # First, failing source()
         client = TestClient(light=True)
@@ -141,6 +140,39 @@ class ConanLib(ConanFile):
         self.assertIn("conanfile.py: Calling source() in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
+
+    def test_local_source_layout_root(self):
+        # Ensure that if a root folder is specified Conan source method
+        # uses it. This is especially important when running with
+        # no_copy_source where both the build()  and source() methods
+        # need to reference source_folder (so the value must be the
+        # same in both methods)
+        conanfile = textwrap.dedent('''
+            from conan import ConanFile
+            from conan.tools.files import save, load
+
+            class ConanLib(ConanFile):
+
+                def layout(self):
+                    self.folders.root = ".."
+                    self.folders.source = "src"
+
+                def source(self):
+                    self.output.info(f"In the source() method the Source folder is: {self.source_folder}")
+                    save(self, "source_file.c", "conent")
+
+                def build(self):
+                    self.output.info(f"In the build() method the Source folder is: {self.source_folder}")
+                    load(self, f"{self.source_folder}/source_file.c")
+            ''')
+        client = TestClient(light=True)
+        client.save({CONANFILE: conanfile})
+
+        client.run("source .")
+        # The build method will fail if source() and build() don't
+        # both use the correct source_folder
+        client.run("build .")
+        assert "conanfile.py: Calling build()" in client.out  # doesn't fail
 
     def test_retrieve_exports_sources(self):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
@@ -191,12 +223,12 @@ class ConanLib(ConanFile):
         conanfile = textwrap.dedent('''
             import os
             from conan import ConanFile
-            from conans.util.files import save
+            from conan.tools.files import save
 
             class ConanLib(ConanFile):
 
                 def source(self):
-                    save(os.path.join(self.source_folder, "main.cpp"), "void main() {}")
+                    save(self, os.path.join(self.source_folder, "main.cpp"), "void main() {}")
                     self.output.info("Running source!")
             ''')
 
@@ -246,7 +278,7 @@ class TestSourceWithoutDefaultProfile:
     def client(self):
         c = TestClient()
         # The ``source()`` should still receive necessary configuration
-        save(c.paths.new_config_path, "tools.files.download:retry=MYCACHE")
+        c.save_home({"global.conf": "tools.files.download:retry=MYCACHE"})
         # Make sure we don't have default profile
         os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         return c

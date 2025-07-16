@@ -1,6 +1,6 @@
 import pytest
 
-from conans.util.files import copytree_compat
+from conan.internal.util.files import copytree_compat
 
 
 @pytest.fixture

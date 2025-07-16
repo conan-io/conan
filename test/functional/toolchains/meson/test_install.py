@@ -88,6 +88,8 @@ class MesonInstall(TestMesonBase):
         """)
 
     _test_package_cmake_lists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.1)
         project(test_package CXX)
 
@@ -97,6 +99,7 @@ class MesonInstall(TestMesonBase):
         """)
 
     @pytest.mark.tool("meson")
+    @pytest.mark.tool("cmake")
     def test_install(self):
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")

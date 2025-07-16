@@ -1,10 +1,11 @@
 import os
 import platform
 import textwrap
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def test_extra_flags_via_conf():
@@ -341,3 +342,66 @@ def test_toolchain_crossbuild_to_android():
         "conanfile.py": consumer
     })
     client.run("create . -pr:h host -pr:b build")
+
+
+def test_conf_build_does_not_exist():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Linux
+    [conf]
+    tools.build:compiler_executables={'c': '/usr/bin/gcc', 'cpp': '/usr/bin/g++'}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    os=Linux
+    [conf]
+    tools.build:compiler_executables={'c': 'x86_64-linux-gnu-gcc', 'cpp': 'x86_64-linux-gnu-g++'}
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+            "host": host,
+            "build": build})
+    c.run("export .")
+    c.run("install --requires=pkg/0.1 --build=pkg/0.1 -g AutotoolsToolchain -pr:h host -pr:b build")
+    tc = c.load("conanautotoolstoolchain.sh")
+    assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
+    assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    os = platform.system()
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("AutotoolsToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+    if os == "Windows":
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
+    else:
+        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
+        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
