@@ -62,17 +62,16 @@ class TestDownloadCacheBackupSources:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["unknown"]
-            assert "http://localhost:5000/myfile.txt" in content["references"]["unknown"]
-            assert len(content["references"]["unknown"]) == 2
+            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["pkg/1.0"]
+            assert len(content["references"]["pkg/1.0"]) == 1
 
             # Ensure the cache is working and we didn't break anything by modifying the summary
             client.run("source .")
             assert "Downloading file" not in client.out
 
-            client.run("create .")
+            client.run("create . --user=barbarian")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert content["references"]["pkg/1.0"] == \
+            assert content["references"]["pkg/1.0@barbarian"] == \
                    ["http://localhost.mirror:5000/myfile.txt"]
 
             client.run("create . --user=barbarian --channel=stable")
@@ -214,9 +213,9 @@ class TestDownloadCacheBackupSources:
                             from conan.tools.files import download
                             class Pkg2(ConanFile):
                                 name = "pkg"
-                                version = "1.0"
                                 def source(self):
-                                    download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                    download(self, "{self.file_server.fake_url}/internet/myfile.txt",
+                                             "myfile.txt",
                                              sha256="{sha256}")
                             """)
 
@@ -234,7 +233,7 @@ class TestDownloadCacheBackupSources:
         s_folder = os.path.join(self.download_cache_folder, "s")
         assert len(os.listdir(s_folder)) == 2
 
-        self.client.run("export .")
+        self.client.run("export . --version=1.0")
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out
 
