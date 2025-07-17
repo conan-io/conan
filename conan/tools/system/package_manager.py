@@ -235,6 +235,8 @@ class _SystemPackageManagerTool(object):
         if version and self.check_version_command:
             command = self.check_version_command.format(tool=self.tool_name, package=package, version=version)
         else:
+            self._conanfile.output.warning(f"System requirements: \"{self.tool_name}\" doesn't support package versions,"
+                                           f" \"{package}\" will be installed without a specific version.")
             command = self.check_command.format(tool=self.tool_name, package=package)
         return self._conanfile_run(command, self.accepted_check_codes)
 
@@ -248,7 +250,6 @@ class Apt(_SystemPackageManagerTool):
     update_command = "{sudo}{tool} update"
     check_command = "dpkg -l | grep -q -E \"^ii\\s+\\b{package}\\s+\\b\""
     check_version_command = "dpkg -l | grep -E \"^ii\\s+\\b{package}\\s+\\b\" | grep -q \"{version}\""
-
 
     def __init__(self, conanfile, arch_names=None):
         """
