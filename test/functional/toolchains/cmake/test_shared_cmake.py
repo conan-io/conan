@@ -111,7 +111,10 @@ def test_virtualrunenv_relocator(transitive_shared_client):
                 binpath = os.path.join(self.generators_folder, "imported-bin")
 
                 def handler(dep):
-                    shutil.copytree(dep.cpp_info.bindir, binpath, dirs_exist_ok=True)
+                    if os.path.exists(dep.cpp_info.libdir):
+                        shutil.copytree(dep.cpp_info.libdir, binpath, dirs_exist_ok=True)
+                    if os.path.exists(dep.cpp_info.bindir):
+                        shutil.copytree(dep.cpp_info.bindir, binpath, dirs_exist_ok=True)
 
                 runenv = VirtualRunEnv(self, handler=handler)
                 # Add it to PATH instead the original location
