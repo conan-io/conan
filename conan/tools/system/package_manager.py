@@ -373,7 +373,6 @@ class PacMan(_SystemPackageManagerTool):
     install_command = "{sudo}{tool} -S --noconfirm {packages}"
     update_command = "{sudo}{tool} -Syyu --noconfirm"
     check_command = "{tool} -Qi {package}"
-    # check_version_command = "pacman -Q {package} | grep \"{version}\""
 
     def __init__(self, conanfile, arch_names=None):
         """
