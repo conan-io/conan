@@ -164,7 +164,7 @@ class TargetConfigurationTemplate2:
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
                                              pkg_folder_var)
                 if target is not None:
-                    cmake_target_aliases = self._get_aliases(target_name, name)
+                    cmake_target_aliases = self._get_aliases(name)
                     target["cmake_target_aliases"] = cmake_target_aliases
                     libs[target_name] = target
         else:
@@ -172,7 +172,7 @@ class TargetConfigurationTemplate2:
             target_name = target_name or f"{pkg_name}::{pkg_name}"
             target = self._get_cmake_lib(cpp_info, None, pkg_folder, pkg_folder_var)
             if target is not None:
-                cmake_target_aliases = self._get_aliases(target_name, comp_name=None)
+                cmake_target_aliases = self._get_aliases()
                 target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
         return libs
@@ -237,10 +237,10 @@ class TargetConfigurationTemplate2:
             target["link_languages"] = link_languages
         return target
 
-    def _get_aliases(self, target, comp_name=None):
+    def _get_aliases(self, comp_name=None):
         aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
                                                comp_name, check_type=list)
-        return {alias: target for alias in aliases} if aliases else {}
+        return aliases if aliases else []
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
@@ -264,7 +264,7 @@ class TargetConfigurationTemplate2:
             else:
                 all_requires = {k: True for k in libs.keys()}
             # This target might have an alias, so we need to check it
-            cmake_target_aliases = self._get_aliases(root_target_name, comp_name=None)
+            cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
                                       "requires": all_requires,
                                       "cmake_target_aliases": cmake_target_aliases}
@@ -346,7 +346,7 @@ class TargetConfigurationTemplate2:
             message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
-        {% for alias, target in lib_info.get("cmake_target_aliases", {}).items() %}
+        {% for alias in lib_info.get("cmake_target_aliases", []) %}
         if(NOT TARGET {{alias}})
             message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
             add_library({{alias}} ALIAS {{lib}})
