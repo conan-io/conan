@@ -240,7 +240,7 @@ class TargetConfigurationTemplate2:
     def _get_aliases(self, target, comp_name=None):
         aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
                                                comp_name, check_type=list)
-        return {alias: target for alias in aliases}
+        return {alias: target for alias in aliases} if aliases else {}
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
@@ -252,6 +252,7 @@ class TargetConfigurationTemplate2:
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
         # TODO: What if an exe target is called like the pkg_name::pkg_name
         if libs and root_target_name not in libs:
+            # TODO: Should this also be skipped if an alias exists for this name?
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
                 all_requires = {}
@@ -262,8 +263,11 @@ class TargetConfigurationTemplate2:
                     all_requires[comp_name] = True  # It is an interface, full link
             else:
                 all_requires = {k: True for k in libs.keys()}
+            # This target might have an alias, so we need to check it
+            cmake_target_aliases = self._get_aliases(root_target_name, comp_name=None)
             libs[root_target_name] = {"type": "INTERFACE",
-                                      "requires": all_requires}
+                                      "requires": all_requires,
+                                      "cmake_target_aliases": cmake_target_aliases}
 
     def _get_exes(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
         exes = {}

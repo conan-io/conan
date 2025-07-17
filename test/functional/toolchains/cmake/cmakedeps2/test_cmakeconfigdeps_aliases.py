@@ -93,6 +93,41 @@ def test_component_alias():
 
 
 @pytest.mark.tool("cmake")
+def test_global_and_component_alias():
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Hello(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_target_aliases", ["hola::hola"])
+            self.cpp_info.components["buy"].set_property("cmake_target_aliases",
+                ["hola::adios"])
+    """)
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(test NONE)
+
+    find_package(hello REQUIRED)
+    get_target_property(_aliased_target hola::hola ALIASED_TARGET)
+    message("hola::hola aliased target: ${_aliased_target}")
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+
+    assert "hola::hola aliased target: hello::hello" in client.out
+
+
+@pytest.mark.tool("cmake")
 def test_custom_name():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
