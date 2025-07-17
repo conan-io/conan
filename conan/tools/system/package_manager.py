@@ -73,7 +73,7 @@ class _SystemPackageManagerTool(object):
     def _split_package_name(self, package, host_package):
 
         name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
-        arch_separator, arch_name, version_separator = "", "", ""
+        arch_separator, arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
         if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
