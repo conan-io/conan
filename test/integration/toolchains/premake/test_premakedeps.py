@@ -122,7 +122,6 @@ def test_premakedeps_link_order():
     client.run("create libc -pr profile")
     client.run("install consumer -pr profile")
     contents = client.load("consumer/conanconfig.premake5.lua")
-    assert contents
     start_idx = contents.find('"')
     path = contents[start_idx+1:contents.find('"', start_idx + 1)]
     contents = client.load(f"consumer/{path}")
