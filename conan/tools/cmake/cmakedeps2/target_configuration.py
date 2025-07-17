@@ -164,12 +164,16 @@ class TargetConfigurationTemplate2:
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
                                              pkg_folder_var)
                 if target is not None:
+                    cmake_target_aliases = self._get_aliases(target_name, name)
+                    target["cmake_target_aliases"] = cmake_target_aliases
                     libs[target_name] = target
         else:
             target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             target_name = target_name or f"{pkg_name}::{pkg_name}"
             target = self._get_cmake_lib(cpp_info, None, pkg_folder, pkg_folder_var)
             if target is not None:
+                cmake_target_aliases = self._get_aliases(target_name, comp_name=None)
+                target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
         return libs
 
@@ -232,6 +236,11 @@ class TargetConfigurationTemplate2:
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
         return target
+
+    def _get_aliases(self, target, comp_name=None):
+        aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
+                                               comp_name, check_type=list)
+        return {alias: target for alias in aliases}
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
@@ -333,6 +342,12 @@ class TargetConfigurationTemplate2:
             message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
+        {% for alias, target in lib_info.get("cmake_target_aliases", {}).items() %}
+        if(NOT TARGET {{alias}})
+            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            add_library({{alias}} ALIAS {{lib}})
+        endif()
+        {% endfor %}
         {% if lib_info.get("includedirs") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {{config_wrapper(config, lib_info["includedirs"])}})
