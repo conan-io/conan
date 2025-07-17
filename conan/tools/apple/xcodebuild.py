@@ -38,7 +38,7 @@ class XcodeBuild(object):
                        will build all the targets passing the ``-alltargets`` argument instead.
         :return: the return code for the launched ``xcodebuild`` command.
         """
-        target = "-target {}".format(target) if target else "-alltargets"
+        target = "-target '{}'".format(target) if target else "-alltargets"
         cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,
                                 self._verbosity, target)
