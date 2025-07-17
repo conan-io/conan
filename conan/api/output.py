@@ -19,7 +19,7 @@ LEVEL_DEBUG = 20  # -vv Closely related to internal implementation details
 LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementation details
 
 
-class Color(object):
+class Color:
     """ Wrapper around colorama colors that are undefined in importing
     """
     RED = Fore.RED  # @UndefinedVariable
@@ -181,6 +181,11 @@ class ConanOutput:
         self.writeln(f'*{msg: ^48}*', fg=color)
         self.writeln(f"**************************************************\n", fg=color)
 
+    def login_msg(self, msg, newline=False):
+        # unconditional to the error level, this has to show always
+        self._write_message(msg, newline=newline)
+        return self
+
     def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
@@ -189,20 +194,19 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        ret = ""
         if self._scope:
             if self._color:
-                ret = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+                ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
             else:
-                ret = "{}: ".format(self._scope)
-
-        if self._color:
-            ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+                ret = f"{self._scope}: {msg}"
         else:
-            ret += "{}".format(msg)
+            if self._color:
+                ret = f"{fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
+            else:
+                ret = msg
 
         if newline:
-            ret = "%s\n" % ret
+            ret += "\n"
 
         with self.lock:
             self.stream.write(ret)
@@ -260,7 +264,8 @@ class ConanOutput:
 
     def warning(self, msg, warn_tag=None):
         _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
-        if self._conan_output_level <= LEVEL_WARNING or (_treat_as_error and self._conan_output_level <= LEVEL_ERROR):
+        if (self._conan_output_level <= LEVEL_WARNING or
+                (_treat_as_error and self._conan_output_level <= LEVEL_ERROR)):
             if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
                 return self
             warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
