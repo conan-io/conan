@@ -239,8 +239,8 @@ class TargetConfigurationTemplate2:
 
     def _get_aliases(self, comp_name=None):
         aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
-                                               comp_name, check_type=list)
-        return aliases if aliases else []
+                                               comp_name, check_type=list) or []
+        return aliases
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """

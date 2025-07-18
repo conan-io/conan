@@ -24,7 +24,7 @@ class Consumer(ConanFile):
 """)
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_global_alias():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -58,7 +58,7 @@ def test_global_alias():
     assert "hello aliased target: hello::hello" in client.out
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_component_alias():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -92,7 +92,7 @@ def test_component_alias():
     assert "hola::adios aliased target: hello::buy" in client.out
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_global_and_component_alias():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -127,7 +127,7 @@ def test_global_and_component_alias():
     assert "hola::hola aliased target: hello::hello" in client.out
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_custom_name():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -161,7 +161,7 @@ def test_custom_name():
     assert "hello aliased target: ola::comprar" in client.out
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_collide_global_alias():
     """
     FIXME: right now, having multiple aliases with same name doesn't emit any warning/error.
@@ -197,7 +197,7 @@ def test_collide_global_alias():
     # assert "Target name 'hello::hello' already exists." in client.out
 
 
-@pytest.mark.tool("cmake", "2.27")
+@pytest.mark.tool("cmake", "3.27")
 def test_collide_component_alias():
     """
     FIXME: right now, having multiple aliases with same name doesn't emit any warning/error.
