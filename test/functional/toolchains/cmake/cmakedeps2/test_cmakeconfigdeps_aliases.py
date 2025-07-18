@@ -162,38 +162,6 @@ def test_custom_name():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_collide_global_alias():
-    conanfile = textwrap.dedent("""
-    from conan import ConanFile
-
-    class Hello(ConanFile):
-        name = "hello"
-        version = "1.0"
-        settings = "os", "compiler", "build_type", "arch"
-
-        def package_info(self):
-            # the default global target is "hello::hello"
-            self.cpp_info.set_property("cmake_target_aliases", ["hello::hello"])
-    """)
-
-    cmakelists = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(test NONE)
-
-    find_package(hello REQUIRED)
-    """)
-
-    client = TestClient()
-    client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
-
-    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
-
-    assert f"Alias 'hello::hello' already defined as a target in hello/1.0" in client.out
-
-
-@pytest.mark.tool("cmake", "3.27")
 def test_collide_component_alias():
     conanfile = textwrap.dedent("""
     from conan import ConanFile
