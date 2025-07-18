@@ -150,6 +150,64 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().success("Integrity check: ok")
 
 
+@conan_subcommand()
+def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Sign packages
+    """
+    subparser.add_argument("pattern", nargs="?",
+                           help="Selection pattern for references to check integrity for")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                           help="Package list of packages to check integrity for")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Only the packages matching a specific query, e.g., "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    conan_api.cache.sign(package_list)
+
+
+@conan_subcommand()
+def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Check siugnature
+    """
+    subparser.add_argument("pattern", nargs="?",
+                           help="Selection pattern for references to check integrity for")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                           help="Package list of packages to check integrity for")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Only the packages matching a specific query, e.g., "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    conan_api.cache.verify(package_list)
+
+
 @conan_subcommand(formatters={"text": print_list_text,
                               "json": print_list_json})
 def cache_save(conan_api: ConanAPI, parser, subparser, *args):
