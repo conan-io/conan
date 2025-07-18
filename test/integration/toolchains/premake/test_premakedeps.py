@@ -122,8 +122,15 @@ def test_premakedeps_link_order():
     client.run("create libc -pr profile")
     client.run("install consumer -pr profile")
     contents = client.load("consumer/conanconfig.premake5.lua")
-    start_idx = contents.find('"')
-    path = contents[start_idx+1:contents.find('"', start_idx + 1)]
-    contents = client.load(f"consumer/{path}")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_release_x86_64.premake5.lua")
     # Check correct order of dependencies: more dependent libs should be linked first
     assert 't_conan_deps_order["release_x86_64"] = {"libc", "libb", "liba"}' in contents
+
+    # Check previous configurations are preserved when installing new configuration
+    client.run("install consumer -pr profile -s build_type=Debug --build=missing")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    assert 'include "conanconfig_debug_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_debug_x86_64.premake5.lua")
+    assert 't_conan_deps_order["debug_x86_64"] = {"libc", "libb", "liba"}' in contents

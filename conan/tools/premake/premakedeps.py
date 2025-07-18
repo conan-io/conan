@@ -274,7 +274,6 @@ class PremakeDeps:
             PREMAKE_TEMPLATE_ROOT_GLOBAL
         ])
 
-
         # Output configuration file for the current build configuration
         self._output_lua_file(PREMAKE_CONFIG_FILE.format(config=conf_name), [
             PREMAKE_TEMPLATE_CONFIG.format(
