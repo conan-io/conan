@@ -8,16 +8,27 @@ from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
 
 # Filename format strings
 PREMAKE_VAR_FILE = "conan_{pkgname}_vars_{config}.premake5.lua"
-PREMAKE_CONF_FILE = "conan_{pkgname}{config}.premake5.lua"
 PREMAKE_PKG_FILE = "conan_{pkgname}.premake5.lua"
 PREMAKE_ROOT_FILE = "conandeps.premake5.lua"
 
+PREMAKE_CONFIG_FILE = "conanconfig_{config}.premake5.lua"
+PREMAKE_CONFIG_ROOT_FILE = "conanconfig.premake5.lua"
+
 # File template format strings
+PREMAKE_TEMPLATE_CONFIG = """
+include "conanutils.premake5.lua"
+
+t_conan_deps_order = {{}}
+t_conan_deps_order["{config}"] = {{{order}}}
+
+if conan_deps_order == nil then conan_deps_order = {{}} end
+conan_premake_tmerge(conan_deps_order, t_conan_deps_order)
+"""
 PREMAKE_TEMPLATE_UTILS = """
 function conan_premake_tmerge(dst, src)
     for k, v in pairs(src) do
         if type(v) == "table" then
-            if type(conandeps[k] or 0) == "table" then
+            if type(dst[k] or 0) == "table" then
                 conan_premake_tmerge(dst[k] or {}, src[k] or {})
             else
                 dst[k] = v
@@ -66,8 +77,9 @@ function {function_name}(conf, pkg)
     if conf == nil then
 {filter_call}
     elseif pkg == nil then
-        for k,v in pairs(conandeps[conf]) do
-            {function_name}(conf, k)
+        local order = conan_deps_order[conf]
+        for index, lib in ipairs(order) do
+            {function_name}(conf, lib)
         end
     else
 {lua_content}
@@ -183,10 +195,13 @@ class PremakeDeps:
         # Global utility file
         self._output_lua_file("conanutils.premake5.lua", [PREMAKE_TEMPLATE_UTILS])
 
-        # Extract all dependencies
-        host_req = self._conanfile.dependencies.host
-        test_req = self._conanfile.dependencies.test
-        build_req = self._conanfile.dependencies.build
+        # Extract all dependencies in topological order: some linkers like ld or gold prunes the
+        # functions which are not being used in the lookup table. If the less dependant libraries are
+        # passed first, the linker will not be able to resolve the symbols in the dependent libraries
+        # as they will have been removed
+        host_req = self._conanfile.dependencies.host.topological_sort
+        test_req = self._conanfile.dependencies.test.topological_sort
+        build_req = self._conanfile.dependencies.build.topological_sort
 
         # Merge into one list
         full_req = list(host_req.items()) + list(test_req.items()) + list(build_req.items())
@@ -212,13 +227,13 @@ class PremakeDeps:
             # Create list of all available profiles by searching on disk
             file_pattern = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="*")
             file_regex = PREMAKE_VAR_FILE.format(pkgname=re.escape(dep_name), config="(([^_]*)_(.*))")
-            available_files = glob.glob(file_pattern)
+            available_config_files = glob.glob(file_pattern)
             # Add filename of current generations var file if not already present
-            if var_filename not in available_files:
-                available_files.append(var_filename)
+            if var_filename not in available_config_files:
+                available_config_files.append(var_filename)
             profiles = [
                 (regex_res[0], regex_res.group(1), regex_res.group(2), regex_res.group(3)) for regex_res in [
-                    re.search(file_regex, file_name) for file_name in available_files
+                    re.search(file_regex, file_name) for file_name in available_config_files
                 ]
             ]
             config_sets = [profile[1] for profile in profiles]
@@ -235,6 +250,8 @@ class PremakeDeps:
         self._output_lua_file(PREMAKE_ROOT_FILE, [
             # Includes
             *[f'include "{pkg_file}"' for pkg_file in pkg_files],
+            # Global order for each configuration
+            'include "conanconfig.premake5.lua"',
             # Functions
             PREMAKE_TEMPLATE_ROOT_FUNCTION.format(
                 function_name="conan_setup_build",
@@ -255,6 +272,21 @@ class PremakeDeps:
                 )
             ),
             PREMAKE_TEMPLATE_ROOT_GLOBAL
+        ])
+
+        # Output configuration file for the current build configuration
+        self._output_lua_file(PREMAKE_CONFIG_FILE.format(config=conf_name), [
+            PREMAKE_TEMPLATE_CONFIG.format(
+                config=conf_name, order=", ".join(f'"{name}"' for name in reversed(dep_names))
+            )
+        ])
+
+        # Output root configuration file
+        available_config_files = glob.glob(PREMAKE_CONFIG_FILE.format(config="*"))
+        available_configs = [file_name.split("_", 1)[1].split(".")[0] for file_name in available_config_files]
+        available_configs.append(conf_name)
+        self._output_lua_file(PREMAKE_CONFIG_ROOT_FILE, [
+            *['include "{}"'.format(PREMAKE_CONFIG_FILE.format(config=config)) for config in available_configs],
         ])
 
         return self.output_files
