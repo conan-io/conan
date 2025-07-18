@@ -163,10 +163,6 @@ def test_custom_name():
 
 @pytest.mark.tool("cmake", "3.27")
 def test_collide_global_alias():
-    """
-    FIXME: right now, having multiple aliases with same name doesn't emit any warning/error.
-    Possible alias collisions should be checked in CMakeDeps generator
-    """
     conanfile = textwrap.dedent("""
     from conan import ConanFile
 
@@ -192,17 +188,13 @@ def test_collide_global_alias():
     client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
 
-    # assert "Target name 'hello::hello' already exists." in client.out
+    assert f"Alias 'hello::hello' already defined as a target in hello/1.0" in client.out
 
 
 @pytest.mark.tool("cmake", "3.27")
 def test_collide_component_alias():
-    """
-    FIXME: right now, having multiple aliases with same name doesn't emit any warning/error.
-    Possible alias collisions should be checked in CMakeDeps generator
-    """
     conanfile = textwrap.dedent("""
     from conan import ConanFile
 
@@ -227,6 +219,38 @@ def test_collide_component_alias():
     client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+
+    assert "Alias 'hello::buy' already defined as a target in hello/1.0" in client.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_collide_component_alias_to_alias():
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Hello(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def package_info(self):
+            self.cpp_info.components["ola"].set_property("cmake_target_aliases", ["hello::foo"])
+            self.cpp_info.components["buy"].set_property("cmake_target_aliases", ["hello::foo"])
+    """)
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(test NONE)
+
+    find_package(hello REQUIRED)
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
     client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
 
-    # assert "Target name 'hello::buy' already exists." in client.out
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+
+    assert "Alias 'hello::foo' already defined in hello/1.0" in client.out

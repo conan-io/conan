@@ -122,6 +122,16 @@ class TargetConfigurationTemplate2:
 
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
+        seen_aliases = set()
+        for lib in libs.values():
+            for alias in lib.get("cmake_target_aliases", []):
+                if alias in seen_aliases:
+                    raise ConanException(f"Alias '{alias}' already defined in {self._conanfile}. ")
+                seen_aliases.add(alias)
+                if alias in libs:
+                    raise ConanException(f"Alias '{alias}' already defined as a target in "
+                                         f"{self._conanfile}. ")
+
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
