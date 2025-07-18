@@ -1,6 +1,10 @@
+from os import replace
+import os
 import platform
 import textwrap
 
+from conan.test.utils.mocks import ConanFileMock
+from conan.tools.files.files import replace_in_file
 import pytest
 
 from conan.test.utils.tools import TestClient
@@ -99,3 +103,125 @@ def test_premake_shared_lib():
     assert "lib/0.1: package(): Packaged 1 '.so' file: liblib.so" in c.out
     assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
 
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
+@pytest.mark.parametrize("transitive_libs", [True, False])
+def test_premake_components(transitive_libs):
+    c = TestClient()
+    c.run("new premake_lib -d name=liba -d version=1.0 -o liba")
+
+    libb_premake = textwrap.dedent("""
+        workspace "Libb"
+            configurations { "Debug", "Release" }
+            fatalwarnings {"All"}
+            floatingpoint "Fast"
+            includedirs { ".", "libb1", "libb2" }
+            filter "configurations:Debug"
+               defines { "DEBUG" }
+               symbols "On"
+
+            filter "configurations:Release"
+               defines { "NDEBUG" }
+               optimize "On"
+
+        project "libb1"
+            kind "StaticLib"
+            cppdialect "C++17"
+            language "C++"
+            files { "libb1/**.h", "libb1/**.cpp" }
+
+        project "libb2"
+            kind "StaticLib"
+            cppdialect "C++17"
+            language "C++"
+            files { "libb2/**.h", "libb2/**.cpp" }
+            links { "libb1"}
+    """)
+
+    libb_conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import PremakeDeps, PremakeToolchain, Premake
+
+
+        class libbRecipe(ConanFile):
+            name = "libb"
+            version = "1.0"
+            package_type = "static-library"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "premake5.lua", "libb1/*", "libb2/*"
+
+            def layout(self):
+                basic_layout(self)
+
+            def requirements(self):
+                self.requires("liba/1.0", transitive_libs=%s)
+
+            def generate(self):
+                deps = PremakeDeps(self)
+                deps.generate()
+                tc = PremakeToolchain(self)
+                tc.generate()
+
+            def build(self):
+                premake = Premake(self)
+                premake.configure()
+                premake.build(workspace="Libb")
+
+            def package(self):
+                for lib in ("libb1", "libb2"):
+                    copy(self, "*.h", os.path.join(self.source_folder, lib), os.path.join(self.package_folder, "include", lib))
+
+                for pattern in ("*.lib", "*.a", "*.so*", "*.dylib"):
+                    copy(self, pattern, os.path.join(self.build_folder, "bin"), os.path.join(self.package_folder, "lib"))
+                copy(self, "*.dll", os.path.join(self.build_folder, "bin"), os.path.join(self.package_folder, "bin"))
+
+            def package_info(self):
+                self.cpp_info.components["libb1"].libs = ["libb1"]
+                self.cpp_info.components["libb1"].requires = ["liba::liba"]
+
+                self.cpp_info.components["libb2"].libs = ["libb2"]
+                self.cpp_info.components["libb2"].requires = ["libb1"]
+    """)
+
+    libb_h = textwrap.dedent("""
+        #pragma once
+        #include <string>
+        void libb%s();
+    """)
+
+    libb_cpp = textwrap.dedent("""
+        #include <iostream>
+        #include "libb%s.h"
+        #include "liba.h"
+        void libb%s(){
+            liba();
+            std::cout << "libb%s/1.0" << std::endl;
+        }
+    """)
+
+    c.save(
+        {
+            "libb/premake5.lua": libb_premake,
+            "libb/conanfile.py": libb_conanfile % transitive_libs,
+            "libb/libb1/libb1.h": libb_h % "1",
+            "libb/libb1/libb1.cpp": libb_cpp % ("1", "1", "1"),
+            "libb/libb2/libb2.h": libb_h % "2",
+            "libb/libb2/libb2.cpp": libb_cpp % ("2", "2", "2"),
+        }
+    )
+    # Create a consumer application which depends on libb
+    c.run("new premake_exe -d name=consumer -d version=1.0 -o consumer -d requires=libb/1.0")
+    # Adapt includes and usage of libb in the consumer application
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
+                    '#include "libb.h"', '#include "libb1/libb1.h"\n#include "libb2/libb2.h"')
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
+                    'libb()', 'libb1();libb2()')
+
+    c.run("create liba")
+    c.run("create libb")
+    # If transitive_libs is false, consumer will not compile because it will not find liba
+    c.run("build consumer", assert_error=not transitive_libs)
