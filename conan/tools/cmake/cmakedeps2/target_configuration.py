@@ -123,8 +123,15 @@ class TargetConfigurationTemplate2:
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
         seen_aliases = set()
+        root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+        root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
         for lib in libs.values():
             for alias in lib.get("cmake_target_aliases", []):
+                if alias == root_target_name:
+                    raise ConanException(f"Can't define an alias '{alias}' for the "
+                                         f"root target '{root_target_name}' in {self._conanfile}. "
+                                         f"Changing the default target should be done with the "
+                                         f"'cmake_target_name' property.")
                 if alias in seen_aliases:
                     raise ConanException(f"Alias '{alias}' already defined in {self._conanfile}. ")
                 seen_aliases.add(alias)
@@ -254,15 +261,14 @@ class TargetConfigurationTemplate2:
 
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
-        Addd a new pkgname::pkgname INTERFACE target that depends on default_components or
+        Add a new pkgname::pkgname INTERFACE target that depends on default_components or
         on all other library targets (not exes)
-        It will not be added if there exists already a pkgname::pkgname target.
+        It will not be added if there exists already a pkgname::pkgname target (Or an alias exists).
         """
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
         # TODO: What if an exe target is called like the pkg_name::pkg_name
         if libs and root_target_name not in libs:
-            # TODO: Should this also be skipped if an alias exists for this name?
             # Add a generic interface target for the package depending on the others
             if cpp_info.default_components is not None:
                 all_requires = {}

@@ -254,3 +254,40 @@ def test_collide_component_alias_to_alias():
     client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
 
     assert "Alias 'hello::foo' already defined in hello/1.0" in client.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+@pytest.mark.parametrize("root_target", ["hello::custom", None])
+def test_skip_global_if_aliased(root_target):
+    target_line = f'self.cpp_info.set_property("cmake_target_name", "{root_target}")' if root_target else ""
+    target_name = root_target or "hello::hello"
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+
+    class Hello(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def package_info(self):
+            {target_line}
+            self.cpp_info.components["foo"].set_property("cmake_target_aliases", ["{target_name}"])
+    """)
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(test NONE)
+
+    find_package(hello REQUIRED)
+    get_target_property(_aliased_target hello::hello ALIASED_TARGET)
+    message("hello::hello aliased target: ${_aliased_target}")
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+
+    assert f"Can't define an alias '{target_name}' for the root target '{target_name}' in hello/1.0" in client.out
