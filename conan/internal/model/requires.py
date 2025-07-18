@@ -215,7 +215,6 @@ class Requirement:
             set_if_none("_run", True)
             set_if_none("_libs", False)
             set_if_none("_headers", False)
-            set_if_none("_visible", False)
 
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
@@ -400,8 +399,8 @@ class Requirement:
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode
 
-            if pkg_type is PackageType.MODULE:
-                self.package_id_mode = non_embed_mode
+        if dep_pkg_type is PackageType.MODULE:
+            self.package_id_mode = non_embed_mode
         # For cases like Application->Application, without headers or libs, package_id_mode=None
         # It will be independent by default
 

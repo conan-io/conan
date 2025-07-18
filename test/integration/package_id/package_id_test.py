@@ -1,3 +1,4 @@
+import re
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -249,3 +250,53 @@ def test_explicit_implements():
     pkgid4 = c.created_package_id("pkg/0.1")
     assert pkgid4 != pkgid
     assert pkgid3 != pkgid4
+
+
+def test_skip_binaries():
+    c = TestClient()
+    module_dep = (GenConanfile("module_dep", "1.0").with_generator("CMakeDeps")
+                  .with_settings("build_type").with_package_type("module"))
+    module = (GenConanfile("module", "1.0").with_generator("CMakeDeps")
+              .with_settings("build_type").with_package_type("module")
+              .with_requirement("module_dep/1.0", visible=False))
+    main = (GenConanfile("main", "1.0").with_generator("CMakeDeps").with_settings("build_type")
+            .with_requirement("module/1.0"))
+    c.save({"module_dep/conanfile.py": module_dep,
+            "module/conanfile.py": module,
+            "main/conanfile.py": main,
+            })
+    c.run("create module_dep")
+    c.run("create module")
+    c.run("remove module_dep/*:* -c")
+    c.run("install main")
+    assert re.search(r"Skipped binaries(\s*)module_dep/1.0", c.out)
+
+
+def test_modules_package_id():
+    tc = TestClient(light=True)
+    mod_1_0 = (GenConanfile("mod", "1.0").with_package_type("module")
+               .with_class_attribute('package_id_non_embed_mode = "major_mode"'))
+    mod_1_1 = (GenConanfile("mod", "1.1").with_package_type("module")
+               .with_class_attribute('package_id_non_embed_mode = "major_mode"'))
+    mod_2_0 = (GenConanfile("mod", "2.0").with_package_type("module")
+               .with_class_attribute('package_id_non_embed_mode = "major_mode"'))
+    main = GenConanfile("main", "1.0").with_requirement("mod/[>=1.0 <3.0]")
+    tc.save({"mod_1_0/conanfile.py": mod_1_0,
+             "mod_1_1/conanfile.py": mod_1_1,
+             "mod_2_0/conanfile.py": mod_2_0,
+             "main/conanfile.py": main})
+
+    tc.run('create mod_1_0')
+    tc.run('create main')
+    package_id_1_0 = tc.created_package_id("main/1.0")
+
+    tc.run('create mod_1_1')
+    tc.run('create main')
+    package_id_1_1 = tc.created_package_id("main/1.0")
+
+    tc.run('create mod_2_0')
+    tc.run('create main')
+    package_id_2_0 = tc.created_package_id("main/1.0")
+
+    assert package_id_1_0 == package_id_1_1
+    assert package_id_1_0 != package_id_2_0
