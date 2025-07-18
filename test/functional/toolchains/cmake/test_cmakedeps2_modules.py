@@ -54,3 +54,23 @@ def test_create_consume_module_full_diamond():
     tc.run('create -c tools.cmake.cmakedeps:new="will_break_next" mod2')
     tc.run('create -c tools.cmake.cmakedeps:new="will_break_next" main', assert_error=True)
     assert "ERROR: Version conflict: Conflict between dep/1.0 and dep/2.0 in the graph." in tc.out
+
+
+def test_skip_binaries():
+    c = TestClient()
+    module_dep = (GenConanfile("module_dep", "1.0").with_generator("CMakeDeps")
+                  .with_settings("build_type").with_package_type("module"))
+    module = (GenConanfile("module", "1.0").with_generator("CMakeDeps")
+              .with_settings("build_type").with_package_type("module")
+              .with_requirement("module_dep/1.0", visible=False))
+    main = (GenConanfile("main", "1.0").with_generator("CMakeDeps").with_settings("build_type")
+            .with_requirement("module/1.0"))
+    c.save({"module_dep/conanfile.py": module_dep,
+            "module/conanfile.py": module,
+            "main/conanfile.py": main,
+            })
+    c.run("create module_dep")
+    c.run("create module")
+    c.run("remove module_dep/*:* -c")
+    c.run("install main")
+    assert re.search(r"Skipped binaries(\s*)module_dep/1.0", c.out)
