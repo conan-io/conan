@@ -104,7 +104,7 @@ class ConanAPI:
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
 
         def reinit(self):
-            self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            self.hook_manager.reinit()
 
 
 def _check_conan_version(conan_api):
