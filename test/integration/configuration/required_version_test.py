@@ -1,5 +1,4 @@
 import os
-import unittest
 import mock
 
 from conan import __version__
@@ -8,7 +7,7 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save
 
 
-class RequiredVersionTest(unittest.TestCase):
+class TestRequiredVersion:
 
     @mock.patch("conan.__version__", "1.26.0")
     def test_wrong_version(self):
@@ -16,8 +15,8 @@ class RequiredVersionTest(unittest.TestCase):
         client = TestClient()
         client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
         client.run("help", assert_error=True)
-        self.assertIn("Current Conan version (1.26.0) does not satisfy the defined "
-                      "one ({})".format(required_version), client.out)
+        assert "Current Conan version (1.26.0) does not satisfy the defined " \
+                      "one ({})".format(required_version) in client.out
 
     @mock.patch("conan.__version__", "1.22.0")
     def test_exact_version(self):
@@ -47,5 +46,5 @@ class RequiredVersionTest(unittest.TestCase):
              f"core:required_conan_version={required_version}")
         c = TestClient(cache_folder)
         c.run("version", assert_error=True)
-        self.assertIn("Current Conan version ({}) does not satisfy the defined one ({})"
-                      .format(__version__, required_version), c.out)
+        assert "Current Conan version ({}) does not satisfy the defined one ({})" \
+                      .format(__version__, required_version) in c.out
