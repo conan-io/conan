@@ -1,5 +1,6 @@
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -63,3 +64,73 @@ def test_premakedeps():
     assert_vars_file(client, 'debug')
     assert_vars_file(client, 'release')
 
+
+def test_premakedeps_link_order():
+    client = TestClient()
+    profile = textwrap.dedent(
+        """
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+        """)
+    client.save(
+        {
+            "liba/conanfile.py": GenConanfile("liba")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_generator("PremakeDeps")
+            .with_generator("PremakeToolchain")
+            .with_package_info(cpp_info={"libs": ["liba"]}),
+
+            "libb/conanfile.py": GenConanfile("libb")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("liba/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(
+                cpp_info={
+                    "components": {
+                        "libb1": {"requires": ["liba::liba"]},
+                        "libb2": {"requires": ["libb1"]},
+                    }
+                }
+            ),
+
+            "libc/conanfile.py": GenConanfile("libc")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libb/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(cpp_info={"libs": ["libc"]}),
+
+            "consumer/conanfile.py": GenConanfile("consumer")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libc/1.0")
+            .with_generator("PremakeDeps"),
+
+            "profile": profile
+        }
+    )
+    client.run("create liba -pr profile")
+    client.run("create libb -pr profile")
+    client.run("create libc -pr profile")
+    client.run("install consumer -pr profile")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_release_x86_64.premake5.lua")
+    # Check correct order of dependencies: more dependent libs should be linked first
+    assert 't_conan_deps_order["release_x86_64"] = {"libc", "libb", "liba"}' in contents
+
+    # Check previous configurations are preserved when installing new configuration
+    client.run("install consumer -pr profile -s build_type=Debug --build=missing")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    assert 'include "conanconfig_debug_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_debug_x86_64.premake5.lua")
+    assert 't_conan_deps_order["debug_x86_64"] = {"libc", "libb", "liba"}' in contents

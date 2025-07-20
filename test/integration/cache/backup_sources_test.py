@@ -62,17 +62,16 @@ class TestDownloadCacheBackupSources:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["unknown"]
-            assert "http://localhost:5000/myfile.txt" in content["references"]["unknown"]
-            assert len(content["references"]["unknown"]) == 2
+            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["pkg/1.0"]
+            assert len(content["references"]["pkg/1.0"]) == 1
 
             # Ensure the cache is working and we didn't break anything by modifying the summary
             client.run("source .")
             assert "Downloading file" not in client.out
 
-            client.run("create .")
+            client.run("create . --user=barbarian")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert content["references"]["pkg/1.0"] == \
+            assert content["references"]["pkg/1.0@barbarian"] == \
                    ["http://localhost.mirror:5000/myfile.txt"]
 
             client.run("create . --user=barbarian --channel=stable")
@@ -214,9 +213,9 @@ class TestDownloadCacheBackupSources:
                             from conan.tools.files import download
                             class Pkg2(ConanFile):
                                 name = "pkg"
-                                version = "1.0"
                                 def source(self):
-                                    download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                    download(self, "{self.file_server.fake_url}/internet/myfile.txt",
+                                             "myfile.txt",
                                              sha256="{sha256}")
                             """)
 
@@ -234,7 +233,7 @@ class TestDownloadCacheBackupSources:
         s_folder = os.path.join(self.download_cache_folder, "s")
         assert len(os.listdir(s_folder)) == 2
 
-        self.client.run("export .")
+        self.client.run("export . --version=1.0")
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out
 
@@ -746,7 +745,8 @@ class TestDownloadCacheBackupSources:
         # Ensure we are testing for an already uploaded recipe
         assert f"Recipe 'pkg/1.0#{exported_rev}' already in server, skipping upload" in self.client.out
 
-    def test_source_then_upload_workflow(self):
+    @pytest.mark.parametrize("unknown", [True, False])
+    def test_source_then_upload_workflow(self, unknown):
         mkdir(os.path.join(self.download_cache_folder, "s"))
 
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -770,7 +770,12 @@ class TestDownloadCacheBackupSources:
                             f"core.sources:upload_url={self.file_server.fake_url}/backup/"})
 
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("source .")
+        ref_args = "" if unknown else "--name foo --version 1.0"
+        reference_key = "unknown" if unknown else "foo/1.0"
+        self.client.run(f"source . {ref_args}")
+        content = json.loads(load(os.path.join(self.download_cache_folder, "s", sha256 + ".json")))
+        assert len(content["references"][reference_key]) == 1
+
         self.client.run("cache backup-upload")
         # This used to crash because we were trying to list a missing dir if only exports were made
         assert "[Errno 2] No such file or directory" not in self.client.out

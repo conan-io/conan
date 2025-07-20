@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import sys
@@ -192,6 +193,22 @@ class Lib(ConanFile):
         self.assertIn("My URL: this url", client.out)
         client.run("export-pkg . --name=name --version=version")
         self.assertIn("My URL: this url", client.out)
+
+    def test_conan_data_serialize(self):
+        c = TestClient(light=True)
+        conandata = textwrap.dedent("""
+            src:
+                url: "this url"
+        """)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                "conandata.yml": conandata})
+        c.run("graph info . --format=json")
+        graph = json.loads(c.stdout)
+        assert graph["graph"]["nodes"]["0"]["conandata"]["src"] == {"url": "this url"}
+
+        c.run("inspect . --format=json")
+        result = json.loads(c.stdout)
+        assert result["conandata"]["src"] == {"url": "this url"}
 
 
 class TestConanDataUpdate:

@@ -482,3 +482,42 @@ def test_requires_to_application_component():
     assert "automake::automake" not in targets
     assert "# Requirement automake::mylibapp => Full link: True" in targets
     assert "$<$<CONFIG:RELEASE>:automake::mylibapp>" in targets
+
+
+def test_alias_cmakedeps_set_property():
+    tc = TestClient()
+    tc.save({"dep/conanfile.py": textwrap.dedent("""
+
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].set_property("cmake_target_name", "dep::mycomponent")
+        """),
+             "conanfile.py": textwrap.dedent("""
+             from conan import ConanFile
+             from conan.tools.cmake import CMakeDeps, CMake
+             class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                requires = "dep/1.0"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_target_aliases", ["alias", "dep::other_name"])
+                    deps.set_property("dep::mycomp", "cmake_target_aliases", ["component_alias", "dep::my_aliased_component"])
+                    deps.generate()
+             """)})
+    tc.run("create dep")
+    tc.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
+    targets_data = tc.load('dep-Targets-release.cmake')
+    assert "add_library(dep::dep" in targets_data
+    assert "add_library(alias" in targets_data
+    assert "add_library(dep::other_name" in targets_data
+
+    assert "add_library(component_alias" in targets_data
+    assert "add_library(dep::my_aliased_component" in targets_data
