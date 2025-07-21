@@ -42,5 +42,3 @@ def gen_premake5(workspace, projects, includedirs=["."], language="CXX", std="17
         }
     )
 
-
-# gen_premake5(workspace="MyLib", projects=[{"name": "liba", "files": ["include/mylib.h", "src/mylib.cpp"]}, ], includedirs=[".", "include"])
