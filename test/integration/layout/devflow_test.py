@@ -1,5 +1,4 @@
 import os
-import unittest
 
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import load, mkdir
@@ -30,16 +29,16 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
-class DevInSourceFlowTest(unittest.TestCase):
+class TestDevInSourceFlow:
 
     def _assert_pkg(self, folder):
-        self.assertEqual(sorted(['file.h', 'myartifact.lib', 'subdir', 'conaninfo.txt',
-                                 'conanmanifest.txt']),
-                         sorted(os.listdir(folder)))
-        self.assertEqual(load(os.path.join(folder, "myartifact.lib")),
-                         "artifact contents!")
-        self.assertEqual(load(os.path.join(folder, "subdir/myartifact2.lib")),
-                         "artifact2 contents!")
+        assert sorted(['file.h', 'myartifact.lib', 'subdir', 'conaninfo.txt',
+                                 'conanmanifest.txt']) == \
+                         sorted(os.listdir(folder))
+        assert load(os.path.join(folder, "myartifact.lib")) == \
+                         "artifact contents!"
+        assert load(os.path.join(folder, "subdir/myartifact2.lib")) == \
+                         "artifact2 contents!"
 
     def test_parallel_folders(self):
         client = TestClient()
@@ -120,11 +119,11 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
-class DevOutSourceFlowTest(unittest.TestCase):
+class TestDevOutSourceFlow:
 
     def _assert_pkg(self, folder):
-        self.assertEqual(sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']),
-                         sorted(os.listdir(folder)))
+        assert sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']) == \
+                         sorted(os.listdir(folder))
 
     def test_parallel_folders(self):
         client = TestClient()
