@@ -24,12 +24,12 @@ from conan.internal.util.files import load
 
 class GraphBinariesAnalyzer:
 
-    def __init__(self, conan_app, global_conf):
+    def __init__(self, conan_app, global_conf, hook_manager):
         self._cache = conan_app.cache
         self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
-        self._hook_manager = conan_app.conan_api.config.hook_manager
+        self._hook_manager = hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path

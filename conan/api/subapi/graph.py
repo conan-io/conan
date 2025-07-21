@@ -13,8 +13,9 @@ from conan.api.model import RecipeReference
 
 class GraphAPI:
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, helpers):
         self.conan_api = conan_api
+        self._helpers = helpers
 
     def _load_root_consumer_conanfile(self, path, profile_host, profile_build,
                                       name=None, version=None, user=None, channel=None,
@@ -205,7 +206,8 @@ class GraphAPI:
         """
         ConanOutput().title("Computing necessary packages")
         conan_app = ConanBasicApp(self.conan_api)
-        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
+        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf,
+                                                  self._helpers.hook_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)
 
