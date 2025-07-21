@@ -3,6 +3,8 @@ import os
 import platform
 import textwrap
 
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.premake import gen_premake5
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.files.files import replace_in_file
 import pytest
@@ -111,40 +113,20 @@ def test_premake_components(transitive_libs):
     c = TestClient()
     c.run("new premake_lib -d name=liba -d version=1.0 -o liba")
 
-    libb_premake = textwrap.dedent("""
-        workspace "Libb"
-            configurations { "Debug", "Release" }
-            fatalwarnings {"All"}
-            floatingpoint "Fast"
-            includedirs { ".", "libb1", "libb2" }
-            filter "configurations:Debug"
-               defines { "DEBUG" }
-               symbols "On"
-
-            filter "configurations:Release"
-               defines { "NDEBUG" }
-               optimize "On"
-
-        project "libb1"
-            kind "StaticLib"
-            cppdialect "C++17"
-            language "C++"
-            files { "libb1/**.h", "libb1/**.cpp" }
-
-        project "libb2"
-            kind "StaticLib"
-            cppdialect "C++17"
-            language "C++"
-            files { "libb2/**.h", "libb2/**.cpp" }
-            links { "libb1"}
-    """)
-
+    libb_premake = gen_premake5(
+        workspace="Libb",
+        includedirs=[".", "libb1", "libb2"],
+        projects=[
+            {"name": "libb1", "files": ["libb1/*.h", "libb1/*.cpp"], "kind": "StaticLib"},
+            {"name": "libb2", "files": ["libb2/*.h", "libb2/*.cpp"], "kind": "StaticLib", "links": ["libb1"]}
+        ]
+    )
     libb_conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
         from conan.tools.files import copy
         from conan.tools.layout import basic_layout
-        from conan.tools.premake import PremakeDeps, PremakeToolchain, Premake
+        from conan.tools.premake import Premake
 
 
         class libbRecipe(ConanFile):
@@ -153,18 +135,13 @@ def test_premake_components(transitive_libs):
             package_type = "static-library"
             settings = "os", "compiler", "build_type", "arch"
             exports_sources = "premake5.lua", "libb1/*", "libb2/*"
+            generators= "PremakeDeps", "PremakeToolchain"
 
             def layout(self):
                 basic_layout(self)
 
             def requirements(self):
                 self.requires("liba/1.0", transitive_libs=%s)
-
-            def generate(self):
-                deps = PremakeDeps(self)
-                deps.generate()
-                tc = PremakeToolchain(self)
-                tc.generate()
 
             def build(self):
                 premake = Premake(self)
@@ -225,3 +202,51 @@ def test_premake_components(transitive_libs):
     c.run("create libb")
     # If transitive_libs is false, consumer will not compile because it will not find liba
     c.run("build consumer", assert_error=not transitive_libs)
+
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux now")
+@pytest.mark.tool("premake")
+def test_transitive_headers_not_public(transitive_libraries):
+    c = transitive_libraries
+
+    main = gen_function_cpp(name="main", includes=["engine", "matrix"], calls=["engine"])
+    premake5 = gen_premake5(
+        workspace="Consumer",
+        includedirs=[".", "include"],
+        projects=[
+            {"name": "consumer", "files": ["src/main.cpp"], "kind": "ConsoleApp"}
+        ],
+    )
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import Premake
+
+        class ConsumerRecipe(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            package_type = "application"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "*"
+            generators= "PremakeDeps", "PremakeToolchain"
+            requires = "engine/1.0"
+
+            def layout(self):
+                basic_layout(self)
+
+            def build(self):
+                premake = Premake(self)
+                premake.configure()
+                premake.build(workspace="Consumer")
+    """)
+
+    c.save({"src/main.cpp": main,
+            "premake5.lua": premake5,
+            "conanfile.py": conanfile
+            })
+
+    c.run("build .", assert_error=True)
+    assert "fatal error: 'matrix.h' file not found" in c.out
+
