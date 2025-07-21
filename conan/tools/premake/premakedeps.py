@@ -107,7 +107,7 @@ class _PremakeTemplate(object):
                 return ""
             return ", ".join('"%s"' % p.replace('"', '\\"') for p in flags)
 
-        # transitive_headers dependant
+        # Headers dependant
         with_headers = req and req.headers
         self.includedirs = _format_paths(dep_cpp_info.includedirs if with_headers else [])
         self.defines = _format_flags(dep_cpp_info.defines if with_headers else [])
@@ -116,12 +116,12 @@ class _PremakeTemplate(object):
         self.sharedlinkflags = _format_flags(dep_cpp_info.sharedlinkflags if with_headers else [])
         self.exelinkflags = _format_flags(dep_cpp_info.exelinkflags if with_headers else [])
 
-        # transitive_libs dependant
+        # Libs dependant
         with_libs = req and req.libs
         self.libs = _format_flags(dep_cpp_info.libs if with_libs else [])
         self.libdirs = _format_paths(dep_cpp_info.libdirs if with_libs else [])
 
-        # run dependant
+        # Run dependant
         with_run = req and req.run
         self.bindirs = _format_paths(dep_cpp_info.bindirs if with_run else [])
 
