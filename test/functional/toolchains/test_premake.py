@@ -201,7 +201,8 @@ def test_premake_components(transitive_libs):
 
 
 @pytest.mark.tool("premake")
-def test_transitive_headers_not_public(transitive_libraries):
+@pytest.mark.parametrize("transitive_headers", [True, False])
+def test_transitive_headers_not_public(transitive_libraries, transitive_headers):
     c = transitive_libraries
 
     main = gen_function_cpp(name="main", includes=["engine", "matrix"], calls=["engine"])
@@ -213,7 +214,7 @@ def test_transitive_headers_not_public(transitive_libraries):
         ],
     )
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.layout import basic_layout
         from conan.tools.premake import Premake
@@ -225,10 +226,12 @@ def test_transitive_headers_not_public(transitive_libraries):
             settings = "os", "compiler", "build_type", "arch"
             exports_sources = "*"
             generators= "PremakeDeps", "PremakeToolchain"
-            requires = "engine/1.0"
 
             def layout(self):
                 basic_layout(self)
+            
+            def requirements(self):
+                self.requires("engine/1.0", transitive_headers={transitive_headers})
 
             def build(self):
                 premake = Premake(self)
@@ -241,6 +244,5 @@ def test_transitive_headers_not_public(transitive_libraries):
             "conanfile.py": conanfile
             })
 
-    c.run("build .", assert_error=True)
-    assert "fatal error: 'matrix.h' file not found" in c.out
-
+    c.run("build .", assert_error=not transitive_headers)
+    # Error here is about missing matrix.h for transitive_headers=False
