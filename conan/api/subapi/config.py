@@ -30,7 +30,6 @@ class ConfigAPI:
         self.conan_api = conan_api
         self._new_config = None
         self._cli_core_confs = None
-        self.hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
 
     def home(self):
         return self.conan_api.cache_folder
@@ -236,4 +235,3 @@ class ConfigAPI:
         if self._new_config is not None:
             self._new_config.clear()
             self._populate_global_conf()
-        self.hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)

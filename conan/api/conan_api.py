@@ -22,6 +22,8 @@ from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.hook_manager import HookManager
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
@@ -48,10 +50,12 @@ class ConanAPI:
         init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
-        self.migrate()
-
         # This API is depended upon by the subsequent ones, it should be initialized first
         self.config = ConfigAPI(self)
+        _check_conan_version(self)
+
+        self._api_helpers = self._ApiHelpers(self)
+        self.migrate()
 
         self.remotes = RemotesAPI(self)
         self.command = CommandAPI(self)
@@ -60,27 +64,27 @@ class ConanAPI:
         # Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
         self.profiles = ProfilesAPI(self)
-        self.install = InstallAPI(self)
-        self.graph = GraphAPI(self)
-        self.export = ExportAPI(self)
+        self.install = InstallAPI(self, self._api_helpers)
+        self.graph = GraphAPI(self, self._api_helpers)
+        self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
         self.upload = UploadAPI(self)
         self.download = DownloadAPI(self)
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
-        self.local = LocalAPI(self)
+        self.local = LocalAPI(self, self._api_helpers)
         self.audit = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
-        self.report = ReportAPI(self)
-
-        _check_conan_version(self)
+        self.report = ReportAPI(self, self._api_helpers)
 
     def reinit(self):
         """
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
+        # TODO: Think order of reinitialization for helpers
+        self._api_helpers.reinit()
         self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()
@@ -93,6 +97,14 @@ class ConanAPI:
         from conan import conan_version
         migrator = ClientMigrator(self.cache_folder, conan_version)
         migrator.migrate()
+
+    class _ApiHelpers:
+        def __init__(self, conan_api):
+            self._conan_api = conan_api
+            self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+
+        def reinit(self):
+            self.hook_manager.reinit()
 
 
 def _check_conan_version(conan_api):
