@@ -283,13 +283,13 @@ class RemoteConnection:
         except IOError as e:
             self.runner_output.error(f"Unable to copy {src} to {dst}:\n{e}")
 
-    def put_dir(self, src: str, dst: str, exclude_patterns: Iterable[str] = []) -> None:
+    def put_dir(self, src: str, dst: str, exclude_patterns: Iterable[str] | None = None) -> None:
         source_folder = Path(src)
         destination_folder = Path(dst)
         for item in source_folder.iterdir():
             dest_item = (destination_folder / item.name).as_posix()
             # Check if item matches any exclude pattern
-            if any(fnmatch.fnmatch(item.name, pattern) for pattern in exclude_patterns):
+            if exclude_patterns and any(fnmatch.fnmatch(item.name, pattern) for pattern in exclude_patterns):
                 continue
             if item.is_file():
                 self.runner_output.verbose(f"Copying file {item.as_posix()} to {dest_item}")
