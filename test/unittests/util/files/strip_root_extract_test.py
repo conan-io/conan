@@ -7,6 +7,7 @@ import pytest
 import sys
 
 from conan.internal.api.uploader import gzopen_without_timestamps
+from conan.tools.files import load
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
 from conan.internal.model.manifest import gather_files
@@ -350,6 +351,8 @@ def test_decompressing_using_long_path_prefix():
         _compress_root_folder(tmp_folder, tgz_file, root_folder_name="root")
 
     # Tgz unzipped regularly
-    extract_folder = temp_folder()
+    extract_folder = f"\\\\?\\{temp_folder()}"
     # Do not raise any OSError: [WinError 123]
-    untargz(tgz_file, destination=f"\\\\?\\{extract_folder}", strip_root=True)
+    untargz(tgz_file, destination=extract_folder, strip_root=True)
+    assert "contentsfile1" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file1"))
+    assert "contentsfile2" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file2"))
