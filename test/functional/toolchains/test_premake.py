@@ -1,12 +1,10 @@
-from os import replace
 import os
 import platform
 import textwrap
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.premake import gen_premake5
 from conan.test.utils.mocks import ConanFileMock
-from conan.tools.files.files import replace_in_file
+from conan.tools.files.files import replace_in_file, rmdir
 import pytest
 
 from conan.test.utils.tools import TestClient
@@ -201,20 +199,18 @@ def test_premake_components(transitive_libs):
 
 
 @pytest.mark.tool("premake")
-@pytest.mark.parametrize("transitive_headers", [True, False])
-def test_transitive_headers_not_public(transitive_libraries, transitive_headers):
+def test_transitive_headers_not_public(transitive_libraries):
     c = transitive_libraries
 
-    main = gen_function_cpp(name="main", includes=["engine", "matrix"], calls=["engine"])
+    main = gen_function_cpp(name="main", includes=["engine"], calls=["engine"])
     premake5 = gen_premake5(
         workspace="Consumer",
-        includedirs=[".", "include"],
         projects=[
             {"name": "consumer", "files": ["src/main.cpp"], "kind": "ConsoleApp"}
         ],
     )
 
-    conanfile = textwrap.dedent(f"""
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.layout import basic_layout
         from conan.tools.premake import Premake
@@ -229,9 +225,9 @@ def test_transitive_headers_not_public(transitive_libraries, transitive_headers)
 
             def layout(self):
                 basic_layout(self)
-            
+
             def requirements(self):
-                self.requires("engine/1.0", transitive_headers={transitive_headers})
+                self.requires("engine/1.0")
 
             def build(self):
                 premake = Premake(self)
@@ -243,6 +239,13 @@ def test_transitive_headers_not_public(transitive_libraries, transitive_headers)
             "premake5.lua": premake5,
             "conanfile.py": conanfile
             })
+    # Test it builds successfully
+    c.run("build .")
 
-    c.run("build .", assert_error=not transitive_headers)
-    # Error here is about missing matrix.h for transitive_headers=False
+    # Test including a transitive header: it should fail as engine does not require matrix with
+    # transitive_headers enabled
+    main = gen_function_cpp(name="main", includes=["engine", "matrix"], calls=["engine"])
+    c.save({"src/main.cpp": main})
+    rmdir(ConanFileMock(), os.path.join(c.current_folder, "build-release"))
+    c.run("build .", assert_error=True)
+    assert "fatal error: 'matrix.h' file not found" in c.out
