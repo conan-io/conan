@@ -1,6 +1,7 @@
 import json
 import os
 import base64
+import re
 
 from jinja2 import Template
 
@@ -56,13 +57,59 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
 
+    def _get_line_numbers(line):
+        match = re.search(r"@@ -(\d+),\d+ \+(\d+),\d+ @@", line)
+        if not match:
+            return 0, 0
+        old, new = match.groups()
+        return int(old), int(new)
+
+    per_folder = {"folders": {}, "files": {}}
+    for file in content:
+        replaced_path = _replace_paths(file)
+        replaced_file = replaced_path.replace("(old)", "").replace("(new)", "").replace("\\", "/")
+        bits = replaced_file.split("/")[1:]
+        cur = per_folder
+        for folder in bits[:-1]:
+            cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
+        cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path}
+
+    def flatten_empty_folders(current_node):
+        for folder_data in current_node["folders"].values():
+            flatten_empty_folders(folder_data)
+
+        promoted_folders = {}
+
+        # The list here is important to avoid modifying the dict while iterating
+        for folder_name, folder_data in list(current_node["folders"].items()):
+            if not folder_data["files"]:
+                for sub_folder_name, sub_folder_data in folder_data['folders'].items():
+                    new_key = os.path.join(folder_name, sub_folder_name)
+                    promoted_folders[new_key] = sub_folder_data
+
+                del current_node["folders"][folder_name]
+
+        current_node["folders"].update(promoted_folders)
+
+    flatten_empty_folders(per_folder)
+
+    # Now sort each folder and file recursively
+    def sort_folders_and_files(node):
+        node["folders"] = dict(sorted(node["folders"].items()))
+        node["files"] = dict(sorted(node["files"].items(), key=lambda x: x[0].lower()))
+        for folder_data in node["folders"].values():
+            sort_folders_and_files(folder_data)
+    sort_folders_and_files(per_folder)
+
     return template.render(content=content,
+                           per_folder=per_folder,
                            base_template_path=template_folder, version=__version__,
                            safe_filename=_safe_filename,
                            replace_paths=_replace_paths,
                            replace_cache_paths=_replace_cache_paths,
                            remove_prefixes=_remove_prefixes,
                            get_diff_filename=_get_diff_filename,
+                           get_line_numbers=_get_line_numbers,
                            **kwargs)
 
 def format_diff_html(result):
