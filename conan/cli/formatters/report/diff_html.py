@@ -48,6 +48,9 @@ diff_html = r"""
             .content span {
                 white-space: pre-wrap;
             }
+            .diff-header {
+                background-color: #f0f0f0;
+            }
             .add { background-color: #76ffbb; }
             .del { background-color: #fdb9c1; }
             .context, .context-header, .diff-content { background-color: #f8f8f8; }
@@ -167,11 +170,16 @@ diff_html = r"""
                 </div>
             </div>
             <div class='content'>
-                <h2>Diff Report:</h2>
-                <div style="white-space: nowrap;">
-                    <span class="del">--- (old): <b>{{ old_reference.repr_notime() }}</b></span>
+                <div class="diff-header">
+                    <h2>Diff Report:</h2>
+                    <p>Total files: <b>{{ content|length }}</b></p>
+                    <span class="del" style="white-space: nowrap;">
+                        --- (old) belongs to <b>{{ old_reference.repr_notime() }}</b> reference
+                    </span>
                     <br/>
-                    <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
+                    <span class="add" style="white-space: nowrap;">
+                        +++ (new) belongs to <b>{{ new_reference.repr_notime() }}</b> reference
+                    </span>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
                 <div><!--placeholder-->
