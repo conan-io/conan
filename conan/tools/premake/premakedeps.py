@@ -210,7 +210,7 @@ class PremakeDeps:
         # as they will have been removed
         host_req = self._conanfile.dependencies.host.topological_sort
         test_req = self._conanfile.dependencies.test.topological_sort
-        build_req = self._conanfile.dependencies.build.topological_sort
+        build_req = self._conanfile.dependencies.direct_build.topological_sort
 
         # Merge into one list
         full_req = list(host_req.items()) + list(test_req.items()) + list(build_req.items())
