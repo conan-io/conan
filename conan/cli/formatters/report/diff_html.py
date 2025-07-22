@@ -24,7 +24,7 @@ diff_html = r"""
             body { font-family: monospace; margin: 0px; }
             .container { display: flex; height: 100%; }
             .sidebar {
-                min-width: 20%;
+                min-width: 17%;
                 max-width: 20%;
                 padding: 10px;
                 overflow-y: scroll;
@@ -43,6 +43,7 @@ diff_html = r"""
                 padding: 20px;
                 background: #fff;
                 overflow-y: scroll;
+                width: auto;
             }
             .content span {
                 white-space: pre-wrap;
@@ -55,6 +56,14 @@ diff_html = r"""
             .filename { background-color: #f0f0f0; }
             a:visited {
                 color: blue;
+            }
+            #empty_result {
+                justify-content: center;
+                align-items: center;
+                color: black;
+                font-weight: bold;
+                font-size: 4em;
+                text-align: center;
             }
         </style>
         <script>
@@ -105,10 +114,13 @@ diff_html = r"""
 
                 searchingIcon.style.display = "none";
                 const emptySearchTag = document.getElementById("empty_search");
+                const emptyResultTag = document.getElementById("empty_result");
                 if (emptySearch) {
                     emptySearchTag.style.display = "block";
+                    emptyResultTag.style.display = "block";
                 } else {
                     emptySearchTag.style.display = "none";
+                    emptyResultTag.style.display = "none";
                 }
             }
 
@@ -129,7 +141,7 @@ diff_html = r"""
                 const sidebar = document.querySelector('.sidebar');
                 if (contents.style.display === 'none') {
                     contents.style.display = 'initial';
-                    sidebar.style.minWidth = '20%';
+                    sidebar.style.minWidth = '17%';
                     event.srcElement.textContent = 'Hide';
                 } else {
                     contents.style.display = 'none';
@@ -144,11 +156,6 @@ diff_html = r"""
             <div class='sidebar'>
                 <button onclick="toggleSidebar()">Hide</button>
                 <div id="sidebar-contents">
-                    <div style="white-space: nowrap;">
-                        <span class="del">--- (old): <b>{{ old_reference.repr_notime() }}</b></span>
-                        <br/>
-                        <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
-                    </div>
                     <h2>File list:</h2>
                     <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                     <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
@@ -160,6 +167,13 @@ diff_html = r"""
                 </div>
             </div>
             <div class='content'>
+                <h2>Diff Report:</h2>
+                <div style="white-space: nowrap;">
+                    <span class="del">--- (old): <b>{{ old_reference.repr_notime() }}</b></span>
+                    <br/>
+                    <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
+                </div>
+                <span id="empty_result" style="display:none">No matches</span>
                 <div><!--placeholder-->
                 {%- for filename, lines in content.items() -%}
                     </div>

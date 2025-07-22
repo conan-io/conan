@@ -8,6 +8,7 @@ from jinja2 import Template
 from conan.api.output import cli_out_write
 from conan.cli.formatters.report.diff_html import diff_html
 
+
 def _generate_json(result):
     diff_text = result["diff"]
     src_prefix = result["src_prefix"]
@@ -22,6 +23,7 @@ def _generate_json(result):
         else:
             ret[current_filename].append(line)
     return ret
+
 
 def _get_filenames(line, src_prefix, dst_prefix):
     """
@@ -38,9 +40,11 @@ def _get_filenames(line, src_prefix, dst_prefix):
 
     return src_filename, dst_filename
 
+
 def _render_diff(content, template, template_folder, **kwargs):
     from conan import __version__
     template = Template(template, autoescape=True)
+
     def _safe_filename(filename):
         # Calculate base64 of the filename
         return base64.b64encode(filename.encode(), altchars=b'-_').decode()
@@ -111,6 +115,7 @@ def _render_diff(content, template, template_folder, **kwargs):
                            get_diff_filename=_get_diff_filename,
                            get_line_numbers=_get_line_numbers,
                            **kwargs)
+
 
 def format_diff_html(result):
     conan_api = result["conan_api"]
