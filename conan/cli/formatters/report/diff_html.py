@@ -34,20 +34,9 @@ diff_html = r"""
             .sidebar li { line-height: 1.5; list-style: none; }
             .sidebar li.file-new { list-style: circle }
             .sidebar li.file-old { list-style: square; }
-            /* .sidebar li.file-old { list-style: initial; list-style-image: url("data:image/svg;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgLz4KPC9zdmc+Cg=="); }*/
+            .file-list { padding-left: 10px; }
             .file-list li ul {
                 border-left: 2px solid #ddd;
-            }
-            .file-list ul li::before {
-              content: '';
-              display: block;
-              position: absolute;
-              top: calc(25px / -2);
-              left: -2px;
-              width: calc(25px + 2px);
-              height: calc(25px + 1px);
-              border: solid #ddd;
-              border-width: 0 0 2px 2px;
             }
             li ul { padding-left: 25px; }
             .content {
@@ -134,24 +123,41 @@ diff_html = r"""
                 includeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput(event);
             }
+
+            function toggleSidebar() {
+                const contents = document.querySelector('#sidebar-contents');
+                const sidebar = document.querySelector('.sidebar');
+                if (contents.style.display === 'none') {
+                    contents.style.display = 'initial';
+                    sidebar.style.minWidth = '20%';
+                    event.srcElement.textContent = 'Hide';
+                } else {
+                    contents.style.display = 'none';
+                    sidebar.style.minWidth = 'unset';
+                    event.srcElement.textContent = 'Show';
+                }
+            }
         </script>
     </head>
     <body>
         <div class='container'>
             <div class='sidebar'>
-                <div style="white-space: nowrap;">
-                    <span class="del">--- (old): <b>{{ old_reference.repr_notime() }}</b></span>
-                    <br/>
-                    <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
+                <button onclick="toggleSidebar()">Hide</button>
+                <div id="sidebar-contents">
+                    <div style="white-space: nowrap;">
+                        <span class="del">--- (old): <b>{{ old_reference.repr_notime() }}</b></span>
+                        <br/>
+                        <span class="add">+++ (new): <b>{{ new_reference.repr_notime() }}</b></span>
+                    </div>
+                    <h2>File list:</h2>
+                    <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                    <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                    <span id="searching_icon" style="display:none">...</span>
+                    <ul class="file-list">
+                        {{ render_folder("", per_folder) }}
+                        <span id="empty_search" style="display:none">No results found</span>
+                    </ul>
                 </div>
-                <h2>File list:</h2>
-                <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
-                <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                <span id="searching_icon" style="display:none">...</span>
-                <ul class="file-list">
-                    {{ render_folder("", per_folder) }}
-                    <span id="empty_search" style="display:none">No results found</span>
-                </ul>
             </div>
             <div class='content'>
                 <div><!--placeholder-->
