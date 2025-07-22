@@ -408,8 +408,9 @@ class EnvVars:
         result = [f'CONAN_DOTENV_FOLDER="{os.path.abspath(filepath)}"']
         abs_base_path, new_path = relativize_paths(self._conanfile, "${CONAN_DOTENV_FOLDER}")
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${{{name}}}", subsystem=self._subsystem, pathsep=self._pathsep,
-                                      root_path=abs_base_path, script_path=new_path)
+            value = varvalues.get_str("${{{name}}}", subsystem=self._subsystem,
+                                      pathsep=self._pathsep, root_path=abs_base_path,
+                                      script_path=new_path)
             result.append('{}="{}"'.format(varname, value))
         content = "\n".join(result)
         save(file_location, content)
@@ -580,7 +581,8 @@ class EnvVars:
         else:
             self.save_sh(path)
 
-        self.save_dotenv(f"{name}.env")
+        if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
+            self.save_dotenv(f"{name}.env")
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)
