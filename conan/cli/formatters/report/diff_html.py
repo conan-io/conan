@@ -32,13 +32,13 @@ diff_html = r"""
                 border-right: 1px solid #ccc;
             }
             .sidebar li { line-height: 1.5; list-style: none; }
-            .sidebar li.file-new { list-style: circle }
-            .sidebar li.file-old { list-style: square; }
+            .sidebar li.file-new { list-style: circle; padding-left: 0; margin-left: 25px; }
+            .sidebar li.file-old { list-style: square; padding-left: 0; margin-left: 25px; }
             .file-list { padding-left: 10px; }
             .file-list li ul {
                 border-left: 2px solid #ddd;
             }
-            li ul { padding-left: 25px; }
+            li ul { padding-left: 1ch; }
             .content {
                 padding: 20px;
                 background: #fff;
@@ -55,7 +55,7 @@ diff_html = r"""
             .del { background-color: #fdb9c1; }
             .context, .context-header, .diff-content { background-color: #f8f8f8; }
             .context-header { color: gray; }
-            .line-number { width: 4ch; display: inline-block; text-align: left; color: #888; }
+            .line-number { width: 4ch; display: inline-block; text-align: left; color: #888; user-select: none; }
             .filename { background-color: #f0f0f0; }
             a:visited {
                 color: blue;
