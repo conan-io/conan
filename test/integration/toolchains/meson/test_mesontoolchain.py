@@ -855,3 +855,50 @@ def test_thread_flags(threads, flags):
     assert f"c_link_args = ['{flags}']" in toolchain
     assert f"cpp_args = ['{flags}', '-stdlib=libc++']" in toolchain
     assert f"cpp_link_args = ['{flags}', '-stdlib=libc++']" in toolchain
+
+
+def test_new_public_attributes():
+    host = textwrap.dedent(f"""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [conf]
+    tools.meson.mesontoolchain:backend=xcode
+    """)
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.backend = "vs2022"  # conf has more prio
+            tc.b_staticpic = True
+            tc.buildtype = "Debug"
+            tc.default_library = "shared"
+            tc.cpp_std="c++20"
+            tc.c_std="c20"
+            tc.b_vscrt="MD"
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "host": host})
+    client.run("install . -pr:a host")
+    content = client.load(MesonToolchain.native_filename)
+    expected = textwrap.dedent("""\
+    buildtype = 'Debug'
+    default_library = 'shared'
+    b_vscrt = 'MD'
+    b_ndebug = 'true'
+    b_staticpic = true
+    cpp_std = 'c++20'
+    c_std = 'c20'
+    backend = 'xcode'
+    """)
+    assert expected in content

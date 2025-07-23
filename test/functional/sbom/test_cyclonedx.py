@@ -360,3 +360,28 @@ class TestCyclonedx:
             assert not content_json["components"][0].get("author")
             assert content_json["components"][0]["authors"][0]["name"] == 'conan-dev'
             assert content_json["components"][0]["type"] == 'application'
+
+    @pytest.mark.parametrize("user, channel, user_dep, channel_dep", [("user", None, "user_dep", None), ("user", "channel", "user_dep", "channel_dep")])
+    def test_sbom_user_path(self, hook_setup_post_package_tl, user, channel, user_dep, channel_dep):
+        tc = hook_setup_post_package_tl
+        channel_ref = f"/{channel_dep}" if channel_dep else ""
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("main", "1.0").with_requires(f"dep/1.0@{user_dep}{channel_ref}")})
+        command = "create dep"
+        if user: command += f" --user={user_dep}"
+        if channel: command += f" --channel={channel_dep}"
+
+        tc.run(command)
+
+        command = "create ."
+        if user: command += f" --user={user}"
+        if channel: command += f" --channel={channel}"
+        tc.run(command)
+
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content = tc.load(cyclone_path)
+        content_json = json.loads(content)
+
+        assert content_json["components"][0]["bom-ref"].split("&user=")[1] == f"{user}&channel={channel}" if channel else user
+        assert content_json["dependencies"][0]["dependsOn"][0].split("&user=")[1] == f"{user_dep}&channel={channel_dep}" if channel_dep else user_dep

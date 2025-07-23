@@ -168,7 +168,9 @@ tools_locations = {
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {
-            "path": {'Linux': '/usr/share/premake'}
+            "path": {'Linux': '/usr/share/premake',
+                     'Windows': 'skip-tests',
+                     'Darwin': 'skip-tests'}
         }
     },
     'xcodegen': {"platform": "Darwin"},

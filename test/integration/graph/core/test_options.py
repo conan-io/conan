@@ -15,7 +15,7 @@ class TestOptions(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -40,7 +40,7 @@ class TestOptions(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -66,7 +66,7 @@ class TestOptions(GraphManagerTest):
         # If we expand first the "libb", it will expand to "liba" as static (shared=False)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -80,7 +80,7 @@ class TestOptions(GraphManagerTest):
         # Changing the order, will make "liba" shared=True
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libc = app.edges[0].dst
         libb = app.edges[1].dst
@@ -105,7 +105,7 @@ class TestOptions(GraphManagerTest):
                                                .with_default_option("liba*:shared", shared))
             deps_graph = self.build_consumer(consumer)
 
-            self.assertEqual(4, len(deps_graph.nodes))
+            assert 4 == len(deps_graph.nodes)
             app = deps_graph.root
             libb = app.edges[0].dst
             libc = app.edges[1].dst
@@ -123,7 +123,7 @@ class TestOptions(GraphManagerTest):
                                                .with_default_option("liba*:shared", shared))
             deps_graph = self.build_consumer(consumer)
 
-            self.assertEqual(4, len(deps_graph.nodes))
+            assert 4 == len(deps_graph.nodes)
             app = deps_graph.root
             libc = app.edges[0].dst
             libb = app.edges[1].dst
@@ -147,7 +147,7 @@ class TestBuildRequireOptions(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       options_build={"zlib*:shared": False})
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         protobuf_host = lib.edges[0].dst

@@ -41,6 +41,7 @@ def test_error_config_package_id():
     assert "ERROR: core.package_id:config_mode defined, " \
            "but error while loading 'config_version.json'" in c.out
 
+
 @pytest.mark.parametrize("config_version, mode, result", [
     ("myconfig/1.2.3#rev1:pid1#prev1", "minor_mode", "myconfig/1.2.Z"),
     ("myconfig/1.2.3#rev1:pid1#prev1", "patch_mode", "myconfig/1.2.3"),
@@ -82,3 +83,17 @@ def test_recipe_revision_mode():
     # Now change only the package revision of liba
     clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
     clientc.run("install . --user=user --channel=testing")
+
+
+def test_config_package_id_mode():
+    # chicken and egg problem when the configuration package itself is affected by the mode
+    c = TestClient(light=True)
+    config_version = json.dumps({"config_version": ["myconfig/0.1"]})
+    save(c.paths.config_version_path, config_version)
+    c.save_home({"global.conf": "core.package_id:config_mode=minor_mode"})
+
+    c.save({"conanfile.py": GenConanfile("myconfig", "0.1").with_package_type("configuration")})
+    c.run("create . ")
+    c.run("list *:*")
+    # The binary is independent of the configuration version
+    assert "config_version" not in c.out

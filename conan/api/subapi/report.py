@@ -14,8 +14,9 @@ from conan.internal.util.runners import conan_run
 
 
 class ReportAPI:
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, helpers):
         self.conan_api = conan_api
+        self._helpers = helpers
 
     def diff(self, old_reference, new_reference, remotes, old_path=None, new_path=None, cwd=None):
         """
@@ -36,7 +37,8 @@ class ReportAPI:
                 export_ref, cache_path = _export_recipe_from_path(self.conan_api, path_to_conanfile,
                                                                   reference, remotes, cwd)
             exported_path = self.conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
-            _configure_source(self.conan_api, exported_path, export_ref, remotes)
+            _configure_source(self.conan_api, self._helpers.hook_manager, exported_path, export_ref,
+                              remotes)
             return export_ref, cache_path
 
 
@@ -77,7 +79,7 @@ class ReportAPI:
             "dst_prefix": dst_prefix,
         }
 
-def _configure_source(conan_api, conanfile_path, ref, remotes):
+def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
     app = ConanApp(conan_api)
     conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
                                          user=ref.user, channel=ref.channel, graph_lock=None,
@@ -97,7 +99,7 @@ def _configure_source(conan_api, conanfile_path, ref, remotes):
     conanfile.folders.set_base_source(source_folder)
     conanfile.folders.set_base_export_sources(export_source_folder)
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
-    config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
+    config_source(export_source_folder, conanfile, hook_manager)
 
 def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
     ref = RecipeReference.loads(reference)
