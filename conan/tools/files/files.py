@@ -443,38 +443,38 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
         # File I/O functions in the Windows API convert "/" to "\" as part of converting
         # the name to an NT-style name, except when using the "\\?\" prefix
         using_long_path_prefix = destination.startswith("\\\\?\\")
-        # These are the conditions that would need to run through each member
-        if not any([pattern, strip_root, using_long_path_prefix]):
-            return tarredgzippedFile.extractall(destination)
-        # Now, we have to process each member
-        common_folder = None
-        members = []
-        for member in tarredgzippedFile:
-            if pattern and not fnmatch(member.name, pattern):
-                continue  # Skip files that don’t match the pattern
-            if strip_root:
-                name = member.name.replace("\\", "/")
-                if not common_folder:
-                    splits = name.split("/", 1)
-                    # First case for a plain folder in the root
-                    if member.isdir() or len(splits) > 1:
-                        common_folder = splits[0]  # Find the root folder
-                    else:
-                        raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
-                if not name.startswith(common_folder):
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                # Adjust the member's name for extraction
-                member.name = name[len(common_folder) + 1:]
-                member.path = member.name
-                if member.linkpath and member.linkpath.startswith(common_folder):
-                    # https://github.com/conan-io/conan/issues/11065
-                    member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
-                    member.linkname = member.linkpath
-            if using_long_path_prefix:
-                member.name = member.name.replace("/", "\\")
-            # Let's gather each member
-            members.append(member)
-        tarredgzippedFile.extractall(destination, members=members)
+        if not pattern and not strip_root and not using_long_path_prefix:
+            tarredgzippedFile.extractall(destination)
+        else:
+            common_folder = None
+            members = []
+            for member in tarredgzippedFile:
+                if pattern and not fnmatch(member.name, pattern):
+                    continue  # Skip files that don’t match the pattern
+
+                if strip_root:
+                    name = member.name.replace("\\", "/")
+                    if not common_folder:
+                        splits = name.split("/", 1)
+                        # First case for a plain folder in the root
+                        if member.isdir() or len(splits) > 1:
+                            common_folder = splits[0]  # Find the root folder
+                        else:
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
+                    if not name.startswith(common_folder):
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
+                    # Adjust the member's name for extraction
+                    member.name = name[len(common_folder) + 1:]
+                    member.path = member.name
+                    if member.linkpath and member.linkpath.startswith(common_folder):
+                        # https://github.com/conan-io/conan/issues/11065
+                        member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
+                        member.linkname = member.linkpath
+                if using_long_path_prefix:
+                    member.name = member.name.replace("/", "\\")
+                # Let's gather each member
+                members.append(member)
+            tarredgzippedFile.extractall(destination, members=members)
 
 
 def check_sha1(conanfile, file_path, signature):
