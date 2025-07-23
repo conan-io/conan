@@ -195,11 +195,18 @@ class SSHRunner:
 
     def _sync_conan_config(self):
         # Transfer conan config to remote
+        cache_home = Path(self.conan_api.config.home())
+        cache_remote = Path(self.remote_conan_home)
+        # TODO: inspect each file and determine if references to local paths are present -> inform
+        # user that that profile/configuration file will not work on remote
         self.sftp_client.put_dir(
-            self.conan_api.config.home(),
-            self.remote_conan_home,
-            exclude_patterns=["p", ".conan.db", "*.pyc", "__pycache__", ".DS_Store", ".git"]
+            cache_home / "profiles",
+            cache_remote / "profiles",
+            exclude_patterns=(".conan.db", "*.pyc", "__pycache__", ".DS_Store", ".git")
         )
+        for file in ("settings.yml", "settings_user.yml", "global.conf", "remotes.json"):
+            if (cache_home / file).exists():
+                self.sftp_client.put(cache_home / file, cache_remote / file)
 
     def copy_working_conanfile_path(self):
         resolved_path = Path(self.args.path).resolve()
@@ -277,27 +284,26 @@ class RemoteConnection:
         self.sftp = self.client.open_sftp()
         self.runner_output = runner_output
 
-    def put(self, src: str, dst: str) -> None:
+    def put(self, src: Path, dst: Path) -> None:
         try:
-            self.sftp.put(src, dst)
+            self.sftp.put(src.as_posix(), dst.as_posix())
+            self.runner_output.verbose(f"Copying file {src.as_posix()} to {dst}")
         except IOError as e:
             self.runner_output.error(f"Unable to copy {src} to {dst}:\n{e}")
 
-    def put_dir(self, src: str, dst: str, exclude_patterns: Iterable[str] | None = None) -> None:
-        source_folder = Path(src)
-        destination_folder = Path(dst)
+    def put_dir(self, source_folder: Path, destination_folder: Path, exclude_patterns: Iterable[str] | None = None) -> None:
         for item in source_folder.iterdir():
-            dest_item = (destination_folder / item.name).as_posix()
+            dest_item = destination_folder / item.name
             # Check if item matches any exclude pattern
             if exclude_patterns and any(fnmatch.fnmatch(item.name, pattern) for pattern in exclude_patterns):
                 continue
             if item.is_file():
                 self.runner_output.verbose(f"Copying file {item.as_posix()} to {dest_item}")
-                self.put(item.as_posix(), dest_item)
+                self.put(item, dest_item)
             elif item.is_dir():
                 self.runner_output.verbose(f"Copying directory {item.as_posix()} to {dest_item}")
                 self.mkdir(dest_item, ignore_existing=True)
-                self.put_dir(item.as_posix(), dest_item, exclude_patterns)
+                self.put_dir(item, dest_item, exclude_patterns)
 
     def get(self, src: str, dst: str) -> None:
         try:
@@ -305,9 +311,9 @@ class RemoteConnection:
         except IOError as e:
             self.runner_output.error(f"Unable to copy from remote {src} to {dst}:\n{e}")
 
-    def mkdir(self, folder: str, ignore_existing=False) -> None:
+    def mkdir(self, folder: Path, ignore_existing=False) -> None:
         try:
-            self.sftp.mkdir(folder)
+            self.sftp.mkdir(folder.as_posix())
         except IOError:
             if ignore_existing:
                 pass
