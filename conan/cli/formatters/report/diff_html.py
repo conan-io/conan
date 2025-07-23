@@ -31,15 +31,19 @@ diff_html = r"""
                 background: #f4f4f4;
                 border-right: 1px solid #ccc;
             }
-            .sidebar li { line-height: 1.5; list-style: none; }
-            .sidebar li.file-new { list-style: circle; padding-left: 0; margin-left: 25px; }
-            .sidebar li.file-old { list-style: square; padding-left: 0; margin-left: 25px; }
+            details {
+                text-wrap: nowrap;
+            }
+            .sidebar li { line-height: 1.5; list-style: none; list-style-position: inside; }
+            .sidebar li.file-new { list-style: circle; padding-left: 0; margin-left: 22px; }
+            .sidebar li.file-old { list-style: square; padding-left: 0; margin-left: 22px; }
             .side-link {
                 text-wrap: nowrap;
             }
             .file-list { padding-left: 10px; }
             .file-list li ul {
                 border-left: 2px solid #ddd;
+                margin-left: 3px;
             }
             li ul { padding-left: 1ch; }
             .content {
