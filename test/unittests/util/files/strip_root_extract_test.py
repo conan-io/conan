@@ -356,6 +356,6 @@ def test_decompressing_using_long_path_prefix():
     untargz(tgz_file, destination=extract_folder, strip_root=True)
     assert "contentsfile1" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file1"))
     assert "contentsfile2" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file2"))
-    untargz(tgz_file, destination=extract_folder)
+    untargz(tgz_file, destination=extract_folder, strip_root=False)
     assert "contentsfile1" in load(ConanFileMock(), os.path.join(extract_folder, "root", "parent", "bin", "file1"))
     assert "contentsfile2" in load(ConanFileMock(), os.path.join(extract_folder, "root", "parent", "bin", "file2"))
