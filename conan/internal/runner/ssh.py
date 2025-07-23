@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 import fnmatch
 import pathlib
 import tempfile
@@ -291,7 +291,7 @@ class RemoteConnection:
         except IOError as e:
             self.runner_output.error(f"Unable to copy {src} to {dst}:\n{e}")
 
-    def put_dir(self, source_folder: Path, destination_folder: Path, exclude_patterns: Iterable[str] | None = None) -> None:
+    def put_dir(self, source_folder: Path, destination_folder: Path, exclude_patterns: Optional[Iterable[str]] = None) -> None:
         for item in source_folder.iterdir():
             dest_item = destination_folder / item.name
             # Check if item matches any exclude pattern
