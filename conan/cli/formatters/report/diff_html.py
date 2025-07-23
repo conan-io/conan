@@ -34,6 +34,9 @@ diff_html = r"""
             .sidebar li { line-height: 1.5; list-style: none; }
             .sidebar li.file-new { list-style: circle; padding-left: 0; margin-left: 25px; }
             .sidebar li.file-old { list-style: square; padding-left: 0; margin-left: 25px; }
+            .side-link {
+                text-wrap: nowrap;
+            }
             .file-list { padding-left: 10px; }
             .file-list li ul {
                 border-left: 2px solid #ddd;
