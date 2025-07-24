@@ -34,6 +34,7 @@ def test_cmake_find_none():
             def package_info(self):
                 self.cpp_info.builddirs = ["qt/cmake"]
                 self.cpp_info.set_property("cmake_find_mode", "none")
+                self.cpp_info.set_property("cmake_file_name", "Qt5")
         """)
 
     cmake = textwrap.dedent("""
@@ -74,7 +75,7 @@ def test_cmake_find_none():
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
-        find_package(Qt5 CONFIG REQUIRED)
+        find_package(karchive CONFIG REQUIRED)
         """)
 
     consumer = textwrap.dedent("""
@@ -84,11 +85,11 @@ def test_cmake_find_none():
         class pkgRecipe(ConanFile):
             package_type = "static-library"
             settings = "os", "compiler", "build_type", "arch"
-            generators = "CMakeToolchain"
+            generators = "CMakeToolchain", "CMakeDeps"
 
             def requirements(self):
-                self.requires("qt/0.1")
                 self.requires("karchive/0.1")
+                self.requires("qt/0.1")
 
             def build(self):
                 cmake = CMake(self)
