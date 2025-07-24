@@ -41,12 +41,12 @@ def test_cmake_find_none():
         project(MyHello NONE)
 
         add_library(qt INTERFACE)
-        install(TARGETS qt EXPORT qtConfig)
+        install(TARGETS qt EXPORT Qt5Config)
         export(TARGETS qt
             NAMESPACE qt::
-            FILE "${CMAKE_CURRENT_BINARY_DIR}/qtConfig.cmake"
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/Qt5Config.cmake"
         )
-        install(EXPORT qtConfig
+        install(EXPORT Qt5Config
             DESTINATION "${CMAKE_INSTALL_PREFIX}/qt/cmake"
             NAMESPACE qt::
         )
@@ -74,7 +74,7 @@ def test_cmake_find_none():
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
-        find_package(qt CONFIG REQUIRED)
+        find_package(Qt5 CONFIG REQUIRED)
         """)
 
     consumer = textwrap.dedent("""
