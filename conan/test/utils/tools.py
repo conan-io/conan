@@ -471,7 +471,7 @@ class TestClient:
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
+        return PkgCache(self.cache_folder, ConfigAPI._load_config(self.cache_folder))
 
     @property
     def paths(self):
