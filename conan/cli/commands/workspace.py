@@ -86,7 +86,7 @@ def workspace_remove(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().info(f"Removed from workspace: {removed}")
 
 
-def print_json(data):
+def _print_json(data):
     results = data["info"]
     myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
@@ -103,7 +103,7 @@ def _print_workspace_info(data):
     print_serial(data["info"])
 
 
-@conan_subcommand(formatters={"text": _print_workspace_info, "json": print_json})
+@conan_subcommand(formatters={"text": _print_workspace_info, "json": _print_json})
 def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Display info for current workspace
@@ -217,17 +217,28 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     requires = conan_api.workspace.select_packages(args.pkg)
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
                                                      profile_host, profile_build, lockfile,
-                                                     remotes, args.build, args.update)
+                                                     remotes, update=args.update)
     deps_graph.report_graph_error()
     print_graph_basic(deps_graph)
+
+    buildmode = args.build or []
+    if "editable" not in buildmode:
+        buildmode.append("editable")
+    conan_api.graph.analyze_binaries(deps_graph, buildmode, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    install_graph = conan_api.graph.build_order(deps_graph, order_by="recipe", reduce=True,
+                                                profile_args=args)
+    install_order_serialized = install_graph.install_build_order()
+    ConanOutput().title("Build order")
+    for i, level in enumerate(install_order_serialized["order"]):
+        level_refs = [item["ref"] for item in level]
+        ConanOutput().info(f"Level {i}: " + ",".join(level_refs))
 
     # Collapsing the graph
     ws_graph = conan_api.workspace.super_build_graph(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
 
-    conan_api.graph.analyze_binaries(ws_graph, args.build, remotes=remotes, update=args.update,
-                                     lockfile=lockfile)
     print_graph_packages(ws_graph)
     conan_api.install.install_binaries(deps_graph=ws_graph, remotes=remotes)
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None
@@ -250,8 +261,8 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     Clean the temporary build folders when possible
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
-                        help="Path to a folder where the workspace will be initialized. "
-                             "If  does not exist")
+                           help="Path to a folder where the workspace will be initialized. "
+                                "If does not exist")
     args = parser.parse_args(*args)
     conan_api.workspace.init(args.path)
 
