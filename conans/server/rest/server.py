@@ -1,5 +1,6 @@
 import bottle
 from bottle import Bottle
+from bottle_autodocs import bottle_autodocs
 
 from conans.server.rest.api_v2 import ApiV2
 from conans.server.rest.controller.v2.ping import PingController
@@ -21,6 +22,7 @@ class ConanServer(object):
 
         server_capabilities = server_capabilities or []
         self.root_app = bottle.Bottle()
+        self.root_app.install(bottle_autodocs.BottleAutoDocs())
 
         self.api_v2 = ApiV2(credentials_manager, server_capabilities)
         self.api_v2.authorizer = authorizer
