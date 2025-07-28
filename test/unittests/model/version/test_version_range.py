@@ -95,7 +95,7 @@ def test_range(version_range, conditions, versions_in, versions_out):
     [', include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     [', include_prerelease', None, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
 
-    ['>1 <2.0', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+    ['>1 <2.0', True, ["1.5.1", "1.5.1-pre1"], ["1.0-pre.1", "2.1-pre1"]],
     ['>1 <2.0', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     ['>1 <2.0', None, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
 
@@ -103,7 +103,7 @@ def test_range(version_range, conditions, versions_in, versions_out):
     ['>1- <2.0', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     ['>1- <2.0, include_prerelease', None, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
 
-    ['>1 <2.0, include_prerelease', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+    ['>1 <2.0, include_prerelease', True, ["1.5.1", "1.5.1-pre1"], ["1.0-pre.1", "2.1-pre1"]],
     ['>1 <2.0, include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
     ['>1 <2.0, include_prerelease', None, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
 
