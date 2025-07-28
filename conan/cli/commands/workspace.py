@@ -221,24 +221,12 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     deps_graph.report_graph_error()
     print_graph_basic(deps_graph)
 
-    buildmode = args.build or []
-    if "editable" not in buildmode:
-        buildmode.append("editable")
-    conan_api.graph.analyze_binaries(deps_graph, buildmode, remotes=remotes, update=args.update,
-                                     lockfile=lockfile)
-    install_graph = conan_api.graph.build_order(deps_graph, order_by="recipe", reduce=True,
-                                                profile_args=args)
-    install_order_serialized = install_graph.install_build_order()
-    ConanOutput().title("Build order")
-    for i, level in enumerate(install_order_serialized["order"]):
-        level_refs = [item["ref"] for item in level]
-        ConanOutput().info(f"Level {i}: " + ",".join(level_refs))
-
     # Collapsing the graph
     ws_graph = conan_api.workspace.super_build_graph(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
-
+    conan_api.graph.analyze_binaries(ws_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
     print_graph_packages(ws_graph)
     conan_api.install.install_binaries(deps_graph=ws_graph, remotes=remotes)
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None

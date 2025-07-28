@@ -35,6 +35,8 @@ def test_metabuild():
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
     c.run("workspace super-install")
+    cmake = c.load("CMakeLists.txt")
+    assert "set(CONAN_WS_BUILD_ORDER liba libb app1)" in cmake
     assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
     build_folder = "build/Release" if platform.system() != "Windows" else "build"
     assert os.path.exists(os.path.join(c.current_folder, build_folder, "generators"))

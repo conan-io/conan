@@ -239,6 +239,14 @@ class WorkspaceAPI:
                 "packages": self._ws.packages()}
 
     def super_build_graph(self, deps_graph, profile_host, profile_build):
+        order = []
+        for level in deps_graph.by_levels():
+            items = [item for item in level if item.recipe == "Editable"]
+            items = [{"ref": item.ref} for item in items]
+            if items:
+                order.append(items)
+        self._ws.build_order(order)
+
         ConanOutput().title("Collapsing workspace packages")
 
         root_class = self._ws.root_conanfile()
@@ -292,7 +300,6 @@ class WorkspaceAPI:
             ref, _ = exported_ref
             exported.append(ref)
         return exported
-
 
     def select_packages(self, packages):
         self._check_ws()

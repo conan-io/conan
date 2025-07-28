@@ -30,6 +30,8 @@ function(add_project SUBFOLDER)
     FetchContent_MakeAvailable(${SUBFOLDER})
 endfunction()
 
+set(CONAN_WS_BUILD_ORDER )
+
 add_project(liba)
 # They should be defined in the liba/CMakeLists.txt, but we can fix it here
 add_library(liba::liba ALIAS liba)
@@ -38,9 +40,11 @@ add_library(libb::libb ALIAS libb)
 add_project(app1)
 """
 
-conanfile = '''\
+conanfile = r'''\
+import re
 from conan import Workspace
 from conan import ConanFile
+from conan.tools.files import load, save
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
 
@@ -64,6 +68,15 @@ class MyWs(ConanFile):
 class Ws(Workspace):
     def root_conanfile(self):
         return MyWs
+
+    def build_order(self, order):
+        super().build_order(order)
+        cmakelists = load(self, "CMakeLists.txt")
+        pkglist = " ".join([item["ref"].name for level in order for item in level])
+        cmake_var = f"set(CONAN_WS_BUILD_ORDER {pkglist})"
+        edit = re.search(r"set\(CONAN_WS_BUILD_ORDER ([^)]*)\)", cmakelists)
+        cmakelists = cmakelists.replace(edit.group(0), cmake_var)
+        save(self, "CMakeLists.txt", cmakelists)
 '''
 
 workspace_files = {"conanws.yml": conanws_yml,
