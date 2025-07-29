@@ -97,7 +97,7 @@ def test_catalyst(arch):
         os.subsystem.ios_version = 16.1
         arch = {arch}
         [buildenv]
-        DEVELOPER_DIR=/Applications/Xcode_15.4.app/Contents/Developer
+        DEVELOPER_DIR=/Applications/Xcode_16.0.app/Contents/Developer
         """).format(arch=arch)
 
     t = TestClient()
