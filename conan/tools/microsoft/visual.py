@@ -315,7 +315,7 @@ def _vcvars_versions(conanfile):
                       "v144": "17"}.get(toolset_version)
         if vs_version is None:
             raise ConanException("Visual Studio Runtime version (v140-v144) not defined. Please, "
-                                 "add the compiler.runtime_version=[14 - 17] setting to your profile.")
+                                 "add the compiler.runtime_version=[v140-v144] setting to your profile.")
         vcvars_ver = {"v140": "14.0",
                       "v141": "14.1",
                       "v142": "14.2",
