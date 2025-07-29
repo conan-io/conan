@@ -1,6 +1,7 @@
 import copy
 from collections import OrderedDict, defaultdict
 
+from conan.errors import ConanException
 from conan.tools.env.environment import ProfileEnvironment
 from conan.internal.model.conf import ConfDefinition
 from conan.internal.model.options import Options
@@ -149,6 +150,11 @@ class Profile:
 
         self.replace_requires.update(other.replace_requires)
         self.replace_tool_requires.update(other.replace_tool_requires)
+
+        runner_type = self.runner.get("type")
+        other_runner_type = other.runner.get("type")
+        if runner_type and other_runner_type and runner_type != other_runner_type:
+            raise ConanException(f"Found different runner types in profile composition ({runner_type} and {other_runner_type})")
         self.runner.update(other.runner)
 
         current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}

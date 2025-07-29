@@ -19,6 +19,7 @@ from conan.errors import ConanException
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import load
 
 
@@ -435,7 +436,10 @@ class GraphBinariesAnalyzer:
             self._evaluate_node(n, mode, remotes, update)
 
         levels = deps_graph.by_levels()
-        config_version = self._config_version()
+        # When creating a "conan config install-pkg" package, it should be independent of conf
+        root_pkg_type = deps_graph.root.edges[0].dst.conanfile.package_type \
+            if deps_graph.root.edges else None
+        config_version = self._config_version() if root_pkg_type is not PackageType.CONF else None
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)

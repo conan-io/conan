@@ -15,7 +15,8 @@ class TestRequiredVersion:
         client = TestClient(light=True)
         client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
         client.run("help", assert_error=True)
-        assert f"Current Conan version (1.26.0) does not satisfy the defined one ({required_version})" in client.out
+        assert ("Current Conan version (1.26.0) does not satisfy the defined "
+                f"one ({required_version})") in client.out
 
     @mock.patch("conan.__version__", "1.22.0")
     def test_exact_version(self):
@@ -52,4 +53,5 @@ class TestRequiredVersion:
              f"core:required_conan_version={required_version}")
         c = TestClient(cache_folder, light=True)
         c.run("version", assert_error=True)
-        assert f"Current Conan version ({__version__}) does not satisfy the defined one ({required_version})" in c.out
+        assert (f"Current Conan version ({__version__}) does not satisfy "
+                f"the defined one ({required_version})") in c.out

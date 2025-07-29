@@ -7,12 +7,16 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 
 
+def docker_from_env():
+    try:
+        return docker.from_env()
+    except Exception:
+        return docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+
+
 def docker_skip(test_image='ubuntu:22.04'):
     try:
-        try:
-            docker_client = docker.from_env()
-        except:
-            docker_client = docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+        docker_client = docker_from_env()
         if test_image:
             docker_client.images.pull(test_image)
     except docker.errors.DockerException:
@@ -459,7 +463,7 @@ def test_create_docker_runner_from_configfile_with_args():
     client = TestClient()
 
     # Ensure the network exists
-    docker_client = docker.from_env()
+    docker_client = docker_from_env()
     docker_client.networks.create("my-network")
 
     configfile = textwrap.dedent(f"""
@@ -549,6 +553,45 @@ def test_create_docker_runner_default_build_profile():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
+def test_create_docker_runner_profile_composition():
+    """
+    Tests the ``conan create . `` with profile composition
+    """
+    client = TestClient()
+
+    profile = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    image=conan-runner-ninja-test
+    """)
+
+    profile_extension = textwrap.dedent(f"""\
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path("Dockerfile_ninja")}
+    build_context={conan_base_path()}
+    cache=copy
+    remove=True
+    """)
+    client.save({"profile": profile, "profile_extension": profile_extension})
+    client.run("new cmake_lib -d name=pkg -d version=2.0")
+    client.run("create . -pr:h profile -pr:h profile_extension")
+
+    assert "[100%] Built target example" in client.out
+    assert "Restore: pkg/2.0 in pkgc6abef0178849" in client.out
+    assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
+    assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
 
 
 @pytest.mark.docker_runner

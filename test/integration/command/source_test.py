@@ -1,7 +1,6 @@
 import os
 import re
 import textwrap
-import unittest
 from collections import OrderedDict
 
 import pytest
@@ -11,7 +10,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 
 
-class SourceTest(unittest.TestCase):
+class TestSource:
 
     def test_local_flow_patch(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -39,14 +38,14 @@ class TestexportConan(ConanFile):
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
         client.run("source .")
-        self.assertIn("conanfile.py (test/0.1): PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py (test/0.1): HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py (test/0.1): PYTHON: mypython", client.out)
+        assert "conanfile.py (test/0.1): PATCH: mypatch" in client.out
+        assert "conanfile.py (test/0.1): HEADER: my hello header!" in client.out
+        assert "conanfile.py (test/0.1): PYTHON: mypython" in client.out
 
         client.run("create . ")
-        self.assertIn("test/0.1: PATCH: mypatch", client.out)
-        self.assertIn("test/0.1: HEADER: my hello header!", client.out)
-        self.assertIn("test/0.1: PYTHON: mypython", client.out)
+        assert "test/0.1: PATCH: mypatch" in client.out
+        assert "test/0.1: HEADER: my hello header!" in client.out
+        assert "test/0.1: PYTHON: mypython" in client.out
 
     def test_apply_patch(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -65,11 +64,11 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})
         client.run("source .")
-        self.assertIn("PATCH: this is my patch", client.out)
+        assert "PATCH: this is my patch" in client.out
         client.run("source .")
-        self.assertIn("PATCH: this is my patch", client.out)
+        assert "PATCH: this is my patch" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("PATCH: this is my patch", client.out)
+        assert "PATCH: this is my patch" in client.out
 
     def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
@@ -80,7 +79,7 @@ class ConanLib(ConanFile):
         client = TestClient(light=True)
         client.save({CONANFILE: conanfile})
         client.run("source .")
-        self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
+        assert "This package defines both 'os' and 'os_build'" not in client.out
 
     def test_source_with_path_errors(self):
         client = TestClient(light=True)
@@ -88,10 +87,8 @@ class ConanLib(ConanFile):
 
         # Path with conanfile.txt
         client.run("source conanfile.txt", assert_error=True)
-        self.assertIn(
-            "A conanfile.py is needed, %s is not acceptable"
-            % os.path.join(client.current_folder, "conanfile.txt"),
-            client.out)
+        assert "A conanfile.py is needed, %s is not acceptable" \
+                      % os.path.join(client.current_folder, "conanfile.txt") in client.out
 
     def test_source_local_cwd(self):
         conanfile = '''
@@ -111,8 +108,8 @@ class ConanLib(ConanFile):
 
         client.run("install .")
         client.run("source .")
-        self.assertIn("conanfile.py (hello/0.1): Calling source()", client.out)
-        self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % client.current_folder, client.out)
+        assert "conanfile.py (hello/0.1): Calling source()" in client.out
+        assert "conanfile.py (hello/0.1): cwd=>%s" % client.current_folder in client.out
 
     def test_local_source(self):
         conanfile = '''
@@ -131,15 +128,15 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
-        self.assertIn("conanfile.py: Running source!", client.out)
-        self.assertIn("ERROR: conanfile.py: Error in source() method, line 9", client.out)
+        assert "conanfile.py: Running source!" in client.out
+        assert "ERROR: conanfile.py: Error in source() method, line 9" in client.out
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Calling source() in", client.out)
-        self.assertIn("conanfile.py: Running source!", client.out)
-        self.assertEqual("Hello World", client.load("file1.txt"))
+        assert "conanfile.py: Calling source() in" in client.out
+        assert "conanfile.py: Running source!" in client.out
+        assert "Hello World" == client.load("file1.txt")
 
     def test_local_source_layout_root(self):
         # Ensure that if a root folder is specified Conan source method
@@ -198,7 +195,7 @@ class ConanLib(ConanFile):
         # download the sources from server0
         client.run("install --requires=hello/0.1@ -r server0")
         client.run("upload hello/0.1 -r server1")
-        self.assertIn("Sources downloaded from 'server0'", client.out)
+        assert "Sources downloaded from 'server0'" in client.out
 
         # install from server1 that has the sources, upload to server1
         # Will not download sources, revision already in server
@@ -206,13 +203,13 @@ class ConanLib(ConanFile):
         client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
         assert f"'hello/0.1#{rrev}' already in server, skipping upload" in client.out
-        self.assertNotIn("Sources downloaded from 'server0'", client.out)
+        assert "Sources downloaded from 'server0'" not in client.out
 
         # install from server0 and build
         # download sources from server0
         client.run("remove * -c")
         client.run("install --requires=hello/0.1@ -r server0 --build='*'")
-        self.assertIn("Sources downloaded from 'server0'", client.out)
+        assert "Sources downloaded from 'server0'" in client.out
 
     def test_source_method_called_once(self):
         """

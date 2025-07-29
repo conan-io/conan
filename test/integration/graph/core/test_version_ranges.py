@@ -17,7 +17,7 @@ class TestVersionRanges(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/[>=0.0]"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
 
@@ -40,7 +40,7 @@ class TestVersionRanges(GraphManagerTest):
                                ]:
             consumer = self.recipe_consumer("app/0.1", [f"libb/[{expr}]"])
             deps_graph = self.build_consumer(consumer)
-            self.assertEqual(2, len(deps_graph.nodes))
+            assert 2 == len(deps_graph.nodes)
             app = deps_graph.root
             libb = app.edges[0].dst
 
@@ -55,7 +55,7 @@ class TestVersionRanges(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphMissingError
 
-        self.assertEqual(1, len(deps_graph.nodes))
+        assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
         self._check_node(app, "app/0.1", deps=[])
 
@@ -68,7 +68,7 @@ class TestVersionRanges(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphMissingError
 
-        self.assertEqual(1, len(deps_graph.nodes))
+        assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
 
         self._check_node(app, "app/0.1", deps=[])
@@ -82,7 +82,7 @@ class TestVersionRanges(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphMissingError
 
-        self.assertEqual(1, len(deps_graph.nodes))
+        assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
 
         self._check_node(app, "app/0.1", deps=[])
@@ -96,7 +96,7 @@ class TestVersionRanges(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphMissingError
 
-        self.assertEqual(1, len(deps_graph.nodes))
+        assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
 
         self._check_node(app, "app/0.1", deps=[])
@@ -113,7 +113,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -135,7 +135,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -156,7 +156,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -178,7 +178,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphConflictError
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         app.enabled_remotes = [Remote("foo", None)]
         libb = app.edges[0].dst
@@ -201,7 +201,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphConflictError
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -223,7 +223,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -241,7 +241,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -259,7 +259,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[<1.0]"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -279,7 +279,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphConflictError
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
 
@@ -293,7 +293,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[>1.0]", force=True))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -313,7 +313,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.4]"))
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
@@ -336,7 +336,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
 
         # This is no longer a conflict, and Conan knows that liba/2.0 is a valid joint solution
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba = libb.edges[0].dst
