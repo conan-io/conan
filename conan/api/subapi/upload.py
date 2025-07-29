@@ -15,8 +15,9 @@ from conan.errors import ConanException
 
 class UploadAPI:
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, api_helpers):
         self.conan_api = conan_api
+        self._api_helpers = api_helpers
 
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
@@ -45,7 +46,7 @@ class UploadAPI:
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
         app = ConanApp(self.conan_api)
-        preparator = PackagePreparator(app, self.conan_api.config.global_conf)
+        preparator = PackagePreparator(app, self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
@@ -103,7 +104,7 @@ class UploadAPI:
         add_urls(package_list, remote)
 
     def upload_backup_sources(self, files):
-        config = self.conan_api.config.global_conf
+        config = self._api_helpers.global_conf
         url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
             return

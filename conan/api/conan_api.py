@@ -55,21 +55,21 @@ class ConanAPI:
         self.migrate()
 
         self.config = ConfigAPI(self, self._api_helpers)
-        self.remotes = RemotesAPI(self)
+        self.remotes = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
         # Search recipes by wildcard and packages filtering by configuration
         self.search = SearchAPI(self)
         # Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
-        self.profiles = ProfilesAPI(self)
+        self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
-        self.upload = UploadAPI(self)
+        self.upload = UploadAPI(self, self._api_helpers)
         self.download = DownloadAPI(self)
-        self.cache = CacheAPI(self)
+        self.cache = CacheAPI(self, self._api_helpers)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
         self.audit = AuditAPI(self)
@@ -106,10 +106,9 @@ class ConanAPI:
             # consumers of this shouldn't keep an instance
             if self._global_conf is None:
                 config = load_global_conf(self._conan_api.home_folder)
-                config.update_conf_definition(config)
                 if self._cli_core_confs is not None:
                     config.update_conf_definition(self._cli_core_confs)
-                required_range_new = config.global_conf.get("core:required_conan_version")
+                required_range_new = config.get("core:required_conan_version")
                 if required_range_new:
                     validate_conan_version(required_range_new)
                 self._global_conf = config

@@ -42,7 +42,8 @@ class ConanBasicApp:
         - Global configuration
         - Cache home folder
         """
-        global_conf = conan_api.config.global_conf
+        # TODO: Remove this global_conf from here
+        global_conf = conan_api._api_helpers.global_conf  # noqa
         self.global_conf = global_conf
         self.conan_api = conan_api
         cache_folder = conan_api.home_folder

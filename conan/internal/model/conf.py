@@ -10,7 +10,6 @@ from collections import OrderedDict
 
 from jinja2 import Environment, FileSystemLoader
 
-from conan import conan_version
 from conan.errors import ConanException
 from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
@@ -743,7 +742,6 @@ class ConfDefinition:
 
 
 def load_global_conf(home_folder):
-    # Do not document yet, keep it private
     home_paths = HomePaths(home_folder)
     global_conf_path = home_paths.global_conf_path
     new_config = ConfDefinition()
@@ -754,6 +752,7 @@ def load_global_conf(home_folder):
             import distro
         template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
         home_folder = home_folder.replace("\\", "/")
+        from conan import conan_version
         content = template.render({"platform": platform, "os": os, "distro": distro,
                                    "conan_version": conan_version,
                                    "conan_home_folder": home_folder,
