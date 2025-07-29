@@ -64,7 +64,7 @@ class ConfigAPI:
         root_node.is_conf = True
         update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, update, self._conan_api.config.global_conf)
+                                   update, update, self._helpers.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 
         # Basic checks of the package: correct package_type and no-dependencies
