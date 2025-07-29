@@ -24,6 +24,7 @@ from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.hook_manager import HookManager
+from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
@@ -50,13 +51,10 @@ class ConanAPI:
         init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
-        # This API is depended upon by the subsequent ones, it should be initialized first
-        self.config = ConfigAPI(self)
-        _check_conan_version(self)
-
         self._api_helpers = self._ApiHelpers(self)
         self.migrate()
 
+        self.config = ConfigAPI(self, self._api_helpers)
         self.remotes = RemotesAPI(self)
         self.command = CommandAPI(self)
         # Search recipes by wildcard and packages filtering by configuration
@@ -85,11 +83,8 @@ class ConanAPI:
         """
         # TODO: Think order of reinitialization for helpers
         self._api_helpers.reinit()
-        self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()
-
-        _check_conan_version(self)
 
     def migrate(self):
         # Migration system
@@ -102,12 +97,35 @@ class ConanAPI:
         def __init__(self, conan_api):
             self._conan_api = conan_api
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            self._global_conf = None
+            self._cli_core_confs = None
+
+        @property
+        def global_conf(self):
+            # Lazy loading
+            # consumers of this shouldn't keep an instance
+            if self._global_conf is None:
+                config = load_global_conf(self._conan_api.home_folder)
+                config.update_conf_definition(config)
+                if self._cli_core_confs is not None:
+                    config.update_conf_definition(self._cli_core_confs)
+                required_range_new = config.global_conf.get("core:required_conan_version")
+                if required_range_new:
+                    validate_conan_version(required_range_new)
+                self._global_conf = config
+            return self._global_conf
+
+        def set_core_confs(self, core_confs):
+            confs = ConfDefinition()
+            for c in core_confs:
+                if not CORE_CONF_PATTERN.match(c):
+                    raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
+            confs.loads("\n".join(core_confs))
+            confs.validate()
+            self._cli_core_confs = confs
+            # Last but not least, apply the new configuration
+            self._conan_api.reinit()
 
         def reinit(self):
             self.hook_manager.reinit()
-
-
-def _check_conan_version(conan_api):
-    required_range_new = conan_api.config.global_conf.get("core:required_conan_version")
-    if required_range_new:
-        validate_conan_version(required_range_new)
+            self._global_conf = None

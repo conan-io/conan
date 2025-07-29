@@ -1,14 +1,9 @@
 import json
 import os
-import platform
-import textwrap
 import yaml
-from jinja2 import Environment, FileSystemLoader
 
-from conan import conan_version
 from conan.api.output import ConanOutput
 
-from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.default_settings import default_settings_yml
@@ -16,7 +11,7 @@ from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
-from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
+from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference, PkgReference
 from conan.internal.model.settings import Settings
@@ -25,10 +20,9 @@ from conan.internal.util.files import load, save, rmdir, remove
 
 class ConfigAPI:
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
-        self._new_config = None
-        self._cli_core_confs = None
+        self._helpers = helpers
 
     def home(self):
         """ return the current Conan home folder containing the configuration files like
@@ -118,58 +112,10 @@ class ConfigAPI:
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):
-        return self.global_conf.get(name, default=default, check_type=check_type)
+        return self._helpers.global_conf.get(name, default=default, check_type=check_type)
 
     def show(self, pattern):
-        return self.global_conf.show(pattern)
-
-    @property
-    def global_conf(self):
-        """ this is the new global.conf to replace the old conan.conf that contains
-        configuration defined with the new syntax as in profiles, this config will be composed
-        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
-        """
-        # Lazy loading
-        if self._new_config is None:
-            self._new_config = ConfDefinition()
-            self._populate_global_conf()
-        return self._new_config
-
-    def _populate_global_conf(self):
-        cache_folder = self._conan_api.cache_folder
-        new_config = self._load_config(cache_folder)
-        self._new_config.update_conf_definition(new_config)
-        if self._cli_core_confs is not None:
-            self._new_config.update_conf_definition(self._cli_core_confs)
-
-    @staticmethod
-    def _load_config(home_folder):
-        # Do not document yet, keep it private
-        home_paths = HomePaths(home_folder)
-        global_conf_path = home_paths.global_conf_path
-        new_config = ConfDefinition()
-        if os.path.exists(global_conf_path):
-            text = load(global_conf_path)
-            distro = None
-            if platform.system() in ["Linux", "FreeBSD"]:
-                import distro
-            template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-            home_folder = home_folder.replace("\\", "/")
-            content = template.render({"platform": platform, "os": os, "distro": distro,
-                                       "conan_version": conan_version,
-                                       "conan_home_folder": home_folder,
-                                       "detect_api": detect_api})
-            new_config.loads(content)
-        else:  # creation of a blank global.conf file for user convenience
-            default_global_conf = textwrap.dedent("""\
-                # Core configuration (type 'conan config list' to list possible values)
-                # e.g, for CI systems, to raise if user input would block
-                # core:non_interactive = True
-                # some tools.xxx config also possible, though generally better in profiles
-                # tools.android:ndk_path = my/path/to/android/ndk
-                """)
-            save(global_conf_path, default_global_conf)
-        return new_config
+        return self._helpers.global_conf.show(pattern)
 
     @property
     def builtin_confs(self):
@@ -217,7 +163,7 @@ class ConfigAPI:
 
     def clean(self):
         contents = os.listdir(self.home())
-        packages_folder = (self.global_conf.get("core.cache:storage_path") or
+        packages_folder = (self._helpers.global_conf.get("core.cache:storage_path") or
                            os.path.join(self.home(), "p"))
         for content in contents:
             content_path = os.path.join(self.home(), content)
@@ -231,19 +177,3 @@ class ConfigAPI:
         self._conan_api.reinit()
         # CHECK: This also generates a remotes.json that is not there after a conan profile show?
         self._conan_api.migrate()
-
-    def set_core_confs(self, core_confs):
-        confs = ConfDefinition()
-        for c in core_confs:
-            if not CORE_CONF_PATTERN.match(c):
-                raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
-        confs.loads("\n".join(core_confs))
-        confs.validate()
-        self._cli_core_confs = confs
-        # Last but not least, apply the new configuration
-        self._conan_api.reinit()
-
-    def reinit(self):
-        if self._new_config is not None:
-            self._new_config.clear()
-            self._populate_global_conf()
