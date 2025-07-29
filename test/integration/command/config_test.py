@@ -278,7 +278,6 @@ def test_config_reinit():
 def test_config_reinit_core_conf():
     tc = TestClient(light=True)
     tc.save_home({"extensions/commands/cmd_foo.py": textwrap.dedent("""
-        import json
         from conan.cli.command import conan_command
         from conan.api.output import ConanOutput
 
@@ -286,7 +285,7 @@ def test_config_reinit_core_conf():
         def foo(conan_api, parser, *args, **kwargs):
             ''' Foo '''
             parser.parse_args(*args)
-            ConanOutput().info(f"Retry: {conan_api.config.global_conf.get('core.upload:retry', check_type=int)}")
+            ConanOutput().info(f"Retry: {conan_api.config.get('core.upload:retry', check_type=int)}")
     """)})
     tc.run("foo -cc core.upload:retry=7")
     assert "Retry: 7" in tc.out
