@@ -60,7 +60,7 @@ class ProfilesAPI:
 
         global_conf = self._api_helpers.global_conf
         global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
         cwd = os.getcwd()
         profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
@@ -78,7 +78,7 @@ class ProfilesAPI:
         assert isinstance(profiles, list), "Please provide a list of profiles"
         global_conf = self._api_helpers.global_conf
         global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
 
         profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,

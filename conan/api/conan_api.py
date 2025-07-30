@@ -25,6 +25,7 @@ from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.hook_manager import HookManager
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
+from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
@@ -123,3 +124,7 @@ class ConanAPI:
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
+
+        @property
+        def settings_yml(self):
+            return load_settings_yml(self._conan_api.home_folder)

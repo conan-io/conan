@@ -1,12 +1,10 @@
 import json
 import os
-import yaml
 
 from conan.api.output import ConanOutput
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-from conan.internal.default_settings import default_settings_yml
 from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
@@ -14,7 +12,6 @@ from conan.errors import ConanException
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference, PkgReference
-from conan.internal.model.settings import Settings
 from conan.internal.util.files import load, save, rmdir, remove
 
 
@@ -35,7 +32,9 @@ class ConfigAPI:
 
     def install(self, path_or_url, verify_ssl, config_type=None, args=None,
                 source_folder=None, target_folder=None):
-        # TODO: We probably want to split this into git-folder-http cases?
+        """ install Conan configuration from a git repo, from a zip file in an http server
+        or a local folder
+        """
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
         requester = self._conan_api.remotes.requester
@@ -46,8 +45,8 @@ class ConfigAPI:
 
     def install_pkg(self, ref, lockfile=None, force=False, remotes=None,
                     profile=None) -> PkgReference:
-        """ Install configuration stored inside a Conan package
-        The installation of configuration will reinitialize (call reinit()) the full ConanAPI
+        """ install configuration stored inside a Conan package
+        The installation of configuration will reinitialize the full ConanAPI
         """
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
@@ -112,56 +111,25 @@ class ConfigAPI:
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):
+        """ get the value of a global.conf item
+        """
         return self._helpers.global_conf.get(name, default=default, check_type=check_type)
 
-    def show(self, pattern):
+    def show(self, pattern) -> dict:
+        """ get the values of global.conf for those configurations that matches the pattern
+        """
         return self._helpers.global_conf.show(pattern)
 
-    @property
-    def builtin_confs(self):
+    @staticmethod
+    def conf_list():
+        """ list all the available built-in configurations
+        """
         return BUILT_IN_CONFS
 
-    @property
-    def settings_yml(self):
-        """Returns {setting: [value, ...]} defining all the possible
-                   settings without values"""
-        _home_paths = HomePaths(self._conan_api.cache_folder)
-        settings_path = _home_paths.settings_path
-        if not os.path.exists(settings_path):
-            save(settings_path, default_settings_yml)
-            save(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
-
-        def _load_settings(path):
-            try:
-                return yaml.safe_load(load(path)) or {}
-            except yaml.YAMLError as ye:
-                raise ConanException("Invalid settings.yml format: {}".format(ye))
-
-        settings = _load_settings(settings_path)
-        user_settings_file = _home_paths.settings_path_user
-        if os.path.exists(user_settings_file):
-            settings_user = _load_settings(user_settings_file)
-
-            def appending_recursive_dict_update(d, u):
-                # Not the same behavior as conandata_update, because this append lists
-                for k, v in u.items():
-                    if isinstance(v, list):
-                        current = d.get(k) or []
-                        d[k] = current + [value for value in v if value not in current]
-                    elif isinstance(v, dict):
-                        current = d.get(k) or {}
-                        if isinstance(current, list):  # convert to dict lists
-                            current = {k: None for k in current}
-                        d[k] = appending_recursive_dict_update(current, v)
-                    else:
-                        d[k] = v
-                return d
-
-            appending_recursive_dict_update(settings, settings_user)
-
-        return Settings(settings)
-
     def clean(self):
+        """ reset the Conan home folder to a clean state, removing all the user
+        custom configuration, custom files, and resetting modified files
+        """
         contents = os.listdir(self.home())
         packages_folder = (self._helpers.global_conf.get("core.cache:storage_path") or
                            os.path.join(self.home(), "p"))
