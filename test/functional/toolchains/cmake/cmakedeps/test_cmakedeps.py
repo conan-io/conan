@@ -735,6 +735,7 @@ def test_quiet():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows and MSVC")
 @pytest.mark.tool("meson")
+@pytest.mark.tool("pkg_config")
 @pytest.mark.tool("ninja")
 @pytest.mark.tool("cmake", "3.23")
 def test_meson_and_cmakedeps_and_static_builds():
