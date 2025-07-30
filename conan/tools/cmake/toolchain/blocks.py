@@ -882,7 +882,6 @@ class CMakeFlagsInitBlock(Block):
 class TryCompileBlock(Block):
     template = textwrap.dedent("""\
         # Blocks after this one will not be added when running CMake try/checks
-
         {% if config %}
         if(NOT DEFINED CMAKE_TRY_COMPILE_CONFIGURATION)  # to allow user command line override
             set(CMAKE_TRY_COMPILE_CONFIGURATION {{config}})
@@ -897,8 +896,13 @@ class TryCompileBlock(Block):
 
     def context(self):
         # Only for well known CMake configurations, but not for custom ones
-        bt = self._conanfile.settings.get_safe("build_type")
-        config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct, there are
+        # legacy code using check_function_exists that breaks in CMake with MSVC, see
+        # https://github.com/conan-io/conan/issues/18689
+        # TODO: Resume this effort when other try_compile things are sorted out
+        # bt = self._conanfile.settings.get_safe("build_type")
+        # config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        config = None  # Keep it defined but as `None` in case some user already customized it
         return {"config": config}
 
 
