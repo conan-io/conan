@@ -109,13 +109,14 @@ class ConanAPI:
             confs.validate()
             self._cli_core_confs = confs
             # Last but not least, apply the new configuration
+            # This will in turn call ApiHelpers.reinit() as the very first thing
             self._conan_api.reinit()
 
         def _init_global_conf(self):
             self.global_conf = load_global_conf(self._conan_api.home_folder)
-            required_range_new = self.global_conf.get("core:required_conan_version")
             if self._cli_core_confs:
                 self.global_conf.update_conf_definition(self._cli_core_confs)
+            required_range_new = self.global_conf.get("core:required_conan_version")
             if required_range_new:
                 validate_conan_version(required_range_new)
 
