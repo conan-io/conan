@@ -2068,6 +2068,15 @@ def test_cmake_toolchain_language_c():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_check_function_exists():
+    """
+    covers the problematic check_function_exists() CMake DISCOURAGED check, that can fail
+    for Release configuration, due to CMake issues. This was broken when we tried to
+    add the automatic CMAKE_TRY_COMPILE_CONFIGURATION in release cases, as CheckFunctionExists.c
+    is optimized away or fails to compile in Release, but works in Debug.
+    This test is here to capture this legacy and problematic use case NOT to recommended this
+    as a good practice, rather then opposite, DONT DO IT
+    """
+
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
