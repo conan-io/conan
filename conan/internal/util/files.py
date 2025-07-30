@@ -252,6 +252,9 @@ def remove(path):
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
     if os.path.exists(path):
+        if os.path.isfile(path):
+            raise ConanException("Cannot create folder: '{}'. "
+                                 "Path already exists and is not a folder.".format(path))
         return
     os.makedirs(path)
 

@@ -59,6 +59,9 @@ def mkdir(conanfile, path):
     :param path: Path to the folder to be created.
     """
     if os.path.exists(path):
+        if os.path.isfile(path):
+            raise ConanException("Cannot create folder: '{}'. "
+                                 "Path already exists and is not a folder.".format(path))
         return
     os.makedirs(path)
 
