@@ -96,23 +96,9 @@ class ConanAPI:
     class _ApiHelpers:
         def __init__(self, conan_api):
             self._conan_api = conan_api
-            self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
-            self._global_conf = None
             self._cli_core_confs = None
-
-        @property
-        def global_conf(self):
-            # Lazy loading
-            # consumers of this shouldn't keep an instance
-            if self._global_conf is None:
-                config = load_global_conf(self._conan_api.home_folder)
-                if self._cli_core_confs is not None:
-                    config.update_conf_definition(self._cli_core_confs)
-                required_range_new = config.get("core:required_conan_version")
-                if required_range_new:
-                    validate_conan_version(required_range_new)
-                self._global_conf = config
-            return self._global_conf
+            self._init_global_conf()
+            self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -125,6 +111,14 @@ class ConanAPI:
             # Last but not least, apply the new configuration
             self._conan_api.reinit()
 
+        def _init_global_conf(self):
+            self.global_conf = load_global_conf(self._conan_api.home_folder)
+            required_range_new = self.global_conf.get("core:required_conan_version")
+            if self._cli_core_confs:
+                self.global_conf.update_conf_definition(self._cli_core_confs)
+            if required_range_new:
+                validate_conan_version(required_range_new)
+
         def reinit(self):
+            self._init_global_conf()
             self.hook_manager.reinit()
-            self._global_conf = None
