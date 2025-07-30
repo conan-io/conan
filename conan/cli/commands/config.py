@@ -116,7 +116,7 @@ def config_list(conan_api, parser, subparser, *args):
     subparser.add_argument('pattern', nargs="?",
                            help="Filter configuration items that matches this pattern")
     args = parser.parse_args(*args)
-    confs = conan_api.config.global_conf_list()
+    confs = conan_api.config.conf_list()
     if args.pattern:
         p = args.pattern.lower()
         confs = {k: v for k, v in confs.items() if p in k.lower() or p in v.lower()}
