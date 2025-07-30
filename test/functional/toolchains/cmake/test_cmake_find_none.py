@@ -3,7 +3,7 @@ import textwrap
 from conan.test.utils.tools import TestClient
 
 
-def test_cmake_find_none():
+def test_cmake_find_none_transitive():
     c = TestClient()
 
     qt = textwrap.dedent("""
@@ -100,5 +100,5 @@ def test_cmake_find_none():
     c.save({"conanfile.py": consumer,
             "CMakeLists.txt": consumer_cmake}, clean_first=True)
     c.run("build .")
-    print(c.out)
-
+    assert "Conan: Target declared 'karchive::karchive'" in c.out
+    # And it doesn't fail to find transitive qt

@@ -2063,3 +2063,37 @@ def test_cmake_toolchain_language_c():
     else:
         client.run("build . -s compiler.cppstd=11")
         # It doesn't fail
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.tool("cmake")
+def test_cmaketoolchain_check_function_exists():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+        class Conan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                # This gets back to older default behavior
+                # tc.blocks["try_compile"].values["config"] = None
+                tc.generate()
+            def build(self):
+                CMake(self).configure()
+        """)
+    consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello C)
+        include(CheckFunctionExists)
+        check_function_exists(pow HAVE_POW)
+        if(NOT HAVE_POW)
+            message(FATAL_ERROR "Not math!!!!!")
+        endif()
+       """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": consumer})
+
+    c.run("build . ")  # Release breaks the check
+    assert "Looking for pow - found" in c.out
+    # And it no longer crashes
