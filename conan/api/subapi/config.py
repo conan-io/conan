@@ -16,6 +16,11 @@ from conan.internal.util.files import load, save, rmdir, remove
 
 
 class ConfigAPI:
+    """ This API provides methods to manage the Conan configuration in the Conan home folder.
+    It allows installing configurations from various sources, retrieving global configuration
+    values, and listing available configurations. It also provides methods to clean the
+    Conan home folder, resetting it to a clean state.
+    """
 
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api

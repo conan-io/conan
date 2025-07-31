@@ -53,6 +53,8 @@ class ListAPI:
         self.conan_api = conan_api
 
     def latest_recipe_revision(self, ref: RecipeReference, remote=None):
+        """ For a given recipe reference, return the latest revision of the recipe in the remote,
+        or in the local cache if no remote is specified"""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         app = ConanBasicApp(self.conan_api)
         if remote:
@@ -63,6 +65,8 @@ class ListAPI:
         return ret
 
     def recipe_revisions(self, ref: RecipeReference, remote=None):
+        """ For a given recipe reference, return all the revisions of the recipe in the remote,
+        or in the local cache if no remote is specified"""
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
         app = ConanBasicApp(self.conan_api)
         if remote:
@@ -95,8 +99,8 @@ class ListAPI:
             results = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
         return results
 
-    def packages_configurations(self, ref: RecipeReference,
-                                remote=None) -> Dict[PkgReference, dict]:
+    def _packages_configurations(self, ref: RecipeReference,
+                                 remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
         app = ConanBasicApp(self.conan_api)
@@ -111,7 +115,7 @@ class ListAPI:
         return packages
 
     @staticmethod
-    def filter_packages_configurations(pkg_configurations, query):
+    def _filter_packages_configurations(pkg_configurations, query):
         """
         :param pkg_configurations: Dict[PkgReference, PkgConfiguration]
         :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
@@ -131,7 +135,7 @@ class ListAPI:
             raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
     @staticmethod
-    def filter_packages_profile(packages, profile, ref):
+    def _filter_packages_profile(packages, profile, ref):
         result = {}
         profile_settings = profile.processed_settings.serialize()
         # Options are those for dependencies, like *:shared=True
@@ -161,6 +165,15 @@ class ListAPI:
         return result
 
     def select(self, pattern, package_query=None, remote=None, lru=None, profile=None):
+        """ For a given pattern, return a list of recipes and packages matching the provided filters.
+        :param pattern: ListPattern object with the search criteria
+        :param package_query: When returning packages, a str like "os=Windows AND (arch=x86 OR compiler=gcc)"
+            to filter packages by. If None, all packages will be returned if requested.
+        :param remote: Remote object to search in, if None, it will search in the local cache
+        :param lru: If set, it will filter the results to only include packages/binaries that have
+            been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
+        :param profile: Profile object to filter the packages by settings and options
+        """
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
@@ -175,7 +188,7 @@ class ListAPI:
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
         if search_ref:
-            refs = self.conan_api.search.recipes(search_ref, remote=remote)
+            refs = _search_recipes(app, search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
@@ -219,11 +232,11 @@ class ListAPI:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
                     packages = {}
                 else:
-                    packages = self.packages_configurations(rrev, remote)
+                    packages = self._packages_configurations(rrev, remote)
                     if package_query is not None:
-                        packages = self.filter_packages_configurations(packages, package_query)
+                        packages = self._filter_packages_configurations(packages, package_query)
                     if profile is not None:
-                        packages = self.filter_packages_profile(packages, profile, rrev)
+                        packages = self._filter_packages_profile(packages, profile, rrev)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
@@ -260,14 +273,14 @@ class ListAPI:
         # Collect all configurations
         candidates = []
         ConanOutput().info(f"Finding binaries in the cache")
-        pkg_configurations = self.packages_configurations(ref)
+        pkg_configurations = self._packages_configurations(ref)
         candidates.extend(_BinaryDistance(pref, data, conaninfo)
                           for pref, data in pkg_configurations.items())
 
         for remote in remotes:
             try:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
-                pkg_configurations = self.packages_configurations(ref, remote=remote)
+                pkg_configurations = self._packages_configurations(ref, remote=remote)
             except Exception as e:
                 ConanOutput().error(f"Error in remote '{remote.name}': {e}")
             else:
@@ -509,3 +522,20 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         result[pkg_layout.reference] = info
 
     return result
+
+
+def _search_recipes(app, query: str, remote=None):
+    only_none_user_channel = False
+    if query and query.endswith("@"):
+        only_none_user_channel = True
+        query = query[:-1]
+
+    if remote:
+        refs = app.remote_manager.search_recipes(remote, query)
+    else:
+        refs = app.cache.search_recipes(query)
+    ret = []
+    for r in refs:
+        if not only_none_user_channel or (r.user is None and r.channel is None):
+            ret.append(r)
+    return sorted(ret)

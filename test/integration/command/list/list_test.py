@@ -764,7 +764,7 @@ class TestListRemotes:
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, client, exc, output):
-        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+        with patch("conan.api.subapi.list._search_recipes", new=Mock(side_effect=exc)):
             client.run(f'list whatever/1.0 -r="*"')
         expected_output = textwrap.dedent(f"""\
             default

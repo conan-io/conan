@@ -19,7 +19,6 @@ from conan.api.subapi.profiles import ProfilesAPI
 from conan.api.subapi.list import ListAPI
 from conan.api.subapi.remotes import RemotesAPI
 from conan.api.subapi.remove import RemoveAPI
-from conan.api.subapi.search import SearchAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
@@ -55,12 +54,11 @@ class ConanAPI:
         self._api_helpers = self._ApiHelpers(self)
         self.migrate()
 
+        #: Interact with the local Conan configuration
         self.config = ConfigAPI(self, self._api_helpers)
         self.remotes = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
-        # Search recipes by wildcard and packages filtering by configuration
-        self.search = SearchAPI(self)
-        # Get latest refs and list refs of recipes and packages
+        #: Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
         self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
