@@ -34,8 +34,7 @@ def test_metabuild():
 
     c.save({}, clean_first=True)
     c.run("new workspace -d requires=mymath/0.1")
-    with c.chdir("liba"):
-        c.run("workspace super-install")
+    c.run("workspace super-install")
     assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
     build_folder = "build/Release" if platform.system() != "Windows" else "build"
     assert os.path.exists(os.path.join(c.current_folder, build_folder, "generators"))
