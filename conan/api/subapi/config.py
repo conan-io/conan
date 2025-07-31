@@ -124,7 +124,7 @@ class ConfigAPI:
     def conf_list():
         """ list all the available built-in configurations
         """
-        return BUILT_IN_CONFS
+        return BUILT_IN_CONFS.copy()
 
     def clean(self):
         """ reset the Conan home folder to a clean state, removing all the user
