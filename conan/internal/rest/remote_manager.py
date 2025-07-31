@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections import namedtuple
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -22,6 +23,9 @@ from conan.internal.util.files import mkdir, tar_extract
 
 class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
+
+    _ErrorMsg = namedtuple("ErrorMsg", ["message"])
+
     def __init__(self, cache, auth_manager, home_folder):
         self._cache = cache
         self._auth_manager = auth_manager
@@ -255,12 +259,16 @@ class RemoteManager:
                                            headers=headers)
                 cached_method[pref] = result
                 return result
-            except Exception as e:
-                cached_method[pref] = e
+            except NotFoundException as e:
+                # Let's avoid leaking memory by saving all the exception objects,
+                # which translates to a ~2x memory increase. Now, it only saves the type and the
+                # final message. For now, let's cache only the NotFoundException one.
+                cached_method[pref] = self._ErrorMsg(str(e))
                 raise e
         else:
-            if isinstance(result, Exception):
-                raise result
+            if isinstance(result, self._ErrorMsg):
+                # Let's raise it
+                raise NotFoundException(result.message)
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:

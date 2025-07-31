@@ -439,7 +439,11 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
     with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
-        if not pattern and not strip_root:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+        # File I/O functions in the Windows API convert "/" to "\" as part of converting
+        # the name to an NT-style name, except when using the "\\?\" prefix
+        using_long_path_prefix = destination.startswith("\\\\?\\")
+        if not pattern and not strip_root and not using_long_path_prefix:
             tarredgzippedFile.extractall(destination)
         else:
             common_folder = None
@@ -466,6 +470,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         # https://github.com/conan-io/conan/issues/11065
                         member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
+                if using_long_path_prefix:
+                    member.name = member.name.replace("/", "\\")
                 # Let's gather each member
                 members.append(member)
             tarredgzippedFile.extractall(destination, members=members)

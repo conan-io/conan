@@ -75,6 +75,7 @@ class ConanFile:
     runenv_info = None
     conf_info = None
     generator_info = None
+    conan_data = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name
@@ -176,6 +177,8 @@ class ConanFile:
         if self.info is not None:
             result["info"] = self.info.serialize()
         result["vendor"] = self.vendor
+        if self.conan_data:
+            result["conandata"] = self.conan_data
         return result
 
     @property

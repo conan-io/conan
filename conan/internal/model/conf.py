@@ -150,8 +150,7 @@ USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
-    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
+    return TOOLS_CONF_PATTERN.match(module_name) or USER_CONF_PATTERN.match(module_name)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -384,6 +383,12 @@ class Conf:
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
+    def filter_core(self):
+        c = Conf()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
+                                if not CORE_CONF_PATTERN.match(k))
+        return c
+
     def dumps(self):
         """
         Returns a string with the format ``name=conf-value``
@@ -536,10 +541,12 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
-                                 f"the conf format introduced is not valid. Run 'conan config list' "
-                                 f"to see all the available confs.")
+        if conf.startswith("user"):
+            if USER_CONF_PATTERN.match(conf) is None:
+                raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+        elif conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 "Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
@@ -630,7 +637,9 @@ class ConfDefinition:
         :type global_conf: ConfDefinition
         """
         result = ConfDefinition()
-        result._pattern_confs = global_conf._pattern_confs.copy()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
         result.update_conf_definition(self)
         self._pattern_confs = result._pattern_confs
         return

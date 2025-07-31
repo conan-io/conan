@@ -110,7 +110,7 @@ compiler:
                     "9", "9.1", "9.2", "9.3", "9.4", "9.5",
                     "10", "10.1", "10.2", "10.3", "10.4", "10.5",
                     "11", "11.1", "11.2", "11.3", "11.4", "11.5",
-                    "12", "12.1", "12.2", "12.3", "12.4",
+                    "12", "12.1", "12.2", "12.3", "12.4", "12.5",
                     "13", "13.1", "13.2", "13.3", "13.4",
                     "14", "14.1", "14.2", "14.3",
                     "15", "15.1"]
@@ -168,6 +168,7 @@ compiler:
         # There is no ABI compatibility guarantee between versions
         version: [ANY]
         libcxx: [null, libstdc++, libstdc++11, libc++]
+        threads: [null, posix, wasm_workers]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23, 26, gnu26]
         cstd: [null, 99, gnu99, 11, gnu11, 17, gnu17, 23, gnu23]
 

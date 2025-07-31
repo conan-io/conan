@@ -5,14 +5,12 @@ from conan.internal.api.new.cmake_lib import cmake_lib_files
 
 conanws_yml = """\
 packages:
-  liba/0.1:
-    path: liba
-  libb/0.1:
-    path: libb
-  app1/0.1:
-    path: app1
-products:
-- app1
+  - path: liba
+    ref: liba/0.1
+  - path: libb
+    ref: libb/0.1
+  - path: app1
+    ref: app1/0.1
 """
 
 cmake = """\

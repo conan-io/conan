@@ -1,11 +1,10 @@
 import os
-import unittest
 import textwrap
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class BuildRequiresFromProfileTest(unittest.TestCase):
+class TestBuildRequiresFromProfile:
     profile_host = textwrap.dedent("""
         [settings]
         os=Windows
@@ -56,7 +55,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
               "--build='*'")
 
 
-class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
+class TestBuildRequiresContextHostFromProfile:
     toolchain = textwrap.dedent("""
         from conan import ConanFile
 
@@ -118,27 +117,27 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
         t.run("create mytoolchain.py -pr:h=profile_host -pr:b=profile_build --build-require")
 
         t.run("create gtest.py -pr=profile_host -pr:b=profile_build")
-        self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
+        assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
 
         t.run("create gtest.py -pr=profile_host -pr:b=profile_build --build=*")
-        self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("gtest/1.0: Build OS=Linux", t.out)
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
+        assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
+        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
 
         t.run("create library.py -pr:h=profile_host -pr:b=profile_build")
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
-        self.assertIn("library/version: Build OS=Linux", t.out)
-        self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
+        assert "library/version: Build OS=Linux" in t.out
+        assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
 
         t.run("create library.py -pr:h=profile_host -pr:b=profile_build --build=*")
-        self.assertIn("gtest/1.0: Build OS=Linux", t.out)
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
-        self.assertIn("library/version: Build OS=Linux", t.out)
-        self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
+        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
+        assert "library/version: Build OS=Linux" in t.out
+        assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
 
 
-class BuildRequiresBothContextsTest(unittest.TestCase):
+class TestBuildRequiresBothContexts:
     toolchain_creator = textwrap.dedent("""
         from conan import ConanFile
 
@@ -216,17 +215,17 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 "gtest.py": self.gtest})
         t.run("create creator.py -pr=profile_build")
         t.run("create mytoolchain.py -pr:h=profile_host -pr:b=profile_build --build-require")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
+        assert "creator/1.0: PackageInfo OS=Windows" in t.out
+        assert "mytoolchain/1.0: Build OS=Windows" in t.out
 
         # new way, the toolchain can now run in Windows, but gtest in Linux
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build")
-        self.assertNotIn("creator/1.0: PackageInfo", t.out)  # Creator is skipped now, not needed
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
+        assert "creator/1.0: PackageInfo" not in t.out  # Creator is skipped now, not needed
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
 
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build=*")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
+        assert "creator/1.0: PackageInfo OS=Windows" in t.out
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
 
         # Declaring the build_requires in the recipe works, it is just the profile that is
         # not transitive
@@ -247,20 +246,20 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
             """)
         t.save({'mytoolchain.py': toolchain})
         t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
+        assert "creator/1.0: PackageInfo OS=Windows" in t.out
+        assert "mytoolchain/1.0: Build OS=Windows" in t.out
 
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build=*")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
-        self.assertIn("gtest/1.0: Build OS=Linux", t.out)
+        assert "creator/1.0: PackageInfo OS=Windows" in t.out
+        assert "mytoolchain/1.0: Build OS=Windows" in t.out
+        assert "gtest/1.0: Build OS=Linux" in t.out
 
         t.run("create library.py -pr:h=profile_host --profile:build=profile_build --build=*")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
-        self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
-        self.assertIn("gtest/1.0: Build OS=Linux", t.out)
-        self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
-        self.assertIn("library/version: Build OS=Linux", t.out)
+        assert "creator/1.0: PackageInfo OS=Windows" in t.out
+        assert "mytoolchain/1.0: Build OS=Windows" in t.out
+        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "gtest/1.0: PackageInfo OS=Linux" in t.out
+        assert "library/version: Build OS=Linux" in t.out
 
 
 def test_consumer_get_profile_tool_requires():

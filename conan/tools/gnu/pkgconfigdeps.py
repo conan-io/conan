@@ -259,7 +259,8 @@ class _PCFilesDeps:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        if pkg_name not in pc_files:
+        should_skip_main = self._get_property("pkg_config_name", self._dep) == "none"
+        if pkg_name not in pc_files and not should_skip_main:
             cpp_info = self._dep.cpp_info
             # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
             # Note: If DEP has components, they'll be the requirements == pc_files.keys()

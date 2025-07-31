@@ -50,7 +50,7 @@ def test_cmake_toolchain_user_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.paths.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake")
+    client.save_home({"global.conf": "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake"})
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -62,7 +62,7 @@ def test_cmake_toolchain_custom_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.paths.new_config_path, "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake")
+    client.save_home({"global.conf": "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake"})
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -1416,7 +1416,7 @@ def test_inject_user_toolchain():
     # Now test with the global.conf
     global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
                   '["{{conan_home_folder}}/my.cmake"]'
-    save(client.paths.new_config_path, global_conf)
+    client.save_home({"global.conf": global_conf})
     save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
     client.run("build .")
     # The toolchain is found and can be used
@@ -2063,3 +2063,46 @@ def test_cmake_toolchain_language_c():
     else:
         client.run("build . -s compiler.cppstd=11")
         # It doesn't fail
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.tool("cmake")
+def test_cmaketoolchain_check_function_exists():
+    """
+    covers the problematic check_function_exists() CMake DISCOURAGED check, that can fail
+    for Release configuration, due to CMake issues. This was broken when we tried to
+    add the automatic CMAKE_TRY_COMPILE_CONFIGURATION in release cases, as CheckFunctionExists.c
+    is optimized away or fails to compile in Release, but works in Debug.
+    This test is here to capture this legacy and problematic use case NOT to recommended this
+    as a good practice, rather then opposite, DONT DO IT
+    """
+
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+        class Conan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                # This gets back to older default behavior
+                # tc.blocks["try_compile"].values["config"] = None
+                tc.generate()
+            def build(self):
+                CMake(self).configure()
+        """)
+    consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello C)
+        include(CheckFunctionExists)
+        check_function_exists(pow HAVE_POW)
+        if(NOT HAVE_POW)
+            message(FATAL_ERROR "Not math!!!!!")
+        endif()
+       """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": consumer})
+
+    c.run("build . ")  # Release breaks the check
+    assert "Looking for pow - found" in c.out
+    # And it no longer crashes

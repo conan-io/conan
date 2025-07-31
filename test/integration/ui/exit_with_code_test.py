@@ -1,7 +1,6 @@
 import textwrap
 
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 def test_exit_with_code():
@@ -27,6 +26,6 @@ def test_exit_with_code():
 
 def test_wrong_home_error():
     client = TestClient(light=True)
-    save(client.paths.new_config_path, "core.cache:storage_path=//")
+    client.save_home({"global.conf": "core.cache:storage_path=//"})
     client.run("list *")
     assert "Couldn't initialize storage in" in client.out

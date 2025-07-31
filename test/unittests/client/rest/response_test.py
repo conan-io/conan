@@ -1,11 +1,8 @@
-# coding=utf-8
-
-import unittest
 from collections import namedtuple
 from conan.internal import rest
 
 
-class RestStringTest(unittest.TestCase):
+class TestRestString:
 
     def _get_html_response(self):
         headers = {"content-type": "text/html;charset=utf-8",}
@@ -26,9 +23,9 @@ class RestStringTest(unittest.TestCase):
     def test_html_error(self):
         response = self._get_html_response()
         result = rest.response_to_str(response)
-        self.assertEqual("404: Not Found", result)
+        assert "404: Not Found" == result
 
     def test_json_error(self):
         response = self._get_json_response()
         result = rest.response_to_str(response)
-        self.assertEqual("Could not find the artifact", result)
+        assert "Could not find the artifact" == result
