@@ -30,21 +30,22 @@ function(add_project SUBFOLDER)
     FetchContent_MakeAvailable(${SUBFOLDER})
 endfunction()
 
-set(CONAN_WS_BUILD_ORDER )
+include(conanws_build_order.cmake)
 
-add_project(liba)
-# They should be defined in the liba/CMakeLists.txt, but we can fix it here
-add_library(liba::liba ALIAS liba)
-add_project(libb)
-add_library(libb::libb ALIAS libb)
-add_project(app1)
+foreach(pkg ${CONAN_WS_BUILD_ORDER})
+    add_project(${pkg})
+    # This target should be defined in the liba/CMakeLists.txt, but we can fix it here
+    get_target_property(target_type ${pkg} TYPE)
+    if (NOT target_type STREQUAL "EXECUTABLE")
+        add_library(${pkg}::${pkg} ALIAS ${pkg})
+    endif()
+endforeach()
 """
 
 conanfile = r'''\
-import re
 from conan import Workspace
 from conan import ConanFile
-from conan.tools.files import load, save
+from conan.tools.files import save
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
 
@@ -70,13 +71,9 @@ class Ws(Workspace):
         return MyWs
 
     def build_order(self, order):
-        super().build_order(order)
-        cmakelists = load(self, "CMakeLists.txt")
+        super().build_order(order)  # default behavior prints the build order
         pkglist = " ".join([item["ref"].name for level in order for item in level])
-        cmake_var = f"set(CONAN_WS_BUILD_ORDER {pkglist})"
-        edit = re.search(r"set\(CONAN_WS_BUILD_ORDER ([^)]*)\)", cmakelists)
-        cmakelists = cmakelists.replace(edit.group(0), cmake_var)
-        save(self, "CMakeLists.txt", cmakelists)
+        save(self, "conanws_build_order.cmake", f"set(CONAN_WS_BUILD_ORDER {pkglist})")
 '''
 
 workspace_files = {"conanws.yml": conanws_yml,
