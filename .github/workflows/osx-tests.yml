@@ -9,7 +9,7 @@ on:
 
 jobs:
   osx_setup:
-    runs-on: macos-14
+    runs-on: macos-15
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -115,7 +115,7 @@ jobs:
 
   osx_tests:
     needs: osx_setup
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: true
       matrix:
