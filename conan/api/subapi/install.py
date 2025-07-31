@@ -21,7 +21,7 @@ class InstallAPI:
         :param remotes:
         """
         app = ConanBasicApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
@@ -35,7 +35,7 @@ class InstallAPI:
         :param graph: Dependency graph to intall packages for
         """
         app = ConanBasicApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_system_requires(graph, only_info)
 
@@ -46,7 +46,7 @@ class InstallAPI:
         :param graph: Dependency graph to install packages for
         """
         app = ConanBasicApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf, app.editable_packages,
+        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
 

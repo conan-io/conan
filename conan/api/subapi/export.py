@@ -18,11 +18,11 @@ class ExportAPI:
         ConanOutput().title("Exporting recipe to the cache")
         app = ConanApp(self.conan_api)
         hook_manager = self._helpers.hook_manager
-        return cmd_export(app, hook_manager, self.conan_api.config.global_conf, path, name, version,
+        return cmd_export(app, hook_manager, self._helpers.global_conf, path, name, version,
                           user, channel, graph_lock=lockfile, remotes=remotes)
 
     def export_pkg(self, deps_graph, source_folder, output_folder):
-        cache = PkgCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        cache = PkgCache(self.conan_api.cache_folder, self._helpers.global_conf)
         hook_manager = self._helpers.hook_manager
 
         # The graph has to be loaded with build_mode=[ref.name], so that node is not tried

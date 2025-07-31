@@ -24,6 +24,8 @@ from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.hook_manager import HookManager
+from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
+from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
@@ -50,28 +52,25 @@ class ConanAPI:
         init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
-        # This API is depended upon by the subsequent ones, it should be initialized first
-        self.config = ConfigAPI(self)
-        _check_conan_version(self)
-
         self._api_helpers = self._ApiHelpers(self)
         self.migrate()
 
-        self.remotes = RemotesAPI(self)
+        self.config = ConfigAPI(self, self._api_helpers)
+        self.remotes = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
         # Search recipes by wildcard and packages filtering by configuration
         self.search = SearchAPI(self)
         # Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
-        self.profiles = ProfilesAPI(self)
+        self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
-        self.upload = UploadAPI(self)
+        self.upload = UploadAPI(self, self._api_helpers)
         self.download = DownloadAPI(self)
-        self.cache = CacheAPI(self)
+        self.cache = CacheAPI(self, self._api_helpers)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
         self.audit = AuditAPI(self)
@@ -85,11 +84,8 @@ class ConanAPI:
         """
         # TODO: Think order of reinitialization for helpers
         self._api_helpers.reinit()
-        self.config.reinit()
         self.remotes.reinit()
         self.local.reinit()
-
-        _check_conan_version(self)
 
     def migrate(self):
         # Migration system
@@ -101,13 +97,34 @@ class ConanAPI:
     class _ApiHelpers:
         def __init__(self, conan_api):
             self._conan_api = conan_api
+            self._cli_core_confs = None
+            self._init_global_conf()
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
 
+        def set_core_confs(self, core_confs):
+            confs = ConfDefinition()
+            for c in core_confs:
+                if not CORE_CONF_PATTERN.match(c):
+                    raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
+            confs.loads("\n".join(core_confs))
+            confs.validate()
+            self._cli_core_confs = confs
+            # Last but not least, apply the new configuration
+            # This will in turn call ApiHelpers.reinit() as the very first thing
+            self._conan_api.reinit()
+
+        def _init_global_conf(self):
+            self.global_conf = load_global_conf(self._conan_api.home_folder)
+            if self._cli_core_confs:
+                self.global_conf.update_conf_definition(self._cli_core_confs)
+            required_range_new = self.global_conf.get("core:required_conan_version")
+            if required_range_new:
+                validate_conan_version(required_range_new)
+
         def reinit(self):
+            self._init_global_conf()
             self.hook_manager.reinit()
 
-
-def _check_conan_version(conan_api):
-    required_range_new = conan_api.config.global_conf.get("core:required_conan_version")
-    if required_range_new:
-        validate_conan_version(required_range_new)
+        @property
+        def settings_yml(self):
+            return load_settings_yml(self._conan_api.home_folder)

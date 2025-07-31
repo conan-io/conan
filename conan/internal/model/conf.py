@@ -1,15 +1,22 @@
 import copy
 import numbers
+import platform
 import re
 import os
 import fnmatch
+import textwrap
 
 from collections import OrderedDict
 
+from jinja2 import Environment, FileSystemLoader
+
 from conan.errors import ConanException
+from conan.internal.api.detect import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
+from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -732,3 +739,32 @@ class ConfDefinition:
 
     def clear(self):
         self._pattern_confs.clear()
+
+
+def load_global_conf(home_folder):
+    home_paths = HomePaths(home_folder)
+    global_conf_path = home_paths.global_conf_path
+    new_config = ConfDefinition()
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+        home_folder = home_folder.replace("\\", "/")
+        from conan import conan_version
+        content = template.render({"platform": platform, "os": os, "distro": distro,
+                                   "conan_version": conan_version,
+                                   "conan_home_folder": home_folder,
+                                   "detect_api": detect_api})
+        new_config.loads(content)
+    else:  # creation of a blank global.conf file for user convenience
+        default_global_conf = textwrap.dedent("""\
+            # Core configuration (type 'conan config list' to list possible values)
+            # e.g, for CI systems, to raise if user input would block
+            # core:non_interactive = True
+            # some tools.xxx config also possible, though generally better in profiles
+            # tools.android:ndk_path = my/path/to/android/ndk
+            """)
+        save(global_conf_path, default_global_conf)
+    return new_config
