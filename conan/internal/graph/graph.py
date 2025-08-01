@@ -127,9 +127,8 @@ class Node:
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
             ill_formed = ((require.direct or existing.require.direct)
                           and require.visible != existing.require.visible)
-            if ill_formed:
-                is_test = require.test or existing.require.test
-                visibility_conflicts.setdefault(require.ref, set()).add((self.ref, is_test))
+            if ill_formed and not (require.test or existing.require.test):
+                visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
             require.aggregate(existing.require)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
