@@ -48,13 +48,13 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                python_requires=python_requires,
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
-    conanfile.original_info = conanfile.info.clone()
+    conanfile.consumer_info = conanfile.info.clone()
 
     run_validate_package_id(conanfile, hook_manager)
 
     if conanfile.info.settings_target:
         # settings_target has beed added to conan package via package_id api
-        conanfile.original_info.settings_target = conanfile.info.settings_target
+        conanfile.consumer_info.settings_target = conanfile.info.settings_target
 
     info = conanfile.info
     node.package_id = info.package_id()
