@@ -18,13 +18,20 @@ class RecipeReference:
 
     def __init__(self, name=None, version=None, user=None, channel=None, revision=None,
                  timestamp=None):
-        self.name = name
+        """ The attributes should be regarded as immutable, and should not be modified by the user."""
+        #: Name of the reference
+        self.name: str = name
         if version is not None and not isinstance(version, Version):
             version = Version(version)
-        self.version = version  # This MUST be a version if we want to be able to order
+        #: Version of the reference
+        self.version: Version = version  # This MUST be a version if we want to be able to order
+        #: User of the reference, if any
         self.user = user
+        #: Channel of the reference, if any
         self.channel = channel
+        #: Revision of the reference, if any
         self.revision = revision
+        #: Timestamp of the reference, if any
         self.timestamp = timestamp
 
     def copy(self):
