@@ -49,13 +49,16 @@ class ConanAPI:
             raise ConanException("cache_folder has to be an absolute path")
 
         init_colorama(sys.stderr)
+        # Deprecated, but still used internally, prefer home_folder
         self.cache_folder = cache_folder or get_conan_user_home()
-        self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
+        #: Where the Conan user home is located
+        self.home_folder = self.cache_folder
         self._api_helpers = self._ApiHelpers(self)
         self.migrate()
 
         #: Interact with the local Conan configuration
         self.config = ConfigAPI(self, self._api_helpers)
+        #: Interact with remotes
         self.remotes = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
         #: Get latest refs and list refs of recipes and packages
