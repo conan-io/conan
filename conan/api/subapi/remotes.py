@@ -29,16 +29,17 @@ class RemotesAPI:
     the servers to perform such authentication
     """
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, api_helpers):
         # This method is private, the subapi is not instantiated by users
         self._conan_api = conan_api
+        self._api_helpers = api_helpers
         self._home_folder = conan_api.home_folder
         self._remotes_file = HomePaths(self._home_folder).remotes_path
         # Wraps an http_requester to inject proxies, certs, etc
-        self._requester = ConanRequester(self._conan_api.config.global_conf, self._conan_api.cache_folder)
+        self._requester = ConanRequester(api_helpers.global_conf, self._home_folder)
 
     def reinit(self):
-        self._requester = ConanRequester(self._conan_api.config.global_conf, self._conan_api.cache_folder)
+        self._requester = ConanRequester(self._api_helpers.global_conf, self._home_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -230,7 +231,7 @@ class RemotesAPI:
         app.remote_manager.authenticate(remote, username, password)
 
     def login(self, remotes, username=None, password=None):
-        creds = RemoteCredentials(self._conan_api.cache_folder, self._conan_api.config.global_conf)
+        creds = RemoteCredentials(self._conan_api.cache_folder, self._api_helpers.global_conf)
 
         ret = OrderedDict()
         for r in remotes:

@@ -185,7 +185,7 @@ class GraphAPI:
 
         remotes = remotes or []
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, check_update, self.conan_api.config.global_conf)
+                                   update, check_update, self.conan_api._api_helpers.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 
@@ -206,7 +206,7 @@ class GraphAPI:
         """
         ConanOutput().title("Computing necessary packages")
         conan_app = ConanBasicApp(self.conan_api)
-        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf,
+        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api._api_helpers.global_conf,
                                                   self._helpers.hook_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)
