@@ -219,7 +219,7 @@ def test_system_libs_no_libs():
 
         assert f"System libs {build_type}: {library_name}" in client.out
         assert f"Target libs: $<$<CONFIG:{build_type}>:>;" \
-               "$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
+               f"$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
