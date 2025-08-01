@@ -45,8 +45,7 @@ def _timelimit(expression):
 
 
 class ListAPI:
-    """
-    Get references from the recipes and packages in the cache or a remote
+    """ Get references from the recipes and packages in the cache or a remote
     """
 
     def __init__(self, conan_api):
@@ -168,10 +167,10 @@ class ListAPI:
         """ For a given pattern, return a list of recipes and packages matching the provided filters.
         :param pattern: ListPattern object with the search criteria
         :param package_query: When returning packages, a str like "os=Windows AND (arch=x86 OR compiler=gcc)"
-            to filter packages by. If None, all packages will be returned if requested.
+        to filter packages by. If None, all packages will be returned if requested.
         :param remote: Remote object to search in, if None, it will search in the local cache
         :param lru: If set, it will filter the results to only include packages/binaries that have
-            been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
+        been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
         :param profile: Profile object to filter the packages by settings and options
         """
         if package_query and pattern.package_id and "*" not in pattern.package_id:
