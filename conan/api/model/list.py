@@ -12,114 +12,6 @@ from conan.internal.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_
 from conan.internal.util.files import load
 
 
-class PackagesList:
-    """ A collection of recipes, revisions and packages."""
-    def __init__(self):
-        self.recipes = {}
-
-    def merge(self, other):
-        def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
-            for k, v in u.items():
-                if isinstance(v, dict):
-                    d[k] = recursive_dict_update(d.get(k, {}), v)
-                else:
-                    d[k] = v
-            return d
-        recursive_dict_update(self.recipes, other.recipes)
-
-    def keep_outer(self, other):
-        if not self.recipes:
-            return
-
-        for ref, info in other.recipes.items():
-            if self.recipes.get(ref, {}) == info:
-                self.recipes.pop(ref)
-
-    def split(self):
-        """
-        Returns a list of PackageList, splitted one per reference.
-        This can be useful to parallelize things like upload, parallelizing per-reference
-        """
-        result = []
-        for r, content in self.recipes.items():
-            subpkglist = PackagesList()
-            subpkglist.recipes[r] = content
-            result.append(subpkglist)
-        return result
-
-    def only_recipes(self):
-        result = {}
-        for ref, ref_dict in self.recipes.items():
-            for rrev_dict in ref_dict.get("revisions", {}).values():
-                rrev_dict.pop("packages", None)
-        return result
-
-    def add_refs(self, refs):
-        # RREVS alreday come in ASCENDING order, so upload does older revisions first
-        for ref in refs:
-            ref_dict = self.recipes.setdefault(str(ref), {})
-            if ref.revision:
-                revs_dict = ref_dict.setdefault("revisions", {})
-                rev_dict = revs_dict.setdefault(ref.revision, {})
-                if ref.timestamp:
-                    rev_dict["timestamp"] = ref.timestamp
-
-    def add_prefs(self, rrev, prefs):
-        # Prevs already come in ASCENDING order, so upload does older revisions first
-        revs_dict = self.recipes[str(rrev)]["revisions"]
-        rev_dict = revs_dict[rrev.revision]
-        packages_dict = rev_dict.setdefault("packages", {})
-
-        for pref in prefs:
-            package_dict = packages_dict.setdefault(pref.package_id, {})
-            if pref.revision:
-                prevs_dict = package_dict.setdefault("revisions", {})
-                prev_dict = prevs_dict.setdefault(pref.revision, {})
-                if pref.timestamp:
-                    prev_dict["timestamp"] = pref.timestamp
-
-    def add_configurations(self, confs):
-        for pref, conf in confs.items():
-            rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
-            try:
-                rev_dict["packages"][pref.package_id]["info"] = conf
-            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
-                pass
-
-    def refs(self):
-        result = {}
-        for ref, ref_dict in self.recipes.items():
-            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
-                t = rrev_dict.get("timestamp")
-                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
-                if t is not None:
-                    recipe.timestamp = t
-                result[recipe] = rrev_dict
-        return result
-
-    @staticmethod
-    def prefs(ref, recipe_bundle):
-        result = {}
-        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
-            prevs = pkg_bundle.get("revisions", {})
-            for prev, prev_bundle in prevs.items():
-                t = prev_bundle.get("timestamp")
-                pref = PkgReference(ref, package_id, prev, t)
-                result[pref] = prev_bundle
-        return result
-
-    def serialize(self):
-        """ Serialize the instance to a dictionary."""
-        return self.recipes.copy()
-
-    @staticmethod
-    def deserialize(data):
-        """ Loads the data from a serialized dictionary."""
-        result = PackagesList()
-        result.recipes = data
-        return result
-
-
 class MultiPackagesList:
     """ A collection of PackagesList by remote name."""
     def __init__(self):
@@ -131,7 +23,7 @@ class MultiPackagesList:
         except KeyError:
             raise ConanException(f"'{name}' doesn't exist in package list")
 
-    def add(self, name, pkg_list: PackagesList):
+    def add(self, name, pkg_list):
         self.lists[name] = pkg_list
 
     def add_error(self, remote_name, error):
@@ -296,6 +188,114 @@ class MultiPackagesList:
                 cache_list.add_prefs(ref, [pref])
                 cache_list.add_configurations({pref: node["info"]})
         return pkglist
+
+
+class PackagesList:
+    """ A collection of recipes, revisions and packages."""
+    def __init__(self):
+        self.recipes = {}
+
+    def merge(self, other):
+        def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
+            for k, v in u.items():
+                if isinstance(v, dict):
+                    d[k] = recursive_dict_update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+        recursive_dict_update(self.recipes, other.recipes)
+
+    def keep_outer(self, other):
+        if not self.recipes:
+            return
+
+        for ref, info in other.recipes.items():
+            if self.recipes.get(ref, {}) == info:
+                self.recipes.pop(ref)
+
+    def split(self):
+        """
+        Returns a list of PackageList, splitted one per reference.
+        This can be useful to parallelize things like upload, parallelizing per-reference
+        """
+        result = []
+        for r, content in self.recipes.items():
+            subpkglist = PackagesList()
+            subpkglist.recipes[r] = content
+            result.append(subpkglist)
+        return result
+
+    def only_recipes(self):
+        result = {}
+        for ref, ref_dict in self.recipes.items():
+            for rrev_dict in ref_dict.get("revisions", {}).values():
+                rrev_dict.pop("packages", None)
+        return result
+
+    def add_refs(self, refs):
+        # RREVS alreday come in ASCENDING order, so upload does older revisions first
+        for ref in refs:
+            ref_dict = self.recipes.setdefault(str(ref), {})
+            if ref.revision:
+                revs_dict = ref_dict.setdefault("revisions", {})
+                rev_dict = revs_dict.setdefault(ref.revision, {})
+                if ref.timestamp:
+                    rev_dict["timestamp"] = ref.timestamp
+
+    def add_prefs(self, rrev, prefs):
+        # Prevs already come in ASCENDING order, so upload does older revisions first
+        revs_dict = self.recipes[str(rrev)]["revisions"]
+        rev_dict = revs_dict[rrev.revision]
+        packages_dict = rev_dict.setdefault("packages", {})
+
+        for pref in prefs:
+            package_dict = packages_dict.setdefault(pref.package_id, {})
+            if pref.revision:
+                prevs_dict = package_dict.setdefault("revisions", {})
+                prev_dict = prevs_dict.setdefault(pref.revision, {})
+                if pref.timestamp:
+                    prev_dict["timestamp"] = pref.timestamp
+
+    def add_configurations(self, confs):
+        for pref, conf in confs.items():
+            rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            try:
+                rev_dict["packages"][pref.package_id]["info"] = conf
+            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+                pass
+
+    def refs(self):
+        result = {}
+        for ref, ref_dict in self.recipes.items():
+            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
+                t = rrev_dict.get("timestamp")
+                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
+                if t is not None:
+                    recipe.timestamp = t
+                result[recipe] = rrev_dict
+        return result
+
+    @staticmethod
+    def prefs(ref, recipe_bundle):
+        result = {}
+        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
+            prevs = pkg_bundle.get("revisions", {})
+            for prev, prev_bundle in prevs.items():
+                t = prev_bundle.get("timestamp")
+                pref = PkgReference(ref, package_id, prev, t)
+                result[pref] = prev_bundle
+        return result
+
+    def serialize(self):
+        """ Serialize the instance to a dictionary."""
+        return self.recipes.copy()
+
+    @staticmethod
+    def deserialize(data):
+        """ Loads the data from a serialized dictionary."""
+        result = PackagesList()
+        result.recipes = data
+        return result
 
 
 class ListPattern:
