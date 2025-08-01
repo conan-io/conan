@@ -101,6 +101,7 @@ class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
         self._url_creds = _SourceURLCredentials(cache_folder)
+        self._config = config
         _max_retries = config.get("core.net.http:max_retries", default=2, check_type=int)
         self._http_requester = requests.Session()
         _adapter = HTTPAdapter(max_retries=self._get_retries(_max_retries))
@@ -117,6 +118,20 @@ class ConanRequester:
                                    "Python " + platform.python_version(),
                                    platform.machine()])
         self._user_agent = "Conan/%s (%s)" % (__version__, platform_info)
+
+    def reinit(self):
+        _max_retries = self._config.get("core.net.http:max_retries", default=2, check_type=int)
+        self._http_requester = requests.Session()
+        _adapter = HTTPAdapter(max_retries=self._get_retries(_max_retries))
+        self._http_requester.mount("http://", _adapter)
+        self._http_requester.mount("https://", _adapter)
+        self._timeout = self._config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
+        self._no_proxy_match = self._config.get("core.net.http:no_proxy_match", check_type=list)
+        self._proxies = self._config.get("core.net.http:proxies")
+        self._cacert_path = self._config.get("core.net.http:cacert_path", check_type=str)
+        self._client_certificates = self._config.get("core.net.http:client_cert")
+        self._clean_system_proxy = self._config.get("core.net.http:clean_system_proxy",
+                                                    default=False, check_type=bool)
 
     @staticmethod
     def _get_retries(max_retries):

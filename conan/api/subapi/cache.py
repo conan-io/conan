@@ -23,47 +23,47 @@ from conan.internal.util.files import rmdir, mkdir, remove, save
 class CacheAPI:
 
     def __init__(self, conan_api, api_helpers):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._api_helpers = api_helpers
 
     def export_path(self, ref: RecipeReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export", ref_layout.export())
 
     def recipe_metadata_path(self, ref: RecipeReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "metadata", ref_layout.metadata())
 
     def export_source_path(self, ref: RecipeReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export_sources", ref_layout.export_sources())
 
     def source_path(self, ref: RecipeReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         ref = _resolve_latest_ref(cache, ref)
         ref_layout = cache.recipe_layout(ref)
         return _check_folder_existence(ref, "source", ref_layout.source())
 
     def build_path(self, pref: PkgReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pref = _resolve_latest_pref(cache, pref)
         ref_layout = cache.pkg_layout(pref)
         return _check_folder_existence(pref, "build", ref_layout.build())
 
     def package_metadata_path(self, pref: PkgReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pref = _resolve_latest_pref(cache, pref)
         ref_layout = cache.pkg_layout(pref)
         return _check_folder_existence(pref, "metadata", ref_layout.metadata())
 
     def package_path(self, pref: PkgReference):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pref = _resolve_latest_pref(cache, pref)
         ref_layout = cache.pkg_layout(pref)
         if os.path.exists(ref_layout.finalize()):
@@ -72,7 +72,7 @@ class CacheAPI:
 
     def check_integrity(self, package_list):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         checker = IntegrityChecker(cache)
         checker.check(package_list)
 
@@ -90,7 +90,7 @@ class CacheAPI:
         :return:
         """
 
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         if temp:
             rmdir(cache.temp_folder)
             # Clean those build folders that didn't succeed to create a package and wont be in DB
@@ -104,7 +104,7 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
         if backup_sources:
-            backup_files = self.conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
+            backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
             ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
@@ -128,7 +128,7 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path, no_source=False):
         global_conf = self._api_helpers.global_conf
-        cache = PkgCache(self.conan_api.cache_folder, global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
@@ -180,7 +180,7 @@ class CacheAPI:
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
         with open(path, mode='rb') as file_handler:
@@ -255,13 +255,13 @@ class CacheAPI:
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
-            self.conan_api.cache_folder).default_sources_backup_folder
+            self._conan_api.cache_folder).default_sources_backup_folder
         excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[]) if exclude else []
         download_cache = DownloadCache(download_cache_path)
         return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
     def path_to_ref(self, path):
-        cache = PkgCache(self.conan_api.cache_folder, self._api_helpers.global_conf)
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         result = cache.path_to_ref(path)
         if result is None:
             base, folder = os.path.split(path)

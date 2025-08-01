@@ -29,6 +29,7 @@ from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
+from conan.internal.rest.conan_requester import ConanRequester
 
 
 class ConanAPI:
@@ -73,7 +74,7 @@ class ConanAPI:
         self.cache = CacheAPI(self, self._api_helpers)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
-        self.audit = AuditAPI(self)
+        self.audit = AuditAPI(self, self._api_helpers)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
         self.report = ReportAPI(self, self._api_helpers)
@@ -100,6 +101,7 @@ class ConanAPI:
             self._cli_core_confs = None
             self._init_global_conf()
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            self.requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -124,6 +126,7 @@ class ConanAPI:
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
+            self.requester.reinit()
 
         @property
         def settings_yml(self):

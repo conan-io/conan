@@ -13,14 +13,14 @@ from conan.api.model import RecipeReference
 class DownloadAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     def recipe(self, ref: RecipeReference, remote: Remote, metadata: Optional[List[str]] = None):
         """Download the recipe specified in the ref from the remote.
         If the recipe is already in the cache it will be skipped,
         but the specified metadata will be downloaded."""
         output = ConanOutput()
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         assert ref.revision, f"Reference '{ref}' must have revision"
         try:
             app.cache.recipe_layout(ref)  # raises if not found
@@ -53,7 +53,7 @@ class DownloadAPI:
         If the package is already in the cache it will be skipped,
         but the specified metadata will be downloaded."""
         output = ConanOutput()
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         try:
             app.cache.recipe_layout(pref.ref)  # raises if not found
         except ConanException:
@@ -88,7 +88,7 @@ class DownloadAPI:
                     self.package(pref, remote, metadata)
 
         t = time.time()
-        parallel = self.conan_api.config.get("core.download:parallel", default=1, check_type=int)
+        parallel = self._conan_api.config.get("core.download:parallel", default=1, check_type=int)
         thread_pool = ThreadPool(parallel) if parallel > 1 else None
         if not thread_pool or len(package_list.refs()) <= 1:
             _download_pkglist(package_list)
