@@ -12,169 +12,6 @@ from conan.internal.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_
 from conan.internal.util.files import load
 
 
-class MultiPackagesList:
-    """ A collection of PackagesList by remote name."""
-    def __init__(self):
-        self.lists = {}
-
-    def __getitem__(self, name):
-        try:
-            return self.lists[name]
-        except KeyError:
-            raise ConanException(f"'{name}' doesn't exist in package list")
-
-    def add(self, name, pkg_list):
-        """ Add a PackagesList associated to the remote name to the collection,
-        overwriting if it already exists."""
-        self.lists[name] = pkg_list
-
-    def add_error(self, remote_name, error):
-        self.lists[remote_name] = {"error": error}
-
-    def serialize(self):
-        """ Serialize the MultiPackagesList to a dictionary."""
-        return {k: v.serialize() if isinstance(v, PackagesList) else v
-                for k, v in self.lists.items()}
-
-    def merge(self, other):
-        for k, v in other.lists.items():
-            self.lists.setdefault(k, PackagesList()).merge(v)
-
-    def keep_outer(self, other):
-        for namespace, other_pkg_list in other.lists.items():
-            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
-
-    @staticmethod
-    def load(file):
-        """ Load a MultiPackagesList from a serialized JSON file."""
-        try:
-            content = json.loads(load(file))
-        except JSONDecodeError as e:
-            raise ConanException(f"Package list file invalid JSON: {file}\n{e}")
-        except Exception as e:
-            raise ConanException(f"Package list file missing or broken: {file}\n{e}")
-        # Check if input json is not a graph file
-        if "graph" in content:
-            base_path = os.path.basename(file)
-            raise ConanException(
-                'Expected a package list file but found a graph file. You can create a "package list" JSON file by running:\n\n'
-                f"\tconan list --graph {base_path} --format=json > pkglist.json\n\n"
-                "More Info at 'https://docs.conan.io/2/examples/commands/pkglists.html"
-            )
-        result = {}
-        for remote, pkglist in content.items():
-            if "error" in pkglist:
-                result[remote] = pkglist
-            else:
-                result[remote] = PackagesList.deserialize(pkglist)
-        pkglist = MultiPackagesList()
-        pkglist.lists = result
-        return pkglist
-
-    @staticmethod
-    def load_graph(graphfile, graph_recipes=None, graph_binaries=None, context=None):
-        """ Create a MultiPackagesList from a graph file, the json format returned by a few commands
-        like conan graph info or conan create/install."""
-        if not os.path.isfile(graphfile):
-            raise ConanException(f"Graph file not found: {graphfile}")
-        try:
-            base_context = context.split("-")[0] if context else None
-            graph = json.loads(load(graphfile))
-            # Check if input json is a graph file
-            if "graph" not in graph:
-                raise ConanException(
-                    'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running:\n\n'
-                    f"\tconan [ graph-info | create | export-pkg | install | test ] --format=json > graph.json\n\n"
-                    "More Info at 'https://docs.conan.io/2/reference/commands/formatters/graph_info_json_formatter.html"
-                )
-
-            mpkglist =  MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                        context=base_context)
-            if context == "build-only":
-                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context="host")
-                mpkglist.keep_outer(host)
-            elif context == "host-only":
-                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                        context="build")
-                mpkglist.keep_outer(build)
-            return mpkglist
-        except JSONDecodeError as e:
-            raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
-        except KeyError as e:
-            raise ConanException(f'Graph file {graphfile} is missing the required "{e}" key in its contents.\n'
-                                 "Note that the graph file should not be filtered "
-                                 "if you expect to use it with the list command.")
-        except ConanException as e:
-            raise e
-        except Exception as e:
-            raise ConanException(f"Graph file broken: {graphfile}\n{e}")
-
-    @staticmethod
-    def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
-        pkglist = MultiPackagesList()
-        cache_list = PackagesList()
-        if graph_recipes is None and graph_binaries is None:
-            recipes = ["*"]
-            binaries = ["*"]
-        else:
-            recipes = [r.lower() for r in graph_recipes or []]
-            binaries = [b.lower() for b in graph_binaries or []]
-
-        pkglist.lists["Local Cache"] = cache_list
-        for node in graph["graph"]["nodes"].values():
-            if context and node['context'] != context:
-                continue
-
-            # We need to add the python_requires too
-            python_requires = node.get("python_requires")
-            if python_requires is not None:
-                for pyref, pyreq in python_requires.items():
-                    pyrecipe = pyreq["recipe"]
-                    if pyrecipe == RECIPE_EDITABLE:
-                        continue
-                    pyref = RecipeReference.loads(pyref)
-                    if any(r == "*" or r == pyrecipe for r in recipes):
-                        cache_list.add_refs([pyref])
-                    pyremote = pyreq["remote"]
-                    if pyremote:
-                        remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
-                        remote_list.add_refs([pyref])
-
-            recipe = node["recipe"]
-            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_PLATFORM):
-                continue
-
-            ref = node["ref"]
-            ref = RecipeReference.loads(ref)
-            ref.timestamp = node["rrev_timestamp"]
-            recipe = recipe.lower()
-            if any(r == "*" or r == recipe for r in recipes):
-                cache_list.add_refs([ref])
-
-            remote = node["remote"]
-            if remote:
-                remote_list = pkglist.lists.setdefault(remote, PackagesList())
-                remote_list.add_refs([ref])
-            pref = PkgReference(ref, node["package_id"], node["prev"], node["prev_timestamp"])
-            binary_remote = node["binary_remote"]
-            if binary_remote:
-                remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())
-                remote_list.add_refs([ref])  # Binary listed forces recipe listed
-                remote_list.add_prefs(ref, [pref])
-
-            binary = node["binary"]
-            if binary in (BINARY_SKIP, BINARY_INVALID, BINARY_MISSING):
-                continue
-
-            binary = binary.lower()
-            if any(b == "*" or b == binary for b in binaries):
-                cache_list.add_refs([ref])  # Binary listed forces recipe listed
-                cache_list.add_prefs(ref, [pref])
-                cache_list.add_configurations({pref: node["info"]})
-        return pkglist
-
-
 class PackagesList:
     """ A collection of recipes, revisions and packages."""
     def __init__(self):
@@ -272,14 +109,193 @@ class PackagesList:
         return result
 
     def serialize(self):
-        """ Serialize the PackagesList to a dictionary."""
-        return self.recipes
+        """ Serialize the instance to a dictionary."""
+        return self.recipes.copy()
 
     @staticmethod
     def deserialize(data):
+        """ Loads the data from a serialized dictionary."""
         result = PackagesList()
         result.recipes = data
         return result
+
+
+class MultiPackagesList:
+    """ A collection of PackagesList by remote name."""
+    def __init__(self):
+        self.lists = {}
+
+    def __getitem__(self, name):
+        try:
+            return self.lists[name]
+        except KeyError:
+            raise ConanException(f"'{name}' doesn't exist in package list")
+
+    def add(self, name, pkg_list: PackagesList):
+        self.lists[name] = pkg_list
+
+    def add_error(self, remote_name, error):
+        self.lists[remote_name] = {"error": error}
+
+    def serialize(self):
+        """ Serialize object to a dictionary."""
+        return {k: v.serialize() if isinstance(v, PackagesList) else v
+                for k, v in self.lists.items()}
+
+    def merge(self, other):
+        for k, v in other.lists.items():
+            self.lists.setdefault(k, PackagesList()).merge(v)
+
+    def keep_outer(self, other):
+        for namespace, other_pkg_list in other.lists.items():
+            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
+
+    @staticmethod
+    def load(file):
+        """ Create an instance of the class from a serialized JSON file path pointed by ``file``."""
+        try:
+            content = json.loads(load(file))
+        except JSONDecodeError as e:
+            raise ConanException(f"Package list file invalid JSON: {file}\n{e}")
+        except Exception as e:
+            raise ConanException(f"Package list file missing or broken: {file}\n{e}")
+        # Check if input json is not a graph file
+        if "graph" in content:
+            base_path = os.path.basename(file)
+            raise ConanException(
+                'Expected a package list file but found a graph file. You can create a "package list" JSON file by running:\n\n'
+                f"\tconan list --graph {base_path} --format=json > pkglist.json\n\n"
+                "More Info at 'https://docs.conan.io/2/examples/commands/pkglists.html"
+            )
+        result = {}
+        for remote, pkglist in content.items():
+            if "error" in pkglist:
+                result[remote] = pkglist
+            else:
+                result[remote] = PackagesList.deserialize(pkglist)
+        pkglist = MultiPackagesList()
+        pkglist.lists = result
+        return pkglist
+
+    @staticmethod
+    def load_graph(graphfile, graph_recipes=None, graph_binaries=None, context=None):
+        """ Create an instance of the class from a graph file path, which is
+        the json format returned by a few commands
+        like ``conan graph info`` or ``conan create/install.``
+
+        :parameter str graphfile: Path to the graph file
+        :parameter list[str] graph_recipes: List for kinds of recipes to return.
+            For example ``"cache"`` will return only recipes in the local cache,
+            ``"download"`` will return only recipes that have been downloaded,
+            and passing ``"*"`` will return all recipes.
+        :parameter list[str] graph_binaries: List for kinds of binaries to return.
+            For example ``"cache"`` will return only binaries in the local cache,
+            ``"download"`` will return only binaries that have been downloaded,
+            ``"build"`` will return only binaries that are built,
+            ``"missing"`` will return only binaries that are missing,
+            ``"invalid"`` will return only binaries that are invalid,
+            and passing ``"*"`` will return all binaries.
+        :parameter str context: Context to filter the graph,
+            can be ``"host"``, ``"build"``, ``"host-only"`` or ``"build-only"``
+        """
+        if not os.path.isfile(graphfile):
+            raise ConanException(f"Graph file not found: {graphfile}")
+        try:
+            base_context = context.split("-")[0] if context else None
+            graph = json.loads(load(graphfile))
+            # Check if input json is a graph file
+            if "graph" not in graph:
+                raise ConanException(
+                    'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running:\n\n'
+                    f"\tconan [ graph-info | create | export-pkg | install | test ] --format=json > graph.json\n\n"
+                    "More Info at 'https://docs.conan.io/2/reference/commands/formatters/graph_info_json_formatter.html"
+                )
+
+            mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                        context=base_context)
+            if context == "build-only":
+                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                       context="host")
+                mpkglist.keep_outer(host)
+            elif context == "host-only":
+                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+                                                        context="build")
+                mpkglist.keep_outer(build)
+            return mpkglist
+        except JSONDecodeError as e:
+            raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
+        except KeyError as e:
+            raise ConanException(f'Graph file {graphfile} is missing the required "{e}" key in its contents.\n'
+                                 "Note that the graph file should not be filtered "
+                                 "if you expect to use it with the list command.")
+        except ConanException as e:
+            raise e
+        except Exception as e:
+            raise ConanException(f"Graph file broken: {graphfile}\n{e}")
+
+    @staticmethod
+    def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
+        pkglist = MultiPackagesList()
+        cache_list = PackagesList()
+        if graph_recipes is None and graph_binaries is None:
+            recipes = ["*"]
+            binaries = ["*"]
+        else:
+            recipes = [r.lower() for r in graph_recipes or []]
+            binaries = [b.lower() for b in graph_binaries or []]
+
+        pkglist.lists["Local Cache"] = cache_list
+        for node in graph["graph"]["nodes"].values():
+            if context and node['context'] != context:
+                continue
+
+            # We need to add the python_requires too
+            python_requires = node.get("python_requires")
+            if python_requires is not None:
+                for pyref, pyreq in python_requires.items():
+                    pyrecipe = pyreq["recipe"]
+                    if pyrecipe == RECIPE_EDITABLE:
+                        continue
+                    pyref = RecipeReference.loads(pyref)
+                    if any(r == "*" or r == pyrecipe for r in recipes):
+                        cache_list.add_refs([pyref])
+                    pyremote = pyreq["remote"]
+                    if pyremote:
+                        remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
+                        remote_list.add_refs([pyref])
+
+            recipe = node["recipe"]
+            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_PLATFORM):
+                continue
+
+            ref = node["ref"]
+            ref = RecipeReference.loads(ref)
+            ref.timestamp = node["rrev_timestamp"]
+            recipe = recipe.lower()
+            if any(r == "*" or r == recipe for r in recipes):
+                cache_list.add_refs([ref])
+
+            remote = node["remote"]
+            if remote:
+                remote_list = pkglist.lists.setdefault(remote, PackagesList())
+                remote_list.add_refs([ref])
+            pref = PkgReference(ref, node["package_id"], node["prev"], node["prev_timestamp"])
+            binary_remote = node["binary_remote"]
+            if binary_remote:
+                remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())
+                remote_list.add_refs([ref])  # Binary listed forces recipe listed
+                remote_list.add_prefs(ref, [pref])
+
+            binary = node["binary"]
+            if binary in (BINARY_SKIP, BINARY_INVALID, BINARY_MISSING):
+                continue
+
+            binary = binary.lower()
+            if any(b == "*" or b == binary for b in binaries):
+                cache_list.add_refs([ref])  # Binary listed forces recipe listed
+                cache_list.add_prefs(ref, [pref])
+                cache_list.add_configurations({pref: node["info"]})
+        return pkglist
 
 
 class ListPattern:
@@ -287,19 +303,19 @@ class ListPattern:
 
     def __init__(self, expression, rrev="latest", package_id=None, prev="latest", only_recipe=False):
         """
-        :param expression: The pattern to match, e.g. "name/*:*"
-        :param rrev: The recipe revision to match, defaults to "latest",
-                     can also be "!latest" or "~latest" to match all but the latest revision,
-                     a pattern like "1234*" to match a specific revision,
-                     or a specific revision like "1234".
-        :param package_id: The package ID to match, defaults to None, which matches all package IDs.
-        :param prev: The package revision to match, defaults to "latest",
-                     can also be "!latest" or "~latest" to match all but the latest revision,
-                     a pattern like "1234*" to match a specific revision,
-                     or a specific revision like "1234".
-        :param only_recipe: If True, only the recipe part of the expression is parsed,
-                            ignoring package_id and prev. This is useful for commands that
-                            only operate on recipes, like `conan search`.
+        :param expression: The pattern to match, e.g. ``"name/*:*"``
+        :param rrev: The recipe revision to match, defaults to ``"latest"``,
+                     can also be ``"!latest"`` or ``"~latest"`` to match all but the latest revision,
+                     a pattern like ``"1234*"`` to match a specific revision,
+                     or a specific revision like ``"1234"``.
+        :param package_id: The package ID to match, defaults to ``None``, which matches all package IDs.
+        :param prev: The package revision to match, defaults to ``"latest"``,
+                     can also be ``"!latest"`` or ``"~latest"`` to match all but the latest revision,
+                     a pattern like ``"1234*"`` to match a specific revision,
+                     or a specific revision like ``"1234"``.
+        :param only_recipe: If ``True``, only the recipe part of the expression is parsed,
+                            ignoring ``package_id`` and ``prev``. This is useful for commands that
+                            only operate on recipes, like ``conan search``.
         """
         def split(s, c, default=None):
             if not s:

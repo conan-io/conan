@@ -51,9 +51,9 @@ class ListAPI:
     def __init__(self, conan_api):
         self._conan_api = conan_api
 
-    def latest_recipe_revision(self, ref: RecipeReference, remote=None):
+    def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
-        or in the local cache if no remote is specified"""
+        or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         app = ConanBasicApp(self._conan_api)
         if remote:
@@ -63,7 +63,7 @@ class ListAPI:
 
         return ret
 
-    def recipe_revisions(self, ref: RecipeReference, remote=None):
+    def recipe_revisions(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return all the revisions of the recipe in the remote,
         or in the local cache if no remote is specified"""
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
@@ -163,14 +163,19 @@ class ListAPI:
 
         return result
 
-    def select(self, pattern: ListPattern, package_query=None, remote: Remote=None, lru=None, profile=None) -> PackagesList:
+    def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None, profile=None) -> PackagesList:
         """For a given pattern, return a list of recipes and packages matching the provided filters.
 
         :parameter ListPattern pattern: Search criteria
-        :parameter str package_query: When returning packages, a str like "os=Windows AND (arch=x86 OR compiler=gcc)" to filter packages by. If None, all packages will be returned if requested.
-        :parameter Remote remote: Remote object to search in, if None, it will search in the local cache
-        :parameter str lru: If set, it will filter the results to only include packages/binaries that have been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
-        :parameter Profile profile: Profile object to filter the packages by settings and options
+        :parameter str package_query: When returning packages, expression of the form
+            ``"os=Windows AND (arch=x86 OR compiler=gcc)"`` to filter packages by.
+            If ``None``, all packages will be returned if requested.
+        :parameter Remote remote: Remote to search in,
+            if ``None``, it will search in the local cache.
+        :parameter str lru: If set, it will filter the results to only include
+            packages/binaries that have been used in the last 'lru' time.
+            It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
+        :parameter Profile profile: Profile to filter the packages by settings and options.
         """
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
