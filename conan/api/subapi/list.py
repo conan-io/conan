@@ -3,7 +3,7 @@ import os
 from collections import OrderedDict
 from typing import Dict
 
-from conan.api.model import PackagesList, MultiPackagesList, ListPattern
+from conan.api.model import PackagesList, MultiPackagesList, ListPattern, Remote
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
 from conan.internal.conan_app import ConanBasicApp
@@ -49,13 +49,13 @@ class ListAPI:
     """
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     def latest_recipe_revision(self, ref: RecipeReference, remote=None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
         or in the local cache if no remote is specified"""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if remote:
             ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
         else:
@@ -67,7 +67,7 @@ class ListAPI:
         """ For a given recipe reference, return all the revisions of the recipe in the remote,
         or in the local cache if no remote is specified"""
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
@@ -81,7 +81,7 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if remote:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
@@ -91,7 +91,7 @@ class ListAPI:
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if remote:
             results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
@@ -102,7 +102,7 @@ class ListAPI:
                                  remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         if not remote:
             prefs = app.cache.get_package_references(ref)
             packages = _get_cache_packages_binary_info(app.cache, prefs)
@@ -163,15 +163,14 @@ class ListAPI:
 
         return result
 
-    def select(self, pattern, package_query=None, remote=None, lru=None, profile=None):
-        """ For a given pattern, return a list of recipes and packages matching the provided filters.
-        :param pattern: ListPattern object with the search criteria
-        :param package_query: When returning packages, a str like "os=Windows AND (arch=x86 OR compiler=gcc)"
-        to filter packages by. If None, all packages will be returned if requested.
-        :param remote: Remote object to search in, if None, it will search in the local cache
-        :param lru: If set, it will filter the results to only include packages/binaries that have
-        been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
-        :param profile: Profile object to filter the packages by settings and options
+    def select(self, pattern: ListPattern, package_query=None, remote: Remote=None, lru=None, profile=None) -> PackagesList:
+        """For a given pattern, return a list of recipes and packages matching the provided filters.
+
+        :parameter ListPattern pattern: Search criteria
+        :parameter str package_query: When returning packages, a str like "os=Windows AND (arch=x86 OR compiler=gcc)" to filter packages by. If None, all packages will be returned if requested.
+        :parameter Remote remote: Remote object to search in, if None, it will search in the local cache
+        :parameter str lru: If set, it will filter the results to only include packages/binaries that have been used in the last 'lru' time. It can be a string like "2d" (2 days) or "3h" (3 hours).
+        :parameter Profile profile: Profile object to filter the packages by settings and options
         """
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
@@ -182,7 +181,7 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         limit_time = _timelimit(lru) if lru else None
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
