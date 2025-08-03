@@ -74,7 +74,7 @@ class ConanAPI:
         self.cache = CacheAPI(self, self._api_helpers)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
-        self.audit = AuditAPI(self, self._api_helpers)
+        self.audit = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
         self.report = ReportAPI(self, self._api_helpers)

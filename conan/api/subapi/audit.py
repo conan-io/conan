@@ -18,9 +18,8 @@ class AuditAPI:
     This class provides the functionality to scan references for vulnerabilities.
     """
 
-    def __init__(self, conan_api, api_helpers):
+    def __init__(self, conan_api):
         self._conan_api = conan_api
-        self._api_helpers = api_helpers
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
         self._provider_cls = {
@@ -87,7 +86,7 @@ class AuditAPI:
 
         provider_cls = self._provider_cls.get(provider_data["type"])
 
-        return provider_cls(self._conan_api, provider_name, provider_data, self._api_helpers.requester)
+        return provider_cls(self._conan_api, provider_name, provider_data)
 
     def list_providers(self):
         """
@@ -97,7 +96,7 @@ class AuditAPI:
         result = []
         for name, provider_data in providers.items():
             provider_cls = self._provider_cls.get(provider_data["type"])
-            result.append(provider_cls(self._conan_api, name, provider_data, self._api_helpers.requester))
+            result.append(provider_cls(self._conan_api, name, provider_data))
         return result
 
     def add_provider(self, name, url, provider_type):

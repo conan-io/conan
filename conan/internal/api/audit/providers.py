@@ -11,12 +11,12 @@ def _build_headers(token):
 
 
 class ConanCenterProvider:
-    def __init__(self, conan_api, name, provider_data, requester):
+    def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = requester
+        self._session = conan_api.remotes.requester
         self._query_url = urljoin(self.url, "api/v1/query")
 
     def get_cves(self, refs):
@@ -106,12 +106,12 @@ class ConanCenterProvider:
 
 
 class PrivateProvider:
-    def __init__(self, conan_api, name, provider_data, requester):
+    def __init__(self, conan_api, name, provider_data):
         self.name = name
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = requester
+        self._session = conan_api.remotes.requester
         self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
     def get_cves(self, refs):
