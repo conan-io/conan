@@ -83,9 +83,7 @@ class ConanAPI:
         """
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
-        # TODO: Think order of reinitialization for helpers
         self._api_helpers.reinit()
-        self.remotes.reinit()
         self.local.reinit()
 
     def migrate(self):
