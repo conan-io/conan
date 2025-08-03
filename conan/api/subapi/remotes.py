@@ -36,10 +36,10 @@ class RemotesAPI:
         self._home_folder = conan_api.home_folder
         self._remotes_file = HomePaths(self._home_folder).remotes_path
         # Wraps an http_requester to inject proxies, certs, etc
-        self._requester = ConanRequester(self._api_helpers.global_conf, self._conan_api.home_folder)
+        self._requester = ConanRequester(api_helpers.global_conf, self._home_folder)
 
     def reinit(self):
-        self._requester = ConanRequester(self._api_helpers.global_conf, self._conan_api.home_folder)
+        self._requester = ConanRequester(self._api_helpers.global_conf, self._home_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
