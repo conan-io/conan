@@ -77,7 +77,7 @@ def test_project_xcodebuild(client):
                 xcode.build("app.xcodeproj")
 
             def package(self):
-                copy(self, "{}/app".format(self.settings.build_type), self.build_folder,
+                copy(self, "build/{}/app".format(self.settings.build_type), self.source_folder,
                      os.path.join(self.package_folder, "bin"), keep_path=False)
 
             def package_info(self):
