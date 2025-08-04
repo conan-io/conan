@@ -2,7 +2,12 @@ from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_
 
 
 class XcodeBuild(object):
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, use_build_folder=False):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param use_build_folder: If build files/artifacts should be placed in ``self.build_folder``.
+                                 If ``False``, by default they will be placed in the directory of Xcode project.
+        """
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")
         self._arch = to_apple_arch(self._conanfile)
@@ -10,6 +15,7 @@ class XcodeBuild(object):
         self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
         self._os = conanfile.settings.get_safe("os")
         self._os_version = conanfile.settings.get_safe("os.version")
+        self._use_build_folder = use_build_folder
 
     @property
     def _verbosity(self):
@@ -43,10 +49,10 @@ class XcodeBuild(object):
         target = "-target '{}'".format(target) if target else "-alltargets"
         build_config = configuration or self._build_type
         cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
-              "SYMROOT='{}' OBJROOT='{}' " \
               "{} {} {}".format(xcodeproj, build_config, self._arch,
-                                self._conanfile.build_folder, self._conanfile.build_folder,
                                 self._sdkroot, self._verbosity, target)
+        if self._use_build_folder:
+            cmd += f" SYMROOT='{self._conanfile.build_folder}' OBJROOT='{self._conanfile.build_folder}'"
 
         deployment_target_key = xcodebuild_deployment_target_key(self._os)
         if deployment_target_key and self._os_version:
