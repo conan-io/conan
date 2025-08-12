@@ -80,8 +80,88 @@ Also, if you plan to contribute, please add some testing for your changes. You c
 tests guidelines section](https://github.com/conan-io/conan/blob/develop2/test/README.md) for
 some advice on how to write tests for Conan.
 
-### Running the tests
+### Dependencies
 
+Before running tests, you'll need to install various development tools that the Conan test suite requires. The tests expect specific versions of these tools to be available.
+
+### Required Tools and Versions
+
+The following tools are required by the test suite. You can install them system-wide or configure custom paths in a `test/conftest_user.py` file:
+
+**Build Tools:**
+
+-   **CMake**: 3.15.7, 3.19.7, 3.23.5, 3.27.9, 4.0.0-rc3 (minimum: 3.15)
+-   **Ninja**: 1.10.2 or later
+-   **Meson**: Any recent version (install via `pip install meson`)
+-   **Bazel**: 6.5.0, 7.4.1, 8.0.0
+
+**Platform-specific Tools:**
+
+-   **macOS**: Xcode, XcodeGen, autotools (autoconf, automake, libtool), make, zlib, emscripten
+-   **Windows**: Visual Studio 2017/2019/2022, pkg-config, MinGW/MSYS2
+-   **Linux**: GCC/Clang, autotools, pkg-config
+
+**Optional Tools** (tests will be skipped if not available):
+
+-   **Emscripten** (emcc): For WebAssembly tests
+-   **Android NDK**: For Android cross-compilation tests
+-   **QBS**: 2.6.0 for QBS build system tests
+-   **Premake**: 5.0.0 for Premake build system tests
+
+### Installation Examples
+
+**macOS (using Homebrew):**
+
+```bash
+# Install basic development tools
+brew install cmake ninja meson autoconf automake libtool make zlib xcodegen emscripten
+
+# Install multiple CMake versions (for comprehensive testing)
+# You may need to install older versions manually or via the test setup scripts
+```
+
+**Ubuntu/Debian:**
+
+```bash
+# Install basic tools
+sudo apt-get update
+sudo apt-get install build-essential cmake ninja-build python3-pip autoconf automake libtool pkg-config
+
+# Install Meson
+pip3 install meson
+
+# Install Bazel (example for latest version)
+# See https://bazel.build/install for platform-specific instructions
+```
+
+**Windows:**
+
+```bash
+# Using Chocolatey
+choco install cmake ninja pkgconfiglite
+
+# Install Visual Studio with C++ workload
+# Install MSYS2 for Unix-like environment
+# See the GitHub Actions workflows for detailed setup examples
+```
+
+### Custom Tool Configuration
+
+If you have tools installed in non-standard locations or want to skip certain tests, create a `test/conftest_user.py` file:
+
+```python
+# Example conftest_user.py
+tools_locations = {
+    'cmake': {
+        "default": "3.19",
+        "3.19": {"path": {"Darwin": "/opt/cmake/3.19/bin"}},
+    },
+    'meson': {"disabled": True},  # Skip meson tests
+    'bazel': {"disabled": True},  # Skip bazel tests
+}
+```
+
+## Running the tests
 
 **Install Python requirements**
 
