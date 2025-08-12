@@ -353,7 +353,7 @@ class ConanFile:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    def run(self, command: str, stdout=None, cwd: str = None, ignore_errors=False, env="", quiet=False,
+    def run(self, command: str, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
             shell=True, scope="build", stderr=None):
         """ Run a command in the current package context.
 
