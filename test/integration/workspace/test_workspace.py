@@ -160,7 +160,8 @@ class TestAddRemove:
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 conanfile = self.load_conanfile(f)
-                                result.append({"path": f, "ref": f"{conanfile.name}/{conanfile.version}"})
+                                result.append({"path": f,
+                                               "ref": f"{conanfile.name}/{conanfile.version}"})
                         return result
                """)
 
@@ -214,6 +215,34 @@ class TestAddRemove:
         info = json.loads(c.stdout)
         assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.run("install --requires=pkg/2.1")
+        # it will not fail
+
+    def test_api_dynamic_any_version(self):
+        # For workspace, the version of the conanfile can be ignored if the
+        # workspace define a different version.
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name= "pkg"
+                version = "0.1"
+            """)
+
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    return [{"path": "dep1", "ref": "pkg/1.2.3"}]
+            """)
+
+        c.save({"conanws.py": workspace,
+                "dep1/conanfile.py": conanfile})
+        c.run("workspace info --format=json")
+        info = json.loads(c.stdout)
+        assert info["packages"] == [{"ref": "pkg/1.2.3", "path": "dep1"}]
+        c.run("install --requires=pkg/1.2.3")
         # it will not fail
 
     def test_error_uppercase(self):
@@ -488,7 +517,8 @@ class TestMeta:
                clean_first=True)
         c.run("workspace add liba")
         c.run("workspace add libb")
-        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
+        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain "
+              "-of=build --envs-generation=false")
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
@@ -597,7 +627,7 @@ class TestClean:
         c.save({"conanws.yml": "name: my_workspace"})
         pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
         pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
-        c.save({"pkga/conanfile.py": pkga ,
+        c.save({"pkga/conanfile.py": pkga,
                 "pkgb/conanfile.py": pkgb,
                 "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")})
         c.run("workspace add pkga -of=build/pkga")
@@ -781,7 +811,6 @@ class TestCreate:
         assert "WARN: BUILD ZLIB!" not in c.out
         assert "pkgc/0.1: WARN: BUILD PKGC!" in c.out
 
-
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
             import os
@@ -802,7 +831,6 @@ class TestCreate:
         assert "pkga/0.1" in c.out
         c.run("workspace create")
         assert "Workspace create pkga/0.1" in c.out
-
 
     def test_host_build_require(self):
         c = TestClient()
