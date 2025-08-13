@@ -1,5 +1,4 @@
 import textwrap
-import unittest
 
 from jinja2 import Template
 
@@ -7,7 +6,7 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save
 
 
-class TestPackageTestCase(unittest.TestCase):
+class TestTestPackage:
     conanfile_tpl = Template(textwrap.dedent("""
         from conan import ConanFile
         import os
@@ -67,16 +66,16 @@ class TestPackageTestCase(unittest.TestCase):
               " --profile:host=profile_host --profile:build=profile_build")
 
         # Build requires are built in the 'build' context:
-        self.assertIn("br1/version: >> settings.os: Build", t.out)
-        self.assertIn("br1/version: >> settings_build.os: Build", t.out)
+        assert "br1/version: >> settings.os: Build" in t.out
+        assert "br1/version: >> settings_build.os: Build" in t.out
 
         # Package 'name' is built for the 'host' context (br1 as build_requirement)
-        self.assertIn("name/version: >> settings.os: Host", t.out)
-        self.assertIn("name/version: >> settings_build.os: Build", t.out)
+        assert "name/version: >> settings.os: Host" in t.out
+        assert "name/version: >> settings_build.os: Build" in t.out
 
         # Test_package is executed with the same profiles as the package itself
-        self.assertIn("name/version (test package): >> settings.os: Host", t.out)
-        self.assertIn("name/version (test package): >> settings_build.os: Build", t.out)
+        assert "name/version (test package): >> settings.os: Host" in t.out
+        assert "name/version (test package): >> settings_build.os: Build" in t.out
 
         t.run("test test_package/conanfile.py name/version@ "
               "--profile:host=profile_host --profile:build=profile_build")

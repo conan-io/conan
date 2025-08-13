@@ -8,7 +8,7 @@ from conan.errors import ConanException
 class CommandAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self.cli = None
 
     def run(self, cmd):
@@ -33,7 +33,7 @@ class CommandAPI:
         _warnings_as_errors = ConanOutput._warnings_as_errors  # noqa
 
         try:
-            result = command.run_cli(self.conan_api, args)
+            result = command.run_cli(self._conan_api, args)
         finally:
             ConanOutput._conan_output_level = _conan_output_level
             ConanOutput._silent_warn_tags = _silent_warn_tags

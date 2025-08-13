@@ -24,7 +24,7 @@ def test_pkg_sign():
             signature = os.path.join(signature_folder, "signature.asc")
             open(signature, "w").write("\n".join(files))
 
-        def verify(ref, artifacts_folder, signature_folder, files):
+        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             print("Verifying ref: ", ref)
             print("Verifying folder: ", artifacts_folder)
             signature = os.path.join(signature_folder, "signature.asc")

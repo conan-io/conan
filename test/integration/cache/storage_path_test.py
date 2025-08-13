@@ -15,3 +15,10 @@ def test_storage_path():
 
     client.run("cache path mypkg/0.1")
     assert tmp_folder in client.out
+
+
+def test_wrong_home_error():
+    client = TestClient(light=True)
+    client.save_home({"global.conf": "core.cache:storage_path=//"})
+    client.run("list *")
+    assert "Couldn't initialize storage in" in client.out
