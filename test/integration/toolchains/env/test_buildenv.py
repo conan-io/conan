@@ -47,7 +47,7 @@ def test_quoted_vars():
             name = "dep"
             version = "0.1"
             def package_info(self):
-                self.buildenv_info.define("MyCustomEscapedVar", 'MyVar:"content!!"')
+                self.buildenv_info.define("MyCustomEscapedVar", r'MyVar:"content!! ^| other!!"')
         """)
 
     conanfile = textwrap.dedent("""
@@ -70,5 +70,5 @@ def test_quoted_vars():
 
     c.run("create dep")
     c.run("build consumer")
-    assert 'MyCustomEscapedVar=MyVar:"content!!"' in c.out
+    assert 'MyCustomEscapedVar=MyVar:"content!! | other!!"' in c.out
     assert "Hello!!!!" in c.out
