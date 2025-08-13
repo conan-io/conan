@@ -1,22 +1,63 @@
+import copy
+import json
 import os
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
-from conan.internal.util.files import mkdir, sha256sum
-
-SIGN_SUMMARY_FILENAME = "sign-summary.json"
-
-SIGN_SUMMARY_CONTENT = {
-    "provider": None,
-    "method": None,
-    "files": {}
-}
+from conan.internal.util.files import load, mkdir, save, sha256sum
 
 
-def is_signed(signature_folder):
-    return os.path.exists(os.path.join(signature_folder, SIGN_SUMMARY_FILENAME))
+class PkgSignaturesTools:
+
+    SIGN_SUMMARY_CONTENT = {
+        "provider": None,
+        "method": None,
+        "files": {}
+    }
+    SIGN_SUMMARY_FILENAME = "sign-summary.json"
+
+    def __init__(self, artifacts_folder, signature_folder):
+        self._artifacts_folder = artifacts_folder
+        self._signature_folder = signature_folder
+
+    def get_summary_file_path(self):
+        return os.path.join(self._signature_folder, self.SIGN_SUMMARY_FILENAME)
+
+    def is_pkg_signed(self):
+        return os.path.isfile(self.get_summary_file_path())
+
+    def create_summary_content(self):
+        """
+        Creates the summary content as a dictionary for manipulation
+        @return: Dictionary with the summary content
+        """
+        checksums = {}
+        for fname in os.listdir(self._artifacts_folder):
+            file_path = os.path.join(self._artifacts_folder, fname)
+            if os.path.isfile(file_path):
+                sha256 = sha256sum(file_path)
+                checksums[fname] = sha256
+        sorted_checksums = dict(sorted(checksums.items()))
+        content = copy.deepcopy(self.SIGN_SUMMARY_CONTENT)
+        content["files"] = sorted_checksums
+        return content
+
+    def load_summary(self):
+        """"
+        Loads the summary file from the signature folder
+        """
+        return json.loads(load(self.get_summary_file_path()))
+
+    def save_summary(self, content):
+        """
+        Saves the content of the summary to the signature folder using SIGN_SUMMARY_FILENAME as the
+        file name
+        @param content: Content of the summary file
+        @return:
+        """
+        save(self.get_summary_file_path(), json.dumps(content))
 
 
 class PkgSignaturesPlugin:
@@ -35,27 +76,18 @@ class PkgSignaturesPlugin:
             except AttributeError:
                 pass
 
-    def create_summary(self, files, artifacts_folder):
-        checksums = {}
-        for fname in os.listdir(artifacts_folder):
-            file_path = os.path.join(artifacts_folder, fname)
-            if os.path.isfile(file_path):
-                sha256 = sha256sum(file_path)
-                checksums[fname] = sha256
-        sorted_checksums = dict(sorted(checksums.items()))
-        content = SIGN_SUMMARY_CONTENT.copy()
-        content["files"] = sorted_checksums
-
     def sign(self, upload_data, action="upload"):  # cache, upload,
         if self._plugin_sign_function is None:
             ConanOutput().error("Package signing plugin: sign function not found")
             return
 
         def _sign(ref, files, folder):
+            output = ConanOutput(scope=f"{ref.repr_notime()}")
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
+            sign_tools = PkgSignaturesTools(folder, metadata_sign)
             self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
-                                       sign_summary=self.create_summary(folder))
+                                       output=output, sign_tools=sign_tools)
 
         if action == "upload":
             for rref, recipe_bundle in upload_data.refs().items():
@@ -76,9 +108,11 @@ class PkgSignaturesPlugin:
         if self._plugin_verify_function is None:
             ConanOutput().error("Package signing plugin: verify function not found")
             return
+        output = ConanOutput(scope=f"{ref.repr_notime()}")
         metadata_sign = os.path.join(folder, METADATA, "sign")
+        sign_tools = PkgSignaturesTools(folder, metadata_sign)
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
-                                     files=files)
+                                     files=files, output=output, sign_tools=sign_tools)
 
     def verify_pkglist(self, pkg_list, action="cache"):  # cache, install, upload
         if self._plugin_verify_function is None:

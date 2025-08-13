@@ -21,8 +21,8 @@ def test_pkg_sign_basic():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     signer = textwrap.dedent(r"""
-        def sign(ref, artifacts_folder, signature_folder):
-            print(f"Signing package {ref.repr_notime()}")
+        def sign(ref, artifacts_folder, signature_folder, output, sign_tools):
+            output.info(f"Signing package {ref.repr_notime()}")
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
@@ -36,8 +36,8 @@ def test_pkg_verify_basic():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     signer = textwrap.dedent(r"""
-        def verify(ref, artifacts_folder, signature_folder, files):
-            print(f"Verifying package {ref.repr_notime()}")
+        def verify(ref, artifacts_folder, signature_folder, files, output, sign_tools):
+            output.info(f"Verifying package {ref.repr_notime()}")
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")

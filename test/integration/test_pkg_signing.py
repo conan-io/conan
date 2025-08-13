@@ -13,7 +13,7 @@ def test_pkg_sign():
     signer = textwrap.dedent(r"""
         import os
 
-        def sign(ref, artifacts_folder, signature_folder):
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
             print("Signing ref: ", ref)
             print("Signing folder: ", artifacts_folder)
             files = []
