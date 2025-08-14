@@ -169,6 +169,7 @@ class PkgSignaturesPlugin:
 def _handle_failure(exception, action, ref):
     exception_msg = str(exception)
     if action in ["upload", "install"]:
+        # TODO: Mark folder with set_dirty(artifacts_folder)
         raise ConanException(f"{ref.repr_notime()}: {exception_msg}")
     else:
         error_msg = f"Failed: {exception_msg}" if exception_msg else "Failed"
