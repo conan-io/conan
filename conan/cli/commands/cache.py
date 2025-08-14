@@ -23,7 +23,7 @@ def print_cache_sign_verify_text(data):
         for ref, result in elements.items():
             cli_out_write(f"- {ref}", fg=Color.BRIGHT_BLUE)
             if result is None:
-                result = "Ok"
+                result = "Signed" if data.get("action") == "sign" else "Signature verified"
             color = Color.BRIGHT_YELLOW if "warn" in result else Color.BRIGHT_WHITE
             color = Color.BRIGHT_RED if "fail" in result else color
             cli_out_write(f"      {result}", fg=color)

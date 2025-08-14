@@ -56,65 +56,89 @@ def test_pkg_sign():
     assert "VERIFYING  conan_sources.tgz" in c.out
 
 
-def test_pkg_sign_with_tools():
+def test_pkg_sign_canonical():
     c = TestClient(default_server_user=True)
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
-            .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
-            "export/file1.txt": "file1!",
-            "export_sources/file2.txt": "file2!"})
+    c.save({"conanfile1.py": GenConanfile("lib1ok", "0.1"),
+            "conanfile2.py": GenConanfile("lib2fail", "0.1"),  # This pkg fails when installed
+            "conanfile3.py": GenConanfile("lib3fail", "0.1")})  # This pkg should always fail
+    c.run("create conanfile1.py")
+    c.run("create conanfile2.py")
+    c.run("create conanfile3.py")
     signer = textwrap.dedent(r"""
         import os
+        from conan.errors import ConanException
 
         def sign(ref, artifacts_folder, signature_folder, output, sign_tools):
             output.info("Signing reference")
             output.info(f"Signing folder: {artifacts_folder}")
-            files = []
+            if sign_tools.is_pkg_signed():
+                summary = sign_tools.load_summary()
+                if summary.get("provider") != "conan-client":
+                    output.warning("Package already signed by another provider")
+                    return "Warn: Package already signed by another provider"
+                output.info("Package already signed by the same provider")
+                return "Package already signed by the same provider"
+
             c = sign_tools.create_summary_content()
-            c["provider"] = "the provider"
-            c["method"] = "the method"
+            c["method"] = "sigstore"
+
+            if "lib3fail" in str(ref):
+                raise ConanException("sign failed")
+            elif "lib2fail" in str(ref):
+                c["provider"] = "this will fail to verify"
+            else:
+                c["provider"] = "conan-client"
             sign_tools.save_summary(c)
-            signature = sign_tools.get_summary_file_path() + ".asc"
-            files = []
-            for f in sorted(os.listdir(artifacts_folder)):
-                if os.path.isfile(os.path.join(artifacts_folder, f)):
-                    files.append(f)
-            open(signature, "w").write("\n".join(files))
-            contents = open(signature).read()
-            output.info(f"Sign contents: {contents}")
+            output.info("Signature ok")
 
         def verify(ref, artifacts_folder, signature_folder, files, output, sign_tools):
-            if not sign_tools.is_pkg_signed():
-                output.warning("Package not signed, skipping verification")
-                return "not signed"
             output.info("Verifying reference")
-            output.info(f"Verifying folder {artifacts_folder}")
+            if not sign_tools.is_pkg_signed():
+                raise ConanException("Package is not signed")
+
+            if "lib3fail" in str(ref):
+                raise ConanException("verify failed")
             summary = sign_tools.load_summary()
-            output.info(f"Verifying sign provider: {summary.get('provider')}")
-            output.info(f"Verifying sign method: {summary.get('method')}")
-            signature = sign_tools.get_summary_file_path() + ".asc"
-            contents = open(signature).read()
-            output.info(f"Verifying contents: {contents}")
-            for f in files:
-                output.info(f"Verifying file {f}")
-                if os.path.isfile(os.path.join(artifacts_folder, f)):
-                    assert f in contents
-            return "ok"
+            assert summary.get("provider") == "conan-client", "wrong provider"
+            output.info("Verification ok")
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
-    c.run("create .")
+
+    # Cache verify command does not fail if package is not signed
     c.run("cache verify *")
-    assert "WARN: Package not signed, skipping verification" in c.out
-    c.run("upload * -r=default -c")
-    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Signing reference" in c.out
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n      Failed: Package is not signed" in c.out
+    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n      Failed: Package is not signed" in c.out
+    assert "lib3fail/0.1#09ccc766ddd11c96aa78307b3f166fd6\n      Failed: Package is not signed" in c.out
+
+    # Cache sign command does not fail if a package fails to sign, but it reports it
+    c.run("cache sign *")
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n      Signed" in c.out
+    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n      Signed" in c.out
+    assert "lib3fail/0.1#09ccc766ddd11c96aa78307b3f166fd6\n      Failed: sign failed" in c.out
+
+    # Upload sign fails if package signing fails
+    c.run("upload * -c -r default", assert_error=True)
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700: Package already signed by the same provider" in c.out
+    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2: WARN: Package already signed by another provider" in c.out
+    assert "ERROR: lib3fail/0.1#09ccc766ddd11c96aa78307b3f166fd6: sign failed" in c.out
+
+    # If upload sign failed, no packages should be uploaded
+    c.run("list * -r default")
+    assert "WARN: There are no matching recipe references" in c.out
+
+    # Upload packages individually to avoid previous failure
+    c.run("upload lib1ok* -c -r default")
+    c.run("upload lib2fail* -c -r default")
     c.run("remove * -c")
-    c.run("install --requires=pkg/0.1")
-    assert "Verifying sign method: the method" in c.out
-    assert "Verifying sign provider: the provider" in c.out
-    assert "pkg/0.1#5e2d444a24c6bdf96fc141053eb3bb7a: Verifying reference" in c.out
-    assert "Verifying file conanfile.py" in c.out
-    assert "Verifying file conan_sources.tgz" not in c.out  # Sources not retrieved now
-    assert "Verifying file conan_package.tgz" in c.out
-    # Lets force the retrieval of the sources
-    c.run("install --requires=pkg/0.1 --build=*")
-    assert "Verifying file conanfile.py" not in c.out  # It doesn't re-verify previous contents
-    assert "Verifying file conan_sources.tgz" in c.out
+
+    # Install verify command should fail if package is signed by another provider
+    c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700: Verification ok" in c.out
+    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2: wrong provider" in c.out
+
+    # Packages that failed in install verification should not appear as installed
+    c.run("list *")
+    assert "lib1ok" in c.out
+    assert "lib2fail" not in c.out
+    c.run("cache verify *")
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n      Signature verified" in c.out

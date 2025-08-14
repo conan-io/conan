@@ -99,7 +99,7 @@ class PkgSignaturesPlugin:
                 result = self._plugin_sign_function(ref, artifacts_folder=folder,
                                                     signature_folder=metadata_sign, output=output,
                                                     sign_tools=sign_tools)
-            except ConanException as e:
+            except (ConanException, AssertionError) as e:
                 result = _handle_failure(e, context, ref)
             # Add files to the pkglist/bundle
             for f in os.listdir(metadata_sign):
@@ -142,7 +142,7 @@ class PkgSignaturesPlugin:
             result = self._plugin_verify_function(ref, artifacts_folder=folder,
                                                   signature_folder=metadata_sign, files=files,
                                                   output=output, sign_tools=sign_tools)
-        except ConanException as e:
+        except (ConanException, AssertionError) as e:
             result = _handle_failure(e, context, ref)
         return {ref.repr_notime(): result}
 
