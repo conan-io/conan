@@ -46,6 +46,15 @@ class TestRequiredVersion:
         client.run("config home -cc core:required_conan_version=>2.0", assert_error=True)
         assert f"Current Conan version (1.0.0) does not satisfy the defined one (>2.0)" in client.out
 
+    @mock.patch("conan.__version__", "1.0.0")
+    def test_version_check_before_hooks(self):
+        client = TestClient(light=True)
+        client.save_home({"global.conf": f"core:required_conan_version=>2.0",
+                          # The hook shouldn't matter, version check happens earlier
+                          "extensions/hooks/hook_trim.py": "some error here"})
+        client.run("config home", assert_error=True)
+        assert f"Current Conan version (1.0.0) does not satisfy the defined one (>2.0)" in client.out
+
     def test_bad_format(self):
         required_version = "1.0.0.0-foobar"
         cache_folder = temp_folder()

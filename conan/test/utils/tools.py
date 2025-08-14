@@ -24,7 +24,6 @@ from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
-from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
@@ -33,6 +32,7 @@ from conan.internal import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
+from conan.internal.model.conf import load_global_conf
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
 from conan.api.model import PkgReference
@@ -471,7 +471,7 @@ class TestClient:
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
+        return PkgCache(self.cache_folder, load_global_conf(self.cache_folder))
 
     @property
     def paths(self):
