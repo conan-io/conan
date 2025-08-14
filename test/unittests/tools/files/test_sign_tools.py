@@ -45,5 +45,7 @@ def test_save_load_summary(pkg_sign_tools):
 def test_is_pkg_signed(pkg_sign_tools):
     assert not pkg_sign_tools.is_pkg_signed()
     c = pkg_sign_tools.create_summary_content()
+    c["provider"] = "the provider"
+    c["method"] = "the method"
     pkg_sign_tools.save_summary(c)
     assert pkg_sign_tools.is_pkg_signed()

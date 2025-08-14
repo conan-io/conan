@@ -2,7 +2,7 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import cli_out_write, ConanOutput, Color
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json
@@ -13,6 +13,25 @@ from conan.api.model import RecipeReference
 
 def json_export(data):
     cli_out_write(json.dumps({"cache_path": data}))
+
+
+def print_cache_sign_verify_text(data):
+    elements = data.get("results")
+    if elements:
+        title = "Verification" if data.get("action") == "verify" else "Signing"
+        cli_out_write(f"[Package signing plugin] {title} results:", fg=Color.BRIGHT_BLUE)
+        for ref, result in elements.items():
+            cli_out_write(f"- {ref}", fg=Color.BRIGHT_BLUE)
+            if result is None:
+                result = "Ok"
+            color = Color.BRIGHT_YELLOW if "warn" in result else Color.BRIGHT_WHITE
+            color = Color.BRIGHT_RED if "fail" in result else color
+            cli_out_write(f"      {result}", fg=color)
+
+
+def print_cache_sign_verify_json(data):
+    myjson = json.dumps(data, indent=4)
+    cli_out_write(myjson)
 
 
 @conan_command(group="Consumer")
@@ -150,10 +169,11 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().success("Integrity check: ok")
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+                              "json": print_cache_sign_verify_json})
 def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Sign packages
+    Sign packages with the Package Singing Plugin
     """
     subparser.add_argument("pattern", nargs="?",
                            help="Selection pattern for references to check integrity for")
@@ -176,13 +196,14 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    conan_api.cache.sign(package_list)
+    return conan_api.cache.sign(package_list)
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+                              "json": print_cache_sign_verify_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Check siugnature
+    Check the signature of packages with the Package Singing Plugin
     """
     subparser.add_argument("pattern", nargs="?",
                            help="Selection pattern for references to check integrity for")
@@ -205,7 +226,7 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    conan_api.cache.verify(package_list)
+    return conan_api.cache.verify(package_list)
 
 
 @conan_subcommand(formatters={"text": print_list_text,

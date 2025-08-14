@@ -3,6 +3,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput
+from conan.errors import ConanException
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
@@ -26,7 +27,11 @@ class PkgSignaturesTools:
         return os.path.join(self._signature_folder, self.SIGN_SUMMARY_FILENAME)
 
     def is_pkg_signed(self):
-        return os.path.isfile(self.get_summary_file_path())
+        try:
+            c = self.load_summary()
+        except FileNotFoundError:
+            return False
+        return bool(c.get("provider") and c.get("method"))
 
     def create_summary_content(self):
         """
@@ -57,16 +62,18 @@ class PkgSignaturesTools:
         @param content: Content of the summary file
         @return:
         """
+        assert content.get("provider")
+        assert content.get("method")
         save(self.get_summary_file_path(), json.dumps(content))
 
 
 class PkgSignaturesPlugin:
     def __init__(self, cache, home_folder):
         self._cache = cache
-        signer = HomePaths(home_folder).sign_plugin_path
+        self.sign_plugin_path = HomePaths(home_folder).sign_plugin_path
         self._plugin_sign_function = self._plugin_verify_function = None
-        if os.path.isfile(signer):
-            mod, _ = load_python_file(signer)
+        if os.path.isfile(self.sign_plugin_path):
+            mod, _ = load_python_file(self.sign_plugin_path)
             try:
                 self._plugin_sign_function = mod.sign
             except AttributeError:
@@ -76,54 +83,93 @@ class PkgSignaturesPlugin:
             except AttributeError:
                 pass
 
-    def sign(self, upload_data, action="upload"):  # cache, upload,
+    def sign(self, upload_data, context="upload"):  # cache, upload,
+        results = {}
         if self._plugin_sign_function is None:
-            ConanOutput().error("Package signing plugin: sign function not found")
-            return
+            ConanOutput().error(f"[Package signing plugin] sign() function not found in "
+                                f"{self.sign_plugin_path}")
+            return results
 
-        def _sign(ref, files, folder):
+        def _sign(ref, files, folder, context="upload"):
             output = ConanOutput(scope=f"{ref.repr_notime()}")
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
             sign_tools = PkgSignaturesTools(folder, metadata_sign)
-            self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
-                                       output=output, sign_tools=sign_tools)
+            try:
+                result = self._plugin_sign_function(ref, artifacts_folder=folder,
+                                                    signature_folder=metadata_sign, output=output,
+                                                    sign_tools=sign_tools)
+            except ConanException as e:
+                result = _handle_failure(e, context, ref)
+            # Add files to the pkglist/bundle
+            for f in os.listdir(metadata_sign):
+                files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
+            return {ref.repr_notime(): result}
 
-        if action == "upload":
+        if context == "upload":
             for rref, recipe_bundle in upload_data.refs().items():
                 if recipe_bundle["upload"]:
-                    _sign(rref, recipe_bundle["files"], self._cache.recipe_layout(rref).download_export())
+                    result = _sign(rref, recipe_bundle["files"],
+                                   self._cache.recipe_layout(rref).download_export())
+                    results.update(result)
                 for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
                     if pkg_bundle["upload"]:
-                        _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
+                        result = _sign(pref, pkg_bundle["files"],
+                                       self._cache.pkg_layout(pref).download_package())
+                        results.update(result)
         else:
             for rref, recipe_bundle in upload_data.refs().items():
                 if recipe_bundle:
-                    _sign(rref, [], self._cache.recipe_layout(rref).download_export())
+                    result = _sign(rref, {}, self._cache.recipe_layout(rref).download_export(),
+                                   context)
+                    results.update(result)
                 for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
                     if pkg_bundle:
-                        _sign(pref, [], self._cache.pkg_layout(pref).download_package())
+                        result = _sign(pref, {}, self._cache.pkg_layout(pref).download_package(),
+                                       context)
+                        results.update(result)
+        return results
 
-    def verify(self, ref, folder, files):
+    def verify(self, ref, folder, files, context="install"):
         if self._plugin_verify_function is None:
-            ConanOutput().error("Package signing plugin: verify function not found")
-            return
+            ConanOutput().error(f"[Package signing plugin] verify() function not found in "
+                                f"{self.sign_plugin_path}")
+            return {}
         output = ConanOutput(scope=f"{ref.repr_notime()}")
         metadata_sign = os.path.join(folder, METADATA, "sign")
         sign_tools = PkgSignaturesTools(folder, metadata_sign)
-        self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
-                                     files=files, output=output, sign_tools=sign_tools)
+        try:
+            result = self._plugin_verify_function(ref, artifacts_folder=folder,
+                                                  signature_folder=metadata_sign, files=files,
+                                                  output=output, sign_tools=sign_tools)
+        except ConanException as e:
+            result = _handle_failure(e, context, ref)
+        return {ref.repr_notime(): result}
 
-    def verify_pkglist(self, pkg_list, action="cache"):  # cache, install, upload
+    def verify_pkglist(self, pkg_list, context="cache"):  # cache, install, upload
+        results = {}
         if self._plugin_verify_function is None:
-            ConanOutput().error("Package signing plugin: verify function not found")
-            return
+            ConanOutput().error(f"[Package signing plugin] verify() function not found in "
+                                f"{self.sign_plugin_path}")
+            return results
 
         for rref, recipe_bundle in pkg_list.refs().items():
             if recipe_bundle:
                 rref_folder = self._cache.recipe_layout(rref).download_export()
-                self.verify(rref, rref_folder, os.listdir(rref_folder))
+                result = self.verify(rref, rref_folder, os.listdir(rref_folder), context)
+                results.update(result)
             for pref, pkg_bundle in pkg_list.prefs(rref, recipe_bundle).items():
                 if pkg_bundle:
                     pref_folder = self._cache.pkg_layout(pref).download_package()
-                    self.verify(pref, pref_folder, os.listdir(pref_folder))
+                    result = self.verify(pref, pref_folder, os.listdir(pref_folder), context)
+                    results.update(result)
+        return results
+
+
+def _handle_failure(exception, action, ref):
+    exception_msg = str(exception)
+    if action in ["upload", "install"]:
+        raise ConanException(f"{ref.repr_notime()}: {exception_msg}")
+    else:
+        error_msg = f"Failed: {exception_msg}" if exception_msg else "Failed"
+        return error_msg
