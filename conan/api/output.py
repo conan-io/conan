@@ -206,7 +206,7 @@ class ConanOutput:
                 ret = msg
 
         if newline:
-            ret += "\n"
+            ret = f"{ret}\n"
 
         with self.lock:
             self.stream.write(ret)
