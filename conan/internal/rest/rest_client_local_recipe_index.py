@@ -12,7 +12,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.export import cmd_export
 from conan.internal.hook_manager import HookManager
 from conan.internal.loader import ConanFileLoader
-from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
