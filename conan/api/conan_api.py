@@ -40,7 +40,7 @@ class ConanAPI:
     def __init__(self, cache_folder=None):
         """
         :param cache_folder: Conan cache/home folder. It will have less priority than the
-                             "home_folder" defined in a Workspace.
+                             ``"home_folder"`` defined in a Workspace.
         """
 
         version = sys.version_info
@@ -69,8 +69,10 @@ class ConanAPI:
         self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
-        self.upload = UploadAPI(self, self._api_helpers)
-        self.download = DownloadAPI(self)
+        #: Used to upload recipes and packages to remotes
+        self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
+        #: Used to download recipes and packages from remotes
+        self.download: DownloadAPI = DownloadAPI(self)
         self.cache = CacheAPI(self, self._api_helpers)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
