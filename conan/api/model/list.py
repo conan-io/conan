@@ -13,6 +13,7 @@ from conan.internal.util.files import load
 
 
 class MultiPackagesList:
+    """ A collection of PackagesList by remote name."""
     def __init__(self):
         self.lists = {}
 
@@ -29,6 +30,7 @@ class MultiPackagesList:
         self.lists[remote_name] = {"error": error}
 
     def serialize(self):
+        """ Serialize object to a dictionary."""
         return {k: v.serialize() if isinstance(v, PackagesList) else v
                 for k, v in self.lists.items()}
 
@@ -42,6 +44,7 @@ class MultiPackagesList:
 
     @staticmethod
     def load(file):
+        """ Create an instance of the class from a serialized JSON file path pointed by ``file``."""
         try:
             content = json.loads(load(file))
         except JSONDecodeError as e:
@@ -68,6 +71,25 @@ class MultiPackagesList:
 
     @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None, context=None):
+        """ Create an instance of the class from a graph file path, which is
+        the json format returned by a few commands
+        like ``conan graph info`` or ``conan create/install.``
+
+        :parameter str graphfile: Path to the graph file
+        :parameter list[str] graph_recipes: List for kinds of recipes to return.
+            For example ``"cache"`` will return only recipes in the local cache,
+            ``"download"`` will return only recipes that have been downloaded,
+            and passing ``"*"`` will return all recipes.
+        :parameter list[str] graph_binaries: List for kinds of binaries to return.
+            For example ``"cache"`` will return only binaries in the local cache,
+            ``"download"`` will return only binaries that have been downloaded,
+            ``"build"`` will return only binaries that are built,
+            ``"missing"`` will return only binaries that are missing,
+            ``"invalid"`` will return only binaries that are invalid,
+            and passing ``"*"`` will return all binaries.
+        :parameter str context: Context to filter the graph,
+            can be ``"host"``, ``"build"``, ``"host-only"`` or ``"build-only"``
+        """
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
         try:
@@ -81,7 +103,7 @@ class MultiPackagesList:
                     "More Info at 'https://docs.conan.io/2/reference/commands/formatters/graph_info_json_formatter.html"
                 )
 
-            mpkglist =  MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
+            mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
                                                         context=base_context)
             if context == "build-only":
                 host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
@@ -169,6 +191,7 @@ class MultiPackagesList:
 
 
 class PackagesList:
+    """ A collection of recipes, revisions and packages."""
     def __init__(self):
         self.recipes = {}
 
@@ -264,18 +287,36 @@ class PackagesList:
         return result
 
     def serialize(self):
-        return self.recipes
+        """ Serialize the instance to a dictionary."""
+        return self.recipes.copy()
 
     @staticmethod
     def deserialize(data):
+        """ Loads the data from a serialized dictionary."""
         result = PackagesList()
         result.recipes = data
         return result
 
 
 class ListPattern:
+    """ Object holding a pattern that matches recipes, revisions and packages."""
 
     def __init__(self, expression, rrev="latest", package_id=None, prev="latest", only_recipe=False):
+        """
+        :param expression: The pattern to match, e.g. ``"name/*:*"``
+        :param rrev: The recipe revision to match, defaults to ``"latest"``,
+                     can also be ``"!latest"`` or ``"~latest"`` to match all but the latest revision,
+                     a pattern like ``"1234*"`` to match a specific revision,
+                     or a specific revision like ``"1234"``.
+        :param package_id: The package ID to match, defaults to ``None``, which matches all package IDs.
+        :param prev: The package revision to match, defaults to ``"latest"``,
+                     can also be ``"!latest"`` or ``"~latest"`` to match all but the latest revision,
+                     a pattern like ``"1234*"`` to match a specific revision,
+                     or a specific revision like ``"1234"``.
+        :param only_recipe: If ``True``, only the recipe part of the expression is parsed,
+                            ignoring ``package_id`` and ``prev``. This is useful for commands that
+                            only operate on recipes, like ``conan search``.
+        """
         def split(s, c, default=None):
             if not s:
                 return None, default

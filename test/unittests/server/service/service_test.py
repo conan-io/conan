@@ -1,6 +1,6 @@
 import copy
 import os
-import unittest
+import pytest
 
 from conan.internal.errors import NotFoundException
 from conan.internal.model.manifest import FileTreeManifest
@@ -20,9 +20,10 @@ from conan.internal.util.files import save, save_files
 DEFAULT_REVISION = "1234"
 
 
-class ConanServiceTest(unittest.TestCase):
+class TestConanService:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.ref = RecipeReference.loads("openssl/2.0.3@lasote/testing#%s" % DEFAULT_REVISION)
 
         self.pref = PkgReference(self.ref, "123123123", DEFAULT_REVISION)
@@ -79,20 +80,20 @@ class ConanServiceTest(unittest.TestCase):
         info = self.search_service.search()
         expected = [RecipeReference(r.name, r.version, r.user, r.channel, revision=None)
                     for r in [ref3, ref4, self.ref, ref2]]
-        self.assertEqual(expected, info)
+        assert expected == info
 
         info = self.search_service.search(pattern="Assimp*", ignorecase=False)
         ref3_norev = copy.copy(ref3)
         ref3_norev.revision = None
-        self.assertEqual(info, [ref3_norev])
+        assert info == [ref3_norev]
 
         info = self.search_service.search_packages(ref2)
-        self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
-                                                }})
+        assert info == {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
+                                                }}
 
         info = self.search_service.search_packages(ref3)
-        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n'}
-                                })
+        assert info == {'77777777777': {'content': '\n[options]\n    use_Qt=True\n'}
+                                }
 
     def test_remove(self):
         ref2 = RecipeReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION)
@@ -111,9 +112,9 @@ class ConanServiceTest(unittest.TestCase):
         # Delete all the conans folder
         self.service.remove_recipe(self.ref, "lasote")
         conan_path = self.server_store.base_folder(self.ref)
-        self.assertFalse(os.path.exists(conan_path))
+        assert not os.path.exists(conan_path)
 
         # Raise an exception
-        self.assertRaises(NotFoundException,
-                          self.service.remove_recipe,
-                          RecipeReference("Fake", "1.0", "lasote", "stable"), "lasote")
+        with pytest.raises(NotFoundException):
+            self.service.remove_recipe(
+                              RecipeReference("Fake", "1.0", "lasote", "stable"), "lasote")

@@ -32,56 +32,70 @@ diff_html = r"""
             }
         </style>
         <script>
+            function debounce(func, delay) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        func.apply(context, args);
+                    }, delay);
+                };
+            }
             let includeSearchQuery = "";
             let excludeSearchQuery = "";
-
-            async function onExcludeSearchInput(event) {
-                excludeSearchQuery = event.currentTarget.value.toLowerCase();
-                onSearchInput(event);
-            }
-
-            async function onIncludeSearchInput(event) {
-                includeSearchQuery = event.currentTarget.value.toLowerCase();
-                onSearchInput(event);
-            }
 
             async function onSearchInput(event) {
                 const sidebar = document.querySelectorAll(".sidebar li");
                 const content = document.querySelectorAll(".content .diff-content");
+                const searchingIcon = document.getElementById("searching_icon");
+
+                searchingIcon.style.display = "inline-block";
+
+                let emptySearch = true;
 
                 sidebar.forEach(async function(item) {
                     const text = item.textContent.toLowerCase();
                     const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
                     const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+                    const associatedId = item.querySelector("a").getAttribute("href").substring(1)
+                    const contentItem = document.getElementById(associatedId);
 
                     if (shouldInclude) {
                         if (shouldExclude) {
                             item.style.display = "none";
+                            contentItem.style.display = "none";
                         } else {
                             item.style.display = "list-item";
+                            contentItem.style.display = "block";
+                            emptySearch = false;
                         }
                     } else {
                         item.style.display = "none";
+                        contentItem.style.display = "none";
                     }
 
                 });
 
-                content.forEach(async function(item) {
-                    const filename = document.getElementById(item.id + "_filename");
-                    const text = filename.dataset.replacedPaths.toLowerCase();
-                    const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
-                    const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+                searchingIcon.style.display = "none";
+                const emptySearchTag = document.getElementById("empty_search");
+                if (emptySearch) {
+                    emptySearchTag.style.display = "block";
+                } else {
+                    emptySearchTag.style.display = "none";
+                }
+            }
 
-                    if (shouldInclude) {
-                        if (shouldExclude) {
-                            item.style.display = "none";
-                        } else {
-                            item.style.display = "block";
-                        }
-                    } else {
-                        item.style.display = "none";
-                    }
-                });
+            const debouncedOnSearchInput = debounce(onSearchInput, 500);
+
+             async function onExcludeSearchInput(event) {
+                excludeSearchQuery = event.currentTarget.value.toLowerCase();
+                debouncedOnSearchInput(event);
+            }
+
+            async function onIncludeSearchInput(event) {
+                includeSearchQuery = event.currentTarget.value.toLowerCase();
+                debouncedOnSearchInput(event);
             }
         </script>
     </head>
@@ -96,10 +110,12 @@ diff_html = r"""
                 <h2>File list:</h2>
                 <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                 <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                <span id="searching_icon" style="display:none">...</span>
                 <ul>
                     {%- for filename in content.keys() %}
                         <li><a href="#diff_{{- safe_filename(filename) -}}" class="side-link">{{ replace_cache_paths(filename) }}</a></li>
                     {%- endfor %}
+                    <span id="empty_search" style="display:none">No results found</span>
                 </ul>
             </div>
             <div class='content'>

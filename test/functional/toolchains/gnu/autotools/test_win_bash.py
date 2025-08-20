@@ -10,7 +10,6 @@ from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -130,7 +129,6 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
                  "main.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
-    print(client.out)
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__18" in client.out
@@ -158,10 +156,10 @@ def test_add_msys2_path_automatically():
     except KeyError:
         pytest.skip("msys2 path not defined")
 
-    save(client.paths.new_config_path, textwrap.dedent("""
+    client.save_home({"global.conf": textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
-            """.format(bash_path)))
+            """.format(bash_path))})
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -277,7 +275,7 @@ def test_msys2_and_msbuild():
         """)
 
     # A minimal project is sufficient - here just copy the application file to another directory
-    my_vcxproj = """<?xml version="1.0" encoding="utf-8"?>
+    my_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
         <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
         <ItemGroup Label="ProjectConfigurations">
         <ProjectConfiguration Include="Debug|Win32">

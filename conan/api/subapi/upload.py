@@ -15,13 +15,14 @@ from conan.errors import ConanException
 
 class UploadAPI:
 
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
+    def __init__(self, conan_api, api_helpers):
+        self._conan_api = conan_api
+        self._api_helpers = api_helpers
 
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
-        app = ConanApp(self.conan_api)
+        app = ConanApp(self._conan_api)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -44,8 +45,8 @@ class UploadAPI:
         string (""), it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self.conan_api)
-        preparator = PackagePreparator(app, self.conan_api.config.global_conf)
+        app = ConanApp(self._conan_api)
+        preparator = PackagePreparator(app, self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
@@ -54,7 +55,7 @@ class UploadAPI:
         signer.sign(package_list)
 
     def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api)
+        app = ConanApp(self._conan_api)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
@@ -73,7 +74,7 @@ class UploadAPI:
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if check_integrity:
                 subtitle("Checking integrity of cache packages")
-                self.conan_api.cache.check_integrity(pkglist)
+                self._conan_api.cache.check_integrity(pkglist)
             # Check if the recipes/packages are in the remote
             subtitle("Checking server existing packages")
             self.check_upstream(pkglist, remote, enabled_remotes, force)
@@ -83,12 +84,12 @@ class UploadAPI:
             if not dry_run:
                 subtitle("Uploading artifacts")
                 self.upload(pkglist, remote)
-                backup_files = self.conan_api.cache.get_backup_sources(pkglist)
+                backup_files = self._conan_api.cache.get_backup_sources(pkglist)
                 self.upload_backup_sources(backup_files)
 
         t = time.time()
         ConanOutput().title(f"Uploading to remote {remote.name}")
-        parallel = self.conan_api.config.get("core.upload:parallel", default=1, check_type=int)
+        parallel = self._conan_api.config.get("core.upload:parallel", default=1, check_type=int)
         thread_pool = ThreadPool(parallel) if parallel > 1 else None
         if not thread_pool or len(package_list.recipes) <= 1:
             _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
@@ -103,7 +104,7 @@ class UploadAPI:
         add_urls(package_list, remote)
 
     def upload_backup_sources(self, files):
-        config = self.conan_api.config.global_conf
+        config = self._api_helpers.global_conf
         url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
             return
@@ -115,7 +116,7 @@ class UploadAPI:
             output.info("No backup sources files to upload")
             return files
 
-        requester = self.conan_api.remotes.requester
+        requester = self._conan_api.remotes.requester
         uploader = FileUploader(requester, verify=True, config=config, source_credentials=True)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general

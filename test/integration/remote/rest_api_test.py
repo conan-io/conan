@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 from conan.api.model import Remote
 from conan.internal.model.conf import ConfDefinition
@@ -17,36 +17,32 @@ from conan.internal.rest.rest_client import RestApiClient
 from conan.internal.util.files import md5, save
 
 
-class RestApiTest(unittest.TestCase):
+class TestRestApi:
     """Open a real server (sockets) to test rest_api function."""
 
-    server = None
-    api = None
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_class(self):
+        with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
+            read_perms = [("*/*@*/*", "private_user")]
+            write_perms = [("*/*@*/*", "private_user")]
+            self.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
+                                             read_permissions=read_perms,
+                                             write_permissions=write_perms)
+            self.server.start()
 
-    @classmethod
-    def setUpClass(cls):
-        if not cls.server:
-            with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
-                read_perms = [("*/*@*/*", "private_user")]
-                write_perms = [("*/*@*/*", "private_user")]
-                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
-                                                read_permissions=read_perms,
-                                                write_permissions=write_perms)
-                cls.server.start()
+            config = ConfDefinition()
+            requester = ConanRequester(config)
 
-                config = ConfDefinition()
-                requester = ConanRequester(config)
+            remote = Remote("myremote", f"http://127.0.0.1:{self.server.port}", True, True)
+            self.api = RestApiClient(remote, None, requester, config)
+            self.api._token = self.api.authenticate(user="private_user", password="private_pass")
+            # Necessary for setup_class approach
+            TestRestApi.api = self.api
+            TestRestApi.server = self.server
+        yield
 
-                remote = Remote("myremote", f"http://127.0.0.1:{cls.server.port}", True, True)
-                cls.api = RestApiClient(remote, None, requester, config)
-                cls.api._token = cls.api.authenticate(user="private_user", password="private_pass")
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.server.stop()
-
-    def tearDown(self):
-        RestApiTest.server.clean()
+        self.server.stop()
+        self.server.clean()
 
     def test_get_conan(self):
         # Upload a conans
@@ -56,8 +52,8 @@ class RestApiTest(unittest.TestCase):
         # Get the conans
         tmp_dir = temp_folder()
         self.api.get_recipe(ref, tmp_dir, metadata=None, only_metadata=False)
-        self.assertIn(CONANFILE, os.listdir(tmp_dir))
-        self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
+        assert CONANFILE in os.listdir(tmp_dir)
+        assert CONAN_MANIFEST in os.listdir(tmp_dir)
 
     def test_get_package(self):
         # Upload a conans
@@ -72,7 +68,7 @@ class RestApiTest(unittest.TestCase):
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir, metadata=None, only_metadata=False)
         # The hello.cpp file is not downloaded!
-        self.assertNotIn("hello.cpp", os.listdir(tmp_dir))
+        assert "hello.cpp" not in os.listdir(tmp_dir)
 
     def test_upload_huge_conan(self):
         ref = RecipeReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
@@ -80,8 +76,8 @@ class RestApiTest(unittest.TestCase):
 
         tmp = temp_folder()
         files = self.api.get_recipe(ref, tmp, metadata=None, only_metadata=False)
-        self.assertIsNotNone(files)
-        self.assertFalse(os.path.exists(os.path.join(tmp, "file9.cpp")))
+        assert files is not None
+        assert not os.path.exists(os.path.join(tmp, "file9.cpp"))
 
     def test_search(self):
         # Upload a conan1
@@ -112,14 +108,14 @@ class RestApiTest(unittest.TestCase):
 
         # Get the info about this ConanFileReference
         info = self.api.search_packages(ref1)
-        self.assertEqual(conan_info, info["1F23223EFDA"]["content"])
+        assert conan_info == info["1F23223EFDA"]["content"]
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
         results = [RecipeReference(r.name, r.version, r.user, r.channel, revision=None)
                    for r in results]
         ref1.revision = None
-        self.assertEqual(results, [ref1])
+        assert results == [ref1]
 
     def test_remove(self):
         # Upload a conans
@@ -127,10 +123,10 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(ref)
         ref.revision = "myreciperev"
         path1 = self.server.server_store.base_folder(ref)
-        self.assertTrue(os.path.exists(path1))
+        assert os.path.exists(path1)
         # Remove conans and packages
         self.api.remove_recipe(ref)
-        self.assertFalse(os.path.exists(path1))
+        assert not os.path.exists(path1)
 
     def test_remove_packages(self):
         ref = RecipeReference.loads("MySecondConan/2.0.0@private_user/testing#myreciperev")
@@ -142,32 +138,32 @@ class RestApiTest(unittest.TestCase):
             pref = PkgReference(ref, sha, "mypackagerev")
             self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
-            self.assertTrue(os.path.exists(folder))
+            assert os.path.exists(folder)
             folders[sha] = folder
 
         data = self.api.search_packages(ref)
-        self.assertEqual(len(data), 5)
+        assert len(data) == 5
 
         self.api.remove_packages([PkgReference(ref, "1")])
-        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
-        self.assertFalse(os.path.exists(folders["1"]))
-        self.assertTrue(os.path.exists(folders["2"]))
-        self.assertTrue(os.path.exists(folders["3"]))
-        self.assertTrue(os.path.exists(folders["4"]))
-        self.assertTrue(os.path.exists(folders["5"]))
+        assert os.path.exists(self.server.server_store.base_folder(ref))
+        assert not os.path.exists(folders["1"])
+        assert os.path.exists(folders["2"])
+        assert os.path.exists(folders["3"])
+        assert os.path.exists(folders["4"])
+        assert os.path.exists(folders["5"])
 
         self.api.remove_packages([PkgReference(ref, "2"), PkgReference(ref, "3")])
-        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
-        self.assertFalse(os.path.exists(folders["1"]))
-        self.assertFalse(os.path.exists(folders["2"]))
-        self.assertFalse(os.path.exists(folders["3"]))
-        self.assertTrue(os.path.exists(folders["4"]))
-        self.assertTrue(os.path.exists(folders["5"]))
+        assert os.path.exists(self.server.server_store.base_folder(ref))
+        assert not os.path.exists(folders["1"])
+        assert not os.path.exists(folders["2"])
+        assert not os.path.exists(folders["3"])
+        assert os.path.exists(folders["4"])
+        assert os.path.exists(folders["5"])
 
         self.api.remove_all_packages(ref)
-        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
+        assert os.path.exists(self.server.server_store.base_folder(ref))
         for sha in ["1", "2", "3", "4", "5"]:
-            self.assertFalse(os.path.exists(folders[sha]))
+            assert not os.path.exists(folders[sha])
 
     def _upload_package(self, package_reference, base_files=None):
 

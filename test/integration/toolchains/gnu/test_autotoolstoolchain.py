@@ -1,6 +1,7 @@
 import os
 import platform
 import textwrap
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -367,3 +368,40 @@ def test_conf_build_does_not_exist():
     tc = c.load("conanautotoolstoolchain.sh")
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    os = platform.system()
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("AutotoolsToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+    if os == "Windows":
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
+    else:
+        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
+        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain

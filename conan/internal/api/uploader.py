@@ -157,7 +157,7 @@ class PackagePreparator:
             elif tgz_files:
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
                                      conf=self._global_conf, ref=ref,
-                                     compression_plugin=self._app.conan_api.config.compression_plugin)
+                                     compression_plugin=self._app.conan_api.cache.compression_plugin)
                 result[tgz_name] = tgz
 
         add_tgz(EXPORT_TGZ_NAME, files)
@@ -204,7 +204,7 @@ class PackagePreparator:
             tgz_files = {f: path for f, path in files.items()}
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       conf=self._global_conf, ref=pref,
-                                      compression_plugin=self._app.conan_api.config.compression_plugin)
+                                      compression_plugin=self._app.conan_api.cache.compression_plugin)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
 

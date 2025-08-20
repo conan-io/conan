@@ -14,7 +14,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         liba = app.edges[0].dst
 
@@ -30,7 +30,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         liba = app.edges[0].dst
         libb = app.edges[1].dst
@@ -58,7 +58,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(latest)", "libb/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         liba = app.edges[0].dst
         libb = app.edges[1].dst
@@ -88,7 +88,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/(latest)", "libc/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -117,7 +117,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -145,7 +145,7 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(giga)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         liba = app.edges[0].dst
 
@@ -170,7 +170,7 @@ class AliasBuildRequiresTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         liba_build = app.edges[1].dst

@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections import namedtuple
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -22,16 +23,19 @@ from conan.internal.util.files import mkdir, tar_extract
 
 class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
-    def __init__(self, cache, auth_manager, home_folder, config_api):
+
+    _ErrorMsg = namedtuple("ErrorMsg", ["message"])
+
+    def __init__(self, cache, auth_manager, home_folder, conan_api):
         self._cache = cache
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache, home_folder)
         self._home_folder = home_folder
-        self._config_api = config_api
+        self._conan_api = conan_api
 
     def _local_folder_remote(self, remote):
         if remote.remote_type == LOCAL_RECIPES_INDEX:
-            return RestApiClientLocalRecipesIndex(remote, self._home_folder, self._config_api)
+            return RestApiClientLocalRecipesIndex(remote, self._home_folder, self._conan_api)
 
     def check_credentials(self, remote, force_auth=False):
         self._call_remote(remote, "check_credentials", force_auth)
@@ -84,7 +88,7 @@ class RemoteManager:
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, scope=str(ref), config_api=self._config_api)
+            uncompress_file(tgz_file, export_folder, scope=str(ref), conan_api=self._conan_api)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -126,7 +130,7 @@ class RemoteManager:
 
         self._signer.verify(ref, download_folder, files=zipped_files)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), config_api=self._config_api)
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref), conan_api=self._conan_api)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -174,7 +178,7 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), config_api=self._config_api)
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref), conan_api=self._conan_api)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -256,12 +260,16 @@ class RemoteManager:
                                            headers=headers)
                 cached_method[pref] = result
                 return result
-            except Exception as e:
-                cached_method[pref] = e
+            except NotFoundException as e:
+                # Let's avoid leaking memory by saving all the exception objects,
+                # which translates to a ~2x memory increase. Now, it only saves the type and the
+                # final message. For now, let's cache only the NotFoundException one.
+                cached_method[pref] = self._ErrorMsg(str(e))
                 raise e
         else:
-            if isinstance(result, Exception):
-                raise result
+            if isinstance(result, self._ErrorMsg):
+                # Let's raise it
+                raise NotFoundException(result.message)
             return result
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
@@ -296,7 +304,7 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder, scope="", config_api=None):
+def uncompress_file(src_path, dest_folder, scope="", conan_api=None):
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
@@ -304,13 +312,10 @@ def uncompress_file(src_path, dest_folder, scope="", config_api=None):
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
 
+        compression_plugin=conan_api.cache.compression_plugin if conan_api and conan_api.cache.compression_plugin else None
+        conf=conan_api.config._helpers.global_conf if conan_api else None
         with open(src_path, mode='rb') as file_handler:
-            tar_extract(
-                fileobj=file_handler,
-                destination_dir=dest_folder,
-                compression_plugin=config_api.compression_plugin if config_api and config_api.compression_plugin else None,
-                conf=config_api.global_conf if config_api else None
-            )
+            tar_extract(fileobj=file_handler, destination_dir=dest_folder, compression_plugin=compression_plugin, conf=conf)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))
