@@ -7,6 +7,7 @@ import tempfile
 from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 
+import errno
 import os
 from io import BytesIO
 import sys
@@ -314,8 +315,8 @@ class RemoteConnection:
     def mkdir(self, folder: Path, ignore_existing=False) -> None:
         try:
             self.sftp.mkdir(folder.as_posix())
-        except IOError:
-            if ignore_existing:
+        except IOError as e:
+            if e.errno == errno.EEXIST and ignore_existing:
                 pass
             else:
                 raise
