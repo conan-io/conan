@@ -22,7 +22,21 @@ class UploadAPI:
         self._conan_api = conan_api
         self._api_helpers = api_helpers
 
-    def _check_upstream(self, package_list, remote, enabled_remotes, force=False):
+    def check_upstream(self, package_list: PackagesList, remote: Remote, enabled_remotes: List[Remote],
+                       force=False):
+        """ Checks ``remote`` for the existence of the recipes and packages in ``package_list``.
+        Items that are not present in the remote will add an ``upload`` key to the entry
+        with the value ``True``.
+
+        If the recipe has an upload policy of ``skip``, it will be discarded from the upload list.
+
+        :parameter package_list: A ``PackagesList`` object with the recipes and packages to check.
+        :parameter remote: Remote to check.
+        :parameter enabled_remotes: List of enabled remotes. This is used to possibly load
+            python_requires from the listed recipes if necessary.
+        :parameter force: If ``True``, it will skip the check and mark that all items need to be uploaded.
+            A ``force_upload`` key will be added to the entries that will be uploaded.
+        """
         app = ConanApp(self._conan_api)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
@@ -82,7 +96,8 @@ class UploadAPI:
         :param package_list: A PackagesList object with the recipes and packages to upload.
         :param remote: The remote to upload the packages to.
         :param enabled_remotes: A list of remotes that are enabled in the client.
-            Recipe sources will attempt to be fetched from these remotes.
+            Recipe sources will attempt to be fetched from these remotes,
+            and to possibly load python_requires from the listed recipes if necessary.
         :param check_integrity: If ``True``, it will check the integrity of the cache packages
             before uploading them. This is useful to ensure that the packages are not corrupted.
         :param force: If ``True``, it will force the upload of the recipes and packages,
@@ -101,7 +116,7 @@ class UploadAPI:
                 self._conan_api.cache.check_integrity(pkglist)
             # Check if the recipes/packages are in the remote
             subtitle("Checking server for existing packages")
-            self._check_upstream(pkglist, remote, enabled_remotes, force)
+            self.check_upstream(pkglist, remote, enabled_remotes, force)
             subtitle("Preparing artifacts for upload")
             self.prepare(pkglist, enabled_remotes, metadata)
 
