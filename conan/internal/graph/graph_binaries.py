@@ -194,7 +194,16 @@ class GraphBinariesAnalyzer:
             if not compatible.cant_build:
                 node._package_id = pkg_id  # Modifying package id under the hood, FIXME
                 self._compatible_found(node.conanfile, pkg_id, compatible)
-                node.binary = BINARY_BUILD
+                # We might have the compatible package in the cache,
+                # check for it before, and then build it if not found
+                cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
+                if cache_latest_prev is None:
+                    node.binary = BINARY_BUILD
+                else:
+                    node.binary = BINARY_CACHE
+                    node.binary_remote = None
+                    node.prev = cache_latest_prev.revision
+                    node.pref_timestamp = cache_latest_prev.timestamp
                 return
         node.binary = original_binary
         node._package_id = original_package_id
