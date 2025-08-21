@@ -670,6 +670,39 @@ class TestCompatibleBuild:
             assert pkga["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
             assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
 
+    def test_compatible_build_test_package(self):
+        tc = TestClient()
+        tc.save({"conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import check_min_cppstd
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "compiler"
+
+            def validate(self):
+                check_min_cppstd(self, 17)
+        """),
+                 "test_package/conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+
+        class TestPkg(ConanFile):
+            settings = "compiler"
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                pass
+                 """)})
+
+        tc.run("create . -s compiler.cppstd=14 --build=compatible")
+        # Without checking if the compatibles are already in the cache, it will build twice,
+        # once for the package and once for the test_package
+        assert tc.out.count("pkg/0.1#2e52358a1684ca0bd32277b2630f0080:0b26ee249577d4b7c1e52c7ce646c0b5eb611dfb - Build") == 1
+        tc.run("create . -s compiler.cppstd=17 --build=compatible")
+        # This would fail because the package revision is now also included
+        #assert tc.out.count("pkg/0.1#2e52358a1684ca0bd32277b2630f0080:0b26ee249577d4b7c1e52c7ce646c0b5eb611dfb - Cache") == 2
+
 
 def test_compatibility_new_setting_forwards_compat():
     """ This test tries to reflect the following scenario:
