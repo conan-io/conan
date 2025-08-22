@@ -12,6 +12,7 @@ from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.model.conanfile_interface import ConanFileInterface
 from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.requires import Requirement
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
@@ -77,13 +78,24 @@ class CMakeDeps2:
                 ConanOutput(self._conanfile.ref).info("Copying project provided CMake configuration files...")
                 config_filename = ConfigTemplate2(self, dep).filename
                 version_filename = ConfigVersionTemplate2(self, dep).filename
-                targets_file = TargetsTemplate2(self, dep)
-                target_configuration = TargetConfigurationTemplate2(self, dep, require)
+                targets_filename = TargetsTemplate2(self, dep).filename
+                target_configuration_filename = self._project_provided_target_configuration_filename(dep)
                 # The version and config files are the ones that matter and are typically different when provided by the project.
                 ret[config_filename] = self._read_project_provided_cmake_file(config_filename, dep)
                 ret[version_filename] = self._read_project_provided_cmake_file(version_filename, dep)
-                ret[targets_file.filename] = targets_file.content()
-                ret[target_configuration.filename] = target_configuration.content()
+                ret[targets_filename] = self._read_project_provided_cmake_file(targets_filename, dep)
+                ret[target_configuration_filename] = self._read_project_provided_cmake_file(target_configuration_filename, dep)
+                deduced_cpp_info : CppInfo = dep.cpp_info.deduce_full_cpp_info(self._conanfile)
+                # Generate CMake files have their ${IMPORT_PREFIX} tied to the parent folder relative to the location of the file, so we need to copy over our headers and libs
+                # so that they load correctly.
+                ConanOutput(self._conanfile.ref).info(f"Installing libs found in {deduced_cpp_info.location} and includes in {deduced_cpp_info.includedirs} to IMPORT_PREFIX location")
+                lib_folder = os.path.join("..", "lib", self.configuration)
+                os.makedirs(lib_folder, exist_ok=True)
+                shutil.copy(deduced_cpp_info.location, lib_folder)
+                shutil.copytree(deduced_cpp_info.includedir, os.path.join("..", "include"), dirs_exist_ok=True)
+                # Copy the component libraries.
+                for name, lib in deduced_cpp_info.components.items():
+                    shutil.copy(lib.location, lib_folder)
             else:
                 config = ConfigTemplate2(self, dep)
                 ret[config.filename] = config.content()
@@ -97,6 +109,14 @@ class CMakeDeps2:
 
         self._print_help(direct_deps)
         return ret
+
+    def _project_provided_target_configuration_filename(self, dep):
+        # This function produces a slightly different Target-<config>.cmake filename
+        # than the template here. When these files are generated in a project using
+        # the expected EXPORT keywords, there is no dash between the project name and
+        # Targets. I will not change this in the conan template class, as that could break
+        # user's packages.
+        return f"{self.get_cmake_filename(dep)}Targets-{self.configuration.lower()}.cmake"
 
     def _read_project_provided_cmake_file(self, cmake_file: str, dep: ConanFileInterface) -> str:
         # Just return first hit. There won't be multiple matching files in a given package.
