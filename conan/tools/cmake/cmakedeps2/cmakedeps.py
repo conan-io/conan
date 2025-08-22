@@ -1,7 +1,8 @@
 import os
 import re
+import shutil
 import textwrap
-
+from typing import OrderedDict
 from jinja2 import Template
 
 from conan.api.output import Color, ConanOutput
@@ -9,6 +10,9 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.model.conanfile_interface import ConanFileInterface
+from conan.internal.model.conan_file import ConanFile
+from conan.internal.model.requires import Requirement
 from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
 from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
@@ -20,11 +24,12 @@ FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
 FIND_MODE_NONE = "none"
 FIND_MODE_BOTH = "both"
+FIND_MODE_COPY = "copy"
 
 
 class CMakeDeps2:
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile: ConanFile):
         self._conanfile = conanfile
         self.configuration = str(self._conanfile.settings.build_type)
 
@@ -46,9 +51,9 @@ class CMakeDeps2:
         _PathGenerator(self, self._conanfile).generate()
 
     def _content(self):
-        host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.direct_build
-        test_req = self._conanfile.dependencies.test
+        host_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.host
+        build_req: OrderedDict[Requirement, ConanFileInterface]= self._conanfile.dependencies.direct_build
+        test_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.test
 
         # Iterate all the transitive requires
         ret = {}
@@ -68,18 +73,57 @@ class CMakeDeps2:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            config = ConfigTemplate2(self, dep)
-            ret[config.filename] = config.content()
-            config_version = ConfigVersionTemplate2(self, dep)
-            ret[config_version.filename] = config_version.content()
+            if cmake_find_mode == FIND_MODE_COPY:
+                ConanOutput(self._conanfile.ref).info("Copying project provided CMake configuration files...")
+                # base_name = self.get_cmake_filename(self._conanfile)
+                config_filename =  ConfigTemplate2(self, dep).filename
+                version_filename = ConfigVersionTemplate2(self, dep).filename
+                targets_filename = TargetsTemplate2(self, dep).filename
+                target_configuration_filename = self._project_provided_target_configuration_filename(dep)
+                ret[config_filename] = self._read_project_provided_cmake_file(config_filename, dep)
+                ret[version_filename] = self._read_project_provided_cmake_file(version_filename, dep)
+                ret[targets_filename] = self._read_project_provided_cmake_file(targets_filename, dep)
+                ret[target_configuration_filename] = self._read_project_provided_cmake_file(target_configuration_filename, dep)
+                deduced_cpp_info = dep.cpp_info.deduce_full_cpp_info(self._conanfile)
+                # Generate CMake files have their ${IMPORT_PREFIX} tied to the parent folder relative to the location of the file, so we need to copy over our headers and libs
+                # so that they load correctly.
+                lib_folder = os.path.join("..", "lib", self.configuration)
+                os.makedirs(lib_folder, exist_ok=True)
+                shutil.copy(deduced_cpp_info.location, lib_folder)
+                shutil.copytree(deduced_cpp_info.includedir, os.path.join("..", "include"), dirs_exist_ok=True)
+            else:
+                config = ConfigTemplate2(self, dep)
+                ret[config.filename] = config.content()
+                config_version = ConfigVersionTemplate2(self, dep)
+                ret[config_version.filename] = config_version.content()
 
-            targets = TargetsTemplate2(self, dep)
-            ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(self, dep, require)
-            ret[target_configuration.filename] = target_configuration.content()
+                targets = TargetsTemplate2(self, dep)
+                ret[targets.filename] = targets.content()
+                target_configuration = TargetConfigurationTemplate2(self, dep, require)
+                ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
         return ret
+
+    def _project_provided_target_configuration_filename(self, dep):
+        # This function produces a slightly different Target-<config>.cmake filename
+        # than the template here. When these files are generated in a project using
+        # the expected EXPORT keywords, there is no dash between the project name and
+        # Targets.
+        return f"{self.get_cmake_filename(dep)}Targets-{self.configuration.lower()}.cmake"
+
+    def _read_project_provided_cmake_file(self, cmake_file: str, dep: ConanFileInterface) -> str:
+        # Just return first hit. There won't be multiple matching files in a given package.
+        for dirpath, dirnames, filenames in os.walk(dep.package_folder):
+            for filename in filenames:
+                if cmake_file in filename:
+                    ConanOutput(self._conanfile.ref).info(f"Match found: {dirpath + filename}")
+                    with open(os.path.join(dirpath, filename), 'r') as file:
+                        return file.read()
+
+        # If we got here, the file was not found.
+        raise FileNotFoundError(f"The file {cmake_file} was not available to be copied.")
+
 
     def _print_help(self, direct_deps):
         if direct_deps:
@@ -147,7 +191,7 @@ class CMakeDeps2:
     def _get_find_mode(self, dep):
         """
         :param dep: requirement
-        :return: "none" or "config" or "module" or "both" or "config" when not set
+        :return: "none" or "config" or "module" or "both" or "config" or "copy" when not set
         """
         tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:
