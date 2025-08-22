@@ -52,7 +52,7 @@ class CMakeDeps2:
 
     def _content(self):
         host_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.host
-        build_req: OrderedDict[Requirement, ConanFileInterface]= self._conanfile.dependencies.direct_build
+        build_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.direct_build
         test_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.test
 
         # Iterate all the transitive requires
@@ -75,8 +75,7 @@ class CMakeDeps2:
                 direct_deps.append((require, dep))
             if cmake_find_mode == FIND_MODE_COPY:
                 ConanOutput(self._conanfile.ref).info("Copying project provided CMake configuration files...")
-                # base_name = self.get_cmake_filename(self._conanfile)
-                config_filename =  ConfigTemplate2(self, dep).filename
+                config_filename = ConfigTemplate2(self, dep).filename
                 version_filename = ConfigVersionTemplate2(self, dep).filename
                 targets_file = TargetsTemplate2(self, dep)
                 target_configuration = TargetConfigurationTemplate2(self, dep, require)
@@ -85,7 +84,6 @@ class CMakeDeps2:
                 ret[version_filename] = self._read_project_provided_cmake_file(version_filename, dep)
                 ret[targets_file.filename] = targets_file.content()
                 ret[target_configuration.filename] = target_configuration.content()
-                deduced_cpp_info = dep.cpp_info.deduce_full_cpp_info(self._conanfile)
             else:
                 config = ConfigTemplate2(self, dep)
                 ret[config.filename] = config.content()
@@ -111,7 +109,6 @@ class CMakeDeps2:
 
         # If we got here, the file was not found.
         raise FileNotFoundError(f"The file {cmake_file} was not available to be copied.")
-
 
     def _print_help(self, direct_deps):
         if direct_deps:
