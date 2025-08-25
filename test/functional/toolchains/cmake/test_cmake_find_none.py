@@ -102,3 +102,45 @@ def test_cmake_find_none_transitive():
     c.run("build .")
     assert "Conan: Target declared 'karchive::karchive'" in c.out
     # And it doesn't fail to find transitive qt
+
+
+def test_cmake_find_none_relocation():
+    c = TestClient(default_server_user=True)
+    c.run("new cmake_lib -d name=pkg -d version=0.1")
+    conanfile = c.load("conanfile.py")
+    conanfile = conanfile + '        self.cpp_info.set_property("cmake_find_mode", "none")'
+    conanfile = conanfile + '\n        self.cpp_info.builddirs = ["pkg/cmake"]'
+
+    cmake_export = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello CXX)
+
+        add_library(pkg src/pkg.cpp)
+        target_include_directories(pkg PUBLIC
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:include>
+        )
+        set_target_properties(pkg PROPERTIES PUBLIC_HEADER "include/pkg.h")
+
+        install(TARGETS pkg EXPORT pkgConfig)
+        export(TARGETS pkg
+            NAMESPACE pkg::
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/pkgConfig.cmake"
+        )
+        install(EXPORT pkgConfig
+            DESTINATION "${CMAKE_INSTALL_PREFIX}/pkg/cmake"
+            NAMESPACE pkg::
+        )
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake_export})
+
+    c.run("create . ")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+
+    c2 = TestClient(servers=c.servers)
+    c2.run("new cmake_exe -d name=myapp -d version=0.1 -d requires=pkg/0.1")
+    c2.run('build .')
+    print(c2.out)
