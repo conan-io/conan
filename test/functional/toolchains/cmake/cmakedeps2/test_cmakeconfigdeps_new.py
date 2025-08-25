@@ -1572,3 +1572,43 @@ def test_multiple_find_package_subfolder():
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
     assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_dependendecy_multi_filename():
+    tc = TestClient()
+    find_name = "foo"
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "0.1"
+        def package_info(self):
+            self.cpp_info.set_property("cmake_extra_file_names", ["{find_name}", "extra_name2"])
+    """)
+    cml = textwrap.dedent(f"""
+    cmake_minimum_required(VERSION 3.27)
+    project(app)
+    find_package({find_name} CONFIG REQUIRED)
+    if ({find_name}_FOUND)
+        message("Found {find_name}!")
+        if (TARGET {find_name}::{find_name})
+            message("Found target {find_name}::{find_name}!")
+        endif()
+
+        if (TARGET pkg::pkg)
+            message("Found original target pkg::pkg!")
+        endif()
+    endif()
+    """)
+    tc.save({"conanfile.py": conanfile,
+             "CMakeLists.txt": cml})
+    tc.run("create .")
+    tc.run("install --requires=pkg/0.1 -g CMakeDeps -g CMakeToolchain"
+           f" -c tools.cmake.cmakedeps:new={new_value}")
+    preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+    tc.run_command(f"cmake --preset {preset}")
+    assert f"Found {find_name}!" in tc.out
+    assert f"Found target {find_name}::{find_name}!" not in tc.out
+    assert "Found original target pkg::pkg!" in tc.out

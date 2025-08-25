@@ -70,6 +70,13 @@ class CMakeDeps2:
                 direct_deps.append((require, dep))
             config = ConfigTemplate2(self, dep)
             ret[config.filename] = config.content()
+            extra_file_names = (self.get_property("cmake_extra_file_names", dep, check_type=list)
+                                or [])
+            old = self.get_cmake_filename(dep)
+            for f in extra_file_names:
+                filename = f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
+                ret[filename] = f'include(CMakeFindDependencyMacro)\n' \
+                                f"find_dependency({old})"
             config_version = ConfigVersionTemplate2(self, dep)
             ret[config_version.filename] = config_version.content()
 
@@ -257,6 +264,10 @@ class _PathGenerator:
             # If CMakeDeps generated, the folder is this one
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
             pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
+            extra_file_names = (self._cmakedeps.get_property("cmake_extra_file_names", dep,
+                                                             check_type=list) or [])
+            for f in extra_file_names:
+                pkg_paths[f] = pkg_paths[pkg_name]
 
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")
