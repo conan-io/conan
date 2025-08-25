@@ -1572,27 +1572,3 @@ def test_multiple_find_package_subfolder():
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
     assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
-
-
-def test_toolchain_extra_variables():
-    """ Test extra_variables property - This just shows that it works,
-    there are tests for cmaketoolchain that check the actual behavior
-    of parsing the variables"""
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Pkg(ConanFile):
-            name = "pkg"
-            version = "0.1"
-
-            def package_info(self):
-                self.cpp_info.set_property("cmake_extra_variables", {"FOO": 42, "CMAKE_GENERATOR_INSTANCE": "${GENERATOR_INSTANCE}/buildTools/"})
-    """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create .")
-
-    client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
-    target = client.load("pkg-Targets-release.cmake")
-    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
-    assert 'set(FOO "42")' in target
