@@ -12,7 +12,7 @@ from conan.errors import ConanInvalidConfiguration
 class InstallAPI:
 
     def __init__(self, conan_api, helpers):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._helpers = helpers
 
     def install_binaries(self, deps_graph, remotes=None):
@@ -20,7 +20,7 @@ class InstallAPI:
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
         """
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         install_graph = InstallGraph(deps_graph)
@@ -34,7 +34,7 @@ class InstallAPI:
         :param only_info: Only allow reporting and checking, but never install
         :param graph: Dependency graph to intall packages for
         """
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_system_requires(graph, only_info)
@@ -45,7 +45,7 @@ class InstallAPI:
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
-        app = ConanBasicApp(self.conan_api)
+        app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
@@ -77,7 +77,7 @@ class InstallAPI:
             # Issue related: https://github.com/conan-io/conan/issues/16543
             base_folder = os.path.abspath(deploy_folder) if deploy_folder \
                 else conanfile.folders.base_build
-            do_deploys(self.conan_api.home_folder, deps_graph, deploy, deploy_package, base_folder)
+            do_deploys(self._conan_api.home_folder, deps_graph, deploy, deploy_package, base_folder)
 
         final_generators = []
         # Don't use set for uniqueness because order matters
@@ -89,9 +89,9 @@ class InstallAPI:
                 final_generators.append(gen)
         conanfile.generators = final_generators
         hook_manager = self._helpers.hook_manager
-        write_generators(conanfile, hook_manager, self.conan_api.home_folder,
+        write_generators(conanfile, hook_manager, self._conan_api.home_folder,
                          envs_generation=envs_generation)
 
     def deploy(self, graph, deployer, deploy_package=None, deploy_folder=None):
-        return do_deploys(self.conan_api.home_folder, graph, deployer, deploy_package=deploy_package,
+        return do_deploys(self._conan_api.home_folder, graph, deployer, deploy_package=deploy_package,
                           deploy_folder=deploy_folder)
