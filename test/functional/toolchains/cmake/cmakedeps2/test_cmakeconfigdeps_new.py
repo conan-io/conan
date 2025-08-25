@@ -1577,7 +1577,6 @@ def test_multiple_find_package_subfolder():
 @pytest.mark.tool("cmake", "3.27")
 def test_dependendecy_multi_filename():
     tc = TestClient()
-    find_name = "foo"
     conanfile = textwrap.dedent(f"""
     from conan import ConanFile
 
@@ -1585,16 +1584,19 @@ def test_dependendecy_multi_filename():
         name = "pkg"
         version = "0.1"
         def package_info(self):
-            self.cpp_info.set_property("cmake_extra_file_names", ["{find_name}", "extra_name2"])
+            self.cpp_info.set_property("cmake_extra_file_names", ["foo", "extra_name"])
     """)
     cml = textwrap.dedent(f"""
     cmake_minimum_required(VERSION 3.27)
     project(app)
-    find_package({find_name} CONFIG REQUIRED)
-    if ({find_name}_FOUND)
-        message("Found {find_name}!")
-        if (TARGET {find_name}::{find_name})
-            message("Found target {find_name}::{find_name}!")
+    find_package(foo CONFIG REQUIRED)
+    if (foo_FOUND)
+        message("Found foo!")
+        if (TARGET foo::foo)
+            # This won't ever be found, because the target is pkg::pkg
+            # the default target is constructed from the conanfile name,
+            # not from the final cmake file name
+            message("Found target foo::foo!")
         endif()
 
         if (TARGET pkg::pkg)
@@ -1609,6 +1611,8 @@ def test_dependendecy_multi_filename():
            f" -c tools.cmake.cmakedeps:new={new_value}")
     preset = "conan-default" if platform.system() == "Windows" else "conan-release"
     tc.run_command(f"cmake --preset {preset}")
-    assert f"Found {find_name}!" in tc.out
-    assert f"Found target {find_name}::{find_name}!" not in tc.out
+    assert f"Found foo!" in tc.out
+    assert f"Found target foo::foo!" not in tc.out
     assert "Found original target pkg::pkg!" in tc.out
+    assert "extra_name-config.cmake" in os.listdir(tc.current_folder)
+    assert "set(extra_name_DIR" in tc.load("conan_cmakedeps_paths.cmake")
