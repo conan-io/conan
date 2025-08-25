@@ -88,7 +88,7 @@ def get_build_folder_custom_vars(conanfile):
         tmp = None
         if group == "settings":
             tmp = conanfile.settings.get_safe(var)
-            if var == "arch":  # handle Apple multi-arch/universal binaries
+            if tmp and var == "arch":  # handle Apple multi-arch/universal binaries
                 tmp = tmp.replace("|", "_")
         elif group == "options":
             value = conanfile.options.get_safe(var)
