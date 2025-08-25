@@ -159,7 +159,7 @@ class BinaryCompatibility:
         result = []
         if compatibles:
             for elem in compatibles:
-                compat_info = conanfile.consumer_info.clone()
+                compat_info = conanfile.original_info.clone()
                 compat_info.compatibility_delta = elem
                 settings = elem.get("settings")
                 if settings:

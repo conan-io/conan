@@ -726,77 +726,79 @@ def test_compatibility_new_setting_forwards_compat():
            f"libc_version=2" in tc.out
 
 
-def test_compatible_flags():
-    """ The compiler flags depends on the consumer settings, not on the binary compatible
-    settings used to create that compatible binary. This test shows how the new info
-    can be used to parameterize on the consumer settings
-    """
-    c = TestClient(light=True)
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
+class TestCompatibleFlags:
+    def test_compatible_flags(self):
+        """ The compiler flags depends on the consumer settings, not on the binary compatible
+        settings used to create that compatible binary. This test shows how the new info
+        can be used to parameterize on the consumer settings
+        """
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
 
-        class Pkg(ConanFile):
-            settings = "os"
+            class Pkg(ConanFile):
+                settings = "os"
 
-            def compatibility(self):
-                if self.settings.os == "Windows":
-                    return [{"settings": [("os", "Linux")]}]
+                def compatibility(self):
+                    if self.settings.os == "Windows":
+                        return [{"settings": [("os", "Linux")]}]
 
-            def package_info(self):
-                if self.consumer_info.settings.os == "Linux":
-                    self.cpp_info.cxxflags = ["-mylinuxflag"]
-                elif self.consumer_info.settings.os == "Windows":
-                    self.cpp_info.cxxflags = ["-mywinflag"]
-       """)
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            requires = "pkg/0.1"
-            def generate(self):
-                flags = self.dependencies["pkg"].cpp_info.cxxflags
-                self.output.info(f"FLAGS: {flags}!!!")
-            """)
-    c.save({"pkg/conanfile.py": conanfile,
-            "consumer/conanfile.py": consumer})
+                def package_info(self):
+                    if self.settings_consumer.os == "Linux":
+                        self.cpp_info.cxxflags = ["-mylinuxflag"]
+                    elif self.settings_consumer.os == "Windows":
+                        self.cpp_info.cxxflags = ["-mywinflag"]
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                requires = "pkg/0.1"
+                def generate(self):
+                    flags = self.dependencies["pkg"].cpp_info.cxxflags
+                    self.output.info(f"FLAGS: {flags}!!!")
+                """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
 
-    c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
+        c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
-    c.run("install consumer -s os=Linux")
-    assert "conanfile.py: FLAGS: ['-mylinuxflag']!!!" in c.out
-    c.run("install consumer -s os=Windows")
-    assert "conanfile.py: FLAGS: ['-mywinflag']!!!" in c.out
+        c.run("install consumer -s os=Linux")
+        assert "conanfile.py: FLAGS: ['-mylinuxflag']!!!" in c.out
+        c.run("install consumer -s os=Windows")
+        assert "conanfile.py: FLAGS: ['-mywinflag']!!!" in c.out
 
+    def test_compatible_flags_direct(self):
+        """  same as above but without compatibility
+        """
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
 
-def test_compatible_flags_direct():
-    """  same as above but without compatibility
-    """
-    c = TestClient(light=True)
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
 
-        class Pkg(ConanFile):
-            settings = "os"
+                def package_info(self):
+                    if self.settings_consumer.os == "Linux":
+                        self.cpp_info.cxxflags = ["-mylinuxflag"]
+                    elif self.settings_consumer.os == "Windows":
+                        self.cpp_info.cxxflags = ["-mywinflag"]
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                requires = "pkg/0.1"
+                def generate(self):
+                    flags = self.dependencies["pkg"].cpp_info.cxxflags
+                    self.output.info(f"FLAGS: {flags}!!!")
+                """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
 
-            def package_info(self):
-                if self.consumer_info.settings.os == "Linux":
-                    self.cpp_info.cxxflags = ["-mylinuxflag"]
-                elif self.consumer_info.settings.os == "Windows":
-                    self.cpp_info.cxxflags = ["-mywinflag"]
-       """)
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            requires = "pkg/0.1"
-            def generate(self):
-                flags = self.dependencies["pkg"].cpp_info.cxxflags
-                self.output.info(f"FLAGS: {flags}!!!")
-            """)
-    c.save({"pkg/conanfile.py": conanfile,
-            "consumer/conanfile.py": consumer})
+        c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
-    c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
-
-    c.run("install consumer -s os=Linux")
-    assert "conanfile.py: FLAGS: ['-mylinuxflag']!!!" in c.out
-    c.run("install consumer -s os=Windows -s pkg*:os=Linux")
-    assert "conanfile.py: FLAGS: ['-mywinflag']!!!" in c.out
+        c.run("install consumer -s os=Linux")
+        assert "conanfile.py: FLAGS: ['-mylinuxflag']!!!" in c.out
+        c.run("install consumer -s os=Windows -s pkg*:os=Linux")
+        assert "conanfile.py: FLAGS: ['-mywinflag']!!!" in c.out
