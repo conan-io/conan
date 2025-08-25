@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 import textwrap
-from typing import OrderedDict
 from jinja2 import Template
 
 from conan.api.output import Color, ConanOutput
@@ -30,7 +29,7 @@ FIND_MODE_COPY = "copy"
 
 class CMakeDeps2:
 
-    def __init__(self, conanfile: ConanFile):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
         self.configuration = str(self._conanfile.settings.build_type)
 
@@ -52,9 +51,9 @@ class CMakeDeps2:
         _PathGenerator(self, self._conanfile).generate()
 
     def _content(self):
-        host_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.host
-        build_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.direct_build
-        test_req: OrderedDict[Requirement, ConanFileInterface] = self._conanfile.dependencies.test
+        host_req = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
 
         # Iterate all the transitive requires
         ret = {}
@@ -118,7 +117,7 @@ class CMakeDeps2:
         # user's packages.
         return f"{self.get_cmake_filename(dep)}Targets-{self.configuration.lower()}.cmake"
 
-    def _read_project_provided_cmake_file(self, cmake_file: str, dep: ConanFileInterface) -> str:
+    def _read_project_provided_cmake_file(self, cmake_file, dep):
         # Just return first hit. There won't be multiple matching files in a given package.
         for dirpath, dirnames, filenames in os.walk(dep.package_folder):
             for filename in filenames:
