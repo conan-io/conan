@@ -5,6 +5,7 @@ import jinja2
 from jinja2 import Template
 
 from conan.errors import ConanException
+from conan.tools.cmake.utils import parse_extra_variable
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
@@ -153,6 +154,15 @@ class TargetConfigurationTemplate2:
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
+        # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
+        extra_variables = prefixes = self._cmakedeps.get_property("cmake_extra_variables",
+                                                                  self._conanfile, check_type=dict
+                                                                  ) or {}
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
+                                                               key, value)
+
         pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
                                      "${CMAKE_CURRENT_LIST_DIR}")
         dependencies = self._get_dependencies()
@@ -169,6 +179,7 @@ class TargetConfigurationTemplate2:
                 "include_dirs": include_dirs,
                 "definitions": definitions,
                 "libraries": libraries,
+                "extra_variables": parsed_extra_variables,
                 }
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
@@ -480,6 +491,12 @@ class TargetConfigurationTemplate2:
         {% if definitions is not none %}
         set({{ prefix }}_DEFINITIONS {{ definitions}} )
         {% endif %}
+        {% endfor %}
+
+        # Definition of extra CMake variables from cmake_extra_variables
+
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
         {% endfor %}
 
         ################# Exes information ##############
