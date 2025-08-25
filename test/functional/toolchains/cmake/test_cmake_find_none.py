@@ -48,7 +48,7 @@ def test_cmake_find_none_transitive():
             FILE "${CMAKE_CURRENT_BINARY_DIR}/Qt5Config.cmake"
         )
         install(EXPORT Qt5Config
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/qt/cmake"
+            DESTINATION "qt/cmake"
             NAMESPACE qt::
         )
         """)
@@ -128,7 +128,7 @@ def test_cmake_find_none_relocation():
             FILE "${CMAKE_CURRENT_BINARY_DIR}/pkgConfig.cmake"
         )
         install(EXPORT pkgConfig
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/pkg/cmake"
+            DESTINATION "pkg/cmake"
             NAMESPACE pkg::
         )
         """)
@@ -143,4 +143,4 @@ def test_cmake_find_none_relocation():
     c2 = TestClient(servers=c.servers)
     c2.run("new cmake_exe -d name=myapp -d version=0.1 -d requires=pkg/0.1")
     c2.run('build .')
-    print(c2.out)
+    # Now it builds correctly without failing, because package is relocatable

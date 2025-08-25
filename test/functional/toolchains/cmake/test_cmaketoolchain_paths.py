@@ -214,7 +214,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
             FILE "${CMAKE_CURRENT_BINARY_DIR}/helloConfig.cmake"
         )
         install(EXPORT helloConfig
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/hello/cmake"
+            DESTINATION "hello/cmake"
             NAMESPACE hello::
         )
         """)

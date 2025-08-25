@@ -240,7 +240,7 @@ def _matrix_c_interface_client():
             FILE "${CMAKE_CURRENT_BINARY_DIR}/matrixConfig.cmake"
         )
         install(EXPORT matrixConfig
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/matrix/cmake"
+            DESTINATION "matrix/cmake"
             NAMESPACE matrix::
         )
         """)
