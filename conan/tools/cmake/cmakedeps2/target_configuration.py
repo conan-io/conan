@@ -155,9 +155,8 @@ class TargetConfigurationTemplate2:
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
-        extra_variables = prefixes = self._cmakedeps.get_property("cmake_extra_variables",
-                                                                  self._conanfile, check_type=dict
-                                                                  ) or {}
+        extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
+                                                       check_type=dict) or {}
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
