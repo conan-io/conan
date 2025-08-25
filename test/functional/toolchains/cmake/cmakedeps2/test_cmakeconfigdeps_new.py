@@ -1596,7 +1596,7 @@ def test_dependendecy_multi_filename():
             # This won't ever be found, because the target is pkg::pkg
             # the default target is constructed from the conanfile name,
             # not from the final cmake file name
-            message("Found target foo::foo!")
+            message(FATAL_ERROR "Found target foo::foo!")
         endif()
 
         if (TARGET pkg::pkg)
