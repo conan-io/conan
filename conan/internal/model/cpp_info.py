@@ -804,6 +804,8 @@ class CppInfo:
             raise ConanException(msg)
         external = [c[0] for c in comps if c[0] is not None]
         if not external:
+            # Here we might want to check that if internal requires exist,
+            # we will miss
             return
         # Only direct host (not test) dependencies can define required components
         # We use conanfile.dependencies to use the already replaced ones by "replace_requires"
