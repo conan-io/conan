@@ -95,9 +95,9 @@ def test_create_universal_binary():
     client.run('install . -s="arch=armv8|armv8.3|x86_64" '
                '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.arch"]\'')
 
-    client.run_command("cmake --preset \"conan-armv8|armv8.3|x86_64-release\" ")
-    client.run_command("cmake --build --preset \"conan-armv8|armv8.3|x86_64-release\" ")
-    client.run_command("lipo -info './build/armv8|armv8.3|x86_64/Release/foo'")
+    client.run_command("cmake --preset \"conan-armv8_armv8.3_x86_64-release\" ")
+    client.run_command("cmake --build --preset \"conan-armv8_armv8.3_x86_64-release\" ")
+    client.run_command("lipo -info './build/armv8_armv8.3_x86_64/Release/foo'")
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
 
