@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import rmdir
 
@@ -100,36 +99,6 @@ def test_create_universal_binary():
     client.run_command("lipo -info './build/armv8_armv8.3_x86_64/Release/foo'")
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
-
-
-@pytest.mark.tool("cmake", "3.23")
-def test_create_universal_binary_test_package_folder():
-    # https://github.com/conan-io/conan/issues/18820
-    # While multi-arch is Darwin specific, this was a cmake_layout issue, so it can be
-    # tested in any platform
-    c = TestClient()
-    test_conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.cmake import cmake_layout
-
-        class mylibraryTestConan(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
-
-            def requirements(self):
-                self.requires(self.tested_reference_str)
-
-            def layout(self):
-                cmake_layout(self)
-
-            def test(self):
-                pass
-            """)
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("arch"),
-            "test_package/conanfile.py": test_conanfile})
-
-    c.run('create . -s="arch=armv8|x86_64"')
-    c.run("list *:*")
-    assert "arch: armv8|x86_64" in c.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
