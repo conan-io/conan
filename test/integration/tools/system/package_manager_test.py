@@ -428,7 +428,7 @@ def test_tools_install_archless_with_version(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info -e package'),
-    (Apt, 'dpkg -l | grep -q -E "^ii\\s+\\bpackage\\s+\\b"'),
+    (Apt, 'dpkg-query -W -f=\'${Architecture}\' package | grep -qx "amd64"'),
     (Yum, 'rpm -q package'),
     (Dnf, 'rpm -q package'),
     (Brew, 'test -n "$(brew ls --versions package)"'),
@@ -452,7 +452,7 @@ def test_tools_check(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info package | grep "0.1"'),
-    (Apt, 'dpkg -l | grep -E "^ii\\s+\\bpackage\\s+\\b" | grep -q "0.1"'),
+    (Apt, 'dpkg-query -W -f=\'${Architecture} ${Version}\' package | grep -qx "amd64 0.1"'),
     (Yum, 'rpm -q package-0.1'),
     (Dnf, 'rpm -q package-0.1'),
     (Brew, 'brew list --versions package | grep "0.1"'),
