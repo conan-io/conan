@@ -58,7 +58,7 @@ def test_unzip_with_exclude_pattern():
     conanfile = ConanFileMock({})
 
     dest_dir = temp_folder()
-    unzip(conanfile, archive, dest_dir, exclude_pattern=["src/*"])
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
@@ -141,7 +141,7 @@ def test_untargz_with_exclude_pattern():
     conanfile = ConanFileMock({})
 
     dest_dir = temp_folder()
-    unzip(conanfile, archive, dest_dir, exclude_pattern=["src/*"])
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
