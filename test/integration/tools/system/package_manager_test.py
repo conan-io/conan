@@ -12,18 +12,6 @@ from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
-_apt_archs = {
-    "x86_64": "amd64",
-    "x86": "i386",
-    "ppc32": "powerpc",
-    "ppc64le": "ppc64el",
-    "armv7": "arm",
-    "armv7hf": "armhf",
-    "armv8": "arm64",
-    "s390x": "s390x"
-}
-
-
 @pytest.mark.parametrize("platform, tool", [
     ("Linux", "apt-get"),
     ("Windows", "choco"),
@@ -439,7 +427,7 @@ def test_tools_install_archless_with_version(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info -e package'),
-    (Apt, f'dpkg-query -W -f=\'${{Architecture}}\' package | grep -qx "{_apt_archs.get(platform.machine())}"'),
+    (Apt, 'dpkg-query -W -f=\'${{Architecture}}\' package | grep -qx "amd64"'),
     (Yum, 'rpm -q package'),
     (Dnf, 'rpm -q package'),
     (Brew, 'test -n "$(brew ls --versions package)"'),
