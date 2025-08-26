@@ -265,6 +265,7 @@ class PackagesList:
                 pass
 
     def refs(self):
+        """ Get all the recipe references in the list."""
         result = {}
         for ref, ref_dict in self.recipes.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
@@ -277,6 +278,7 @@ class PackagesList:
 
     @staticmethod
     def prefs(ref, recipe_bundle):
+        """ Get all the package references for a given recipe reference given a bundle."""
         result = {}
         for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
             prevs = pkg_bundle.get("revisions", {})
