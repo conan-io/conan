@@ -225,12 +225,14 @@ class PackagesList:
             result.append(subpkglist)
         return result
 
-    def only_recipes(self):
-        result = {}
+    def only_recipes(self) -> dict:
+        """ Filter out all the packages and package revisions, returning only the recipes and
+            recipe revisions.
+        """
         for ref, ref_dict in self.recipes.items():
             for rrev_dict in ref_dict.get("revisions", {}).values():
                 rrev_dict.pop("packages", None)
-        return result
+        return self.recipes.copy()
 
     def add_refs(self, refs):
         # RREVS alreday come in ASCENDING order, so upload does older revisions first
