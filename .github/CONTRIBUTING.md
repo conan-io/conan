@@ -26,7 +26,7 @@ To contribute follow the next steps:
    your fix/feature as discussed in previous step.
 4. Try to keep your branch updated with the `develop2` branch to avoid conflicts.
 5. Run the ``test/unittest`` and ``test/integration`` test suite locally, as described in [Conan tests guidelines section](https://github.com/conan-io/conan/blob/develop2/test/README.md). If you are doing changes to a build system integration, locate the respective folder for that integration in ``test/functional`` and run the tests of that folder. It is not expected that contributors have to run the full test suite locally, as it requires too many external tools.
-6. Open a pull request, and select `develop2` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.X.Y patch. In that case, the PR should be targeted to release/2.0.
+6. Open a pull request, and select `develop2` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.X.Y patch. In that case, the PR should be targeted to ``release/2.X``.
 7. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
 8. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
