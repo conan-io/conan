@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Check SDK version
+        run: xcrun -sdk macosx --show-sdk-version
+
       - name: Cache pip packages
         id: cache-pip
         uses: actions/cache@v4
