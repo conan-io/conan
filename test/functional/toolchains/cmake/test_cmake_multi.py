@@ -2,8 +2,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conan.test.utils.tools import TestClient
 
 
@@ -18,7 +16,7 @@ class CMakeInstallTest(unittest.TestCase):
             class multiRecipe(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
 
-                exports_sources = "cmake_one/CMakeLists.txt", "cmake_two/CMakeLists.txt", "src/*"
+                exports_sources = "cmake_one/CMakeLists.txt", "cmake_two/CMakeLists.txt", "src_one/*", "src_two/*"
 
                 def layout(self):
                     cmake_layout(self)
@@ -31,9 +29,9 @@ class CMakeInstallTest(unittest.TestCase):
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(build_script_folder="cmake_one", build_subfolder="one")
+                    cmake.configure(build_script_folder="cmake_one", build_subfolder="one", source_subfolder="src_one")
                     cmake.build(build_subfolder="one")
-                    cmake.configure(build_script_folder="cmake_two", build_subfolder="two")
+                    cmake.configure(build_script_folder="cmake_two", build_subfolder="two", source_subfolder="src_two")
                     cmake.build(build_subfolder="two")
 
                 def package(self):
@@ -67,10 +65,10 @@ class CMakeInstallTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.15)
             project(hello_{name} CXX)
 
-            add_library(hello_{name} ../src/hello_{name}.cpp)
-            target_include_directories(hello_{name} PUBLIC include)
+            add_library(hello_{name} ${{CONAN_MULTI_SOURCE_DIR}}/hello_{name}.cpp)
+            target_include_directories(hello_{name} PUBLIC ${{CONAN_MULTI_SOURCE_DIR}})
 
-            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "../src/hello_{name}.h")
+            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "${{CONAN_MULTI_SOURCE_DIR}}/hello_{name}.h")
             install(TARGETS hello_{name})
             """)
 
@@ -78,10 +76,10 @@ class CMakeInstallTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "cmake_one/CMakeLists.txt": cmakelist.format(name="one"),
                      "cmake_two/CMakeLists.txt": cmakelist.format(name="two"),
-                     "src/hello_one.h": hello_h.format(name="one"),
-                     "src/hello_one.cpp": hello_cpp.format(name="one"),
-                     "src/hello_two.h": hello_h.format(name="two"),
-                     "src/hello_two.cpp": hello_cpp.format(name="two")})
+                     "src_one/hello_one.h": hello_h.format(name="one"),
+                     "src_one/hello_one.cpp": hello_cpp.format(name="one"),
+                     "src_two/hello_two.h": hello_h.format(name="two"),
+                     "src_two/hello_two.cpp": hello_cpp.format(name="two")})
 
         client.run("create . --name=multi --version=0.1")
         self.assertIn("[100%] Built target hello_one", client.out)
