@@ -101,7 +101,10 @@ class CMake:
         if self._generator:
             arg_list.append('-G "{}"'.format(self._generator))
         if self._toolchain_file:
-            toolpath = os.path.join('..', self._toolchain_file)
+            toolpath = self._toolchain_file
+            if build_subfolder:
+                bsf = build_subfolder.replace("\\", "/")
+                toolpath = os.path.join(('../' * len(bsf.split('/'))).rstrip('/'), self._toolchain_file)
             toolpath = toolpath.replace("\\", "/")
             arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
         if self._conanfile.package_folder:
@@ -191,9 +194,9 @@ class CMake:
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.build()")
-        self._build(build_type, target, cli_args, build_tool_args, build_subfolder=build_subfolder,stdout=stdout, stderr=stderr)
+        self._build(build_type, target, cli_args, build_tool_args, build_subfolder=build_subfolder, stdout=stdout, stderr=stderr)
 
-    def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None):
+    def install(self, build_type=None, component=None, build_subfolder=None, cli_args=None, stdout=None, stderr=None):
         """
         Equivalent to running ``cmake --install``
 
@@ -208,12 +211,17 @@ class CMake:
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.install()")
-        mkdir(self._conanfile, self._conanfile.package_folder)
+        package_folder = self._conanfile.package_folder
+        build_folder = self._conanfile.build_folder
+        if build_subfolder:
+            package_folder = os.path.join(self._conanfile.package_folder, build_subfolder)
+            build_folder = os.path.join(self._conanfile.build_folder, build_subfolder)
+        mkdir(self._conanfile, package_folder)
 
         build_config = self._config_arg(build_type)
 
-        pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
-        build_folder = '"{}"'.format(self._conanfile.build_folder)
+        pkg_folder = '"{}"'.format(package_folder.replace("\\", "/"))
+        build_folder = '"{}"'.format(build_folder.replace("\\", "/"))
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
