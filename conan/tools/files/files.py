@@ -94,7 +94,7 @@ def rm(conanfile, pattern, folder, recursive=False, excludes=None):
 
 def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
-        auth=None, headers=None, strip_root=False, extract_filter=None):
+        auth=None, headers=None, strip_root=False, extract_filter=None, excludes=None):
     """
     High level download and decompressing of a tgz, zip or other compressed format file.
     Just a high level wrapper for download, unzip, and remove the temporary zip file once unzipped.
@@ -117,7 +117,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     :param auth:  forwarded to ``tools.file.download()``.
     :param headers:  forwarded to ``tools.file.download()``.
     :param strip_root: forwarded to ``tools.file.unzip()``.
-    :param extract_filter: forwarded to ``tools.file.unzip()``.
+    :param excludes: forwarded to ``tools.file.unzip()``.
     """
 
     if not filename:  # deduce filename from the URL
@@ -131,7 +131,8 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
              retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(conanfile, filename, destination=destination, keep_permissions=keep_permissions,
-          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter)
+          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter,
+          excludes=excludes)
     os.unlink(filename)
 
 
@@ -344,7 +345,7 @@ def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=No
 
 
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
-          strip_root=False, extract_filter=None):
+          strip_root=False, extract_filter=None, excludes=None):
     """
     Extract different compressed formats
 
@@ -362,6 +363,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     :param extract_filter: (Optional, defaulted to None). When extracting a tar file,
            use the tar extracting filters define by Python in
            https://docs.python.org/3/library/tarfile.html
+    :param excludes: (Optional, defaulted to None). When extracting a file,
+           exclude paths matching any of the patterns. This should be a Unix shell-style wildcard,
+           see fnmatch documentation for more details.
     """
 
     output = conanfile.output
@@ -370,7 +374,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
+        return untargz(filename, destination, pattern, strip_root, extract_filter,
+                       excludes=excludes)
     if filename.endswith(".gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
@@ -381,7 +386,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 shutil.copyfileobj(fin, fout)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
+        return untargz(filename, destination, pattern, strip_root, extract_filter,
+                       excludes=excludes)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -390,6 +396,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if excludes:
+            zip_info = [zi for zi in zip_info
+                        if not any(fnmatch(zi.filename, pat) for pat in excludes)]
         if strip_root:
             names = [zi.filename.replace("\\", "/") for zi in zip_info]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
@@ -433,7 +442,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
+def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None,
+            excludes=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
     with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
@@ -443,7 +453,7 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
         # File I/O functions in the Windows API convert "/" to "\" as part of converting
         # the name to an NT-style name, except when using the "\\?\" prefix
         using_long_path_prefix = destination.startswith("\\\\?\\")
-        if not pattern and not strip_root and not using_long_path_prefix:
+        if not pattern and not excludes and not strip_root and not using_long_path_prefix:
             tarredgzippedFile.extractall(destination)
         else:
             common_folder = None
@@ -451,6 +461,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
             for member in tarredgzippedFile:
                 if pattern and not fnmatch(member.name, pattern):
                     continue  # Skip files that don’t match the pattern
+                if excludes and any(fnmatch(member.name, pat) for pat in excludes):
+                    continue  # Skip files that match the excludes
 
                 if strip_root:
                     name = member.name.replace("\\", "/")
