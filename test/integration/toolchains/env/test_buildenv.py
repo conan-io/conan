@@ -46,8 +46,11 @@ def test_quoted_vars():
         class Pkg(ConanFile):
             name = "dep"
             version = "0.1"
+            settings = "os"
             def package_info(self):
-                self.buildenv_info.define("MyCustomEscapedVar", r'MyVar:"content!! ^| other!!"')
+                v = 'MyVar:"content!! | other!!"'
+                v = v.replace("|", "^|") if self.settings.os == "Windows" else v  # escape
+                self.buildenv_info.define("MyCustomEscapedVar", v)
         """)
 
     conanfile = textwrap.dedent("""
@@ -66,7 +69,7 @@ def test_quoted_vars():
         """)
 
     c.save({"dep/conanfile.py": dep,
-            "consumer/conanfile.py": conanfile,})
+            "consumer/conanfile.py": conanfile})
 
     c.run("create dep")
     c.run("build consumer")
