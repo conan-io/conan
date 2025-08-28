@@ -43,7 +43,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
                                       install=False)
 
         # Build requires always apply to the consumer
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         cmake = app.edges[0].dst
 
@@ -56,7 +56,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -88,7 +88,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
                                       with_require("lib/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -118,7 +118,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.2"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake2 = lib.edges[0].dst
@@ -141,7 +141,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -171,7 +171,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
                                                                               "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -207,7 +207,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         assert "Version conflict: Conflict between zlib/0.2 and zlib/0.1 in the graph." in out
         assert "Conflict originates from lib/0.1" in out
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -237,7 +237,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
                                       .with_require("gazelle/0.1")
                                       .with_tool_requires("grass/0.2"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         cheetah = deps_graph.root
         gazelle = cheetah.edges[0].dst
         grass2 = cheetah.edges[1].dst
@@ -256,7 +256,7 @@ class TestBuildRequiresVisible(GraphManagerTest):
         self._cache_recipe("libc/0.1", GenConanfile().with_requirement("libb/0.1", visible=False))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("libc/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libc = app.edges[0].dst
         libb = libc.edges[0].dst
@@ -284,7 +284,7 @@ class TestTestRequire(GraphManagerTest):
         deps_graph = self.build_graph(conanfile)
 
         # Build requires always apply to the consumer
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         gtest = app.edges[0].dst
 
@@ -300,7 +300,7 @@ class TestTestRequire(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         gtest = lib.edges[0].dst
@@ -319,7 +319,7 @@ class TestTestRequire(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         gtest = lib.edges[0].dst
@@ -351,7 +351,7 @@ class TestTestRequire(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
                                       with_require("lib/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         gtest = lib.edges[0].dst
@@ -388,7 +388,7 @@ class TestTestRequire(GraphManagerTest):
                                                     .with_requires("zlib/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         gtest = lib.edges[1].dst
@@ -414,7 +414,7 @@ class TestTestRequire(GraphManagerTest):
         self._cache_recipe("gtest/1.14", GenConanfile().with_requires("abseil/1.0"))
         deps_graph = self.build_graph(GenConanfile("opencv", "1.0").with_test_requires("gtest/1.14"))
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         opencv = deps_graph.root
         gtest14 = opencv.edges[0].dst
         abseil = gtest14.edges[0].dst
@@ -429,7 +429,7 @@ class TestTestRequire(GraphManagerTest):
 class TestTestRequiresProblemsShared(GraphManagerTest):
 
     def _check_graph(self, deps_graph, reverse):
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         lib_c = deps_graph.root
         if not reverse:
             lib_a = lib_c.edges[0].dst
@@ -577,7 +577,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -595,7 +595,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -611,7 +611,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         assert lib.package_id == "2813db72897dd13aca2af071efe8ecb116f679ed"
@@ -629,7 +629,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         lib = app.edges[0].dst
         cmake = lib.edges[0].dst
@@ -742,7 +742,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         assert type(deps_graph.error) == GraphConflictError
 
         # Build requires always apply to the consumer
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -771,7 +771,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         assert type(deps_graph.error) == GraphConflictError
 
         # Build requires always apply to the consumer
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
         libd = app.edges[0].dst
         libe = app.edges[1].dst
@@ -798,7 +798,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1"))
 
         # Build requires always apply to the consumer
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         protobuf_host = libb.edges[0].dst
@@ -829,7 +829,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
                                       .with_tool_requirement("protobuf/0.2", override=True))
 
         # Build requires always apply to the consumer
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         protobuf_host = libb.edges[0].dst
@@ -865,7 +865,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         deps_graph = self.build_graph(conanfile)
 
         # Build requires always apply to the consumer
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         tool = app.edges[0].dst
 
@@ -885,7 +885,7 @@ class TestLoops(GraphManagerTest):
         assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
         tool = app.edges[0].dst
         tool2 = tool.edges[0].dst
@@ -907,7 +907,7 @@ class TestLoops(GraphManagerTest):
         assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
         cmake = app.edges[0].dst
         gtest = cmake.edges[0].dst

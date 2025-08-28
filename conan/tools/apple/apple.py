@@ -108,6 +108,16 @@ def resolve_apple_flags(conanfile, is_cross_building=False):
     return min_version_flag, apple_arch_flag, apple_isysroot_flag
 
 
+def xcodebuild_deployment_target_key(os_name):
+    return {
+        "Macos": "MACOSX_DEPLOYMENT_TARGET",
+        "iOS": "IPHONEOS_DEPLOYMENT_TARGET",
+        "tvOS": "TVOS_DEPLOYMENT_TARGET",
+        "watchOS": "WATCHOS_DEPLOYMENT_TARGET",
+        "visionOS": "XROS_DEPLOYMENT_TARGET",
+    }.get(os_name) if os_name else None
+
+
 class XCRun:
     """
     XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.

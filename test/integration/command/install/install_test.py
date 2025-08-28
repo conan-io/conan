@@ -32,7 +32,7 @@ def test_install_reference_error(client):
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
     client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     client.run("install . --channel=testing", assert_error=True)
-    assert "Can't specify channel without user" in client.out
+    assert "Can't specify channel 'testing' without user" in client.out
 
 
 def test_install_args_error():
