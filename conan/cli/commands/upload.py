@@ -121,20 +121,23 @@ def upload(conan_api: ConanAPI, parser, *args):
 
 def _ask_confirm_upload(conan_api, package_list):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for ref, bundle in package_list.refs().items():
-        msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
-        ref_dict = package_list.recipes[str(ref)]["revisions"]
-        if not ui.request_boolean(msg):
-            ref_dict.pop(ref.revision)
-            # clean up empy refs
-            if not ref_dict:
-                package_list.recipes.pop(str(ref))
-        else:
-            for pref, prev_bundle in package_list.prefs(ref, bundle).items():
-                msg = "Are you sure you want to upload package '%s'?" % pref.repr_notime()
-                pkgs_dict = ref_dict[ref.revision]["packages"]
-                if not ui.request_boolean(msg):
-                    pref_dict = pkgs_dict[pref.package_id]["revisions"]
-                    pref_dict.pop(pref.revision)
-                    if not pref_dict:
-                        pkgs_dict.pop(pref.package_id)
+    result = {}
+    for ref, ref_info in package_list.recipes.items():
+        result_ref = {}
+        for rrev, rrev_info in ref_info["revisions"].items():
+            msg = f"Are you sure you want to upload recipe '{ref}#{rrev}'?"
+            if ui.request_boolean(msg):
+                result_rrev = {}
+                if rrev_info.get("timestamp"):
+                    result_rrev["timestamp"] = rrev_info["timestamp"]
+                for pkg_id, pkg_id_info in rrev_info["packages"].items():
+                    for prev, prev_info in pkg_id_info["revisions"].items():
+                        msg = (f"Are you sure you want to upload package "
+                               f"'{ref}#{rrev}:{pkg_id}#{prev}'?")
+                        if ui.request_boolean(msg):
+                            pkg_info = result_rrev.setdefault("packages", {}).setdefault(pkg_id, {})
+                            pkg_info.setdefault("revisions", {})[prev] = prev_info
+                            pkg_info["info"] = pkg_id_info["info"]
+                result_ref.setdefault("revisions", {})[rrev] = result_rrev
+        result[ref] = result_ref
+    package_list.recipes = result

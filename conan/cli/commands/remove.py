@@ -93,35 +93,35 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list.add(cache_name, package_list)
 
     # TODO: This iteration and removal of not-confirmed is ugly and complicated, improve it
-    for ref, ref_bundle in package_list.refs().items():
-        ref_dict = package_list.recipes[str(ref)]["revisions"]
-        packages = ref_bundle.get("packages")
-        if packages is None:
-            if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
-                if not args.dry_run:
-                    conan_api.remove.recipe(ref, remote=remote)
-            else:
+    result = {}
+    for ref, ref_info in package_list.recipes.items():
+        result_ref = {}
+        for rrev, rrev_info in ref_info["revisions"].items():
+            packages = rrev_info.get("packages")
+            if packages is None:
+                if confirmation(f"Remove the recipe and all the packages of '{ref}#{rrev}'?"):
+                    if not args.dry_run:
+                        conan_api.remove.recipe(ref, remote=remote)
+
+            prefs = package_list.prefs(ref, ref_bundle)
+            if not prefs:
+                ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
                 ref_dict.pop(ref.revision)
                 if not ref_dict:
                     package_list.recipes.pop(str(ref))
-            continue
-        prefs = package_list.prefs(ref, ref_bundle)
-        if not prefs:
-            ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
-            ref_dict.pop(ref.revision)
-            if not ref_dict:
-                package_list.recipes.pop(str(ref))
-            continue
+                continue
 
-        for pref, _ in prefs.items():
-            if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                if not args.dry_run:
-                    conan_api.remove.package(pref, remote=remote)
-            else:
-                pref_dict = packages[pref.package_id]["revisions"]
-                pref_dict.pop(pref.revision)
-                if not pref_dict:
-                    packages.pop(pref.package_id)
+            for pref, _ in prefs.items():
+                if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
+                    if not args.dry_run:
+                        conan_api.remove.package(pref, remote=remote)
+                else:
+                    pref_dict = packages[pref.package_id]["revisions"]
+                    pref_dict.pop(pref.revision)
+                    if not pref_dict:
+                        packages.pop(pref.package_id)
+        result[ref] = result_ref
+    package_list.recipes = result
 
     return {
         "results": multi_package_list.serialize(),
