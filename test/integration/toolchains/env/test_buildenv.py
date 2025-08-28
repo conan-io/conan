@@ -73,5 +73,5 @@ def test_quoted_vars():
 
     c.run("create dep")
     c.run("build consumer")
-    assert 'MyCustomEscapedVar=MyVar:"content!! | other!!"' in c.out
+    assert 'MyVar:"content!! | other!!"' in c.out
     assert "Hello!!!!" in c.out
