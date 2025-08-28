@@ -230,7 +230,6 @@ def test_custom_arch_flag_via_toolchain():
     assert re.search(r"cpp_link_args =.+-mmy-flag.+", content)
 
 
-
 def test_linker_scripts_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -824,6 +823,7 @@ def test_conf_extra_apple_flags():
     for flags in ["objcpp_args", "objc_args"]:
         assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
@@ -895,7 +895,7 @@ def test_new_public_attributes():
     buildtype = 'Debug'
     default_library = 'shared'
     b_vscrt = 'MD'
-    b_ndebug = 'true'
+    b_ndebug = true
     b_staticpic = true
     cpp_std = 'c++20'
     c_std = 'c20'
