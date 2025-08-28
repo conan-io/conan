@@ -60,7 +60,7 @@ class CMake:
     def is_multi_configuration(self):
         return is_multi_configuration(self._generator)
 
-    def configure(self, variables=None, build_script_folder=None, cli_args=None,
+    def configure(self, variables=None, build_script_folder=None, build_subfolder=None, cli_args=None,
                   stdout=None, stderr=None):
         """
 
@@ -93,13 +93,16 @@ class CMake:
         cmakelist_folder = cmakelist_folder.replace("\\", "/")
 
         build_folder = self._conanfile.build_folder
+        if build_subfolder:
+            build_folder = os.path.join(self._conanfile.build_folder, build_subfolder)
         mkdir(self._conanfile, build_folder)
 
         arg_list = [self._cmake_program]
         if self._generator:
             arg_list.append('-G "{}"'.format(self._generator))
         if self._toolchain_file:
-            toolpath = self._toolchain_file.replace("\\", "/")
+            toolpath = os.path.join('..', self._toolchain_file)
+            toolpath = toolpath.replace("\\", "/")
             arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
         if self._conanfile.package_folder:
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
@@ -140,9 +143,11 @@ class CMake:
         build_config = "--config {}".format(build_type) if build_type and is_multi else ""
         return build_config
 
-    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="",
+    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="", build_subfolder=None,
                stdout=None, stderr=None):
         bf = self._conanfile.build_folder
+        if build_subfolder:
+            bf = os.path.join(self._conanfile.build_folder, build_subfolder)
         build_config = self._config_arg(build_type)
 
         args = []
@@ -167,7 +172,7 @@ class CMake:
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command, env=env, stdout=stdout, stderr=stderr)
 
-    def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None,
+    def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, build_subfolder=None,
               stdout=None, stderr=None):
         """
 
@@ -186,7 +191,7 @@ class CMake:
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.build()")
-        self._build(build_type, target, cli_args, build_tool_args, stdout=stdout, stderr=stderr)
+        self._build(build_type, target, cli_args, build_tool_args, build_subfolder=build_subfolder,stdout=stdout, stderr=stderr)
 
     def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None):
         """
