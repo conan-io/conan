@@ -353,8 +353,27 @@ class ConanFile:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
+    def run(self, command: str, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
             shell=True, scope="build", stderr=None):
+        """ Run a command in the current package context.
+
+        :parameter command: The command to run.
+        :parameter stdout: The output stream to write the command output. If ``None``, it defaults to
+            the standard output stream.
+        :parameter stderr: The error output stream to write the command error output. If ``None``,
+            it defaults to the standard error stream.
+        :parameter cwd: The current working directory to run the command in.
+        :parameter ignore_errors: If ``True``, do not raise an error if the command returns a
+            non-zero exit code.
+        :parameter env: The environment file to use. If empty, it defaults to ``"conanbuild"`` for
+            when ``scope`` is ``build`` or ``"conanrun"`` for ``run``.
+            If set to ``None`` explicitly, no environment file will be applied,
+            which is useful for commands that do not require any environment.
+        :parameter quiet: If ``True``, suppress the output of the command.
+        :parameter shell: If ``True``, run the command in a shell. This is passed to the
+            underlying ``Popen`` function.
+        :parameter scope: The scope of the command, either ``"build"`` or ``"run"``.
+        """
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command, conanfile=self)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
