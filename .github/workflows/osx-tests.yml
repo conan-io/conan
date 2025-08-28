@@ -20,8 +20,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Check SDK version
-        run: xcrun -sdk macosx --show-sdk-version
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
 
       - name: Cache pip packages
         id: cache-pip
