@@ -79,7 +79,7 @@ class RestApiClientLocalRecipesIndex:
     def get_recipe_sources(self, ref, dest_folder):
         try:
             export_sources = self._app.cache.recipe_layout(ref).export_sources()
-        except ConanReferenceDoesNotExistInDB as e:
+        except ConanReferenceDoesNotExistInDB:
             # This can happen when there a local-recipes-index is being queried for sources it
             # doesn't contain
             # If that is the case, check if they are in the repo, try to export
