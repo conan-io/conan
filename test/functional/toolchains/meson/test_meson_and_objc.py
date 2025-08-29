@@ -82,8 +82,6 @@ def test_apple_meson_toolchain_native_compilation_objective_c():
 
 @pytest.mark.parametrize("arch, os_, os_version, sdk", [
     ('armv8', 'iOS', '10.0', 'iphoneos'),
-    ('armv7', 'iOS', '10.0', 'iphoneos'),
-    ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8', 'Macos', '11.0', None)  # Apple Silicon
 ])

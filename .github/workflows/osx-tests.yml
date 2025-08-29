@@ -153,6 +153,12 @@ jobs:
             ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:

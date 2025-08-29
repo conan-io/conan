@@ -117,6 +117,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     :param auth:  forwarded to ``tools.file.download()``.
     :param headers:  forwarded to ``tools.file.download()``.
     :param strip_root: forwarded to ``tools.file.unzip()``.
+    :param extract_filter: forwarded to ``tools.file.unzip()``.
     :param excludes: forwarded to ``tools.file.unzip()``.
     """
 
