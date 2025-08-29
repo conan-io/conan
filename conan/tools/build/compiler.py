@@ -42,6 +42,6 @@ def check_min_compiler_version(conanfile, compiler_restrictions):
             if Version(compiler_version) < Version(min_version):
                 ref = conanfile.ref if hasattr(conanfile, "ref") else conanfile.name
                 raise ConanInvalidConfiguration(
-                    f"{ref} requires {compiler} >= {min_version}"
-                    f" ({reason}), but {compiler} {compiler_version} was found.")
+                    f"{ref} requires {compiler} >= {min_version}, but {compiler} {compiler_version} was found\n"
+                    f"Reason: {reason}")
             break
