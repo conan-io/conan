@@ -1,10 +1,13 @@
 import os
 import platform
+import shutil
 
 import pytest
 
 from conan.api.subapi.workspace import WorkspaceAPI
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
+from conan.tools.files import replace_in_file
 
 WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
@@ -41,8 +44,31 @@ def test_metabuild():
     config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
     c.run_command(f"cmake --preset {config_preset}")
     assert "Conan: Target declared 'mymath::mymath'" in c.out
-    assert "Adding project liba" in c.out
-    assert "Adding project libb" in c.out
-    assert "Adding project app1" in c.out
+    assert "Adding project: liba" in c.out
+    assert "Adding project: libb" in c.out
+    assert "Adding project: app1" in c.out
     c.run_command("cmake --build --preset conan-release")
     # it doesn't fail
+
+
+# The workspace CMake needs at least 3.25 for find_package to work
+@pytest.mark.tool("cmake", "3.27")
+def test_new_template_and_different_folder():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/18813
+    """
+    c = TestClient()
+    c.run("new workspace")
+    shutil.move(os.path.join(c.current_folder, "liba"), os.path.join(c.current_folder, "libX"))
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "conanws.yml"),
+                    "  - path: liba",
+                    "  - path: libX")
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "CMakeLists.txt"),
+                    "add_project(liba)",
+                    "add_project(liba libX)")
+    c.run("workspace super-install")
+    config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+    c.run_command(f"cmake --preset {config_preset}")  # it does not fail
+    assert "Adding project: liba" in c.out
+    assert "Adding project: libb" in c.out
+    assert "Adding project: app1" in c.out

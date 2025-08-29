@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import load, mkdir
@@ -31,17 +32,15 @@ class ConanFileToolsTest(ConanFile):
 
 class TestDevInSourceFlow:
 
-    def _assert_pkg(self, folder):
+    @staticmethod
+    def _assert_pkg(folder):
         assert sorted(['file.h', 'myartifact.lib', 'subdir', 'conaninfo.txt',
-                                 'conanmanifest.txt']) == \
-                         sorted(os.listdir(folder))
-        assert load(os.path.join(folder, "myartifact.lib")) == \
-                         "artifact contents!"
-        assert load(os.path.join(folder, "subdir/myartifact2.lib")) == \
-                         "artifact2 contents!"
+                       'conanmanifest.txt']) == sorted(os.listdir(folder))
+        assert load(os.path.join(folder, "myartifact.lib")) == "artifact contents!"
+        assert load(os.path.join(folder, "subdir/myartifact2.lib")) == "artifact2 contents!"
 
     def test_parallel_folders(self):
-        client = TestClient()
+        client = TestClient(light=True)
         repo_folder = os.path.join(client.current_folder, "recipe")
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(repo_folder)
@@ -62,7 +61,7 @@ class TestDevInSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
-        client = TestClient()
+        client = TestClient(light=True)
         repo_folder = client.current_folder
         package_folder = os.path.join(client.current_folder, "pkg")
         mkdir(package_folder)
@@ -79,7 +78,7 @@ class TestDevInSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
-        client = TestClient()
+        client = TestClient(light=True)
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         package_folder = os.path.join(build_folder, "package")
@@ -121,12 +120,13 @@ class ConanFileToolsTest(ConanFile):
 
 class TestDevOutSourceFlow:
 
-    def _assert_pkg(self, folder):
+    @staticmethod
+    def _assert_pkg(folder):
         assert sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']) == \
                          sorted(os.listdir(folder))
 
     def test_parallel_folders(self):
-        client = TestClient()
+        client = TestClient(light=True)
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
         build_folder = os.path.join(client.current_folder, "build")
@@ -156,7 +156,7 @@ class TestDevOutSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
-        client = TestClient()
+        client = TestClient(light=True)
         repo_folder = client.current_folder
         client.save({"conanfile.py": conanfile_out})
 
@@ -172,7 +172,7 @@ class TestDevOutSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
-        client = TestClient()
+        client = TestClient(light=True)
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
@@ -194,3 +194,18 @@ class TestDevOutSourceFlow:
 
         cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
+
+
+def test_error_build_file():
+    c = TestClient(light=True)
+    conanfile_error = textwrap.dedent(r"""
+        from conan import ConanFile
+        class Test(ConanFile):
+            def layout(self):
+                self.folders.build = "build"
+        """)
+
+    c.save({"conanfile.py": conanfile_error,
+            "build": "# Some existing BUILD file like bazel"})
+    c.run("build . ", assert_error=True)
+    assert "ERROR: conanfile.py: Failed to create build folder, there is already a file" in c.out

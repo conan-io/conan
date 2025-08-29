@@ -4,7 +4,7 @@ LABEL maintainer="Conan.io <info@conan.io>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ENV PY36=3.6.15 \
+ENV PY37=3.7.9 \
     PY38=3.8.6 \
     PY39=3.9.2 \
     PY310=3.10.16 \
@@ -95,7 +95,7 @@ ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
 
 RUN curl https://pyenv.run | bash && \
-    pyenv install $PY36 && \
+    pyenv install $PY37 && \
     pyenv install $PY38 && \
     pyenv install $PY39 && \
     pyenv install $PY310 && \

@@ -19,15 +19,20 @@ project(monorepo CXX)
 
 include(FetchContent)
 
-function(add_project SUBFOLDER)
-    message(STATUS "Adding project ${SUBFOLDER}")
+function(add_project PACKAGE_NAME)
+    if(ARGC GREATER 1)
+        set(SUBFOLDER "${ARGV1}")
+    else()
+        set(SUBFOLDER "${PACKAGE_NAME}")
+    endif()
+    message(STATUS "Adding project: ${PACKAGE_NAME}")
     FetchContent_Declare(
-        ${SUBFOLDER}
+        ${PACKAGE_NAME}
         SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${SUBFOLDER}
         SYSTEM
         OVERRIDE_FIND_PACKAGE
     )
-    FetchContent_MakeAvailable(${SUBFOLDER})
+    FetchContent_MakeAvailable(${PACKAGE_NAME})
 endfunction()
 
 add_project(liba)
