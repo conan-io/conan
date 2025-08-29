@@ -19,23 +19,28 @@ project(monorepo CXX)
 
 include(FetchContent)
 
-function(add_project SUBFOLDER LIBRARY_NAME)
-    message(STATUS "Adding project ${SUBFOLDER}/${LIBRARY_NAME}")
+function(add_project PACKAGE_NAME)
+    if(ARGC GREATER 1)
+        set(SUBFOLDER "${ARGV1}")
+    else()
+        set(SUBFOLDER "${PACKAGE_NAME}")
+    endif()
+    message(STATUS "Adding project: ${PACKAGE_NAME}")
     FetchContent_Declare(
-        ${LIBRARY_NAME}
+        ${PACKAGE_NAME}
         SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${SUBFOLDER}
         SYSTEM
         OVERRIDE_FIND_PACKAGE
     )
-    FetchContent_MakeAvailable(${LIBRARY_NAME})
+    FetchContent_MakeAvailable(${PACKAGE_NAME})
 endfunction()
 
-add_project(liba liba)
+add_project(liba)
 # They should be defined in the liba/CMakeLists.txt, but we can fix it here
 add_library(liba::liba ALIAS liba)
-add_project(libb libb)
+add_project(libb)
 add_library(libb::libb ALIAS libb)
-add_project(app1 app1)
+add_project(app1)
 """
 
 conanfile = '''\
