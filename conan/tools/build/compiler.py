@@ -12,7 +12,7 @@ def check_min_compiler_version(conanfile, compiler_restrictions):
                                `conanfile.settings.compiler.version`.
     :param compiler_restrictions: A list of tuples, where each tuple contains
                                       (compiler, min_version, reason).
-                                  - compiler (str): The name of the compiler (e.g., "gcc", "Visual Studio").
+                                  - compiler (str): The name of the compiler (e.g., "gcc", "msvc").
                                   - min_version (str): The minimum required version as a string (e.g., "14", "19.0").
                                   - reason (str): A string explaining the reason for the version requirement.
 
