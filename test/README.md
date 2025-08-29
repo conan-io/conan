@@ -64,13 +64,15 @@ external tools: `cmake`, `gcc`, `clang`, `visual_studio`, `mingw`, `autotools`, 
 
 ```python
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
-@pytest.mark.visual_studio
+@pytest.mark.tool("visual_studio")
 def test_vcvars_priority(self):
     client = TestClient()
     ...
 ```
 
 If the test needs any of those tools to run it should be marked as using that tool and moved to the `test/functional` folder.
+Note that only tests in ``test/functional`` might need the ``@pytest.mark.tool`` annotation. Tests in ``integration`` or ``unittest`` should never require an extra tool.
+
 
 ### Parametrizing tests
 
@@ -87,10 +89,22 @@ Please, if you need to run several combinations of the same testing code use par
 If you want to run the Coman test suite locally, please check the [README on the front
 page](https://github.com/conan-io/conan#running-the-tests).
 
+Recall it is not expected for contributors to run the full test suite locally, only:
+
+- Run the ``unittest`` and ``integration`` tests. These shouldn't require any external tools
+- If doing modifications to some specific build-system integration, locate the relevant folder under ``functional/toolchains`` and run those tests only.
+
+
+The reason is that the ``functional`` test suite uses too many different external tools, and installing all of them can be tedious.
+The Conan CI system will run those tests.
+
 
 ## Installation of tools
 
 Work in progress!
+
+Note the ``test/conftest.py`` file contains the upstream configuration of tools.
+This file should not be changed, but users can create a ``test/conftest_user.py`` file containing their local definitions of tools, that will override the ``conftest.py`` definitions.
 
 ### Windows msys2, mingw64 and mingw32
 

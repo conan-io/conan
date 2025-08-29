@@ -61,3 +61,7 @@ class HookManager:
                     self.hooks.setdefault(method, []).append((hook_name, hook_method))
         except Exception as e:
             raise ConanException("Error loading hook '%s': %s" % (hook_path, str(e)))
+
+    def reinit(self):
+        self.hooks.clear()
+        self._load_hooks()

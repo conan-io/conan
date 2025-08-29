@@ -42,15 +42,17 @@ class ConanBasicApp:
         - Global configuration
         - Cache home folder
         """
-        global_conf = conan_api.config.global_conf
-        self.global_conf = global_conf
+        # TODO: Remove this global_conf from here
+        global_conf = conan_api._api_helpers.global_conf  # noqa
+        self._global_conf = global_conf
         self.conan_api = conan_api
         cache_folder = conan_api.home_folder
         self.cache_folder = cache_folder
         self.cache = PkgCache(self.cache_folder, global_conf)
         # Wraps RestApiClient to add authentication support (same interface)
         localdb = LocalDB(cache_folder)
-        auth_manager = ConanApiAuthManager(conan_api.remotes.requester, cache_folder, localdb, global_conf)
+        auth_manager = ConanApiAuthManager(conan_api.remotes.requester, cache_folder, localdb,
+                                           global_conf)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, cache_folder)
         global_editables = conan_api.local.editable_packages
@@ -64,13 +66,14 @@ class ConanApp(ConanBasicApp):
         - LocalAPI to read editable packages
         """
         super().__init__(conan_api)
-        self.proxy = ConanProxy(self, self.editable_packages)
-        self.range_resolver = RangeResolver(self, self.global_conf, self.editable_packages)
+        legacy_update = self._global_conf.get("core:update_policy", choices=["legacy"])
+        self.proxy = ConanProxy(self, self.editable_packages, legacy_update=legacy_update)
+        self.range_resolver = RangeResolver(self, self._global_conf, self.editable_packages)
 
-        self.pyreq_loader = PyRequireLoader(self, self.global_conf)
+        self.pyreq_loader = PyRequireLoader(self, self._global_conf)
         cmd_wrap = CmdWrapper(HomePaths(self.cache_folder).wrapper_path)
-        conanfile_helpers = ConanFileHelpers(conan_api.remotes.requester, cmd_wrap, self.global_conf,
-                                             self.cache, self.cache_folder)
+        conanfile_helpers = ConanFileHelpers(conan_api.remotes.requester, cmd_wrap,
+                                             self._global_conf, self.cache, self.cache_folder)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
 
 

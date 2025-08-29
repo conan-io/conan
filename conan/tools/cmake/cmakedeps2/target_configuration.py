@@ -122,6 +122,23 @@ class TargetConfigurationTemplate2:
 
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
+        seen_aliases = set()
+        root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+        root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
+        for lib in libs.values():
+            for alias in lib.get("cmake_target_aliases", []):
+                if alias == root_target_name:
+                    raise ConanException(f"Can't define an alias '{alias}' for the "
+                                         f"root target '{root_target_name}' in {self._conanfile}. "
+                                         f"Changing the default target should be done with the "
+                                         f"'cmake_target_name' property.")
+                if alias in seen_aliases:
+                    raise ConanException(f"Alias '{alias}' already defined in {self._conanfile}. ")
+                seen_aliases.add(alias)
+                if alias in libs:
+                    raise ConanException(f"Alias '{alias}' already defined as a target in "
+                                         f"{self._conanfile}. ")
+
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
@@ -164,12 +181,16 @@ class TargetConfigurationTemplate2:
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
                                              pkg_folder_var)
                 if target is not None:
+                    cmake_target_aliases = self._get_aliases(name)
+                    target["cmake_target_aliases"] = cmake_target_aliases
                     libs[target_name] = target
         else:
             target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             target_name = target_name or f"{pkg_name}::{pkg_name}"
             target = self._get_cmake_lib(cpp_info, None, pkg_folder, pkg_folder_var)
             if target is not None:
+                cmake_target_aliases = self._get_aliases()
+                target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
         return libs
 
@@ -233,11 +254,16 @@ class TargetConfigurationTemplate2:
             target["link_languages"] = link_languages
         return target
 
+    def _get_aliases(self, comp_name=None):
+        aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
+                                               comp_name, check_type=list) or []
+        return aliases
+
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
-        Addd a new pkgname::pkgname INTERFACE target that depends on default_components or
+        Add a new pkgname::pkgname INTERFACE target that depends on default_components or
         on all other library targets (not exes)
-        It will not be added if there exists already a pkgname::pkgname target.
+        It will not be added if there exists already a pkgname::pkgname target (Or an alias exists).
         """
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
@@ -253,8 +279,11 @@ class TargetConfigurationTemplate2:
                     all_requires[comp_name] = True  # It is an interface, full link
             else:
                 all_requires = {k: True for k in libs.keys()}
+            # This target might have an alias, so we need to check it
+            cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
-                                      "requires": all_requires}
+                                      "requires": all_requires,
+                                      "cmake_target_aliases": cmake_target_aliases}
 
     def _get_exes(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
         exes = {}
@@ -333,6 +362,12 @@ class TargetConfigurationTemplate2:
             message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
+        {% for alias in lib_info.get("cmake_target_aliases", []) %}
+        if(NOT TARGET {{alias}})
+            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            add_library({{alias}} ALIAS {{lib}})
+        endif()
+        {% endfor %}
         {% if lib_info.get("includedirs") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {{config_wrapper(config, lib_info["includedirs"])}})

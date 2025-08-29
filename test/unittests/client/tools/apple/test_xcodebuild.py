@@ -64,3 +64,39 @@ def test_sdk():
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
     assert "SDKROOT" not in conanfile.command
+
+
+@pytest.mark.parametrize("os_name, os_version, expected_key", [
+    ("Macos", "14.0", "MACOSX_DEPLOYMENT_TARGET"),
+    ("iOS", "15.1", "IPHONEOS_DEPLOYMENT_TARGET"),
+    ("watchOS", "8.0", "WATCHOS_DEPLOYMENT_TARGET"),
+    ("tvOS", "15.0", "TVOS_DEPLOYMENT_TARGET"),
+    ("visionOS", "1.0", "XROS_DEPLOYMENT_TARGET")
+])
+def test_deployment_target_and_quoting(os_name, os_version, expected_key):
+    """
+    Checks that the correct deployment target is passed and that paths are quoted.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": os_name, "os.version": os_version})
+    xcodebuild = XcodeBuild(conanfile)
+
+    xcodebuild.build("My Project.xcodeproj", target="My Target")
+
+    expected_arg = f" {expected_key}={os_version}"
+    assert expected_arg in conanfile.command
+
+    assert "-project 'My Project.xcodeproj'" in conanfile.command
+    assert "-target 'My Target'" in conanfile.command
+
+
+def test_no_deployment_target_if_version_is_missing():
+    """
+    Checks that the deployment target argument is not added if os.version is missing.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Macos"})
+    xcodebuild = XcodeBuild(conanfile)
+    xcodebuild.build("app.xcodeproj")
+
+    assert "MACOSX_DEPLOYMENT_TARGET" not in conanfile.command
