@@ -5,9 +5,9 @@ import unittest
 from conan.test.utils.tools import TestClient
 
 
-class CMakeInstallTest(unittest.TestCase):
+class MultiCMakeTest(unittest.TestCase):
 
-    def test_install(self):
+    def test_create(self):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
@@ -65,11 +65,58 @@ class CMakeInstallTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.15)
             project(hello_{name} CXX)
 
-            add_library(hello_{name} ${{CONAN_MULTI_SOURCE_DIR}}/hello_{name}.cpp)
-            target_include_directories(hello_{name} PUBLIC ${{CONAN_MULTI_SOURCE_DIR}})
+            add_library(hello_{name} ${{CONAN_SOURCE_DIR}}/hello_{name}.cpp)
+            target_include_directories(hello_{name} PUBLIC ${{CONAN_SOURCE_DIR}})
 
-            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "${{CONAN_MULTI_SOURCE_DIR}}/hello_{name}.h")
+            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "${{CONAN_SOURCE_DIR}}/hello_{name}.h")
             install(TARGETS hello_{name})
+            """)
+
+        test_cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(test_package LANGUAGES C)
+
+            find_package(multi REQUIRED CONFIG)
+
+            add_executable(${PROJECT_NAME} test_package.c)
+            target_link_libraries(${PROJECT_NAME} PRIVATE multi::multi)
+            """)
+
+        test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import can_run
+        from conan.tools.cmake import cmake_layout, CMake
+        import os
+
+
+        class TestPackageConan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def test(self):
+                if can_run(self):
+                    bin_path = os.path.join(self.cpp.build.bindir, "test_package")
+                    self.run(bin_path, env="conanrun")
+            """)
+
+        test_package_c = textwrap.dedent("""
+            #include "hello_two.h"
+
+            int main(void) {
+                hello_two();
+                return EXIT_SUCCESS;
+            }
             """)
 
         client = TestClient(path_with_spaces=False)
@@ -79,7 +126,10 @@ class CMakeInstallTest(unittest.TestCase):
                      "src_one/hello_one.h": hello_h.format(name="one"),
                      "src_one/hello_one.cpp": hello_cpp.format(name="one"),
                      "src_two/hello_two.h": hello_h.format(name="two"),
-                     "src_two/hello_two.cpp": hello_cpp.format(name="two")})
+                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),
+                     "test_package/CMakeLists.txt": test_cmake,
+                     "test_package/conanfile.py": test_conanfile,
+                     "test_package/test_package.c": test_package_c})
 
         client.run("create . --name=multi --version=0.1")
         self.assertIn("[100%] Built target hello_one", client.out)

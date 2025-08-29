@@ -114,10 +114,7 @@ class CMake:
         if not variables:
             variables = {}
         if source_subfolder:
-            variables["CMAKE_SOURCE_DIR"] = os.path.join(self._conanfile.source_folder, source_subfolder).replace("\\", "/")
-            variables["CONAN_MULTI_SOURCE_DIR"] = os.path.join(self._conanfile.source_folder, source_subfolder).replace("\\", "/")
-        if build_subfolder:
-            variables["CMAKE_CURRENT_SOURCE_DIR"] = cmakelist_folder
+            variables["CONAN_SOURCE_DIR"] = os.path.join(self._conanfile.source_folder, source_subfolder).replace("\\", "/")
         self._cache_variables.update(variables)
 
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
