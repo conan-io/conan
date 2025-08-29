@@ -63,9 +63,6 @@ def test_new_template_and_different_folder():
     replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "conanws.yml"),
                     "  - path: liba",
                     "  - path: libX")
-    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "CMakeLists.txt"),
-                    "add_project(liba)",
-                    "add_project(liba libX)")
     c.run("workspace super-install")
     config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
     c.run_command(f"cmake --preset {config_preset}")  # it does not fail
