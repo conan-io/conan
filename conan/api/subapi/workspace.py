@@ -21,7 +21,7 @@ from conan.tools.scm import Git
 from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
     RECIPE_CONSUMER
 from conan.internal.graph.graph import TransitiveRequirement
-from conan.internal.graph.profile_node_definer import consumer_definer
+from conan.internal.graph.profile_node_definer import consumer_definer, initialize_conanfile_profile
 from conan.internal.loader import load_python_file
 from conan.internal.source import retrieve_exports_sources
 from conan.internal.util.files import merge_directories, save
@@ -242,7 +242,8 @@ class WorkspaceAPI:
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 
-    def _init_options(self, conanfile, options):
+    @staticmethod
+    def _init_options(conanfile, options):
         if hasattr(conanfile, "config_options"):
             with conanfile_exception_formatter(conanfile, "config_options"):
                 conanfile.config_options()
@@ -266,7 +267,9 @@ class WorkspaceAPI:
         root_class = self._ws.root_conanfile()
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
-            consumer_definer(conanfile, profile_host, profile_build)
+            initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
+                                         is_build_require=False)
+            # consumer_definer(conanfile, profile_host, profile_build)
             self._init_options(conanfile, profile_host.options)
             root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                         path=self._folder)  # path lets use the conanws.py folder
@@ -284,12 +287,12 @@ class WorkspaceAPI:
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)
-        conanfile.workspace_options = {}
+        conanfile.workspace_packages_options = {}
         for node in deps_graph.nodes[1:]:  # Exclude the current root
             if node.recipe != RECIPE_EDITABLE:
                 result.add_node(node)
                 continue
-            conanfile.workspace_options[node.ref] = node.conanfile.options.serialize()
+            conanfile.workspace_packages_options[node.ref] = node.conanfile.options.serialize()
             for r, t in node.transitive_deps.items():
                 if t.node.recipe == RECIPE_EDITABLE:
                     continue
@@ -317,7 +320,6 @@ class WorkspaceAPI:
             ref, _ = exported_ref
             exported.append(ref)
         return exported
-
 
     def select_packages(self, packages):
         self._check_ws()
