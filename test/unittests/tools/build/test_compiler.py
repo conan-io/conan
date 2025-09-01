@@ -9,11 +9,11 @@ from conan.test.utils.mocks import MockSettings, ConanFileMock
     ("clang", "14", (("clang", "14", "coroutines"), ("gcc", "13", "alignas")), False),
     ("gcc", "13", (("clang", "14", "coroutines"), ("gcc", "13", "alignas")), False),
     ("gcc", "14", (("clang", "14", "coroutines"), ("gcc", "13", "alignas")), False),
-    ("Visual Studio", "16", (("Visual Studio", "16", "reason"), ("clang", "14", "coroutines")), False),
+    ("msvc", "192", (("msvc", "192", "reason"), ("clang", "14", "coroutines")), False),
 
     ("clang", "13", (("clang", "14", "coroutines"), ("gcc", "13", "alignas")), True),
     ("gcc", "12", (("clang", "14", "coroutines"), ("gcc", "13", "alignas")), True),
-    ("Visual Studio", "15", (("Visual Studio", "16", "reason"), ("clang", "14", "coroutines")), True),
+    ("msvc", "191", (("msvc", "192", "reason"), ("clang", "14", "coroutines")), True),
 
     ("emcc", "1.0", (("gcc", "13", "alignas"),), False),
     (None, "12", (("gcc", "13", "alignas"),), True),
