@@ -68,7 +68,7 @@ class CMakeDeps2:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            config = ConfigTemplate2(self, dep)
+            config = ConfigTemplate2(self, require, dep)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
             ret[config_version.filename] = config_version.content()
