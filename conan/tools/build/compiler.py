@@ -3,7 +3,7 @@ from conan.internal.model.version import Version
 
 
 def check_min_compiler_version(conanfile, compiler_restrictions):
-    """Checks if the current compiler and its version meet the minimum requirements.
+    """(Experimental) Checks if the current compiler and its version meet the minimum requirements.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param compiler_restrictions:
