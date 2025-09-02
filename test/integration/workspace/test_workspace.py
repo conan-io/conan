@@ -279,11 +279,11 @@ class TestAddRemove:
         c.save({"conanws.py": workspace,
                 "dep/conanfile.py": GenConanfile("dep", "0.1")})
         c.run("workspace add dep")
-        assert "myws: Adding dep/0.1" in c.out
+        assert "Workspace 'myws': Adding dep/0.1" in c.out
         c.run("workspace info")
         assert "dep/0.1" in c.out
         c.run("workspace remove dep")
-        assert "myws: Removing" in c.out
+        assert "Workspace 'myws': Removing" in c.out
         c.run("workspace info")
         assert "dep/0.1" not in c.out
 
@@ -488,7 +488,9 @@ class TestMeta:
                clean_first=True)
         c.run("workspace add liba")
         c.run("workspace add libb")
-        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build --envs-generation=false")
+        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
+              "--envs-generation=false")
+        assert "Packages build order:\n    liba/0.1\n    libb/0.1" in c.out
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
@@ -567,6 +569,94 @@ class TestMeta:
             assert "dep1-config.cmake" in files
             assert "dep2-config.cmake" not in files
 
+    def test_workspace_options(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+            class MyWs(ConanFile):
+                settings = "arch", "build_type"
+                options = {"myoption": [1, 2, 3]}
+                def generate(self):
+                    self.output.info(f"Generating with my option {self.options.myoption}!!!!")
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace super-install -of=build")
+        assert "conanws.py base project Conanfile: Generating with my option None!!!!" in c.out
+        c.run("workspace super-install -of=build -o *:myoption=1")
+        assert "conanws.py base project Conanfile: Generating with my option 1!!!!" in c.out
+
+    def test_workspace_common_shared_options(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+            class MyWs(ConanFile):
+                settings = "os"
+                options = {"shared": [True, False],
+                           "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+                implements = "auto_shared_fpic"
+
+                def generate(self):
+                    self.output.info(f"OS={self.settings.os}!!!!")
+                    self.output.info(f"shared={self.options.shared}!!!!")
+                    self.output.info(f"fPIC={self.options.get_safe('fPIC')}!!!!")
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace super-install -of=build -s os=Windows")
+        assert "conanws.py base project Conanfile: OS=Windows!!!!" in c.out
+        assert "conanws.py base project Conanfile: shared=False!!!!" in c.out
+        assert "conanws.py base project Conanfile: fPIC=None!!!!" in c.out
+        c.run("workspace super-install -of=build -s os=Linux -o *:shared=True")
+        assert "conanws.py base project Conanfile: OS=Linux!!!!" in c.out
+        assert "conanws.py base project Conanfile: shared=True!!!!" in c.out
+        assert "conanws.py base project Conanfile: fPIC=None!!!!" in c.out
+        c.run("workspace super-install -of=build -s os=Linux -o *:shared=False")
+        assert "conanws.py base project Conanfile: OS=Linux!!!!" in c.out
+        assert "conanws.py base project Conanfile: shared=False!!!!" in c.out
+        assert "conanws.py base project Conanfile: fPIC=True!!!!" in c.out
+
+    def test_workspace_pkg_options(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+
+            class MyWs(ConanFile):
+                settings = "arch", "build_type"
+                def generate(self):
+                    for pkg, options in self.workspace_packages_options.items():
+                        for k, v in options.items():
+                            self.output.info(f"Generating with opt {pkg}:{k}={v}!!!!")
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_option("myoption", [1, 2, 3]),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace super-install -of=build")
+        assert "project Conanfile: Generating with opt dep/0.1:myoption=None!!!!" in c.out
+        c.run("workspace super-install -of=build -o *:myoption=1")
+        assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()
@@ -607,8 +697,8 @@ class TestClean:
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
         c.run("workspace clean")
-        assert "my_workspace: Removing pkga/0.1 output folder" in c.out
-        assert "my_workspace: Removing pkgb/0.1 output folder" in c.out
+        assert "Workspace 'my_workspace': Removing pkga/0.1 output folder" in c.out
+        assert "Workspace 'my_workspace': Removing pkgb/0.1 output folder" in c.out
         assert "Editable pkgc/0.1 doesn't have an output_folder defined" in c.out
         assert not os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert not os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
@@ -626,7 +716,7 @@ class TestClean:
         c = TestClient()
         c.save({"conanws.py": conanfilews})
         c.run("workspace clean")
-        assert "my_workspace: MY CLEAN!!!" in c.out
+        assert "Workspace 'my_workspace': MY CLEAN!!!" in c.out
 
 
 def test_relative_paths():

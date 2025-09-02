@@ -25,9 +25,10 @@ To contribute follow the next steps:
 3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop2` branch and develop
    your fix/feature as discussed in previous step.
 4. Try to keep your branch updated with the `develop2` branch to avoid conflicts.
-5. Open a pull request, and select `develop2` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.X.Y patch. In that case, the PR should be targeted to release/2.0.
-6. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
-7. Submit a PR to the Conan documentation about the changes done providing examples if needed.
+5. Run the ``test/unittest`` and ``test/integration`` test suite locally, as described in [Conan tests guidelines section](https://github.com/conan-io/conan/blob/develop2/test/README.md). If you are doing changes to a build system integration, locate the respective folder for that integration in ``test/functional`` and run the tests of that folder. It is not expected that contributors have to run the full test suite locally, as it requires too many external tools.
+6. Open a pull request, and select `develop2` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.X.Y patch. In that case, the PR should be targeted to ``release/2.X``.
+7. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
+8. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
 The ``conan-io`` organization maintainers will review and help with the coding of tests. Finally it will be assigned to milestone.
 
@@ -102,8 +103,7 @@ import shutil
 
 from tqdm import tqdm
 
-from conans.client.tools import which
-from conans.errors import ConanException
-from conans.model.version import Version
+from conan.tools.cmake import CMakeToolchain
+from conan.tools.files import save, load
 ```
-- Write unit tests, if possible
+- Write tests, if possible
