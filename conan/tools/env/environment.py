@@ -404,13 +404,9 @@ class EnvVars:
             os.environ.update(old_env)
 
     def save_dotenv(self, file_location):
-        filepath = os.path.dirname(file_location)
-        result = [f'CONAN_DOTENV_FOLDER="{os.path.abspath(filepath)}"']
-        abs_base_path, new_path = relativize_paths(self._conanfile, "${CONAN_DOTENV_FOLDER}")
+        result = []
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${{{name}}}", subsystem=self._subsystem,
-                                      pathsep=self._pathsep, root_path=abs_base_path,
-                                      script_path=new_path)
+            value = varvalues.get_value(subsystem=self._subsystem, pathsep=self._pathsep)
             result.append('{}="{}"'.format(varname, value))
         content = "\n".join(result)
         save(file_location, content)
@@ -582,6 +578,14 @@ class EnvVars:
             self.save_sh(path)
 
         if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
+            bt = self._conanfile.settings.get_safe("build_type")
+            arch = self._conanfile.settings.get_safe("arch")
+            name = name.replace(bt.lower(), bt) if bt else name
+            name = name.replace(arch.lower(), arch) if arch else name
+            ConanOutput().warning(f"Creating dotenv file: {name}.env\n"
+                                  "Files generated with absolute paths, not interpolated.\n"
+                                  "When https://github.com/microsoft/vscode-cpptools/issues/13781 "
+                                  "solved, it will get interpolation", warn_tag="experimental")
             self.save_dotenv(f"{name}.env")
 
         if self._scope:

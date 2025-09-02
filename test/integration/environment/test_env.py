@@ -863,18 +863,21 @@ def test_dotenv():
         MYVAR3+=MyVal3
         MYPATH+=(path)/some/path/here
         MYOTHER_PATH=+(path){other_path}
+
+        [runenv]
+        MYRUNVAR=SomeVal1
+
         [conf]
         tools.env:dotenv=True
         """)
     c.save({"conanfile.txt": "",
             "myprofile": myprofile})
-    c.run("install . -pr=myprofile")
-    dotenv = c.load("conanbuildenv.env")
-    assert f'CONAN_DOTENV_FOLDER="{c.current_folder}"' in dotenv
-    expected = os.pathsep.join([os.path.join("${CONAN_DOTENV_FOLDER}", "my", "rel", "path"),
-                                "${MYOTHER_PATH}"])
+    c.run("install . -pr=myprofile -s build_type=Release")
+    dotenv = c.load("conanbuildenv-Release.env")
+    expected = os.path.join(c.current_folder, "my", "rel", "path")
     assert f'MYOTHER_PATH="{expected}"' in dotenv
-    expected = os.pathsep.join(["${MYPATH}", "/some/path/here"])
-    assert f'MYPATH="{expected}"' in dotenv
-    assert 'MYVAR3="${MYVAR3} MyVal3"' in dotenv
+    assert f'MYPATH="/some/path/here"' in dotenv
+    assert 'MYVAR3="MyVal3"' in dotenv
     assert 'MYVAR1="MyVal1"' in dotenv
+    dotenv = c.load("conanrunenv-release.env")
+    assert f'MYRUNVAR="SomeVal1"' in dotenv

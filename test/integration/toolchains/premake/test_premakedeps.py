@@ -137,7 +137,6 @@ def test_premakedeps_link_order():
     contents = client.load("consumer/conanconfig_debug_x86_64.premake5.lua")
     assert 't_conan_deps_order["debug_x86_64"] = {"libc", "libb", "liba"}' in contents
 
-
 @pytest.mark.parametrize("transitive_headers", [True, False])
 @pytest.mark.parametrize("transitive_libs", [True, False])
 @pytest.mark.parametrize("brotli_package_type", ["unknown", "static-library", "shared-library"])
