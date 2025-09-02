@@ -345,9 +345,18 @@ class _Component:
 
     @property
     def cxxflags(self):
-        if self._cxxflags is None:
+        if self._cxxflags is None or isinstance(self._cxxflags, dict):
             self._cxxflags = []
         return self._cxxflags
+
+    def cxxflags_consumer(self, conanfile):
+        if not isinstance(self._cxxflags, dict):
+            return self._cxxflags
+        for k, v in self._cxxflags.items():
+            # FIXME: Just POC for illustrating the UX and idea
+            if str(conanfile.settings.os) in k:
+                return v
+        return []
 
     @cxxflags.setter
     def cxxflags(self, value):

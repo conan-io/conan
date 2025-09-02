@@ -50,9 +50,6 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
             else:
                 conanfile.settings_target = parent.settings_target.copy()
 
-    if parent is not None:
-        conanfile.settings_consumer = getattr(parent, "settings_consumer", parent.settings)
-
 
 def _per_package_settings(conanfile, profile, ref):
     # Prepare the settings for the loaded conanfile
