@@ -15,7 +15,7 @@ from conan.internal.util.runners import conan_run
 
 class ReportAPI:
     def __init__(self, conan_api, helpers):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._helpers = helpers
 
     def diff(self, old_reference, new_reference, remotes, old_path=None, new_path=None, cwd=None):
@@ -32,12 +32,12 @@ class ReportAPI:
 
         def _source(path_to_conanfile, reference):
             if path_to_conanfile is None:
-                export_ref, cache_path = _get_ref_from_cache_or_remote(self.conan_api, reference, remotes)
+                export_ref, cache_path = _get_ref_from_cache_or_remote(self._conan_api, reference, remotes)
             else:
-                export_ref, cache_path = _export_recipe_from_path(self.conan_api, path_to_conanfile,
+                export_ref, cache_path = _export_recipe_from_path(self._conan_api, path_to_conanfile,
                                                                   reference, remotes, cwd)
-            exported_path = self.conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
-            _configure_source(self.conan_api, self._helpers.hook_manager, exported_path, export_ref,
+            exported_path = self._conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
+            _configure_source(self._conan_api, self._helpers.hook_manager, exported_path, export_ref,
                               remotes)
             return export_ref, cache_path
 
@@ -65,9 +65,9 @@ class ReportAPI:
         diff = stdout.getvalue()
 
         if old_path:
-            self.conan_api.remove.recipe(old_export_ref)
+            self._conan_api.remove.recipe(old_export_ref)
         if new_path:
-            self.conan_api.remove.recipe(new_export_ref)
+            self._conan_api.remove.recipe(new_export_ref)
 
         return {
             "diff": diff,

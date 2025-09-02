@@ -27,7 +27,7 @@ jobs:
         id: set_versions
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/develop2" || "${{ github.ref }}" == refs/heads/release/* ]]; then
-            echo "python_versions_linux_windows=['3.13', '3.6']" >> $GITHUB_OUTPUT
+            echo "python_versions_linux_windows=['3.13', '3.7']" >> $GITHUB_OUTPUT
             echo "python_versions_macos=['3.13', '3.8']" >> $GITHUB_OUTPUT
           else
             echo "python_versions_linux_windows=['3.10']" >> $GITHUB_OUTPUT

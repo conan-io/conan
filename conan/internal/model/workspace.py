@@ -23,7 +23,7 @@ class Workspace:
         self.folder = folder
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
-        self.output = ConanOutput(scope=self.name())
+        self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
 
     def name(self):
         return self.conan_data.get("name") or os.path.basename(self.folder)
@@ -95,7 +95,7 @@ class Workspace:
         from conan.internal.cache.home_paths import HomePaths
         from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
         cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
-        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api.config.global_conf,
+        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api._api_helpers.global_conf,
                                    cache=None, home_folder=self._conan_api.home_folder)
         loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
@@ -104,3 +104,10 @@ class Workspace:
 
     def root_conanfile(self):  # noqa
         return None
+
+    def build_order(self, order):  # noqa
+        msg = ["Packages build order:"]
+        for level in order:
+            for item in level:
+                msg.append(f"    {item['ref']}")
+        self.output.info("\n".join(msg))

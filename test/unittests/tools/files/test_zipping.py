@@ -53,6 +53,16 @@ def test_unzip_with_pattern():
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
 
+def test_unzip_with_exclude_pattern():
+    archive = create_example_zip(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
 def test_unzip_with_strip_root():
     archive = create_example_zip(root_file=False, subfolder=True)
     conanfile = ConanFileMock({})
@@ -122,6 +132,16 @@ def test_untargz_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_untargz_with_exclude_pattern():
+    archive = create_example_tar(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
