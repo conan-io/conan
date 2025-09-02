@@ -124,14 +124,14 @@ def _ask_confirm_upload(conan_api, package_list):
     result = {}
     for ref, ref_info in package_list.recipes.items():
         result_ref = {}
-        for rrev, rrev_info in ref_info["revisions"].items():
+        for rrev, rrev_info in ref_info.get("revisions", {}).items():
             msg = f"Are you sure you want to upload recipe '{ref}#{rrev}'?"
             if ui.request_boolean(msg):
                 result_rrev = {}
                 if rrev_info.get("timestamp"):
                     result_rrev["timestamp"] = rrev_info["timestamp"]
-                for pkg_id, pkg_id_info in rrev_info["packages"].items():
-                    for prev, prev_info in pkg_id_info["revisions"].items():
+                for pkg_id, pkg_id_info in rrev_info.get("packages", {}).items():
+                    for prev, prev_info in pkg_id_info.get("revisions", {}).items():
                         msg = (f"Are you sure you want to upload package "
                                f"'{ref}#{rrev}:{pkg_id}#{prev}'?")
                         if ui.request_boolean(msg):

@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.model import ListPattern, MultiPackagesList, RecipeReference, PkgReference
 from conan.api.output import cli_out_write, ConanOutput
 from conan.api.input import UserInput
 from conan.cli import make_abs_path
@@ -96,31 +96,33 @@ def remove(conan_api: ConanAPI, parser, *args):
     result = {}
     for ref, ref_info in package_list.recipes.items():
         result_ref = {}
-        for rrev, rrev_info in ref_info["revisions"].items():
+        for rrev, rrev_info in ref_info.get("revisions", {}).items():
+            full_ref = RecipeReference.loads(ref)
+            full_ref.revision = rrev
             packages = rrev_info.get("packages")
             if packages is None:
                 if confirmation(f"Remove the recipe and all the packages of '{ref}#{rrev}'?"):
                     if not args.dry_run:
-                        conan_api.remove.recipe(ref, remote=remote)
+                        conan_api.remove.recipe(full_ref, remote=remote)
+                    result_ref.setdefault("revisions", {})[rrev] = rrev_info
+            else:
+                result_rrev = {}
+                for pkg_id, pkg_id_info in packages.items():
+                    package_revisions = pkg_id_info.get("revisions")
+                    if package_revisions is None:
+                        ConanOutput().info(f"No binaries to remove for '{full_ref.repr_notime()}'")
+                        continue
+                    for prev, prev_info in package_revisions.items():
+                        if confirmation(f"Remove the package '{ref}#{rrev}:{pkg_id}#{prev}'?"):
+                            if not args.dry_run:
+                                pref = PkgReference(full_ref, pkg_id, prev)
+                                conan_api.remove.package(pref, remote=remote)
+                                result_rrev.setdefault("packages", {})[pkg_id] = pkg_id_info
+                if result_rrev:
+                    result_ref.setdefault("revisions", {})[rrev] = result_rrev
 
-            prefs = package_list.prefs(ref, ref_bundle)
-            if not prefs:
-                ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
-                ref_dict.pop(ref.revision)
-                if not ref_dict:
-                    package_list.recipes.pop(str(ref))
-                continue
-
-            for pref, _ in prefs.items():
-                if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                    if not args.dry_run:
-                        conan_api.remove.package(pref, remote=remote)
-                else:
-                    pref_dict = packages[pref.package_id]["revisions"]
-                    pref_dict.pop(pref.revision)
-                    if not pref_dict:
-                        packages.pop(pref.package_id)
-        result[ref] = result_ref
+        if result_ref:
+            result[ref] = result_ref
     package_list.recipes = result
 
     return {
