@@ -109,14 +109,14 @@ class CacheAPI:
             for f in backup_files:
                 remove(f)
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in package_list.prefs(ref, ref_bundle).items():
+            for pref, _ in packages.items():
                 ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
                 if build:

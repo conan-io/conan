@@ -92,7 +92,6 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list = MultiPackagesList()
         multi_package_list.add(cache_name, package_list)
 
-    # TODO: This iteration and removal of not-confirmed is ugly and complicated, improve it
     result = {}
     for ref, ref_info in package_list.recipes.items():
         result_ref = {}
@@ -117,10 +116,9 @@ def remove(conan_api: ConanAPI, parser, *args):
                             if not args.dry_run:
                                 pref = PkgReference(full_ref, pkg_id, prev)
                                 conan_api.remove.package(pref, remote=remote)
-                                result_rrev.setdefault("packages", {})[pkg_id] = pkg_id_info
+                            result_rrev.setdefault("packages", {})[pkg_id] = pkg_id_info
                 if result_rrev:
                     result_ref.setdefault("revisions", {})[rrev] = result_rrev
-
         if result_ref:
             result[ref] = result_ref
     package_list.recipes = result
