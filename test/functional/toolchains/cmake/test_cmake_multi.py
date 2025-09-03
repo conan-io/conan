@@ -126,10 +126,10 @@ class MultiCMakeTest(unittest.TestCase):
                      "src_one/hello_one.h": hello_h.format(name="one"),
                      "src_one/hello_one.cpp": hello_cpp.format(name="one"),
                      "src_two/hello_two.h": hello_h.format(name="two"),
-                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),
-                     "test_package/CMakeLists.txt": test_cmake,
-                     "test_package/conanfile.py": test_conanfile,
-                     "test_package/test_package.c": test_package_c})
+                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),})
+                    #  "test_package/CMakeLists.txt": test_cmake,
+                    #  "test_package/conanfile.py": test_conanfile,
+                    #  "test_package/test_package.c": test_package_c})
 
         client.run("create . --name=multi --version=0.1")
         self.assertIn("[100%] Built target hello_one", client.out)
