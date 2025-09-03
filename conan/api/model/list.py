@@ -358,10 +358,10 @@ class ListPattern:
         if self.version and self.version.startswith("[") and self.version.endswith("]"):
             return VersionRange(self.version[1:-1])
 
-    def filter_versions(self, refs):
+    def filter_versions(self, refs, resolve_prereleases=None):
         vrange = self._version_range
         if vrange:
-            refs = [r for r in refs if vrange.contains(r.version, None)]
+            refs = [r for r in refs if vrange.contains(r.version, resolve_prereleases)]
         return refs
 
     @property
