@@ -382,15 +382,11 @@ class TestCyclonedx:
     def test_sbom_test_requires_skipped(self, cyclone_version):
         tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
-        save(hook_path, sbom_hook_post_package.format(cyclone_version=cyclone_version,
-                                                      add_build=False, add_tests=False))
+        save(hook_path, sbom_hook_post_generate.format(cyclone_version=cyclone_version, name=None,
+                                                       add_build=False, add_tests=False))
         tc.save({"dep/conanfile.py": GenConanfile("mydep", "1.0"),
                  "conanfile.py": GenConanfile("foo", "1.0").with_test_requires("mydep/1.0")})
         tc.run("create dep")
-        tc.run("create .")
-        create_layout = tc.created_layout()
-
-        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
-        content = tc.load(cyclone_path)
-        print(content)
+        tc.run("install .")
+        content = tc.load("sbom/sbom.cdx.json")
         assert "mydep" not in content
