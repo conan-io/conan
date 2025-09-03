@@ -228,15 +228,10 @@ class _SystemPackageManagerTool(object):
     def check_package(self, package, host_package=True):
         name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
         arch_package = arch_name or self._arch_names.get(self._arch or self._conanfile.settings_build.get_safe('arch'))
-        package = self.full_package_name.format(name=name,
-                                                arch_separator=arch_separator,
-                                                arch_name=arch_name,
-                                                version="",
-                                                version_separator="")
-        command = self.check_command.format(tool=self.tool_name, package=package, arch_package=arch_package)
+        command = self.check_command.format(tool=self.tool_name, package=name, arch_package=arch_package)
         if version:
             if self.check_version_command:
-                command = self.check_version_command.format(tool=self.tool_name, package=package, version=version, arch_package=arch_package)
+                command = self.check_version_command.format(tool=self.tool_name, package=name, version=version, arch_package=arch_package)
             else:
                 self._conanfile.output.warning(f"System requirements: \"{self.tool_name}\" doesn't support package versions,"
                                                f" \"{package}\" will be installed without a specific version.")
