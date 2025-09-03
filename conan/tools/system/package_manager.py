@@ -228,7 +228,6 @@ class _SystemPackageManagerTool(object):
     def check_package(self, package, host_package=True):
         name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
         arch_package = arch_name or self._arch_names.get(self._arch or self._conanfile.settings_build.get_safe('arch'))
-
         package = self.full_package_name.format(name=name,
                                                 arch_separator=arch_separator,
                                                 arch_name=arch_name,
