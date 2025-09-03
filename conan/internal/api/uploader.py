@@ -54,6 +54,8 @@ class UploadUpstreamChecker:
                 output.info(f"Recipe '{ref.repr_notime()}' already in server, skipping upload")
                 ref_bundle["upload"] = False
                 ref_bundle["force_upload"] = False
+                ref_bundle.pop("files", None)
+                ref_bundle.pop("upload-urls", None)
 
     def _check_upstream_package(self, pref, prev_bundle, remote, force):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
@@ -76,6 +78,8 @@ class UploadUpstreamChecker:
                 output.info(f"Package '{pref.repr_notime()}' already in server, skipping upload")
                 prev_bundle["force_upload"] = False
                 prev_bundle["upload"] = False
+                prev_bundle.pop("files", None)
+                prev_bundle.pop("upload-urls", None)
 
 
 class PackagePreparator:
