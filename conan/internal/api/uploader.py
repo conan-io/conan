@@ -54,8 +54,6 @@ class UploadUpstreamChecker:
                 output.info(f"Recipe '{ref.repr_notime()}' already in server, skipping upload")
                 ref_bundle["upload"] = False
                 ref_bundle["force_upload"] = False
-                ref_bundle.pop("files", None)
-                ref_bundle.pop("upload-urls", None)
 
     def _check_upstream_package(self, pref, prev_bundle, remote, force):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
@@ -78,8 +76,6 @@ class UploadUpstreamChecker:
                 output.info(f"Package '{pref.repr_notime()}' already in server, skipping upload")
                 prev_bundle["force_upload"] = False
                 prev_bundle["upload"] = False
-                prev_bundle.pop("files", None)
-                prev_bundle.pop("upload-urls", None)
 
 
 class PackagePreparator:
@@ -100,9 +96,14 @@ class PackagePreparator:
                                          "This isn't a remote URL, the build won't be reproducible\n"
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
+            # Just in case it was defined from a previous run
+            bundle.pop("files", None)
+            bundle.pop("upload-urls", None)
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
             for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
+                prev_bundle.pop("files", None)  # If defined from a previous upload
+                prev_bundle.pop("upload-urls", None)
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
