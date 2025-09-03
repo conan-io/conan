@@ -41,6 +41,8 @@ class MultiCMakeTest(unittest.TestCase):
 
                 def package_info(self):
                     self.cpp_info.libs = ["hello_two"]
+                    self.cpp_info.includedirs = ['two/include']
+                    self.cpp_info.libdirs = ['two/lib']
             """)
 
         hello_cpp = textwrap.dedent("""
@@ -63,7 +65,7 @@ class MultiCMakeTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(hello_{name} CXX)
+            project(hello_{name} LANGUAGES CXX)
 
             add_library(hello_{name} ${{CONAN_SOURCE_DIR}}/hello_{name}.cpp)
             target_include_directories(hello_{name} PUBLIC ${{CONAN_SOURCE_DIR}})
@@ -74,11 +76,11 @@ class MultiCMakeTest(unittest.TestCase):
 
         test_cmake = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(test_package LANGUAGES C)
+            project(test_package LANGUAGES CXX)
 
             find_package(multi REQUIRED CONFIG)
 
-            add_executable(${PROJECT_NAME} test_package.c)
+            add_executable(${PROJECT_NAME} test_package.cpp)
             target_link_libraries(${PROJECT_NAME} PRIVATE multi::multi)
             """)
 
@@ -110,12 +112,11 @@ class MultiCMakeTest(unittest.TestCase):
                     self.run(bin_path, env="conanrun")
             """)
 
-        test_package_c = textwrap.dedent("""
+        test_package_cpp = textwrap.dedent("""
             #include "hello_two.h"
 
             int main(void) {
                 hello_two();
-                return EXIT_SUCCESS;
             }
             """)
 
@@ -126,10 +127,10 @@ class MultiCMakeTest(unittest.TestCase):
                      "src_one/hello_one.h": hello_h.format(name="one"),
                      "src_one/hello_one.cpp": hello_cpp.format(name="one"),
                      "src_two/hello_two.h": hello_h.format(name="two"),
-                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),})
-                    #  "test_package/CMakeLists.txt": test_cmake,
-                    #  "test_package/conanfile.py": test_conanfile,
-                    #  "test_package/test_package.c": test_package_c})
+                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),
+                     "test_package/CMakeLists.txt": test_cmake,
+                     "test_package/conanfile.py": test_conanfile,
+                     "test_package/test_package.cpp": test_package_cpp})
 
         client.run("create . --name=multi --version=0.1")
         self.assertIn("[100%] Built target hello_one", client.out)
