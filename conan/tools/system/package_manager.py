@@ -245,8 +245,8 @@ class Apt(_SystemPackageManagerTool):
     full_package_name = "{name}{arch_separator}{arch_name}{version_separator}{version}"
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
     update_command = "{sudo}{tool} update"
-    check_command = "dpkg-query -W -f='${{Architecture}}' {package} | grep -qEx '({arch_package}|all)'"
-    check_version_command = "dpkg-query -W -f='${{Architecture}} ${{Version}}' {package} | grep -qEx '({arch_package}|all) {version}'"
+    check_command = "dpkg-query -W -f='${{Architecture}}\n' {package} | grep -qEx '({arch_package}|all)'"
+    check_version_command = "dpkg-query -W -f='${{Architecture}} ${{Version}}\n' {package} | grep -qEx '({arch_package}|all) {version}'"
 
     def __init__(self, conanfile, arch_names=None):
         """
