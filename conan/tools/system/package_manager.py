@@ -228,10 +228,18 @@ class _SystemPackageManagerTool(object):
     def check_package(self, package, host_package=True):
         name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
         arch_package = arch_name or self._arch_names.get(self._arch or self._conanfile.settings_build.get_safe('arch'))
-        command = self.check_command.format(tool=self.tool_name, package=name, arch_package=arch_package)
+
+        package = self.full_package_name.format(name=name,
+                                                arch_separator=arch_separator,
+                                                arch_name=arch_name,
+                                                version="",
+                                                version_separator="")
+        command = self.check_command.format(tool=self.tool_name, package=package, arch_package=arch_package, base_name=name)
+ 
         if version:
             if self.check_version_command:
-                command = self.check_version_command.format(tool=self.tool_name, package=name, version=version, arch_package=arch_package)
+                command = self.check_version_command.format(tool=self.tool_name, package=package, version=version, arch_package=arch_package,
+                                                            base_name=name)
             else:
                 self._conanfile.output.warning(f"System requirements: \"{self.tool_name}\" doesn't support package versions,"
                                                f" \"{package}\" will be installed without a specific version.")
@@ -245,8 +253,8 @@ class Apt(_SystemPackageManagerTool):
     full_package_name = "{name}{arch_separator}{arch_name}{version_separator}{version}"
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
     update_command = "{sudo}{tool} update"
-    check_command = "dpkg-query -W -f='${{Architecture}}\n' {package} | grep -qEx '({arch_package}|all)'"
-    check_version_command = "dpkg-query -W -f='${{Architecture}} ${{Version}}\n' {package} | grep -qEx '({arch_package}|all) {version}'"
+    check_command = "dpkg-query -W -f='${{Architecture}}\n' {base_name} | grep -qEx '({arch_package}|all)'"
+    check_version_command = "dpkg-query -W -f='${{Architecture}} ${{Version}}\n' {base_name} | grep -qEx '({arch_package}|all) {version}'"
 
     def __init__(self, conanfile, arch_names=None):
         """
