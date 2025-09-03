@@ -55,10 +55,11 @@ class _QbsDepsModuleFile:
 class _QbsDepGenerator:
     """ Handles a single package, can create multiple modules in case of several components
     """
-    def __init__(self, conanfile, dep, build_bindirs):
+    def __init__(self, conanfile, dep, build_bindirs, use_cmake_file_name):
         self._conanfile = conanfile
         self._dep = dep
         self._build_bindirs = build_bindirs
+        self._use_cmake_file_name = use_cmake_file_name
 
     @property
     def content(self):
@@ -68,6 +69,8 @@ class _QbsDepGenerator:
         def _get_package_name(dep):
             # TODO: pkgconfig uses suffix, do we need it? see:
             # https://github.com/conan-io/conan/blob/develop2/conan/tools/gnu/pkgconfigdeps.py#L319
+            if self._use_cmake_file_name:
+                return dep.cpp_info.get_property("cmake_file_name") or dep.ref.name
             return dep.cpp_info.get_property("pkg_config_name") or dep.ref.name
 
         def _get_component_name(dep, comp_name):
@@ -166,6 +169,15 @@ class QbsDeps:
         :param conanfile: The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
+        self._use_cmake_file_name = False
+
+    @property
+    def use_cmake_file_name(self):
+        return self._use_cmake_file_name
+
+    @use_cmake_file_name.setter
+    def use_cmake_file_name(self, value):
+        self._use_cmake_file_name = value
 
     @property
     def content(self):
@@ -186,7 +198,7 @@ class QbsDeps:
                 continue
 
             dep_build_bindirs = build_bindirs.get(dep.ref.name, [])
-            qbs_files.update(_QbsDepGenerator(self._conanfile, dep, dep_build_bindirs).content)
+            qbs_files.update(_QbsDepGenerator(self._conanfile, dep, dep_build_bindirs, self._use_cmake_file_name).content)
         return qbs_files
 
     def generate(self):
