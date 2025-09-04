@@ -11,6 +11,7 @@ class MultiCMakeTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+            import os
 
 
             class multiRecipe(ConanFile):
@@ -27,16 +28,24 @@ class MultiCMakeTest(unittest.TestCase):
                     tc = CMakeToolchain(self)
                     tc.generate()
 
-                def build(self):
+                def build_one(self):
                     cmake = CMake(self)
-                    cmake.configure(build_script_folder="cmake_one", build_subfolder="one", source_subfolder="src_one")
+                    cmake.configure(variables={"CONAN_SOURCE_DIR": os.path.join(self.source_folder, "src_one").replace("\\\\", "/")}, build_script_folder="cmake_one", build_subfolder="one")
                     cmake.build(build_subfolder="one")
-                    cmake.configure(build_script_folder="cmake_two", build_subfolder="two", source_subfolder="src_two")
+                    # cmake.install(build_subfolder="one")
+
+                def build_two(self):
+                    cmake = CMake(self)
+                    # CMAKE_PREFIX_PATH
+                    cmake.configure(variables={"CONAN_SOURCE_DIR": os.path.join(self.source_folder, "src_two").replace("\\\\", "/")}, build_script_folder="cmake_two", build_subfolder="two")
                     cmake.build(build_subfolder="two")
+
+                def build(self):
+                    self.build_one()
+                    self.build_two()
 
                 def package(self):
                     cmake = CMake(self)
-                    cmake.install(build_subfolder="one")
                     cmake.install(build_subfolder="two")
 
                 def package_info(self):
@@ -67,11 +76,17 @@ class MultiCMakeTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.15)
             project(hello_{name} LANGUAGES CXX)
 
+            # find_package(hello_one REQUIRED CONFIG)
+
             add_library(hello_{name} ${{CONAN_SOURCE_DIR}}/hello_{name}.cpp)
             target_include_directories(hello_{name} PUBLIC ${{CONAN_SOURCE_DIR}})
 
+            # target_link_libraries(hello_two PRIVATE hello_one)
+
             set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "${{CONAN_SOURCE_DIR}}/hello_{name}.h")
             install(TARGETS hello_{name})
+            # install(TARGETS hello_one EXPORT one_target)
+            # install(EXPORT one_target DESTINATION lib FILE hello_one.cmake)
             """)
 
         test_cmake = textwrap.dedent("""
@@ -133,14 +148,16 @@ class MultiCMakeTest(unittest.TestCase):
                      "test_package/test_package.cpp": test_package_cpp})
 
         client.run("create . --name=multi --version=0.1")
+        print(client.out)
         self.assertIn("[100%] Built target hello_one", client.out)
         self.assertIn("[100%] Built target hello_two", client.out)
-        self.assertIn("multi/0.1: package(): Packaged 2 '.h' files: hello_one.h, hello_two.h", client.out)
-        self.assertIn("multi/0.1: package(): Packaged 2 '.a' files: libhello_one.a, libhello_two.a", client.out)
+        self.assertIn("multi/0.1: package(): Packaged 1 '.h' file: hello_two.h", client.out)
+        self.assertIn("multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a", client.out)
+        self.assertIn("RUN: ./test_package\nHello, World two!", client.out)
         package_folder = client.created_layout().package()
 
-        self.assertTrue(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
-        self.assertTrue(os.path.exists(os.path.join(package_folder, "one", "lib", "libhello_one.a")))
+        self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
+        self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "lib", "libhello_one.a")))
 
         self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h")))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "lib", "libhello_two.a")))

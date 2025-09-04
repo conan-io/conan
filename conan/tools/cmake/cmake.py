@@ -60,7 +60,7 @@ class CMake:
     def is_multi_configuration(self):
         return is_multi_configuration(self._generator)
 
-    def configure(self, variables=None, build_script_folder=None, build_subfolder=None, source_subfolder=None, cli_args=None,
+    def configure(self, variables=None, build_script_folder=None, build_subfolder=None, cli_args=None,
                   stdout=None, stderr=None):
         """
 
@@ -113,8 +113,8 @@ class CMake:
 
         if not variables:
             variables = {}
-        if source_subfolder:
-            variables["CONAN_SOURCE_DIR"] = os.path.join(self._conanfile.source_folder, source_subfolder).replace("\\", "/")
+        # if source_subfolder:
+        #     variables["CONAN_SOURCE_DIR"] = os.path.join(self._conanfile.source_folder, source_subfolder).replace("\\", "/")
         self._cache_variables.update(variables)
 
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
