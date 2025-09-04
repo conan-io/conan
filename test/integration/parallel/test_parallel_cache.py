@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import threading
 
@@ -39,7 +40,7 @@ def test_parallel_config_subprocess():
     test_client = TestClient(cache_folder=cache_folder)
     test_client.run("profile detect --force")
     test_client.save({os.path.join(extra_folder, "profiles", "foobar"): "include(default)"})
-    cmd = ["conan", "config", "install", "-vvv", extra_folder, "--type=dir"]
+    cmd = [sys.executable, "-m", "conans.conan", "config", "install", "-vvv", extra_folder, "--type=dir"]
 
     threads = []
     return_codes = [None] * workers
