@@ -7,7 +7,8 @@
 import os
 from datetime import datetime
 from typing import Any
-from threading import ThreadError
+import inspect
+import traceback
 
 import fasteners
 
@@ -28,6 +29,17 @@ def _filelock_path(conan_api: Any) -> str:
     """
     cache = PkgCache(conan_api.cache_folder, conan_api._api_helpers.global_conf)
     return os.path.join(cache.filelock_folder, CONAN_SEMAPHORE_FILELOCK)
+
+
+def raised_by_fasteners(exc: BaseException) -> bool:
+    """
+    Check if the exception was raised by the fasteners library.
+    """
+    for frame, _ in traceback.walk_tb(exc.__traceback__):
+        mod = inspect.getmodule(frame.f_code)
+        if mod and (mod is fasteners or (getattr(mod, '__name__', '').startswith('fasteners'))):
+            return True
+    return False
 
 
 @contextmanager
@@ -77,9 +89,11 @@ def interprocess_write_lock(conan_api: Any) -> None:
         lock.acquire_write_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been locked.")
         yield
-    # Fastener mainly raises ThreadError, to avoid masking other exceptions
-    except ThreadError as error:
-        raise ConanException(f"Failed to acquire interprocess write lock: {error}") from error
+    except Exception as error:
+        if raised_by_fasteners(error):
+            raise ConanException(f"Failed to acquire interprocess write lock: {error}") from error
+        else:
+            raise
     finally:
         lock.release_write_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been released.")
