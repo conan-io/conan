@@ -1,9 +1,11 @@
+import copy
 import fnmatch
 import json
 import os
 from json import JSONDecodeError
 
 from conan.api.model import RecipeReference, PkgReference
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.errors import NotFoundException
 from conan.internal.model.version_range import VersionRange
@@ -193,7 +195,7 @@ class MultiPackagesList:
 class PackagesList:
     """ A collection of recipes, revisions and packages."""
     def __init__(self):
-        self.recipes = {}
+        self._data = {}
 
     def merge(self, other):
         def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
@@ -203,15 +205,15 @@ class PackagesList:
                 else:
                     d[k] = v
             return d
-        recursive_dict_update(self.recipes, other.recipes)
+        recursive_dict_update(self._data, other.recipes)
 
     def keep_outer(self, other):
-        if not self.recipes:
+        if not self._data:
             return
 
         for ref, info in other.recipes.items():
-            if self.recipes.get(ref, {}) == info:
-                self.recipes.pop(ref)
+            if self._data.get(ref, {}) == info:
+                self._data.pop(ref)
 
     def split(self):
         """
@@ -219,24 +221,24 @@ class PackagesList:
         This can be useful to parallelize things like upload, parallelizing per-reference
         """
         result = []
-        for r, content in self.recipes.items():
+        for r, content in self._data.items():
             subpkglist = PackagesList()
-            subpkglist.recipes[r] = content
+            subpkglist._data[r] = content
             result.append(subpkglist)
         return result
 
     def only_recipes(self) -> None:
         """ Filter out all the packages and package revisions, keep only the recipes and
-            recipe revisions in self.recipes.
+            recipe revisions in self._data.
         """
-        for ref, ref_dict in self.recipes.items():
+        for ref, ref_dict in self._data.items():
             for rrev_dict in ref_dict.get("revisions", {}).values():
                 rrev_dict.pop("packages", None)
 
     def add_refs(self, refs):
         # RREVS alreday come in ASCENDING order, so upload does older revisions first
         for ref in refs:
-            ref_dict = self.recipes.setdefault(str(ref), {})
+            ref_dict = self._data.setdefault(str(ref), {})
             if ref.revision:
                 revs_dict = ref_dict.setdefault("revisions", {})
                 rev_dict = revs_dict.setdefault(ref.revision, {})
@@ -245,7 +247,7 @@ class PackagesList:
 
     def add_prefs(self, rrev, prefs):
         # Prevs already come in ASCENDING order, so upload does older revisions first
-        revs_dict = self.recipes[str(rrev)]["revisions"]
+        revs_dict = self._data[str(rrev)]["revisions"]
         rev_dict = revs_dict[rrev.revision]
         packages_dict = rev_dict.setdefault("packages", {})
 
@@ -259,15 +261,18 @@ class PackagesList:
 
     def add_configurations(self, confs):
         for pref, conf in confs.items():
-            rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict = self._data[str(pref.ref)]["revisions"][pref.ref.revision]
             try:
                 rev_dict["packages"][pref.package_id]["info"] = conf
             except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
                 pass
 
     def refs(self):
+        kk
+        ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "
+                              "removed, use .items() instead", warn_tag="deprecated")
         result = {}
-        for ref, ref_dict in self.recipes.items():
+        for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
                 t = rrev_dict.get("timestamp")
                 recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
@@ -276,29 +281,32 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def items(self) -> dict[RecipeReference, dict[PkgReference, dict]]:
+    def items(self):
         """ Get all the recipe references in the package list."""
         result = {}
-        for ref, ref_dict in self.recipes.items():
+        for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
-                t = rrev_dict.get("timestamp")
                 recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
+                t = rrev_dict.get("timestamp")
                 if t is not None:
                     recipe.timestamp = t
 
-                pref_dict = {}
+                packages = rrev_dict.pop("packages", {})
                 for package_id, pkg_bundle in rrev_dict.get("packages", {}).items():
                     prevs = pkg_bundle.get("revisions", {})
                     for prev, prev_bundle in prevs.items():
                         t = prev_bundle.pop("timestamp", None)
                         pref = PkgReference(recipe, package_id, prev, t)
-                        pref_dict[pref] = prev_bundle
+                        pref_dict.setdefault("packages", {})[pref] = prev_bundle
                 result[recipe] = pref_dict
         return result.items()
 
     @staticmethod
     def prefs(ref, recipe_bundle):
         """ Get all the package references for a given recipe reference given a bundle."""
+        kk
+        ConanOutput().warning("PackageLists.prefs() non-public, non-documented method will be "
+                              "removed, use .items() instead", warn_tag="deprecated")
         result = {}
         for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
             prevs = pkg_bundle.get("revisions", {})
@@ -310,13 +318,13 @@ class PackagesList:
 
     def serialize(self):
         """ Serialize the instance to a dictionary."""
-        return self.recipes.copy()
+        return copy.deepcopy(self._data)
 
     @staticmethod
     def deserialize(data):
         """ Loads the data from a serialized dictionary."""
         result = PackagesList()
-        result.recipes = data
+        result._data = copy.deepcopy(data)
         return result
 
 
