@@ -25,7 +25,7 @@ def _filelock_path(conan_api: Any) -> str:
     :param cache_folder: ConanAPI cache folder path
     :return: Path to the file lock in Conan cache temporary directory
     """
-    cache = PkgCache(conan_api.cache_folder, conan_api.config.global_conf)
+    cache = PkgCache(conan_api.cache_folder, conan_api._api_helpers.global_conf)
     return os.path.join(cache.filelock_folder, CONAN_SEMAPHORE_FILELOCK)
 
 
