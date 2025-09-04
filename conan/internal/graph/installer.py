@@ -355,12 +355,12 @@ class BinaryInstaller:
         base_path = os.path.dirname(conanfile_path)
 
         conanfile.folders.set_base_folders(base_path, output_folder)
-        output = conanfile.output
-        output.info("Rewriting files of editable package "
-                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, self._hook_manager, self._home_folder)
 
         if node.binary == BINARY_EDITABLE_BUILD:
+            output = conanfile.output
+            output.info("Rewriting files of editable package "
+                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+            write_generators(conanfile, self._hook_manager, self._home_folder)
             run_build_method(conanfile, self._hook_manager)
 
         rooted_base_path = base_path if conanfile.folders.root is None else \
@@ -457,6 +457,10 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+        try:
+            conanfile.conf_info.validate()
+        except ConanException as e:
+            raise ConanException(f"{conanfile}: Error in package_info() method:\n\t{str(e)}")
 
     @staticmethod
     def _call_finalize_method(conanfile, finalize_folder):

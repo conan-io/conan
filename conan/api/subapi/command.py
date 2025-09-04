@@ -1,4 +1,5 @@
 import os
+import shlex
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -7,12 +8,12 @@ from conan.errors import ConanException
 class CommandAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self.cli = None
 
     def run(self, cmd):
         if isinstance(cmd, str):
-            cmd = cmd.split()
+            cmd = shlex.split(cmd)
         if isinstance(cmd, list):
             current_cmd = cmd[0]
             args = cmd[1:]
@@ -32,7 +33,7 @@ class CommandAPI:
         _warnings_as_errors = ConanOutput._warnings_as_errors  # noqa
 
         try:
-            result = command.run_cli(self.conan_api, args)
+            result = command.run_cli(self._conan_api, args)
         finally:
             ConanOutput._conan_output_level = _conan_output_level
             ConanOutput._silent_warn_tags = _silent_warn_tags

@@ -14,7 +14,7 @@ class NewAPI:
     _NOT_TEMPLATES = "not_templates"  # Filename containing filenames of files not to be rendered
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     def save_template(self, template, defines=None, output_folder=None, force=False):
         """
@@ -85,6 +85,7 @@ class NewAPI:
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
+        from conan.internal.api.new.header_lib import header_only_lib_files
         from conan.internal.api.new.meson_lib import meson_lib_files
         from conan.internal.api.new.meson_exe import meson_exe_files
         from conan.internal.api.new.msbuild_lib import msbuild_lib_files
@@ -95,12 +96,15 @@ class NewAPI:
         from conan.internal.api.new.bazel_7_exe import bazel_exe_files_7
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
+        from conan.internal.api.new.premake_lib import premake_lib_files
+        from conan.internal.api.new.premake_exe import premake_exe_files
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
         from conan.internal.api.new.workspace import workspace_files
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
+                         "header_lib": header_only_lib_files,
                          "meson_lib": meson_lib_files,
                          "meson_exe": meson_exe_files,
                          "msbuild_lib": msbuild_lib_files,
@@ -112,6 +116,8 @@ class NewAPI:
                          "bazel_7_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
+                         "premake_lib": premake_lib_files,
+                         "premake_exe": premake_exe_files,
                          "alias": alias_file,
                          "local_recipes_index": local_recipes_index_files,
                          "qbs_lib": qbs_lib_files,
@@ -128,7 +134,7 @@ class NewAPI:
     def get_home_template(self, template_name):
         """ Load a template from the Conan home templates/command/new folder
         """
-        folder_template = os.path.join(self.conan_api.home_folder, "templates", "command/new",
+        folder_template = os.path.join(self._conan_api.home_folder, "templates", "command/new",
                                        template_name)
         if os.path.isdir(folder_template):
             return self._read_files(folder_template)

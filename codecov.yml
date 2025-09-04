@@ -6,8 +6,8 @@ coverage:
                 # https://docs.codecov.com/docs/commit-status#informational
                 # Avoids failing on coverage decrease
                 informational: true
-    patch:
-        default:
-            informational: true
+        patch:
+            default:
+                informational: true
 ignore:
   - "test/performance"

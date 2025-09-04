@@ -1,12 +1,11 @@
 import os
-import unittest
 
 from conans.server.plugin_loader import load_authentication_plugin
 from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import save
 
 
-class AuthenticatorPluginTest(unittest.TestCase):
+class TestAuthenticatorPlugin:
 
     def test_instance_authenticator(self):
         folder = temp_folder()
@@ -27,5 +26,5 @@ class MyAuthenticator(object):
         save(plugin_path, my_plugin)
 
         plugin = load_authentication_plugin(folder, "my_auth")
-        self.assertTrue(plugin.valid_user("foo", "bar"))
-        self.assertFalse(plugin.valid_user("foo2", "bar2"))
+        assert plugin.valid_user("foo", "bar")
+        assert not plugin.valid_user("foo2", "bar2")

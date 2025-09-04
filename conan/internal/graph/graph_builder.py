@@ -8,8 +8,7 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
-    GraphRuntimeError, GraphError
+from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, GraphError
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.graph.provides import check_graph_provides
 from conan.errors import ConanException
@@ -63,6 +62,7 @@ class DepsGraphBuilder:
                                                      profile_host)
                     open_requires.extendleft((r, new_node) for r in reversed(newr))
             self._remove_overrides(dep_graph)
+            self._remove_orphans(dep_graph)
             check_graph_provides(dep_graph)
         except GraphError as e:
             dep_graph.error = e
@@ -109,7 +109,7 @@ class DepsGraphBuilder:
             self._save_options_conflicts(node, require, prev_node, graph)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
-            node.propagate_closing_loop(require, prev_node)
+            node.propagate_closing_loop(require, prev_node, graph.visibility_conflicts)
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report
@@ -406,8 +406,7 @@ class DepsGraphBuilder:
         require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
-        if node.propagate_downstream(require, new_node):
-            raise GraphRuntimeError(node, new_node)
+        node.propagate_downstream(require, new_node, graph.visibility_conflicts)
 
         # This is necessary to prevent infinite loops even when visibility is False
         ancestor = node.check_loops(new_node)
@@ -447,3 +446,16 @@ class DepsGraphBuilder:
             to_remove = [r for r in node.transitive_deps if r.override]
             for r in to_remove:
                 node.transitive_deps.pop(r)
+
+    @staticmethod
+    def _remove_orphans(dep_graph):
+        # when requires to the same thing with different visible=xxx converge, there can be orphans
+        opened = {dep_graph.root}
+        all_referenced = set()
+        while opened:
+            all_referenced.update(opened)
+            next_open = set(edge.dst for node in opened for edge in node.edges
+                            if edge.dst not in all_referenced)
+            opened = next_open
+        # Keep order in previous list
+        dep_graph.nodes = [n for n in dep_graph.nodes if n in all_referenced]

@@ -168,7 +168,9 @@ tools_locations = {
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {
-            "path": {'Linux': '/usr/share/premake'}
+            "path": {'Linux': '/usr/share/premake',
+                     'Windows': 'skip-tests',
+                     'Darwin': 'skip-tests'}
         }
     },
     'xcodegen': {"platform": "Darwin"},
@@ -190,6 +192,8 @@ tools_locations = {
             "path": {'Linux': '/usr/share/qbs/bin'}
         }
     },
+    "emcc": {},
+    "node": {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

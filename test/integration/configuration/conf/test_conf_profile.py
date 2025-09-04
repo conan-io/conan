@@ -58,6 +58,8 @@ def test_cmake_config(client):
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "-verbosity:Quiet" in client.out
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile -c=tools.env.virtualenv:powershell=powershell.exe")
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_cmake_config_error(client):

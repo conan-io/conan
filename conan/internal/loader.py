@@ -12,6 +12,7 @@ import yaml
 
 from pathlib import Path
 
+from conan.api.output import ConanOutput
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
@@ -60,6 +61,9 @@ class ConanFileLoader:
                 if getattr(conanfile, "python_requires", None) == "tested_reference_str":
                     conanfile.python_requires = tested_python_requires.repr_notime()
             elif tested_python_requires:
+                if getattr(conanfile, "python_requires", None) != "tested_reference_str":
+                    ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
+                                      " = \"tested_reference_str\"'", warn_tag="deprecated")
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
@@ -129,6 +133,9 @@ class ConanFileLoader:
                                      % (channel, conanfile.channel))
             conanfile.channel = channel
 
+        if conanfile.channel and not conanfile.user:
+            raise ConanException(f"{conanfile_path}: Can't specify channel '{conanfile.channel}' without user")
+
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
                 conanfile.set_name()
@@ -163,8 +170,6 @@ class ConanFileLoader:
                                     remotes, update, check_update,
                                     tested_python_requires=tested_python_requires)
 
-        if conanfile.channel and not conanfile.user:
-            raise ConanException(f"{conanfile_path}: Can't specify channel without user")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))

@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 
@@ -274,6 +275,13 @@ def test_compose_conf_dict_updates():
     assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
                          "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
+def test_compose_conf_numbers():
+    c = ConfDefinition()
+    c.loads("user.version:value=8.1\n"
+            "foo/*:user.version:value=10")
+    assert c.get("user.version:value") == 8.1
+    assert c.get_conanfile_conf(RecipeReference.loads("foo/1.0")).get("user.version:value") == 10
+
 
 def test_conf_get_check_type_and_default():
     text = textwrap.dedent("""\
@@ -381,8 +389,8 @@ def test_conf_scope_patterns_ok(scope, conf):
 
 @pytest.mark.parametrize("conf", ["user.foo.bar=1"])
 @pytest.mark.parametrize("scope, assert_message", [
-    ("", "Either 'user.foo.bar' does not exist in configuration list"),
-    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+    ("", "User conf 'user.foo.bar' invalid format, not 'user.org.group:conf'"),
+    ("pkg/1.0:", "'pkg/1.0:user.foo.bar' does not exist in configuration list"),
 ])
 def test_conf_scope_patterns_bad(scope, conf, assert_message):
     final_conf = scope + conf

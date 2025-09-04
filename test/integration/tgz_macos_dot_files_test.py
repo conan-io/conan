@@ -4,7 +4,6 @@ import shutil
 import subprocess
 import tempfile
 import textwrap
-import unittest
 
 import pytest
 
@@ -15,15 +14,15 @@ from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
-class TgzMacosDotFilesTest(unittest.TestCase):
+class TestTgzMacosDotFiles:
 
     def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
             uncompress_file(src_path=tgz, dest_folder=tmp_folder)
-            self.assertTrue(os.path.exists(os.path.join(tmp_folder, annotated_file)))
-            self.assertEqual(dot_file_expected,
-                             os.path.exists(os.path.join(tmp_folder, "._" + annotated_file)))
+            assert os.path.exists(os.path.join(tmp_folder, annotated_file))
+            assert dot_file_expected == \
+                             os.path.exists(os.path.join(tmp_folder, "._" + annotated_file))
         finally:
             shutil.rmtree(tmp_folder)
 
@@ -31,7 +30,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         """ We want to check if the file has metadata associated: Mac creates the
             ._ files at the moment of creating a tar file in order to send the
             metadata associated to every file. """
-        self.assertTrue(os.path.exists(os.path.join(folder, annotated_file)))
+        assert os.path.exists(os.path.join(folder, annotated_file))
 
         tmp_folder = tempfile.mkdtemp()
         try:
@@ -95,6 +94,6 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         # 3) In the upload process, the metadata is lost again
         export_download_folder = t.get_latest_ref_layout(pref.ref).download_export()
         tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
-        self.assertFalse(os.path.exists(tgz))
+        assert not os.path.exists(tgz)
         t.run("upload lib/version@user/channel -r default --only-recipe")
         self._test_for_metadata_in_zip_file(tgz, 'file.txt', dot_file_expected=False)

@@ -107,8 +107,8 @@ def create(conan_api, parser, *args):
         if args.test_folder is None else args.test_folder
     test_conanfile_path = _get_test_conanfile_path(test_package_folder, path)
     # If the user provide --test-missing and the binary was not built from source, skip test_package
-    if args.test_missing and deps_graph.root.dependencies\
-            and deps_graph.root.dependencies[0].dst.binary != "Build":
+    if args.test_missing and deps_graph.root.edges\
+            and deps_graph.root.edges[0].dst.binary != "Build":
         test_conanfile_path = None  # disable it
 
     if test_conanfile_path:

@@ -53,6 +53,16 @@ def test_unzip_with_pattern():
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
 
+def test_unzip_with_exclude_pattern():
+    archive = create_example_zip(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
 def test_unzip_with_strip_root():
     archive = create_example_zip(root_file=False, subfolder=True)
     conanfile = ConanFileMock({})
@@ -99,14 +109,21 @@ def create_example_tar(root_file=True, subfolder=False):
 
 
 def test_untargz():
+    import io
+    from unittest.mock import patch
+
     archive = create_example_tar(subfolder=True)
     conanfile = ConanFileMock({})
 
-    # Unzip and check permissions are kept
-    dest_dir = temp_folder()
-    unzip(conanfile, archive, dest_dir)
-    assert exists(join(dest_dir, "foo.txt"))
-    assert exists(join(dest_dir, "src", "bar.txt"))
+    with patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+        # Unzip and check permissions are kept
+        dest_dir = temp_folder()
+        unzip(conanfile, archive, dest_dir)
+        assert exists(join(dest_dir, "foo.txt"))
+        assert exists(join(dest_dir, "src", "bar.txt"))
+
+        stderr_output = mock_stderr.getvalue()
+        assert f"Uncompressing {archive} to {dest_dir}" in stderr_output
 
 
 def test_untargz_with_pattern():
@@ -115,6 +132,16 @@ def test_untargz_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_untargz_with_exclude_pattern():
+    archive = create_example_tar(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 

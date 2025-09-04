@@ -1,15 +1,22 @@
 import copy
 import numbers
+import platform
 import re
 import os
 import fnmatch
+import textwrap
 
 from collections import OrderedDict
 
+from jinja2 import Environment, FileSystemLoader
+
 from conan.errors import ConanException
+from conan.internal.api.detect import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
+from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -86,7 +93,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
-    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -101,6 +108,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
@@ -114,7 +122,7 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
     "tools.microsoft.bash:path": "The path to the shell to run when conanfile.win_bash==True",
-    "tools.microsoft.bash:active": "If Conan is already running inside bash terminal in Windows",
+    "tools.microsoft.bash:active": "Set True only when Conan runs in a POSIX Bash (MSYS2/Cygwin) where Python's subprocess (shell=True) uses a POSIX-compatible shell (e.g., /bin/sh). Do not set when using Conan from cmd/PowerShell or with native Windows Python ('win32').",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apk', 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
@@ -134,6 +142,8 @@ BUILT_IN_CONFS = {
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
+    # Toolchain installation
+    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -147,8 +157,7 @@ USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
-    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
+    return TOOLS_CONF_PATTERN.match(module_name) or USER_CONF_PATTERN.match(module_name)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -263,6 +272,9 @@ class _ConfValue:
                 new_value = other._value.copy()
                 new_value.update(self._value)
                 self._value = new_value
+        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
+            # They might be different kind of numbers, so skip the check below
+            pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
@@ -376,6 +388,12 @@ class Conf:
     def copy(self):
         c = Conf()
         c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        return c
+
+    def filter_core(self):
+        c = Conf()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
+                                if not CORE_CONF_PATTERN.match(k))
         return c
 
     def dumps(self):
@@ -530,10 +548,12 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
-                                 f"the conf format introduced is not valid. Run 'conan config list' "
-                                 f"to see all the available confs.")
+        if conf.startswith("user"):
+            if USER_CONF_PATTERN.match(conf) is None:
+                raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+        elif conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 "Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
@@ -624,7 +644,9 @@ class ConfDefinition:
         :type global_conf: ConfDefinition
         """
         result = ConfDefinition()
-        result._pattern_confs = global_conf._pattern_confs.copy()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
         result.update_conf_definition(self)
         self._pattern_confs = result._pattern_confs
         return
@@ -717,3 +739,32 @@ class ConfDefinition:
 
     def clear(self):
         self._pattern_confs.clear()
+
+
+def load_global_conf(home_folder):
+    home_paths = HomePaths(home_folder)
+    global_conf_path = home_paths.global_conf_path
+    new_config = ConfDefinition()
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+        home_folder = home_folder.replace("\\", "/")
+        from conan import conan_version
+        content = template.render({"platform": platform, "os": os, "distro": distro,
+                                   "conan_version": conan_version,
+                                   "conan_home_folder": home_folder,
+                                   "detect_api": detect_api})
+        new_config.loads(content)
+    else:  # creation of a blank global.conf file for user convenience
+        default_global_conf = textwrap.dedent("""\
+            # Core configuration (type 'conan config list' to list possible values)
+            # e.g, for CI systems, to raise if user input would block
+            # core:non_interactive = True
+            # some tools.xxx config also possible, though generally better in profiles
+            # tools.android:ndk_path = my/path/to/android/ndk
+            """)
+        save(global_conf_path, default_global_conf)
+    return new_config

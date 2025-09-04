@@ -5,13 +5,12 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, \
-    libcxx_flags
+    libcxx_flags, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
-from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 
 
@@ -58,10 +57,19 @@ class GnuToolchain:
 
         self.cppstd = cppstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile)
+        self.arch_ld_flag = architecture_link_flag(self._conanfile)
+        self.threads_flags = threads_flags(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
         self.msvc_extra_flags = self._msvc_extra_flags()
+        self.msvc_runtime_link_flags = []
+        if llvm_clang_front(self._conanfile) == "clang":
+            self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
+        extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
+                                                        check_type=list,
+                                                        default=[])
+        extra_configure_args = {it: None for it in extra_configure_args}
 
         # Host/Build triplets
         self.triplets_info = {
@@ -92,6 +100,7 @@ class GnuToolchain:
         self.configure_args.update(self._get_default_configure_shared_flags())
         self.configure_args.update(self._get_default_configure_install_flags())
         self.configure_args.update(self._get_default_triplets())
+        self.configure_args.update(extra_configure_args)
         # Apple stuff
         is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
@@ -228,6 +237,14 @@ class GnuToolchain:
             self.extra_env.define(env_var, env_value)
 
     def _get_msvc_runtime_flag(self):
+        if llvm_clang_front(self._conanfile) == "clang":
+            if self._conanfile.settings.compiler.runtime == "dynamic":
+                runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+                library = "msvcrtd" if runtime_type == "Debug" else "msvcrt"
+                debug = "-D_DEBUG " if runtime_type == "Debug" else ""
+                return f"{debug}-D_DLL -D_MT -Xclang --dependent-lib={library}"
+            return ""  # By default it already link statically
+
         flag = msvc_runtime_flag(self._conanfile)
         return f"-{flag}" if flag else ""
 
@@ -252,7 +269,7 @@ class GnuToolchain:
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
-               self.sysroot_flag]
+               self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
@@ -263,7 +280,7 @@ class GnuToolchain:
     @property
     def cflags(self):
         fpic = "-fPIC" if self.fpic else None
-        ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
+        ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
@@ -273,7 +290,7 @@ class GnuToolchain:
 
     @property
     def ldflags(self):
-        ret = [self.arch_flag, self.sysroot_flag]
+        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
@@ -284,6 +301,7 @@ class GnuToolchain:
                                                   check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
+        ret = ret + self.msvc_runtime_link_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -321,6 +339,17 @@ class GnuToolchain:
                 triplets[f"--{context}"] = info["triplet"]
         return triplets
 
+    def _include_obj_arc_flags(self, env):
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        fobj_arc = ""
+        if enable_arc:
+            fobj_arc = "-fobjc-arc"
+        if enable_arc is False:
+            fobj_arc = "-fno-objc-arc"
+        if fobj_arc:
+            env.append('OBJCFLAGS', [fobj_arc])
+            env.append('OBJCXXFLAGS', [fobj_arc])
+
     @property
     def _environment(self):
         env = Environment()
@@ -330,6 +359,8 @@ class GnuToolchain:
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        # Objective C/C++
+        self._include_obj_arc_flags(env)
         # Let's compose with user extra env variables defined (user ones have precedence)
         return self.extra_env.compose_env(env)
 

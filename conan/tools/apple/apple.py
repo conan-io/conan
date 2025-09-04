@@ -108,6 +108,16 @@ def resolve_apple_flags(conanfile, is_cross_building=False):
     return min_version_flag, apple_arch_flag, apple_isysroot_flag
 
 
+def xcodebuild_deployment_target_key(os_name):
+    return {
+        "Macos": "MACOSX_DEPLOYMENT_TARGET",
+        "iOS": "IPHONEOS_DEPLOYMENT_TARGET",
+        "tvOS": "TVOS_DEPLOYMENT_TARGET",
+        "watchOS": "WATCHOS_DEPLOYMENT_TARGET",
+        "visionOS": "XROS_DEPLOYMENT_TARGET",
+    }.get(os_name) if os_name else None
+
+
 class XCRun:
     """
     XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
@@ -334,20 +344,14 @@ def apple_extra_flags(conanfile):
     if not is_apple_os(conanfile):
         return []
     enable_bitcode = conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
-    enable_arc = conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
     enable_visibility = conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
     is_debug = conanfile.settings.get_safe('build_type') == "Debug"
-
     flags = []
     if enable_bitcode:
         if is_debug:
             flags.append("-fembed-bitcode-marker")
         else:
             flags.append("-fembed-bitcode")
-    if enable_arc:
-        flags.append("-fobjc-arc")
-    if enable_arc is False:
-        flags.append("-fno-objc-arc")
     if enable_visibility:
         flags.append("-fvisibility=default")
     if enable_visibility is False:
