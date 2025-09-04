@@ -32,8 +32,8 @@ def test_parallel_config_subprocess():
     """
     workers = 30
 
-    extra_folder = temp_folder(path_with_spaces=False)
-    cache_folder = temp_folder(path_with_spaces=False)
+    extra_folder = temp_folder(path_with_spaces=False).replace("\\", "/")
+    cache_folder = temp_folder(path_with_spaces=False).replace("\\", "/")
     env = os.environ.copy()
     env["CONAN_HOME"] = cache_folder
 
