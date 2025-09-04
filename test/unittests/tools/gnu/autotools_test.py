@@ -1,9 +1,10 @@
+import pytest
 import os
 from mock import patch
 
 from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools
-from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
 
 
@@ -28,8 +29,34 @@ def test_source_folder_works(chdir_mock):
     assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar '
 
     autotools.autoreconf(build_script_folder="subfolder")
-    chdir_mock.assert_called_with(autotools, os.path.normpath(os.path.join("/path/to/sources", "subfolder")))
+    chdir_mock.assert_called_with(autotools,
+                                  os.path.normpath(os.path.join("/path/to/sources", "subfolder")))
 
     autotools.autoreconf()
     chdir_mock.assert_called_with(autotools, os.path.normpath("/path/to/sources"))
     assert conanfile.command == 'autoreconf -bar foo'
+
+
+@pytest.mark.parametrize("install_strip", [False, True])
+def test_install_strip(install_strip):
+    """
+    When the configuration `tools.build:install_strip` is set to True,
+    the Autotools install command should invoke the `install-strip` target.
+    """
+    folder = temp_folder()
+    os.chdir(folder)
+    save_toolchain_args({})
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "7",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.conf.define("tools.build:install_strip", install_strip)
+    conanfile.folders.generators = "."
+
+    autotools = Autotools(conanfile)
+    autotools.install()
+
+    assert ('install-strip' in str(conanfile.command)) == install_strip

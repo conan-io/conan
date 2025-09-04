@@ -225,12 +225,13 @@ class PackagesList:
             result.append(subpkglist)
         return result
 
-    def only_recipes(self):
-        result = {}
+    def only_recipes(self) -> None:
+        """ Filter out all the packages and package revisions, keep only the recipes and
+            recipe revisions in self.recipes.
+        """
         for ref, ref_dict in self.recipes.items():
             for rrev_dict in ref_dict.get("revisions", {}).values():
                 rrev_dict.pop("packages", None)
-        return result
 
     def add_refs(self, refs):
         # RREVS alreday come in ASCENDING order, so upload does older revisions first
@@ -357,10 +358,10 @@ class ListPattern:
         if self.version and self.version.startswith("[") and self.version.endswith("]"):
             return VersionRange(self.version[1:-1])
 
-    def filter_versions(self, refs):
+    def filter_versions(self, refs, resolve_prereleases=None):
         vrange = self._version_range
         if vrange:
-            refs = [r for r in refs if vrange.contains(r.version, None)]
+            refs = [r for r in refs if vrange.contains(r.version, resolve_prereleases)]
         return refs
 
     @property

@@ -34,6 +34,7 @@ def test_cmakedeps_direct_deps_paths():
     c.save({"conanfile.py": conanfile}, clean_first=True)
     c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
+    assert "set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)" in cmake_paths
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/bin\"", cmake_paths)  # default
     assert re.search(r"list\(PREPEND CMAKE_LIBRARY_PATH \".*/mylib\"", cmake_paths)
     assert re.search(r"list\(PREPEND CMAKE_INCLUDE_PATH \".*/myincludes\"", cmake_paths)
@@ -150,6 +151,7 @@ def test_cmakedeps_deployer_relative_paths():
     assert ('set(liba_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
             'host/liba/1.0/includea" )') in liba_targets
 
+
 def test_cmakeconfigdeps_recipe():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -257,6 +259,7 @@ def test_autolink_pragma():
     assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
            "The package 'package_info()' must correctly define the (CPS) information" in c.out
 
+
 def test_consuming_cpp_info_with_components_dependency_from_same_package():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -360,7 +363,7 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component():
         """)
     c.save({"dependent/conanfile.py": dependent_conanfile,
             "main/conanfile.py": conanfile,
-            "main/test_package/conanfile.py":test_package})
+            "main/test_package/conanfile.py": test_package})
     c.run("create ./dependent/ --name=dependent --version=0.1 "
           f"-c tools.cmake.cmakedeps:new={new_value}")
     c.run(f"create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
@@ -422,7 +425,7 @@ def test_requires_to_application():
 
     c.save({"automake/conanfile.py": automake,
             "libtool/conanfile.py": conanfile,
-            "libtool/test_package/conanfile.py":test_package})
+            "libtool/test_package/conanfile.py": test_package})
     c.run("create automake")
     c.run(f"create libtool -c tools.cmake.cmakedeps:new={new_value}")
     targets = c.load("libtool/test_package/libtool-Targets-release.cmake")
@@ -474,7 +477,7 @@ def test_requires_to_application_component():
 
     c.save({"automake/conanfile.py": automake,
             "libtool/conanfile.py": conanfile,
-            "libtool/test_package/conanfile.py":test_package})
+            "libtool/test_package/conanfile.py": test_package})
     c.run("create automake")
     c.run(f"create libtool -c tools.cmake.cmakedeps:new={new_value}")
     targets = c.load("libtool/test_package/libtool-Targets-release.cmake")
@@ -494,7 +497,8 @@ def test_alias_cmakedeps_set_property():
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                self.cpp_info.components["mycomp"].set_property("cmake_target_name", "dep::mycomponent")
+                self.cpp_info.components["mycomp"].set_property("cmake_target_name",
+                                                                "dep::mycomponent")
         """),
              "conanfile.py": textwrap.dedent("""
              from conan import ConanFile
@@ -509,7 +513,8 @@ def test_alias_cmakedeps_set_property():
                 def generate(self):
                     deps = CMakeDeps(self)
                     deps.set_property("dep", "cmake_target_aliases", ["alias", "dep::other_name"])
-                    deps.set_property("dep::mycomp", "cmake_target_aliases", ["component_alias", "dep::my_aliased_component"])
+                    deps.set_property("dep::mycomp", "cmake_target_aliases",
+                                      ["component_alias", "dep::my_aliased_component"])
                     deps.generate()
              """)})
     tc.run("create dep")

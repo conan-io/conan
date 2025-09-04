@@ -28,7 +28,6 @@ from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
-from conan.internal.rest.conan_requester import ConanRequester
 
 
 class ConanAPI:
@@ -44,8 +43,8 @@ class ConanAPI:
         """
 
         version = sys.version_info
-        if version.major == 2 or version.minor < 6:
-            raise ConanException("Conan needs Python >= 3.6")
+        if version.major == 2 or version.minor < 7:
+            raise ConanException("Conan needs Python >= 3.7")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
