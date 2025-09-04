@@ -7,6 +7,7 @@
 import os
 from datetime import datetime
 from typing import Any
+from threading import ThreadError
 
 import fasteners
 
@@ -76,8 +77,9 @@ def interprocess_write_lock(conan_api: Any) -> None:
         lock.acquire_write_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been locked.")
         yield
-    except Exception as error:
-        raise ConanException(f"Failed to acquire interprocess write lock: {error}")
+    # Fastener mainly raises ThreadError, to avoid masking other exceptions
+    except ThreadError as error:
+        raise ConanException(f"Failed to acquire interprocess write lock: {error}") from error
     finally:
         lock.release_write_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been released.")
