@@ -5,6 +5,7 @@ from conan.test.utils.tools import TestClient
 new_value = "will_break_next"
 
 
+@pytest.mark.tool("cmake", "3.27")
 def test_package_info_extra_variables():
     """ Issue: Dependencies have preference over dependencies, bad """
     client = TestClient()
