@@ -27,7 +27,7 @@ def _run_config_install(cmd, env, cwd, results, index) -> None:
 def test_parallel_config_subprocess():
     """Validate that subprocesses can run concurrently without issues.
 
-       This test starts 30 separate subprocesses, each running the `conan config install` command.
+       This test starts separate subprocesses, each running the `conan config install` command.
        No command should fail, and the cache should be updated correctly.
     """
     workers = 30
@@ -38,8 +38,11 @@ def test_parallel_config_subprocess():
     env["CONAN_HOME"] = cache_folder
 
     test_client = TestClient(cache_folder=cache_folder)
+    # Fill the cache with conf, profile and DB first
     test_client.run("profile detect --force")
     test_client.save({os.path.join(extra_folder, "profiles", "foobar"): "include(default)"})
+    test_client.run(f"config install {extra_folder} --type=dir")
+
     cmd = [sys.executable, "-m", "conans.conan", "config", "install", "-vvv", extra_folder, "--type=dir"]
 
     threads = []
