@@ -31,9 +31,12 @@ def _filelock_path(conan_api: Any) -> str:
     return os.path.join(cache.filelock_folder, CONAN_SEMAPHORE_FILELOCK)
 
 
-def raised_by_fasteners(exc: BaseException) -> bool:
+def _raised_by_fasteners(exc: BaseException) -> bool:
     """
     Check if the exception was raised by the fasteners library.
+
+    :param exc: The exception to check.
+    :return: True if the exception was raised by fasteners, False otherwise.
     """
     for frame, _ in traceback.walk_tb(exc.__traceback__):
         mod = inspect.getmodule(frame.f_code)
@@ -90,7 +93,7 @@ def interprocess_write_lock(conan_api: Any) -> None:
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been locked.")
         yield
     except Exception as error:
-        if raised_by_fasteners(error):
+        if _raised_by_fasteners(error):
             raise ConanException(f"Failed to acquire interprocess write lock: {error}") from error
         else:
             raise
