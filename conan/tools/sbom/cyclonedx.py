@@ -37,10 +37,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     name_default = getattr(graph.root.ref, "name", False) or "conan-sbom"
     name_default += f"/{graph.root.ref.version}" if getattr(graph.root.ref, "version", False) else ""
 
-    def should_add_node(n):
-        return (n.context == "host" or add_build) and (not n.test or add_tests)
-
-    nodes = [node for node in graph.nodes if should_add_node(node)]
+    nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
 
@@ -48,13 +45,14 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     if has_special_root_node:
         deps = {"ref": special_id,
                 "dependsOn": [_calculate_bomref(d.dst) for d in graph.root.edges
-                              if should_add_node(d.dst)]}
+                              if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if should_add_node(d.dst)]
+        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep if should_add_node(d.dst)]
+        depends_on = [_calculate_bomref(d.dst) for d in dep
+                      if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -135,10 +133,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     name_default = getattr(graph.root.ref, "name", False) or "conan-sbom"
     name_default += f"/{graph.root.ref.version}" if getattr(graph.root.ref, "version", False) else ""
 
-    def should_add_node(n):
-        return (n.context == "host" or add_build) and (not n.test or add_tests)
-
-    nodes = [node for node in graph.nodes if should_add_node(node)]
+    nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
 
@@ -146,13 +141,15 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     if has_special_root_node:
         deps = {"ref": special_id,
                 "dependsOn": [_calculate_bomref(d.dst)
-                              for d in graph.root.edges if should_add_node(d.dst)]}
+                              for d in graph.root.edges
+                              if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if should_add_node(d.dst)]
+        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep if should_add_node(d.dst)]
+        depends_on = [_calculate_bomref(d.dst) for d in dep
+                      if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -218,3 +215,7 @@ def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
     return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
+
+
+def should_add_node(node, add_build, add_tests):
+    return (node.context == "host" or add_build) and (not node.test or add_tests)
