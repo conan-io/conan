@@ -98,7 +98,8 @@ def migrate_compatibility_files(cache_folder):
 
     if _is_migratable(compatibility_file) and _is_migratable(cppstd_compat_file):
         compatibility_exists = os.path.exists(compatibility_file)
-        if not compatibility_exists or load(compatibility_file) != _default_compat:
+        needs_update = not compatibility_exists or load(compatibility_file) != _default_compat
+        if needs_update:
             save(compatibility_file, _default_compat)
             if compatibility_exists:
                 ConanOutput().success("Migration: Successfully updated compatibility.py")
