@@ -1,18 +1,22 @@
 diff_html = r"""
 {% macro render_folder(folder, folder_info) %}
     {%- for name, sub_folder_info in folder_info["folders"].items() %}
+        {% set folder_name = folder + "/" + name %}
         <li>
         <details open>
             <summary>{{ name }}</summary>
             <ul>
-                {{ render_folder(folder + "/" + name, sub_folder_info) }}
+                {{ render_folder(folder_name, sub_folder_info) }}
             </ul>
         </details>
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file-{{ "new" if file_info["is_new"] else "old" }}">
-            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">{{ name }}</a>
+        <li class="file-{{ "new" if file_info["is_new"] else "old" }}"
+            data-path="{{ file_info["filename"] }}">
+            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
+                {{ name }}
+            </a>
         </li>
     {%- endfor %}
 {% endmacro %}
@@ -35,8 +39,10 @@ diff_html = r"""
                 text-wrap: nowrap;
             }
             .sidebar li { line-height: 1.5; list-style: none; list-style-position: inside; }
-            .sidebar li.file-new { list-style: circle; padding-left: 0; margin-left: 22px; }
-            .sidebar li.file-old { list-style: square; padding-left: 0; margin-left: 22px; }
+            .sidebar li.file-new { list-style: none; padding-left: 0; }
+            .sidebar li.file-new:before { content: "+"; color: green; }
+            .sidebar li.file-old { list-style: none; padding-left: 0;  }
+            .sidebar li.file-old:before { content: "·"; color: black; }
             .side-link {
                 text-wrap: nowrap;
             }
@@ -100,7 +106,7 @@ diff_html = r"""
                 let emptySearch = true;
 
                 sidebar.forEach(async function(item) {
-                    const text = item.textContent.toLowerCase();
+                    const text = item.dataset.path.toLowerCase();
                     const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
                     const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
                     const associatedId = item.querySelector("a").getAttribute("href").substring(1)
