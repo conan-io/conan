@@ -249,3 +249,17 @@ def test_explicit_implements():
     pkgid4 = c.created_package_id("pkg/0.1")
     assert pkgid4 != pkgid
     assert pkgid3 != pkgid4
+
+
+def test_package_id_nonsemver_dependency():
+    c = TestClient(light=True)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+           "conanfile.py": GenConanfile("app", "0.1")
+            .with_requirement("dep/[>=cci.1.0]", package_id_mode="minor_mode")})
+
+    c.run("create dep --version=cci.1.3")
+
+    c.run("create .")
+    c.run("create dep --version=cci.2.5")
+    c.run("install --requires=app/0.1", assert_error=True)
+    assert "Missing prebuilt package for 'app/0.1'" in c.out

@@ -20,31 +20,20 @@ class _VersionRepr:
             return self.major()
 
     def major(self):
-        if not isinstance(self._version.major.value, int):
-            return str(self._version.major)
         return ".".join([str(self._version.major), 'Y', 'Z'])
 
     def minor(self):
-        if not isinstance(self._version.major.value, int):
-            return str(self._version.major)
-
         v0 = str(self._version.major)
         v1 = str(self._version.minor) if self._version.minor is not None else "0"
         return ".".join([v0, v1, 'Z'])
 
     def patch(self):
-        if not isinstance(self._version.major.value, int):
-            return str(self._version.major)
-
         v0 = str(self._version.major)
         v1 = str(self._version.minor) if self._version.minor is not None else "0"
         v2 = str(self._version.patch) if self._version.patch is not None else "0"
         return ".".join([v0, v1, v2])
 
     def pre(self):
-        if not isinstance(self._version.major.value, int):
-            return str(self._version.major)
-
         v0 = str(self._version.major)
         v1 = str(self._version.minor) if self._version.minor is not None else "0"
         v2 = str(self._version.patch) if self._version.patch is not None else "0"
