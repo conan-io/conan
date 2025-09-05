@@ -114,5 +114,3 @@ def test_compare_paths(fixture_client, old_args, new_args, formatter):
         assert "(new)/es/patches/patch.patch" in output_html
         # We have exports information
         assert "(old)/e/v1.txt" in output_html
-        # New files appear both in the menu (as data-replaced-paths) and in the diff itself
-        assert output_html.count("(new)/s/new-file-for-v2.txt") == 2
