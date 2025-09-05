@@ -3,17 +3,17 @@ diff_html = r"""
     {%- for name, sub_folder_info in folder_info["folders"].items() %}
         {% set folder_name = folder + "/" + name %}
         <li>
-        <details open>
-            <summary>{{ name }}</summary>
-            <ul>
-                {{ render_folder(folder_name, sub_folder_info) }}
-            </ul>
-        </details>
+            <details open>
+                <summary>{{ name }}</summary>
+                <ul>
+                    {{ render_folder(folder_name, sub_folder_info) }}
+                </ul>
+            </details>
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
         <li class="file-{{ "new" if file_info["is_new"] else "old" }}"
-            data-path="{{ file_info["filename"] }}">
+            data-path="{{ file_info["relative_path"] }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
                 {{ name }}
             </a>
