@@ -1,7 +1,6 @@
 name: Build Conan Binaries
 
 on:
-  push:
   workflow_call:
     inputs:
       conan_version: { required: true, type: string }
