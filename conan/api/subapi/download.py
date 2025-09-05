@@ -85,8 +85,12 @@ class DownloadAPI:
         def _download_pkglist(pkglist):
             for ref, packages in pkglist.items():
                 self.recipe(ref, remote, metadata)
+                recipe_bundle.pop("files", None)
+                recipe_bundle.pop("upload-urls", None)
                 for pref, _ in packages.items():
                     self.package(pref, remote, metadata)
+                    pref_bundle.pop("files", None)
+                    pref_bundle.pop("upload-urls", None)
 
         t = time.time()
         parallel = self._conan_api.config.get("core.download:parallel", default=1, check_type=int)
