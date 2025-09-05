@@ -16,6 +16,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ensure_latest_tag_merged:
+    runs-on: ubuntu-latest
+    name: Ensure latest release is merged in develop2 branch
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - shell: bash
+        run: |
+          git fetch --tags --prune
+          latest_tag=$(git tag -l --sort=-v:refname | head -n1)
+          echo "Checking that branch 'develop2' contains the latest release tag: $latest_tag"
+          git merge-base --is-ancestor "$latest_tag" origin/develop2
+
   set_python_versions:
     runs-on: ubuntu-latest
     outputs:
@@ -35,21 +49,21 @@ jobs:
           fi
 
   linux_suite:
-    needs: set_python_versions
+    needs: [ensure_latest_tag_merged, set_python_versions]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
 
   osx_suite:
-    needs: set_python_versions
+    needs: [ensure_latest_tag_merged, set_python_versions]
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
 
   windows_suite:
-    needs: set_python_versions
+    needs: [ensure_latest_tag_merged, set_python_versions]
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
     with:
