@@ -252,6 +252,8 @@ def test_explicit_implements():
 
 
 def test_package_id_nonsemver_dependency():
+    """ This used not to be a missing binary because the initial cci major
+    was triggering logic that ignored following versions """
     c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep"),
            "conanfile.py": GenConanfile("app", "0.1")
