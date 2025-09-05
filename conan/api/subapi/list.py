@@ -163,7 +163,8 @@ class ListAPI:
 
         return result
 
-    def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None, profile=None) -> PackagesList:
+    def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None,
+               profile=None) -> PackagesList:
         """For a given pattern, return a list of recipes and packages matching the provided filters.
 
         :parameter ListPattern pattern: Search criteria
@@ -192,7 +193,9 @@ class ListAPI:
         remote_name = "local cache" if not remote else remote.name
         if search_ref:
             refs = _search_recipes(app, search_ref, remote=remote)
-            refs = pattern.filter_versions(refs)
+            global_conf = self._conan_api._api_helpers.global_conf  # noqa
+            resolve_prereleases = global_conf.get("core.version_ranges:resolve_prereleases")
+            refs = pattern.filter_versions(refs, resolve_prereleases)
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:

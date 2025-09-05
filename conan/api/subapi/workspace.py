@@ -262,6 +262,19 @@ class WorkspaceAPI:
             auto_shared_fpic_configure(conanfile)
 
     def super_build_graph(self, deps_graph, profile_host, profile_build):
+        order = []
+        packages = self._ws.packages()
+
+        def find_folder(ref):
+            return next(p["path"] for p in packages if RecipeReference.loads(p["ref"]) == ref)
+
+        for level in deps_graph.by_levels():
+            items = [item for item in level if item.recipe == "Editable"]
+            items = [{"ref": item.ref, "folder": find_folder(item.ref)} for item in items]
+            if items:
+                order.append(items)
+        self._ws.build_order(order)
+
         ConanOutput().title("Collapsing workspace packages")
 
         root_class = self._ws.root_conanfile()

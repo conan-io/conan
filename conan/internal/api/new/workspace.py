@@ -19,13 +19,8 @@ project(monorepo CXX)
 
 include(FetchContent)
 
-function(add_project PACKAGE_NAME)
-    if(ARGC GREATER 1)
-        set(SUBFOLDER "${ARGV1}")
-    else()
-        set(SUBFOLDER "${PACKAGE_NAME}")
-    endif()
-    message(STATUS "Adding project: ${PACKAGE_NAME}")
+function(add_project PACKAGE_NAME SUBFOLDER)
+    message(STATUS "Adding project: ${PACKAGE_NAME}. Folder: ${SUBFOLDER}")
     FetchContent_Declare(
         ${PACKAGE_NAME}
         SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/${SUBFOLDER}
@@ -35,17 +30,28 @@ function(add_project PACKAGE_NAME)
     FetchContent_MakeAvailable(${PACKAGE_NAME})
 endfunction()
 
-add_project(liba)
-# They should be defined in the liba/CMakeLists.txt, but we can fix it here
-add_library(liba::liba ALIAS liba)
-add_project(libb)
-add_library(libb::libb ALIAS libb)
-add_project(app1)
+include(build/conanws_build_order.cmake)
+
+foreach(pair ${CONAN_WS_BUILD_ORDER})
+    string(FIND "${pair}" ":" pos)
+    string(SUBSTRING "${pair}" 0 "${pos}" pkg)
+    math(EXPR pos "${pos} + 1")  # Skip the separator
+    string(SUBSTRING "${pair}" "${pos}" -1 folder)
+
+    add_project(${pkg} ${folder})
+    # This target should be defined in the liba/CMakeLists.txt, but we can fix it here
+    get_target_property(target_type ${pkg} TYPE)
+    if (NOT target_type STREQUAL "EXECUTABLE")
+        add_library(${pkg}::${pkg} ALIAS ${pkg})
+    endif()
+endforeach()
 """
 
-conanfile = '''\
+conanfile = r'''\
+import json
 from conan import Workspace
 from conan import ConanFile
+from conan.tools.files import save
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
 
@@ -69,6 +75,11 @@ class MyWs(ConanFile):
 class Ws(Workspace):
     def root_conanfile(self):
         return MyWs
+
+    def build_order(self, order):
+        super().build_order(order)  # default behavior prints the build order
+        pkglist = " ".join([f'{it["ref"].name}:{it["folder"]}' for level in order for it in level])
+        save(self, "build/conanws_build_order.cmake", f"set(CONAN_WS_BUILD_ORDER {pkglist})")
 '''
 
 workspace_files = {"conanws.yml": conanws_yml,

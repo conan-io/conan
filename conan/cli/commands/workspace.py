@@ -86,7 +86,7 @@ def workspace_remove(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().info(f"Removed from workspace: {removed}")
 
 
-def print_json(data):
+def _print_json(data):
     results = data["info"]
     myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
@@ -103,7 +103,7 @@ def _print_workspace_info(data):
     print_serial(data["info"])
 
 
-@conan_subcommand(formatters={"text": _print_workspace_info, "json": print_json})
+@conan_subcommand(formatters={"text": _print_workspace_info, "json": _print_json})
 def workspace_info(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
     Display info for current workspace
@@ -217,7 +217,7 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     requires = conan_api.workspace.select_packages(args.pkg)
     deps_graph = conan_api.graph.load_graph_requires(requires, [],
                                                      profile_host, profile_build, lockfile,
-                                                     remotes, args.build, args.update)
+                                                     remotes, update=args.update)
     deps_graph.report_graph_error()
     print_graph_basic(deps_graph)
 
@@ -225,7 +225,6 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     ws_graph = conan_api.workspace.super_build_graph(deps_graph, profile_host, profile_build)
     ConanOutput().subtitle("Collapsed graph")
     print_graph_basic(ws_graph)
-
     conan_api.graph.analyze_binaries(ws_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(ws_graph)
@@ -250,8 +249,8 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     Clean the temporary build folders when possible
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
-                        help="Path to a folder where the workspace will be initialized. "
-                             "If  does not exist")
+                           help="Path to a folder where the workspace will be initialized. "
+                                "If does not exist")
     args = parser.parse_args(*args)
     conan_api.workspace.init(args.path)
 

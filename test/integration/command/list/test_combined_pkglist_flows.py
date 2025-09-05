@@ -273,10 +273,11 @@ class TestPkgListMerge:
         c.run("create . --version=1.0 --format=json", redirect_stdout="out/graph.json")
         c.run("pkglist merge -l out/graph.json", assert_error=True)
         assert (
-            'ERROR: Expected a package list file but found a graph file. You can create a "package list" JSON file by running:'
-            in c.out
+            'ERROR: Expected a package list file but found a graph file. '
+            'You can create a "package list" JSON file by running:' in c.out
         )
         assert "conan list --graph graph.json --format=json > pkglist.json" in c.out
+
 
 class TestDownloadUpload:
     @pytest.fixture()
@@ -311,6 +312,21 @@ class TestDownloadUpload:
         assert f"Uploading recipe 'zli/" not in client.out
         assert "Uploading package 'zlib/1.0.0" in client.out
         assert "Uploading package 'zli/" not in client.out
+
+    def test_download_upload_all_no_removed(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib.py": GenConanfile("zlib", "0.1")})
+        c.run("create zlib.py ")
+        c.run("upload * -r=default -c --format=json", redirect_stdout="pkglist.json")
+        c.run("remove * -c")
+        c.run(f"download --list=pkglist.json -r=default --format=json",
+              redirect_stdout="pkglist.json")
+        # The original "files" and "upload-urls" fields of first upload are removed
+        pkglist_json = c.load("pkglist.json")
+        assert "files" not in pkglist_json
+        assert "upload-urls" not in pkglist_json
+        c.run("upload --list=pkglist.json -r=default --format=json")
+        # It doesn't crash anymore
 
     @pytest.mark.parametrize("prev_list", [False, True])
     def test_download_upload_only_recipes(self, client, prev_list):
@@ -442,7 +458,8 @@ class TestListGraphContext:
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile("lib", "1.0")})
 
-        tc.run("graph info . -f json --build=never --no-remote --filter=context", redirect_stdout="graph_context.json")
+        tc.run("graph info . -f json --build=never --no-remote --filter=context",
+               redirect_stdout="graph_context.json")
 
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)

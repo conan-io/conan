@@ -308,11 +308,11 @@ class TestAddRemove:
         c.save({"conanws.py": workspace,
                 "dep/conanfile.py": GenConanfile("dep", "0.1")})
         c.run("workspace add dep")
-        assert "myws: Adding dep/0.1" in c.out
+        assert "Workspace 'myws': Adding dep/0.1" in c.out
         c.run("workspace info")
         assert "dep/0.1" in c.out
         c.run("workspace remove dep")
-        assert "myws: Removing" in c.out
+        assert "Workspace 'myws': Removing" in c.out
         c.run("workspace info")
         assert "dep/0.1" not in c.out
 
@@ -517,8 +517,9 @@ class TestMeta:
                clean_first=True)
         c.run("workspace add liba")
         c.run("workspace add libb")
-        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain "
-              "-of=build --envs-generation=false")
+        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
+              "--envs-generation=false")
+        assert "Packages build order:\n    liba/0.1\n    libb/0.1" in c.out
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
@@ -725,8 +726,8 @@ class TestClean:
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
         c.run("workspace clean")
-        assert "my_workspace: Removing pkga/0.1 output folder" in c.out
-        assert "my_workspace: Removing pkgb/0.1 output folder" in c.out
+        assert "Workspace 'my_workspace': Removing pkga/0.1 output folder" in c.out
+        assert "Workspace 'my_workspace': Removing pkgb/0.1 output folder" in c.out
         assert "Editable pkgc/0.1 doesn't have an output_folder defined" in c.out
         assert not os.path.exists(os.path.join(c.current_folder, "build", "pkga"))
         assert not os.path.exists(os.path.join(c.current_folder, "build", "pkgb"))
@@ -744,7 +745,7 @@ class TestClean:
         c = TestClient()
         c.save({"conanws.py": conanfilews})
         c.run("workspace clean")
-        assert "my_workspace: MY CLEAN!!!" in c.out
+        assert "Workspace 'my_workspace': MY CLEAN!!!" in c.out
 
 
 def test_relative_paths():
