@@ -147,5 +147,6 @@ def test_build_policy_missing():
     assert "pkg/1.0: Building package from source" not in c.out
 
     c.run("upload * -r=default -c")
+    print(c.out)
     assert "Uploading package" not in c.out
     assert "pkg/1.0: Skipping upload of binaries, because upload_policy='skip'" in c.out
