@@ -1,10 +1,7 @@
 name: Build Conan Binaries
 
 on:
-  # remove push event before merging
   push:
-    branches:
-      - 'czoido/build-binaries-action'  
   workflow_call:
     inputs:
       conan_version: { required: true, type: string }
@@ -59,11 +56,8 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
         run: |
-          rm -rf dist
-          #./jenkins/build_packages.sh "${{ inputs.conan_version || github.event.inputs.conan_version }}" \
-          #                            "${{ inputs.target_sha    || github.event.inputs.target_sha    }}"
-          ./jenkins/build_packages.sh "2.20.1" \
-                                      "0384d64c049d94f0284c9c0610cf079ddf496d7e"
+          ./jenkins/build_packages.sh "${{ inputs.conan_version || github.event.inputs.conan_version }}" \
+                                      "${{ inputs.target_sha    || github.event.inputs.target_sha    }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
