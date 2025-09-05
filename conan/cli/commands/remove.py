@@ -1,5 +1,6 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList, RecipeReference, PkgReference
+from conan.api.model import ListPattern, MultiPackagesList, RecipeReference, PkgReference, \
+    PackagesList
 from conan.api.output import cli_out_write, ConanOutput
 from conan.api.input import UserInput
 from conan.cli import make_abs_path
@@ -81,7 +82,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list[cache_name]
-        refs_to_remove = package_list.refs()
+        refs_to_remove = list(package_list.walk())
         if not refs_to_remove:  # the package list might contain only refs, no revs
             ConanOutput().warning("Nothing to remove, package list do not contain recipe revisions")
     else:
@@ -93,7 +94,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list.add(cache_name, package_list)
 
     result = {}
-    for ref, ref_info in package_list.recipes.items():
+    for ref, ref_info in package_list.serialize().items():
         result_ref = {}
         for rrev, rrev_info in ref_info.get("revisions", {}).items():
             full_ref = RecipeReference.loads(ref)
@@ -121,7 +122,8 @@ def remove(conan_api: ConanAPI, parser, *args):
                     result_ref.setdefault("revisions", {})[rrev] = result_rrev
         if result_ref:
             result[ref] = result_ref
-    package_list.recipes = result
+    package_list = PackagesList.deserialize(result)
+    multi_package_list.add(cache_name, package_list)
 
     return {
         "results": multi_package_list.serialize(),

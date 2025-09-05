@@ -197,6 +197,9 @@ class PackagesList:
     def __init__(self):
         self._data = {}
 
+    def __bool__(self):
+        return bool(self._data)
+
     def merge(self, other):
         def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
             for k, v in u.items():
@@ -205,13 +208,13 @@ class PackagesList:
                 else:
                     d[k] = v
             return d
-        recursive_dict_update(self._data, other.recipes)
+        recursive_dict_update(self._data, other._data)
 
     def keep_outer(self, other):
         if not self._data:
             return
 
-        for ref, info in other.recipes.items():
+        for ref, info in other._data.items():
             if self._data.get(ref, {}) == info:
                 self._data.pop(ref)
 
@@ -281,25 +284,22 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def items(self):
+    def walk(self):
         """ Get all the recipe references in the package list."""
-        result = {}
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
                 recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
                 t = rrev_dict.get("timestamp")
                 if t is not None:
                     recipe.timestamp = t
-
-                packages = rrev_dict.pop("packages", {})
+                packages = {}
                 for package_id, pkg_bundle in rrev_dict.get("packages", {}).items():
                     prevs = pkg_bundle.get("revisions", {})
                     for prev, prev_bundle in prevs.items():
                         t = prev_bundle.pop("timestamp", None)
                         pref = PkgReference(recipe, package_id, prev, t)
-                        pref_dict.setdefault("packages", {})[pref] = prev_bundle
-                result[recipe] = pref_dict
-        return result.items()
+                        packages[pref] = prev_bundle
+                yield recipe, rrev_dict, packages
 
     @staticmethod
     def prefs(ref, recipe_bundle):

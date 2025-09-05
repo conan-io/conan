@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.model import ListPattern, MultiPackagesList, PackagesList
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -97,10 +97,10 @@ def upload(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
-    if package_list.recipes:
+    if package_list:
         # If only if search with "*" we ask for confirmation
         if not args.list and not args.confirm and "*" in args.pattern:
-            _ask_confirm_upload(conan_api, package_list)
+            package_list = _ask_confirm_upload(conan_api, package_list)
 
         conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
                                      args.force, args.metadata, args.dry_run)
@@ -122,7 +122,7 @@ def upload(conan_api: ConanAPI, parser, *args):
 def _ask_confirm_upload(conan_api, package_list):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
     result = {}
-    for ref, ref_info in package_list.recipes.items():
+    for ref, ref_info in package_list.serialize().items():
         result_ref = {}
         for rrev, rrev_info in ref_info.get("revisions", {}).items():
             msg = f"Are you sure you want to upload recipe '{ref}#{rrev}'?"
@@ -140,4 +140,5 @@ def _ask_confirm_upload(conan_api, package_list):
                             pkg_info["info"] = pkg_id_info["info"]
                 result_ref.setdefault("revisions", {})[rrev] = result_rrev
         result[ref] = result_ref
-    package_list.recipes = result
+    package_list = PackagesList.deserialize(result)
+    return package_list

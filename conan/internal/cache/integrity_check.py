@@ -22,9 +22,9 @@ class IntegrityChecker:
 
     def check(self, pkg_list):
         corrupted = False
-        for ref, ref_info in pkg_list.items():
+        for ref, _, packages in pkg_list.walk():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref, _ in ref_info.get("packages", {}).items():
+            for pref, _ in packages.items():
                 corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")

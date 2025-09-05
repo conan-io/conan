@@ -36,7 +36,7 @@ def test_upload_bundle():
 
             ref_pattern = ListPattern(args.reference, package_id="*")
             package_list = conan_api.list.select(ref_pattern)
-            if not package_list.recipes:
+            if not package_list:
                 raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
             # Check if the recipes/packages are in the remote

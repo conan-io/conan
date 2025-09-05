@@ -29,10 +29,10 @@ class PkgSignaturesPlugin:
             for f in os.listdir(metadata_sign):
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
-        for rref, recipe_bundle in upload_data.refs().items():
+        for rref, recipe_bundle, packages in upload_data.walk():
             if recipe_bundle["upload"]:
                 _sign(rref, recipe_bundle["files"], self._cache.recipe_layout(rref).download_export())
-            for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
+            for pref, pkg_bundle in packages.items():
                 if pkg_bundle["upload"]:
                     _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
 

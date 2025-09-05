@@ -306,7 +306,7 @@ class ListAPI:
             pkglist.add_prefs(ref, [pref])
             pkglist.add_configurations({pref: candidate.binary_config})
             # Add the diff data
-            rev_dict = pkglist.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict = pkglist._data[str(pref.ref)]["revisions"][pref.ref.revision]
             rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
@@ -319,7 +319,7 @@ class ListAPI:
         result = MultiPackagesList()
         for r in remotes:
             result_pkg_list = PackagesList()
-            for ref, recipe_bundle in package_list.refs().items():
+            for ref, recipe_bundle, packages in package_list.walk():
                 ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
                 ref_no_rev.revision = None
                 try:
@@ -329,7 +329,7 @@ class ListAPI:
                 if ref not in revs:  # not found
                     continue
                 result_pkg_list.add_refs([ref])
-                for pref, pref_bundle in package_list.prefs(ref, recipe_bundle).items():
+                for pref, pref_bundle in packages.items():
                     pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
                     pref_no_rev.revision = None
                     try:
@@ -340,7 +340,7 @@ class ListAPI:
                         result_pkg_list.add_prefs(ref, [pref])
                         info = recipe_bundle["packages"][pref.package_id]["info"]
                         result_pkg_list.add_configurations({pref: info})
-            if result_pkg_list.recipes:
+            if result_pkg_list:
                 result.add(r.name, result_pkg_list)
         return result
 
@@ -371,9 +371,9 @@ class ListAPI:
                     remote_ref_list = self.select(ref_pattern, package_query=None, remote=remote)
                 except NotFoundException:
                     continue
-                if not remote_ref_list.recipes:
+                if not remote_ref_list:
                     continue
-                str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+                str_latest_ref = list(remote_ref_list._data.keys())[-1]
                 recipe_ref = RecipeReference.loads(str_latest_ref)
                 if (node_info["latest_remote"] is None
                         or node_info["latest_remote"]["ref"] < recipe_ref):

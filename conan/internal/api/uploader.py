@@ -29,9 +29,9 @@ class UploadUpstreamChecker:
         self._app = app
 
     def check(self, upload_bundle, remote, force):
-        for ref, recipe_bundle in upload_bundle.refs().items():
+        for ref, recipe_bundle, packages in upload_bundle.walk():
             self._check_upstream_recipe(ref, recipe_bundle, remote, force)
-            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
+            for pref, prev_bundle in packages.items():
                 self._check_upstream_package(pref, prev_bundle, remote, force)
 
     def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
@@ -85,7 +85,7 @@ class PackagePreparator:
 
     def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle in pkg_list.refs().items():
+        for ref, bundle, packages in pkg_list.walk():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -101,7 +101,7 @@ class PackagePreparator:
             bundle.pop("upload-urls", None)
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
+            for pref, prev_bundle in packages.items():
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
                 if prev_bundle.get("upload"):
@@ -227,10 +227,10 @@ class UploadExecutor:
         self._app = app
 
     def upload(self, upload_data, remote):
-        for ref, bundle in upload_data.refs().items():
+        for ref, bundle, packages in upload_data.walk():
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
-            for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
+            for pref, prev_bundle in packages.items():
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
 
@@ -317,7 +317,7 @@ def _metadata_files(folder, metadata):
 
 
 def gather_metadata(package_list, cache, metadata):
-    for rref, recipe_bundle in package_list.refs().items():
+    for rref, recipe_bundle, packages in package_list.walk():
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
             files = _metadata_files(metadata_folder, metadata)
@@ -326,7 +326,7 @@ def gather_metadata(package_list, cache, metadata):
                 recipe_bundle.setdefault("files", {}).update(files)
                 recipe_bundle["upload"] = True
 
-        for pref, pkg_bundle in package_list.prefs(rref, recipe_bundle).items():
+        for pref, pkg_bundle in packages.items():
             if metadata or pkg_bundle["upload"]:
                 metadata_folder = cache.pkg_layout(pref).metadata()
                 files = _metadata_files(metadata_folder, metadata)

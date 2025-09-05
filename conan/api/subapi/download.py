@@ -83,19 +83,19 @@ class DownloadAPI:
         """Download the recipes and packages specified in the ``package_list`` from the remote,
         parallelized based on ``core.download:parallel``"""
         def _download_pkglist(pkglist):
-            for ref, packages in pkglist.items():
+            for ref, ref_dict, packages in pkglist.walk():
                 self.recipe(ref, remote, metadata)
-                recipe_bundle.pop("files", None)
-                recipe_bundle.pop("upload-urls", None)
-                for pref, _ in packages.items():
+                ref_dict.pop("files", None)
+                ref_dict.pop("upload-urls", None)
+                for pref, pkg_dict in packages.items():
                     self.package(pref, remote, metadata)
-                    pref_bundle.pop("files", None)
-                    pref_bundle.pop("upload-urls", None)
+                    pkg_dict.pop("files", None)
+                    pkg_dict.pop("upload-urls", None)
 
         t = time.time()
         parallel = self._conan_api.config.get("core.download:parallel", default=1, check_type=int)
         thread_pool = ThreadPool(parallel) if parallel > 1 else None
-        if not thread_pool or len(package_list.refs()) <= 1:
+        if not thread_pool or len(package_list._data) <= 1:
             _download_pkglist(package_list)
         else:
             ConanOutput().subtitle(f"Downloading with {parallel} parallel threads")

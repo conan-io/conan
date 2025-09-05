@@ -109,7 +109,7 @@ class CacheAPI:
             for f in backup_files:
                 remove(f)
 
-        for ref, packages in package_list.items():
+        for ref, _, packages in package_list.walk():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
@@ -135,7 +135,7 @@ class CacheAPI:
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, ref_bundle, packages in package_list.walk():
             ref_layout = cache.recipe_layout(ref)
             recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
             recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
@@ -152,7 +152,7 @@ class CacheAPI:
             if os.path.exists(path):
                 tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
 
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref, pref_bundle in packages.items():
                 pref_layout = cache.pkg_layout(pref)
                 pkg_folder = pref_layout.package()
                 folder = os.path.relpath(pkg_folder, cache_folder)
@@ -194,7 +194,7 @@ class CacheAPI:
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, ref_bundle, packages in package_list.walk():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
             try:
@@ -207,7 +207,7 @@ class CacheAPI:
             # In the case of recipes, they are always "in place", so just checking it
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
             out.info(f"Restore: {ref} in {recipe_folder}")
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref, pref_bundle in packages.items():
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle["timestamp"] = pref.timestamp
                 try:
