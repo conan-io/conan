@@ -1,9 +1,7 @@
-import unittest
-
 from conan.test.utils.tools import TestClient
 
 
-class BuildTypeSettingTest(unittest.TestCase):
+class TestBuildTypeSetting:
 
     def test_build_type(self):
         # https://github.com/conan-io/conan/issues/2500
@@ -31,11 +29,11 @@ class Pkg(ConanFile):
         # This won't fail, as it has a build_type=None, which is allowed
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --requires=pkg/0.1@lasote/testing -pr=myprofile --build='*'")
-        self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
+        assert 1 == str(client.out).count("BUILD TYPE: Not defined")
 
         # test_package is totally consinstent with the regular package
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -pr=myprofile")
-        self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))
+        assert 2 == str(client.out).count("BUILD TYPE: Not defined")
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
@@ -43,10 +41,10 @@ class Pkg(ConanFile):
 
         client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("install --requires=pkg/0.1@lasote/testing -pr=myprofile --build='*'")
-        self.assertEqual(1, str(client.out).count("BUILD TYPE: Release"))
+        assert 1 == str(client.out).count("BUILD TYPE: Release")
 
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -pr=myprofile")
-        self.assertEqual(2, str(client.out).count("BUILD TYPE: Release"))
+        assert 2 == str(client.out).count("BUILD TYPE: Release")
 
         # Explicit build_tyep=None is NOT allowed, it is not a valid value
         client.save({"conanfile.py": conanfile,
