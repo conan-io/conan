@@ -18,6 +18,7 @@ concurrency:
 jobs:
   ensure_latest_tag_merged:
     runs-on: ubuntu-latest
+    name: Ensure latest release is merged in develop2 branch
     steps:
       - uses: actions/checkout@v4
         with:
