@@ -1,20 +1,17 @@
 name: Build Conan Binaries
+run-name: Build Conan Binaries - v${{ inputs.conan_version }} - ${{ inputs.target_sha }} - ${{ inputs.request_id }}
 
 on:
   workflow_call:
     inputs:
       conan_version: { required: true, type: string }
       target_sha:    { required: true, type: string }
-  workflow_dispatch:
-    inputs:
-      conan_version: { description: Conan version to package, required: true, type: string }
-      target_sha:    { description: Git SHA to package,       required: true, type: string }
+      request_id:    { required: true, type: string }
 
 permissions:
   contents: read
 
 jobs:
-
   package:
     name: Package for ${{ matrix.platform }}/${{ matrix.arch }}
     strategy:
@@ -31,6 +28,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
+      - name: Show inputs
+        shell: bash
+        run: |
+          echo "conan_version=${{ inputs.conan_version }}"
+          echo "target_sha=${{ inputs.target_sha }}"
+          echo "request_id=${{ inputs.request_id }}"
+
       - name: Generate Read-Only App Token
         id: generate_token
         uses: actions/create-github-app-token@v2
@@ -55,8 +59,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
         run: |
-          ./jenkins/build_packages.sh "${{ inputs.conan_version || github.event.inputs.conan_version }}" \
-                                      "${{ inputs.target_sha    || github.event.inputs.target_sha    }}"
+          ./jenkins/build_packages.sh "${{ inputs.conan_version }}" "${{ inputs.target_sha }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
