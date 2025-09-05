@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   ensure_latest_tag_merged:
-    if: github.ref == 'refs/heads/develop2' || (github.event_name == 'pull_request' && github.base_ref == 'develop2')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
