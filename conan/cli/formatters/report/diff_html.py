@@ -42,7 +42,7 @@ diff_html = r"""
             .sidebar li.file-new { list-style: none; padding-left: 0; }
             .sidebar li.file-new:before { content: "+"; color: green; }
             .sidebar li.file-old { list-style: none; padding-left: 0;  }
-            .sidebar li.file-old:before { content: "·"; color: black; }
+            .sidebar li.file-old:before { content: "*"; color: black; }
             .side-link {
                 text-wrap: nowrap;
             }
