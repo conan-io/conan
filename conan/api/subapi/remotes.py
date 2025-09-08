@@ -159,7 +159,7 @@ class RemotesAPI:
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
-               allowed_packages=None):
+               allowed_packages=None, allow_binary_downloads=None):
         """
         Update an existing remote
 
@@ -169,6 +169,7 @@ class RemotesAPI:
         :param disabled: optional disabled state
         :param index:  optional integer to change the order of the remote
         :param allowed_packages: optional list of packages allowed from this remote
+        :param allow_binary_downloads: optional boolean to allow binary downloads from this remote
         """
         remotes = _load(self._remotes_file)
         try:
@@ -186,6 +187,8 @@ class RemotesAPI:
             remote.disabled = disabled
         if allowed_packages is not None:
             remote.allowed_packages = allowed_packages
+        if allow_binary_downloads is not None:
+            remote.allow_binary_downloads = allow_binary_downloads
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -300,7 +303,8 @@ def _load(remotes_file):
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"), r.get("remote_type"))
+                        r.get("allowed_packages"), r.get("remote_type"),
+                        r.get("allow_binary_downloads", True))
         result.append(remote)
     return result
 
@@ -308,7 +312,8 @@ def _load(remotes_file):
 def _save(remotes_file, remotes):
     remote_list = []
     for r in remotes:
-        remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
+        remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl,
+                  "allow_binary_downloads": r.allow_binary_downloads}
         if r.disabled:
             remote["disabled"] = True
         if r.allowed_packages:
