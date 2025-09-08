@@ -177,7 +177,7 @@ def test_sysrootflag_qnx():
          "arch": "x86_64"})
     conanfile.settings_build = conanfile.settings
     be = GnuToolchain(conanfile)
-    expected = "-Wc,-isysroot /path/to/sysroot"
+    expected = "-Wc,-isysroot,/path/to/sysroot"
     assert be.sysroot_flag == expected
 
 

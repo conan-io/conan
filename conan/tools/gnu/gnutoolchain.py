@@ -94,7 +94,7 @@ class GnuToolchain:
         if sysroot:
             root = sysroot.replace("\\", "/")
             compiler = self._conanfile.settings.get_safe("compiler")
-            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot {root}"
+            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot,{root}"
         else:
             self.sysroot_flag = None
 
