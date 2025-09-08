@@ -6,6 +6,7 @@ from threading import Lock
 
 import fasteners
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.util.dates import timestamp_now
 from conan.internal.util.files import load, save, remove_if_dirty
@@ -87,7 +88,8 @@ class DownloadCache:
             if remove_if_dirty(os.path.join(path_backups, path)):
                 continue
             if path.endswith(dirty_ext):
-                # TODO: Clear the dirty file marker if it does not have a matching downloaded file
+                if not os.path.exists(os.path.join(path_backups, os.path.splitext(path)[0])):
+                    os.remove(os.path.join(path_backups, path))
                 continue
             if not path.endswith(".json"):
                 path_backups_contents.append(path)
