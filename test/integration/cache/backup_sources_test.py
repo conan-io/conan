@@ -510,7 +510,7 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/downloader/" in self.client.out
 
     def test_list_urls_miss(self):
-        def custom_download(this, url, *args, **kwargs):
+        def custom_download(this, url, *args, **kwargs):  # noqa
             raise NotFoundException()
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
