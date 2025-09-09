@@ -5,8 +5,9 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput, Color
 from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
-from conan.internal.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD,
+                                        BINARY_EDITABLE, BINARY_UPDATE, BINARY_EDITABLE_BUILD,
+                                        BINARY_SKIP)
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
@@ -94,7 +95,8 @@ class _PackageBuilder:
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
-            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed", error_type="exception")
+            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed",
+                                   error_type="exception")
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanException):
                 raise exc
