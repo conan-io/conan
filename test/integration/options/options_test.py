@@ -772,6 +772,43 @@ class TestImportantOptions:
         c.run("graph info app -o *:myoption!=4")
         assert "liba/0.1: MYOPTION: 4" in c.out
 
+    def test_important_options_recipe_priority_conditional(self):
+        c = TestClient()
+
+        liba = textwrap.dedent("""
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name = "liba"
+                version = "0.1"
+                settings = "os"
+                options = {"myoption": [1, 2, 3]}
+
+                def config_options(self):
+                    if self.settings.os == "Windows":
+                        setattr(self.options, "myoption!", 2)
+
+                def package_id(self):
+                    self.output.info(f"MYOPTION: {self.info.options.myoption}")
+            """)
+
+        c.save({"liba/conanfile.py": liba,
+                "app/conanfile.py": GenConanfile().with_requires("liba/0.1")})
+        c.run("export liba")
+
+        c.run("graph info app -s os=Linux -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 3" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 1" in c.out
+
+        c.run("graph info app -s os=Windows -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+
     def test_wrong_option_syntax_no_trace(self):
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
