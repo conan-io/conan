@@ -60,7 +60,7 @@ class CMake:
     def is_multi_configuration(self):
         return is_multi_configuration(self._generator)
 
-    def configure(self, variables=None, build_script_folder=None, build_subfolder=None, cli_args=None,
+    def configure(self, variables=None, build_script_folder=None, cli_args=None, build_subfolder=None,
                   stdout=None, stderr=None):
         """
 
@@ -83,6 +83,9 @@ class CMake:
                                     ``self.folders.source`` at the ``layout()`` method.
         :param cli_args: List of arguments ``[arg1, arg2, ...]`` that will be passed
                          as extra CLI arguments to pass to cmake invocation
+        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
+                                and the ``package_folder``. If not provided, files will be placed
+                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -191,6 +194,9 @@ class CMake:
         :param build_tool_args: A list of arguments ``[barg1, barg2, ...]`` for the underlying
                                 build system that will be passed to the command
                                 line after the ``--`` indicator: ``cmake --build ... -- barg1 barg2``
+        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
+                                and the ``package_folder``. If not provided, files will be placed
+                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -208,6 +214,9 @@ class CMake:
                            not build type.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` for the underlying build system
                          that will be passed to the command line: ``cmake --install ... arg1 arg2``
+        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
+                                and the ``package_folder``. If not provided, files will be placed
+                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
