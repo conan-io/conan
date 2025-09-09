@@ -265,3 +265,19 @@ def test_package_id_nonsemver_dependency():
     c.run("create dep --version=cci.2.5")
     c.run("install --requires=app/0.1", assert_error=True)
     assert "Missing prebuilt package for 'app/0.1'" in c.out
+
+
+def test_package_id_nonsemver_dependency_prefixed_versions():
+    """ This used not to be a missing binary because the initial cci major
+    was triggering logic that ignored following versions """
+    c = TestClient(light=True)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+           "conanfile.py": GenConanfile("app", "0.1")
+            .with_requirement("dep/[>=v1.0 <v2]", package_id_mode="minor_mode")})
+
+    c.run("create dep --version=v1.0")
+
+    c.run("create .")
+    c.run("create dep --version=v1.3")
+    c.run("install --requires=app/0.1", assert_error=True)
+    assert "Missing prebuilt package for 'app/0.1'" in c.out
