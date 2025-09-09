@@ -12,7 +12,7 @@ from conan.errors import ConanException
 
 
 def test_impossible_to_import_untargz():
-    with pytest.raises(ImportError) as exc:
+    with pytest.raises(ImportError):
         from conan.tools.files import untargz
 
 

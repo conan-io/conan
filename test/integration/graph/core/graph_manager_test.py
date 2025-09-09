@@ -1866,7 +1866,7 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
 
 
-class TransitiveOverridesGraphTest(GraphManagerTest):
+class TestTransitiveOverridesGraph(GraphManagerTest):
 
     def test_diamond(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
@@ -2007,7 +2007,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(liba2, "liba/0.2#123", dependents=[app])
 
 
-class PureOverrideTest(GraphManagerTest):
+class TestPureOverride(GraphManagerTest):
 
     def test_diamond(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
@@ -2143,7 +2143,7 @@ class PureOverrideTest(GraphManagerTest):
                                  (liba, True, True, False, False)])
 
 
-class PackageIDDeductions(GraphManagerTest):
+class TestPackageIDDeductions(GraphManagerTest):
 
     def test_static_dep_to_shared(self):
         # project -> app1 -> lib
