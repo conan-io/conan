@@ -6,9 +6,9 @@
 """
 import os
 from datetime import datetime
-from typing import Any
 import inspect
 import traceback
+from pathlib import Path
 
 import fasteners
 
@@ -21,13 +21,14 @@ from conan.internal.cache.home_paths import HomePaths
 CONAN_SEMAPHORE_FILELOCK = "conan_semaphore.lock"
 
 
-def _filelock_path(home_paths: HomePaths) -> str:
+def _filelock_path(conan_home: Path) -> str:
     """ Get the path to the interprocess file lock.
 
-    :param home_paths: ConanAPI home folder instance with paths
+    :param conan_home: Conan home folder path
     :return: Path to the file lock in Conan cache temporary directory
     """
-    return os.path.join(home_paths.filelock_folder, CONAN_SEMAPHORE_FILELOCK)
+    conan_home_paths = HomePaths(conan_home)
+    return os.path.join(conan_home_paths.filelock_folder, CONAN_SEMAPHORE_FILELOCK)
 
 
 def _raised_by_fasteners(exc: BaseException) -> bool:
@@ -45,7 +46,7 @@ def _raised_by_fasteners(exc: BaseException) -> bool:
 
 
 @contextmanager
-def interprocess_lock(home_paths: HomePaths) -> None:
+def interprocess_lock(conan_home: Path) -> None:
     """ Context manager to acquire an interprocess lock.
 
         This method uses the fasteners library to create an interprocess lock, and serves as a proxy
@@ -53,10 +54,10 @@ def interprocess_lock(home_paths: HomePaths) -> None:
         processes to safely access shared resources. The lock is released automatically when the
         context manager exits.
 
-    :param home_paths: HomePaths instance with Conan cache paths
+    :param conan_home: Conan home folder path
     :return: None
     """
-    filelock_path = _filelock_path(home_paths)
+    filelock_path = _filelock_path(conan_home)
     lock = fasteners.InterProcessLock(filelock_path)
     pid = os.getpid()
     try:
@@ -75,7 +76,7 @@ def interprocess_lock(home_paths: HomePaths) -> None:
 
 
 @contextmanager
-def interprocess_write_lock(home_paths: HomePaths) -> None:
+def interprocess_write_lock(conan_home: Path) -> None:
     """ Context manager to acquire an interprocess write lock.
 
         This method uses the fasteners library to create an interprocess write lock, and serves as a
@@ -83,10 +84,10 @@ def interprocess_write_lock(home_paths: HomePaths) -> None:
         which allows multiple processes to safely access shared resources. The lock is released
         automatically when the context manager exits.
 
-    :param home_paths: HomePaths instance with Conan cache paths
+    :param conan_home: Conan home folder path
     :return: None
     """
-    filelock_path = _filelock_path(home_paths)
+    filelock_path = _filelock_path(conan_home)
     lock = fasteners.InterProcessReaderWriterLock(filelock_path)
     pid = os.getpid()
     try:
@@ -105,7 +106,7 @@ def interprocess_write_lock(home_paths: HomePaths) -> None:
 
 
 @contextmanager
-def interprocess_read_lock(home_paths: HomePaths) -> None:
+def interprocess_read_lock(conan_home: Path) -> None:
     """ Context manager to acquire an interprocess read lock.
 
         This method uses the fasteners library to create an interprocess read lock, and serves as a
@@ -113,10 +114,10 @@ def interprocess_read_lock(home_paths: HomePaths) -> None:
         which allows multiple processes to safely access shared resources. The lock is released
         automatically when the context manager exits.
 
-    :param home_paths: HomePaths instance with Conan cache paths
+    :param conan_home: Conan home folder path
     :return: None
     """
-    filelock_path = _filelock_path(home_paths)
+    filelock_path = _filelock_path(conan_home)
     lock = fasteners.InterProcessReaderWriterLock(filelock_path)
     pid = os.getpid()
     try:
