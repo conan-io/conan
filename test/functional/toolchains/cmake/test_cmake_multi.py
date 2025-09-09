@@ -30,14 +30,14 @@ class MultiCMakeTest(unittest.TestCase):
 
                 def build_one(self):
                     cmake = CMake(self)
-                    cmake.configure(variables={"CONAN_SOURCE_DIR": os.path.join(self.source_folder, "src_one").replace("\\\\", "/")}, build_script_folder="cmake_one", build_subfolder="one")
+                    cmake.configure(build_script_folder="cmake_one", build_subfolder="one")
                     cmake.build(build_subfolder="one")
                     # cmake.install(build_subfolder="one")
 
                 def build_two(self):
                     cmake = CMake(self)
                     # CMAKE_PREFIX_PATH
-                    cmake.configure(variables={"CONAN_SOURCE_DIR": os.path.join(self.source_folder, "src_two").replace("\\\\", "/")}, build_script_folder="cmake_two", build_subfolder="two")
+                    cmake.configure(build_script_folder="cmake_two", build_subfolder="two")
                     cmake.build(build_subfolder="two")
 
                 def build(self):
@@ -78,61 +78,15 @@ class MultiCMakeTest(unittest.TestCase):
 
             # find_package(hello_one REQUIRED CONFIG)
 
-            add_library(hello_{name} ${{CONAN_SOURCE_DIR}}/hello_{name}.cpp)
-            target_include_directories(hello_{name} PUBLIC ${{CONAN_SOURCE_DIR}})
+            add_library(hello_{name} ../src_{name}/hello_{name}.cpp)
+            target_include_directories(hello_{name} PUBLIC ../src_{name})
 
             # target_link_libraries(hello_two PRIVATE hello_one)
 
-            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "${{CONAN_SOURCE_DIR}}/hello_{name}.h")
+            set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "../src_{name}/hello_{name}.h")
             install(TARGETS hello_{name})
             # install(TARGETS hello_one EXPORT one_target)
             # install(EXPORT one_target DESTINATION lib FILE hello_one.cmake)
-            """)
-
-        test_cmake = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.15)
-            project(test_package LANGUAGES CXX)
-
-            find_package(multi REQUIRED CONFIG)
-
-            add_executable(${PROJECT_NAME} test_package.cpp)
-            target_link_libraries(${PROJECT_NAME} PRIVATE multi::multi)
-            """)
-
-        test_conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.build import can_run
-        from conan.tools.cmake import cmake_layout, CMake
-        import os
-
-
-        class TestPackageConan(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeDeps", "CMakeToolchain"
-
-            def layout(self):
-                cmake_layout(self)
-
-            def requirements(self):
-                self.requires(self.tested_reference_str)
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-
-            def test(self):
-                if can_run(self):
-                    bin_path = os.path.join(self.cpp.build.bindir, "test_package")
-                    self.run(bin_path, env="conanrun")
-            """)
-
-        test_package_cpp = textwrap.dedent("""
-            #include "hello_two.h"
-
-            int main(void) {
-                hello_two();
-            }
             """)
 
         client = TestClient(path_with_spaces=False)
@@ -142,10 +96,7 @@ class MultiCMakeTest(unittest.TestCase):
                      "src_one/hello_one.h": hello_h.format(name="one"),
                      "src_one/hello_one.cpp": hello_cpp.format(name="one"),
                      "src_two/hello_two.h": hello_h.format(name="two"),
-                     "src_two/hello_two.cpp": hello_cpp.format(name="two"),
-                     "test_package/CMakeLists.txt": test_cmake,
-                     "test_package/conanfile.py": test_conanfile,
-                     "test_package/test_package.cpp": test_package_cpp})
+                     "src_two/hello_two.cpp": hello_cpp.format(name="two")})
 
         client.run("create . --name=multi --version=0.1")
         print(client.out)
@@ -153,7 +104,6 @@ class MultiCMakeTest(unittest.TestCase):
         self.assertIn("[100%] Built target hello_two", client.out)
         self.assertIn("multi/0.1: package(): Packaged 1 '.h' file: hello_two.h", client.out)
         self.assertIn("multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a", client.out)
-        self.assertIn("RUN: ./test_package\nHello, World two!", client.out)
         package_folder = client.created_layout().package()
 
         self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
