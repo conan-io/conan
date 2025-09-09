@@ -61,7 +61,7 @@ def interprocess_lock(conan_home: Path) -> None:
     lock = fasteners.InterProcessLock(filelock_path)
     pid = os.getpid()
     try:
-        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore lock.")
+        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore lock: {filelock_path}.")
         lock.acquire()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been locked.")
         yield
@@ -91,7 +91,7 @@ def interprocess_write_lock(conan_home: Path) -> None:
     lock = fasteners.InterProcessReaderWriterLock(filelock_path)
     pid = os.getpid()
     try:
-        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore write lock.")
+        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore write lock: {filelock_path}")
         lock.acquire_write_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore write has been locked.")
         yield
@@ -121,7 +121,7 @@ def interprocess_read_lock(conan_home: Path) -> None:
     lock = fasteners.InterProcessReaderWriterLock(filelock_path)
     pid = os.getpid()
     try:
-        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore read lock.")
+        ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore read lock: {filelock_path}.")
         lock.acquire_read_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore read has been locked.")
         yield
