@@ -130,7 +130,7 @@ class UploadAPI:
         ConanOutput().title(f"Uploading to remote {remote.name}")
         parallel = self._conan_api.config.get("core.upload:parallel", default=1, check_type=int)
         thread_pool = ThreadPool(parallel) if parallel > 1 else None
-        if not thread_pool or len(package_list._data) <= 1:
+        if not thread_pool or len(package_list._data) <= 1:  # FIXME: Iteration when multiple rrevs
             _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
         else:
             ConanOutput().subtitle(f"Uploading with {parallel} parallel threads")

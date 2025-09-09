@@ -201,6 +201,7 @@ class PackagesList:
         return bool(self._data)
 
     def merge(self, other):
+        assert isinstance(other, PackagesList)
         def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
             for k, v in u.items():
                 if isinstance(v, dict):
@@ -211,6 +212,7 @@ class PackagesList:
         recursive_dict_update(self._data, other._data)
 
     def keep_outer(self, other):
+        assert isinstance(other, PackagesList)
         if not self._data:
             return
 
@@ -271,7 +273,6 @@ class PackagesList:
                 pass
 
     def refs(self):
-        kk
         ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "
                               "removed, use .items() instead", warn_tag="deprecated")
         result = {}
@@ -285,7 +286,12 @@ class PackagesList:
         return result
 
     def walk(self):
-        """ Get all the recipe references in the package list."""
+        """ Iterate the contents of the package list.
+        Every iteration returns [RecipeReference, dict, dict]
+        The first dictionary is the information directly belonging to the recipe-revision.
+        The second dictionary contains PkgReference as keys, and a dictionariy with the values
+        belonging to that specific package reference.
+        """
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
                 recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
@@ -293,18 +299,16 @@ class PackagesList:
                 if t is not None:
                     recipe.timestamp = t
                 packages = {}
-                for package_id, pkg_bundle in rrev_dict.get("packages", {}).items():
-                    prevs = pkg_bundle.get("revisions", {})
-                    for prev, prev_bundle in prevs.items():
-                        t = prev_bundle.pop("timestamp", None)
+                for package_id, pkg_info in rrev_dict.get("packages", {}).items():
+                    prevs = pkg_info.get("revisions", {})
+                    for prev, prev_info in prevs.items():
+                        t = prev_info.pop("timestamp", None)
                         pref = PkgReference(recipe, package_id, prev, t)
-                        packages[pref] = prev_bundle
+                        packages[pref] = prev_info
                 yield recipe, rrev_dict, packages
 
     @staticmethod
     def prefs(ref, recipe_bundle):
-        """ Get all the package references for a given recipe reference given a bundle."""
-        kk
         ConanOutput().warning("PackageLists.prefs() non-public, non-documented method will be "
                               "removed, use .items() instead", warn_tag="deprecated")
         result = {}

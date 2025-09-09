@@ -11,7 +11,7 @@ from conan.errors import ConanException
 
 def summary_remove_list(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package-list so it looks prettier on text output
     """
     cli_out_write("Remove summary:")
     info = results["results"]
