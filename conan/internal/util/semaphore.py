@@ -66,7 +66,10 @@ def interprocess_lock(conan_api: Any) -> None:
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been locked.")
         yield
     except Exception as error:
-        raise ConanException(f"Failed to acquire interprocess lock: {error}")
+        if _raised_by_fasteners(error):
+            raise ConanException(f"Failed to acquire interprocess lock: {error}")
+        else:
+            raise
     finally:
         lock.release()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been released.")
@@ -123,7 +126,10 @@ def interprocess_read_lock(conan_api: Any) -> None:
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore read has been locked.")
         yield
     except Exception as error:
-        raise ConanException(f"Failed to acquire interprocess read lock: {error}")
+        if _raised_by_fasteners(error):
+            raise ConanException(f"Failed to acquire interprocess read lock: {error}")
+        else:
+            raise
     finally:
         lock.release_read_lock()
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore read has been released.")
