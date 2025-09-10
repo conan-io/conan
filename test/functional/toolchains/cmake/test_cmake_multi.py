@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -100,14 +101,26 @@ class MultiCMakeTest(unittest.TestCase):
 
         client.run("create . --name=multi --version=0.1")
         print(client.out)
-        self.assertIn("[100%] Built target hello_one", client.out)
-        self.assertIn("[100%] Built target hello_two", client.out)
-        self.assertIn("multi/0.1: package(): Packaged 1 '.h' file: hello_two.h", client.out)
-        self.assertIn("multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a", client.out)
-        package_folder = client.created_layout().package()
+        if platform.system() != "Windows":
+            self.assertIn("[100%] Built target hello_one", client.out)
+            self.assertIn("[100%] Built target hello_two", client.out)
+            self.assertIn("multi/0.1: package(): Packaged 1 '.h' file: hello_two.h", client.out)
+            self.assertIn("multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a", client.out)
+            package_folder = client.created_layout().package()
 
-        self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
-        self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "lib", "libhello_one.a")))
+            self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
+            self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "lib", "libhello_one.a")))
 
-        self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h")))
-        self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "lib", "libhello_two.a")))
+            self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h")))
+            self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "lib", "libhello_two.a")))
+        else:
+            self.assertIn("multi/0.1: package(): Packaged 1 '.h' file: hello_two.h", client.out)
+            self.assertIn("multi/0.1: package(): Packaged 1 '.lib' file: hello_two.lib", client.out)
+            package_folder = client.created_layout().package()
+
+            self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h")))
+            self.assertFalse(os.path.exists(os.path.join(package_folder, "one", "lib", "hello_one.lib")))
+
+            self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h")))
+            self.assertTrue(os.path.exists(os.path.join(package_folder, "two", "lib", "hello_two.lib")))
+
