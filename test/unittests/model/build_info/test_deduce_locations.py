@@ -288,3 +288,14 @@ def test_several_libs_and_exact_match(lib_name, libs, conanfile):
     result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == f"{folder}/libdir/{lib_name}.lib"
     assert result.type == "static-library"
+
+
+def test_sources(conanfile):
+    folder = temp_folder()
+    save(os.path.join(folder, "src", "mylib.cpp"), "")
+    cppinfo = CppInfo()
+    cppinfo.sources = ["src/mylib.cpp"]
+    cppinfo.set_relative_base_folder(folder)
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location is None
+    assert result.type == "header-library"

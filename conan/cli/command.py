@@ -1,4 +1,5 @@
 import argparse
+import os
 import textwrap
 from contextlib import redirect_stdout
 
@@ -96,6 +97,8 @@ class BaseConanCommand:
                 formatarg, ", ".join(self._help_formatters)))
 
         if out_file:
+            if os.path.dirname(out_file):
+                os.makedirs(os.path.dirname(out_file), exist_ok=True)
             with open(out_file, 'w') as f:
                 with redirect_stdout(f):
                     formatter(info)
@@ -123,10 +126,11 @@ class ConanArgumentParser(argparse.ArgumentParser):
         ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
-        global_conf = self._conan_api.config.global_conf
-        if args.core_conf:
-            self._conan_api.config.set_core_confs(args.core_conf)
 
+        if args.core_conf:
+            self._conan_api._api_helpers.set_core_confs(args.core_conf)  # noqa
+
+        global_conf = self._conan_api._api_helpers.global_conf  # noqa
         # TODO: This might be even better moved to the ConanAPI so users without doing custom
         #  commands can benefit from it
         ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",

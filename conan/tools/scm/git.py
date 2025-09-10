@@ -88,6 +88,9 @@ class Git:
             name, url = r.split(maxsplit=1)
             if name == remote:
                 url, _ = url.rsplit(None, 1)
+                # if the url still has (fetch) or (push) at the end
+                if url.endswith("(fetch)") or url.endswith("(push)"):
+                    url, _ = url.rsplit(None, 1)
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
                 return url
@@ -117,8 +120,15 @@ class Git:
             self.run(f"fetch {remote} --refetch --dry-run {commit}")
             return True
         except (Exception,):
-            # Don't raise an error because the fetch could fail for many more reasons than the branch.
-            return False
+            # For example, if using an older git<2.36, see
+            # https://github.com/conan-io/conan/issues/18470, then lets try the old approach
+            try:
+                # This will raise if commit not present.
+                self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
+                return True
+            except (Exception,):
+                # Don't raise an error because it could fail for many more reasons.
+                return False
 
     def is_dirty(self, repository=False):
         """

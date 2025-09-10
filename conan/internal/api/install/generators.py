@@ -30,6 +30,7 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "XcodeDeps": "conan.tools.apple",
                "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
+               "PremakeToolchain": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
                "QbsDeps": "conan.tools.qbs",
@@ -167,7 +168,8 @@ def _receive_generators(conanfile):
             names = [c.__name__ if not isinstance(c, str) else c for c in build_req.generator_info]
             conanfile.output.warning(f"Tool-require {build_req} adding generators: {names}",
                                      warn_tag="experimental")
-            conanfile.generators = build_req.generator_info + conanfile.generators
+            # Generators can be defined as a tuple in recipes, ensure we don't break if so
+            conanfile.generators = build_req.generator_info + list(conanfile.generators)
 
 
 def _generate_aggregated_env(conanfile):
@@ -252,7 +254,7 @@ def relativize_path(path, conanfile, placeholder, normalize=True):
         return path
     try:
         common_path = os.path.commonpath([path, conanfile.generators_folder, base_common_folder])
-        if common_path == base_common_folder:
+        if common_path.replace("\\", "/") == base_common_folder.replace("\\", "/"):
             rel_path = os.path.relpath(path, conanfile.generators_folder)
             new_path = os.path.join(placeholder, rel_path)
             return new_path.replace("\\", "/") if normalize else new_path

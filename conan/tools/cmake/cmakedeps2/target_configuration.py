@@ -51,6 +51,8 @@ class TargetConfigurationTemplate2:
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
             for d in transitive_reqs.values():
+                if d.package_type is PackageType.APP:
+                    continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
@@ -78,7 +80,11 @@ class TargetConfigurationTemplate2:
                     dep_comp = dep.cpp_info.components.get(required_comp)
                     if dep_comp is None:
                         # It must be the interface pkgname::pkgname target
-                        assert required_pkg == required_comp
+                        if required_pkg != required_comp:
+                            msg = (f"{self._conanfile} recipe cpp_info did .requires to "
+                                   f"'{required_pkg}::{required_comp}' but component "
+                                   f"'{required_comp}' not found in {required_pkg}")
+                            raise ConanException(msg)
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED
@@ -116,6 +122,23 @@ class TargetConfigurationTemplate2:
 
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
+        seen_aliases = set()
+        root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+        root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
+        for lib in libs.values():
+            for alias in lib.get("cmake_target_aliases", []):
+                if alias == root_target_name:
+                    raise ConanException(f"Can't define an alias '{alias}' for the "
+                                         f"root target '{root_target_name}' in {self._conanfile}. "
+                                         f"Changing the default target should be done with the "
+                                         f"'cmake_target_name' property.")
+                if alias in seen_aliases:
+                    raise ConanException(f"Alias '{alias}' already defined in {self._conanfile}. ")
+                seen_aliases.add(alias)
+                if alias in libs:
+                    raise ConanException(f"Alias '{alias}' already defined as a target in "
+                                         f"{self._conanfile}. ")
+
         f = self._cmakedeps.get_cmake_filename(self._conanfile)
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
@@ -158,12 +181,16 @@ class TargetConfigurationTemplate2:
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
                                              pkg_folder_var)
                 if target is not None:
+                    cmake_target_aliases = self._get_aliases(name)
+                    target["cmake_target_aliases"] = cmake_target_aliases
                     libs[target_name] = target
         else:
             target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             target_name = target_name or f"{pkg_name}::{pkg_name}"
             target = self._get_cmake_lib(cpp_info, None, pkg_folder, pkg_folder_var)
             if target is not None:
+                cmake_target_aliases = self._get_aliases()
+                target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
         return libs
 
@@ -180,7 +207,7 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
-        system_libs = " ".join(info.system_libs)
+        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
@@ -189,7 +216,8 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(info.cflags),
                   "sharedlinkflags": " ".join(info.sharedlinkflags),
                   "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": system_libs
+                  "system_libs": " ".join(info.system_libs),
+                  "sources": " ".join(sources)
         }
         # System frameworks (only Apple OS)
         if info.frameworks:
@@ -226,11 +254,16 @@ class TargetConfigurationTemplate2:
             target["link_languages"] = link_languages
         return target
 
+    def _get_aliases(self, comp_name=None):
+        aliases = self._cmakedeps.get_property("cmake_target_aliases", self._conanfile,
+                                               comp_name, check_type=list) or []
+        return aliases
+
     def _add_root_lib_target(self, libs, pkg_name, cpp_info):
         """
-        Addd a new pkgname::pkgname INTERFACE target that depends on default_components or
+        Add a new pkgname::pkgname INTERFACE target that depends on default_components or
         on all other library targets (not exes)
-        It will not be added if there exists already a pkgname::pkgname target.
+        It will not be added if there exists already a pkgname::pkgname target (Or an alias exists).
         """
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
@@ -246,8 +279,11 @@ class TargetConfigurationTemplate2:
                     all_requires[comp_name] = True  # It is an interface, full link
             else:
                 all_requires = {k: True for k in libs.keys()}
+            # This target might have an alias, so we need to check it
+            cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
-                                      "requires": all_requires}
+                                      "requires": all_requires,
+                                      "cmake_target_aliases": cmake_target_aliases}
 
     def _get_exes(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var):
         exes = {}
@@ -326,6 +362,12 @@ class TargetConfigurationTemplate2:
             message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
+        {% for alias in lib_info.get("cmake_target_aliases", []) %}
+        if(NOT TARGET {{alias}})
+            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            add_library({{alias}} ALIAS {{lib}})
+        endif()
+        {% endfor %}
         {% if lib_info.get("includedirs") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {{config_wrapper(config, lib_info["includedirs"])}})
@@ -400,7 +442,8 @@ class TargetConfigurationTemplate2:
         {% endif %}
 
         {% if lib_info.get("system_libs") %}
-        target_link_libraries({{lib}} INTERFACE {{lib_info["system_libs"]}})
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     {{config_wrapper(config, lib_info["system_libs"])}})
         {% endif %}
         {% if lib_info.get("frameworks") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
@@ -416,6 +459,11 @@ class TargetConfigurationTemplate2:
             set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
                          $<$<COMPILE_LANGUAGE:C>:-F{{lib_info["package_framework"]["frameworkdir"]}}>)
         endif()
+        {% endif %}
+
+        {% if lib_info.get("sources") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
+                     {{config_wrapper(config, lib_info["sources"] )}})
         {% endif %}
         {% endfor %}
 

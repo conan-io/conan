@@ -218,3 +218,28 @@ def test_msbuilddeps_relocatable(withdepl):
             text = text.replace('\\', '/')
             folder = c.current_folder.replace('\\', '/')
             assert folder not in text
+
+
+def test_msbuilddeps_consume_meson():
+    c = TestClient()
+    pkga = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "pkga"
+            version = "0.1"
+            package_type = "static-library"
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "libpkga.a"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["pkga"]
+        """)
+
+    c.save({"pkga/conanfile.py": pkga,
+            "app/conanfile.py": GenConanfile().with_requires("pkga/0.1")
+                                              .with_settings("arch", "build_type")})
+    c.run("create pkga -s arch=x86_64")
+    c.run("install app -g MSBuildDeps -s arch=x86_64")
+    deps = c.load("app/conan_pkga_vars_release_x64.props")
+    assert "<ConanpkgaLibraries>libpkga.a;</ConanpkgaLibraries>" in deps

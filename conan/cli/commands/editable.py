@@ -77,5 +77,6 @@ def editable_list(conan_api, parser, subparser, *args):
     """
     List all the packages in editable mode.
     """
+    parser.parse_args(*args)
     editables = conan_api.local.editable_list()
     return editables

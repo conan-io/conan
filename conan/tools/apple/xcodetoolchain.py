@@ -1,7 +1,7 @@
 import textwrap
 
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_key
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
 from conan.internal.util.files import save
@@ -13,7 +13,7 @@ class XcodeToolchain(object):
 
     _vars_xconfig = textwrap.dedent("""\
         // Definition of toolchain variables
-        {macosx_deployment_target}
+        {apple_deployment_target}
         {clang_cxx_library}
         {clang_cxx_language_standard}
         """)
@@ -63,27 +63,32 @@ class XcodeToolchain(object):
         return cppstd
 
     @property
-    def _macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
-                                                      self.os_version) if self.os_version else ""
+    def _apple_deployment_target(self):
+        deployment_target_key = xcodebuild_deployment_target_key(self._conanfile.settings.get_safe("os"))
+        return '{}{}={}'.format(deployment_target_key,
+                                _xcconfig_conditional(self._conanfile.settings, self.configuration),
+                                self.os_version) if deployment_target_key and self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings,
+                                                                     self.configuration),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
         return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                          self._cppstd) if self._cppstd else ""
+
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings, self.configuration),
-                                                                       self.extension)
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings,
+                                                                       self.configuration),
+                                           self.extension)
 
     @property
     def _vars_xconfig_content(self):
-        ret = self._vars_xconfig.format(macosx_deployment_target=self._macosx_deployment_target,
+        ret = self._vars_xconfig.format(apple_deployment_target=self._apple_deployment_target,
                                         clang_cxx_library=self._clang_cxx_library,
                                         clang_cxx_language_standard=self._clang_cxx_language_standard)
         return ret

@@ -13,8 +13,9 @@ from conan.internal.util.files import load, save
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_package_framework", "_frameworks", "_libs", "_defines",
-                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags"]
+                    "_cflags", "_cxxflags", "_sharedlinkflags", "_exelinkflags", "_sources"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
+_SINGLE_VALUE_VARS = "_type", "_exe", "_location", "_link_location", "_languages"
 
 
 class MockInfoProperty:
@@ -81,6 +82,7 @@ class _Component:
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
         self._objects = None  # linker flags
+        self._sources = None  # source files
         self._exe = None  # application executable, only 1 allowed, following CPS
         self._languages = None
 
@@ -120,6 +122,7 @@ class _Component:
             "sharedlinkflags": self._sharedlinkflags,
             "exelinkflags": self._exelinkflags,
             "objects": self._objects,
+            "sources": self._sources,
             "sysroot": self._sysroot,
             "requires": self._requires,
             "properties": self._properties,
@@ -381,6 +384,16 @@ class _Component:
         self._objects = value
 
     @property
+    def sources(self):
+        if self._sources is None:
+            self._sources = []
+        return self._sources
+
+    @sources.setter
+    def sources(self, value):
+        self._sources = value
+
+    @property
     def sysroot(self):
         if self._sysroot is None:
             self._sysroot = ""
@@ -448,6 +461,12 @@ class _Component:
                     merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
+
+        for varname in _SINGLE_VALUE_VARS:  # To allow editable of .exe/.location
+            other_values = getattr(other, varname)
+            if other_values is not None:
+                # Just overwrite the existing value, not possible to append
+                setattr(self, varname, other_values)
 
         if other.requires:
             current_values = self.get_init("requires", [])
@@ -817,7 +836,7 @@ class CppInfo:
                 if r not in ret:
                     ret.append(r)
         # Then split the names
-        ret = [r.split("::") if "::" in r else (None, r) for r in ret]
+        ret = [r.split("::", 1) if "::" in r else (None, r) for r in ret]
         return ret
 
     def deduce_full_cpp_info(self, conanfile):

@@ -91,11 +91,12 @@ def test_project_xcodebuild(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+    client.run("create . --build=missing -s os.version=15.0 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+    assert "MACOSX_DEPLOYMENT_TARGET=15.0" in client.out
     assert "xcodebuild: error: invalid option" not in client.out
     assert "hello/0.1: Hello World Release!" in client.out
     assert "App Release!" in client.out
-    client.run("create . -s build_type=Debug --build=missing")
+    client.run("create . -s build_type=Debug -s os.version=15.0 --build=missing")
     assert "hello/0.1: Hello World Debug!" in client.out
     assert "App Debug!" in client.out
 

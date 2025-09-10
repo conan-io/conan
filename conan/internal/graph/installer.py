@@ -5,8 +5,9 @@ from multiprocessing.pool import ThreadPool
 from conan.api.output import ConanOutput, Color
 from conan.internal.methods import run_build_method, run_package_method
 from conan.internal.api.install.generators import write_generators
-from conan.internal.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD,
+                                        BINARY_EDITABLE, BINARY_UPDATE, BINARY_EDITABLE_BUILD,
+                                        BINARY_SKIP)
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
@@ -94,7 +95,8 @@ class _PackageBuilder:
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
-            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed", error_type="exception")
+            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed",
+                                   error_type="exception")
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanException):
                 raise exc
@@ -355,12 +357,12 @@ class BinaryInstaller:
         base_path = os.path.dirname(conanfile_path)
 
         conanfile.folders.set_base_folders(base_path, output_folder)
-        output = conanfile.output
-        output.info("Rewriting files of editable package "
-                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, self._hook_manager, self._home_folder)
 
         if node.binary == BINARY_EDITABLE_BUILD:
+            output = conanfile.output
+            output.info("Rewriting files of editable package "
+                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+            write_generators(conanfile, self._hook_manager, self._home_folder)
             run_build_method(conanfile, self._hook_manager)
 
         rooted_base_path = base_path if conanfile.folders.root is None else \
@@ -457,6 +459,10 @@ class BinaryInstaller:
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)
+        try:
+            conanfile.conf_info.validate()
+        except ConanException as e:
+            raise ConanException(f"{conanfile}: Error in package_info() method:\n\t{str(e)}")
 
     @staticmethod
     def _call_finalize_method(conanfile, finalize_folder):

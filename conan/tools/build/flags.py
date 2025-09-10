@@ -66,6 +66,23 @@ def architecture_flag(conanfile):
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
+    elif compiler == "emcc":
+        if arch == "wasm64":
+            return "-sMEMORY64=1"
+    return ""
+
+
+def architecture_link_flag(conanfile):
+    """
+    returns exclusively linker flags specific to the target architecture and compiler
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    arch = conanfile.settings.get_safe("arch")
+    if compiler == "emcc":
+        # Emscripten default output is WASM since 1.37.x (long time ago)
+        # Deactivate WASM output forcing asm.js output instead
+        if arch == "asm.js":
+            return "-sWASM=0"
     return ""
 
 
@@ -78,7 +95,7 @@ def libcxx_flags(conanfile):
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
         lib = f'-stdlib={libcxx}'
-    elif compiler == "clang" or compiler == "intel-cc":
+    elif compiler in ("clang", "intel-cc", "emcc"):
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
         elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -93,7 +110,7 @@ def libcxx_flags(conanfile):
     elif compiler == "qcc":
         lib = f'-Y _{libcxx}'
 
-    if compiler in ['clang', 'apple-clang', 'gcc']:
+    if compiler in ['clang', 'apple-clang', 'gcc', 'emcc']:
         if libcxx == "libstdc++":
             stdlib11 = "_GLIBCXX_USE_CXX11_ABI=0"
         elif libcxx == "libstdc++11" and conanfile.conf.get("tools.gnu:define_libcxx11_abi",
@@ -134,14 +151,15 @@ def build_type_flags(conanfile):
     if not compiler or not build_type:
         return []
 
-    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
-    # Modules/Platform/Windows-MSVC.cmake
     comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
                                    default={})
     clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
 
     if compiler == "msvc" or clangcl:
-        if clangcl or (vs_toolset and "clang" in vs_toolset):
+        # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+        # Modules/Platform/Windows-MSVC.cmake
+        # FIXME: This condition seems legacy, as no more "clang" exists in Conan toolsets
+        if vs_toolset and "clang" in vs_toolset:
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
                      "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],
@@ -177,6 +195,18 @@ def build_type_flags(conanfile):
             return flags
     return []
 
+def threads_flags(conanfile):
+    """
+    returns flags specific to the threading model used by the compiler
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    threads = conanfile.settings.get_safe("compiler.threads")
+    if compiler == "emcc":
+        if threads == "posix":
+            return ["-pthread"]
+        elif threads == "wasm_workers":
+            return ["-sWASM_WORKERS=1"]
+    return []
 
 def llvm_clang_front(conanfile):
     # Only Windows clang with MSVC backend (LLVM/Clang, not MSYS2 clang)

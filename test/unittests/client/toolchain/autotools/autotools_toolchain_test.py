@@ -285,6 +285,27 @@ def test_architecture_flag(config):
     assert expected in env["LDFLAGS"]
     assert "-debug" not in env["LDFLAGS"]
 
+@pytest.mark.parametrize("config", [
+    ("gcc", "x86_64", ""),
+    ("emcc", "wasm", ""),
+    ("emcc", "wasm64", ""),
+    ("emcc", "asm.js", "-sWASM=0")])
+def test_architecture_link_flag(config):
+    compiler, arch, expected = config
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings(
+        {"build_type": "Release",
+         "os": "Emscripten",
+         "compiler": compiler,
+         "arch": arch})
+    conanfile.settings_build = conanfile.settings
+    be = AutotoolsToolchain(conanfile)
+    assert be.arch_ld_flag == expected
+    env = be.vars()
+    assert "" in env["CXXFLAGS"]
+    assert "" in env["CFLAGS"]
+    assert expected in env["LDFLAGS"]
+
 
 @pytest.mark.parametrize("compiler", ['msvc'])
 def test_build_type_flag(compiler):
@@ -377,10 +398,10 @@ def test_crossbuild_to_android(build_env_mock):
     """
     Issue related: https://github.com/conan-io/conan/issues/17441
     """
-    vars = MagicMock()
+    buildvars = MagicMock()
     # VirtualBuildEnv defines these variables
-    vars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
-    build_env_mock.return_value = vars
+    buildvars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
+    build_env_mock.return_value = buildvars
 
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Android", "arch": "armv8"})

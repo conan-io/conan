@@ -6,8 +6,8 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, \
-    build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
+    build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
@@ -52,6 +52,8 @@ class AutotoolsToolchain:
         self.cppstd = cppstd_flag(self._conanfile)
         self.cstd = cstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile)
+        self.arch_ld_flag = architecture_link_flag(self._conanfile)
+        self.threads_flags = threads_flags(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
@@ -174,7 +176,9 @@ class AutotoolsToolchain:
             if self._conanfile.settings.compiler.runtime == "dynamic":
                 runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
                 library = "msvcrtd" if runtime_type == "Debug" else "msvcrt"
-                return f"-D_DLL -D_MT -Xclang --dependent-lib={library}"
+                # The -D_DEBUG is important to link with the Debug MSVCP140D.dll
+                debug = "-D_DEBUG " if runtime_type == "Debug" else ""
+                return f"{debug}-D_DLL -D_MT -Xclang --dependent-lib={library}"
             return ""  # By default it already link statically
 
         flag = msvc_runtime_flag(self._conanfile)
@@ -200,7 +204,7 @@ class AutotoolsToolchain:
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
-               self.sysroot_flag]
+               self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
@@ -211,7 +215,7 @@ class AutotoolsToolchain:
     @property
     def cflags(self):
         fpic = "-fPIC" if self.fpic else None
-        ret = [self.cstd, self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
+        ret = [self.cstd, self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
@@ -221,7 +225,7 @@ class AutotoolsToolchain:
 
     @property
     def ldflags(self):
-        ret = [self.arch_flag, self.sysroot_flag]
+        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
@@ -240,6 +244,17 @@ class AutotoolsToolchain:
         conf_flags = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
+
+    def _include_obj_arc_flags(self, env):
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        fobj_arc = ""
+        if enable_arc:
+            fobj_arc = "-fobjc-arc"
+        if enable_arc is False:
+            fobj_arc = "-fno-objc-arc"
+        if fobj_arc:
+            env.append('OBJCFLAGS', [fobj_arc])
+            env.append('OBJCXXFLAGS', [fobj_arc])
 
     def environment(self):
         env = Environment()
@@ -274,6 +289,8 @@ class AutotoolsToolchain:
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        # Objective C/C++
+        self._include_obj_arc_flags(env)
         # Issue related: https://github.com/conan-io/conan/issues/15486
         if self._is_cross_building and self._conanfile.conf_build:
             compilers_build_mapping = (

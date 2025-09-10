@@ -14,9 +14,10 @@ DEFAULT_PROFILE_NAME = "default"
 
 class ProfilesAPI:
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
-        self._home_paths = HomePaths(conan_api.cache_folder)
+        self._api_helpers = api_helpers
+        self._home_paths = HomePaths(conan_api.home_folder)
 
     def get_default_host(self):
         """
@@ -25,7 +26,7 @@ class ProfilesAPI:
         """
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            global_conf = self._conan_api.config.global_conf
+            global_conf = self._api_helpers.global_conf
             default_profile = global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
@@ -42,7 +43,7 @@ class ProfilesAPI:
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        global_conf = self._conan_api.config.global_conf
+        global_conf = self._api_helpers.global_conf
         default_profile = global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
@@ -57,37 +58,37 @@ class ProfilesAPI:
         build_profiles = args.profile_build or [self.get_default_build()]
         host_profiles = args.profile_host or [self.get_default_host()]
 
-        global_conf = self._conan_api.config.global_conf
+        global_conf = self._api_helpers.global_conf
         global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
         cwd = os.getcwd()
         profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
                                           args.conf_build, cwd, cache_settings,
-                                          profile_plugin, global_conf)
+                                          profile_plugin, global_conf, context="build")
         profile_host = self._get_profile(host_profiles, args.settings_host, args.options_host, args.conf_host,
-                                         cwd, cache_settings, profile_plugin, global_conf)
+                                         cwd, cache_settings, profile_plugin, global_conf, context="host")
         return profile_host, profile_build
 
-    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None, context=None):
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
-        global_conf = self._conan_api.config.global_conf
+        global_conf = self._api_helpers.global_conf
         global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
 
         profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,
-                                    profile_plugin, global_conf)
+                                    profile_plugin, global_conf, context=context)
         return profile
 
     def _get_profile(self, profiles, settings, options, conf, cwd, cache_settings,
-                     profile_plugin, global_conf):
+                     profile_plugin, global_conf, context):
         loader = ProfileLoader(self._conan_api.cache_folder)
-        profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile = loader.from_cli_args(profiles, settings, options, conf, cwd, context)
         if profile_plugin is not None:
             try:
                 profile_plugin(profile)

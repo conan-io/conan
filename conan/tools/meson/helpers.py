@@ -2,8 +2,6 @@ from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
 from conan.internal.model.options import _PackageOption
 
-__all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag", "to_cstd_flag"]
-
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
 _meson_system_map = {
     'Android': 'android',
@@ -49,10 +47,11 @@ _meson_cpu_family_map = {
     'sparc': ('sparc', 'sparc', 'big'),
     'sparcv9': ('sparc64', 'sparc64', 'big'),
     'wasm': ('wasm32', 'wasm32', 'little'),
+    'wasm64': ('wasm64', 'wasm64', 'little'),
     'x86': ('x86', 'x86', 'little'),
     'x86_64': ('x86_64', 'x86_64', 'little'),
     'riscv32': ('riscv32', 'riscv32', 'little'),
-    'riscv64': ('riscv64', 'riscv32', 'little')
+    'riscv64': ('riscv64', 'riscv64', 'little')
 }
 
 

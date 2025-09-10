@@ -9,7 +9,7 @@ on:
 
 jobs:
   osx_setup:
-    runs-on: macos-14
+    runs-on: macos-15
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -47,7 +47,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
 
       - name: Cache CMake and Bazel installations
         id: cache-tools
@@ -115,7 +115,7 @@ jobs:
 
   osx_tests:
     needs: osx_setup
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: true
       matrix:
@@ -153,6 +153,12 @@ jobs:
             ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
 
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -168,7 +174,7 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
-          brew install xcodegen make libtool zlib autoconf automake ninja
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
           cmake --version
           bazel --version
