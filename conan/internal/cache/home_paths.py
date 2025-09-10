@@ -88,3 +88,9 @@ class HomePaths:
     @property
     def config_version_path(self):
         return os.path.join(self._home, "config_version.json")
+
+    @property
+    def filelock_folder(self):
+        """ Folder reserved for file locks on parallel operations
+        """
+        return os.path.join(self._home, "semaphores")
