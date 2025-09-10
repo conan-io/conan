@@ -77,20 +77,14 @@ class MultiCMakeTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.15)
             project(hello_{name} LANGUAGES CXX)
 
-            # find_package(hello_one REQUIRED CONFIG)
-
             add_library(hello_{name} ../src_{name}/hello_{name}.cpp)
             target_include_directories(hello_{name} PUBLIC ../src_{name})
 
-            # target_link_libraries(hello_two PRIVATE hello_one)
-
             set_target_properties(hello_{name} PROPERTIES PUBLIC_HEADER "../src_{name}/hello_{name}.h")
             install(TARGETS hello_{name})
-            # install(TARGETS hello_one EXPORT one_target)
-            # install(EXPORT one_target DESTINATION lib FILE hello_one.cmake)
             """)
 
-        client = TestClient(path_with_spaces=False)
+        client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "cmake_one/CMakeLists.txt": cmakelist.format(name="one"),
                      "cmake_two/CMakeLists.txt": cmakelist.format(name="two"),
@@ -100,7 +94,7 @@ class MultiCMakeTest(unittest.TestCase):
                      "src_two/hello_two.cpp": hello_cpp.format(name="two")})
 
         client.run("create . --name=multi --version=0.1")
-        print(client.out)
+
         if platform.system() != "Windows":
             self.assertIn("[100%] Built target hello_one", client.out)
             self.assertIn("[100%] Built target hello_two", client.out)

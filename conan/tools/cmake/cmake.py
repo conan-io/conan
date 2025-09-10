@@ -83,9 +83,9 @@ class CMake:
                                     ``self.folders.source`` at the ``layout()`` method.
         :param cli_args: List of arguments ``[arg1, arg2, ...]`` that will be passed
                          as extra CLI arguments to pass to cmake invocation
-        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
-                                and the ``package_folder``. If not provided, files will be placed
-                                in the ``build_folder`` and the ``package_folder`` root.
+        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                                and the ``package_folder``. If not provided, files will be placed
+                                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -106,8 +106,7 @@ class CMake:
         if self._toolchain_file:
             toolpath = self._toolchain_file
             if build_subfolder:
-                bsf = build_subfolder.replace("\\", "/")
-                toolpath = os.path.join(('../' * len(bsf.split('/'))).rstrip('/'), self._toolchain_file)
+                toolpath = os.path.relpath(self._toolchain_file, start=build_subfolder)
             toolpath = toolpath.replace("\\", "/")
             arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
         if self._conanfile.package_folder:
@@ -194,9 +193,9 @@ class CMake:
         :param build_tool_args: A list of arguments ``[barg1, barg2, ...]`` for the underlying
                                 build system that will be passed to the command
                                 line after the ``--`` indicator: ``cmake --build ... -- barg1 barg2``
-        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
-                                and the ``package_folder``. If not provided, files will be placed
-                                in the ``build_folder`` and the ``package_folder`` root.
+        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                                and the ``package_folder``. If not provided, files will be placed
+                                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -214,9 +213,9 @@ class CMake:
                            not build type.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` for the underlying build system
                          that will be passed to the command line: ``cmake --install ... arg1 arg2``
-        :param build_subfolder: The name of a subfolder to be created inside the ``build_folder``
-                                and the ``package_folder``. If not provided, files will be placed
-                                in the ``build_folder`` and the ``package_folder`` root.
+        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                                and the ``package_folder``. If not provided, files will be placed
+                                                in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
