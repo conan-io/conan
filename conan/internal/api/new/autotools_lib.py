@@ -109,8 +109,7 @@ class {{package_name}}TestConan(ConanFile):
 
     def test(self):
         if can_run(self):
-            cmd = os.path.join(self.cpp.build.bindir, "main")
-            self.run(cmd, env="conanrun")
+            self.run("./main", env="conanrun")
 """
 
 test_configure_ac = """
@@ -126,6 +125,7 @@ AC_OUTPUT
 test_makefile_am = """
 bin_PROGRAMS = main
 main_SOURCES = main.cpp
+main_LDADD=$(LDFLAGS)
 """
 
 autotools_lib_files = {"conanfile.py": conanfile_sources_v2,

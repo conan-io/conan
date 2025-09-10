@@ -2,6 +2,7 @@ import os
 
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.util.files import save
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
@@ -10,6 +11,7 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, b
     libcxx_flags, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.gnu.wrappers import compile_wrapper, lib_wrapper
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -206,6 +208,9 @@ class GnuToolchain:
                     ret[env_var] = compiler  # User/tools ones have precedence
         return ret
 
+    def _wrapper_path(self, p):
+        return os.path.join(self._conanfile.generators_folder, "wrappers", p)
+
     def _initialize_default_extra_env(self):
         """Initialize the default environment variables."""
         # If it's an Android cross-compilation
@@ -213,11 +218,14 @@ class GnuToolchain:
         if not extra_env_vars:
             # Normally, these are the most common default flags used by MSVC in Windows
             if is_msvc(self._conanfile):
-                extra_env_vars = {"CC": "cl -nologo",
-                                  "CXX": "cl -nologo",
-                                  "LD": "link -nologo",
-                                  "AR": "lib",
+                # FIXME: Proof of concept, should this allow configuration?
+                cl_wrapper = unix_path(self._conanfile, self._wrapper_path("compile"))
+                ar_wrapper = unix_path(self._conanfile, self._wrapper_path("ar-lib"))
+                extra_env_vars = {"CC": f"{cl_wrapper} cl -nologo",
+                                  "CXX": f"{cl_wrapper} cl -nologo",
                                   "NM": "dumpbin -symbols",
+                                  "LD": 'link -nologo',
+                                  "AR": f'{ar_wrapper} "lib -nologo"',
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
@@ -357,6 +365,7 @@ class GnuToolchain:
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
+        # FIXME: Is LIBS missing here?
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Objective C/C++
@@ -377,3 +386,6 @@ class GnuToolchain:
         }
         save_toolchain_args(args, namespace=self._namespace)
         VCVars(self._conanfile).generate()
+        if is_msvc(self._conanfile):
+            save(self._wrapper_path("compile"), compile_wrapper)
+            save(self._wrapper_path("ar-lib"), lib_wrapper)
