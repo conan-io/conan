@@ -306,7 +306,7 @@ class ListAPI:
             pkglist.add_prefs(ref, [pref])
             pkglist.add_configurations({pref: candidate.binary_config})
             # Add the diff data
-            rev_dict = pkglist._data[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict = pkglist.recipe_info(ref)
             rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
@@ -319,7 +319,7 @@ class ListAPI:
         result = MultiPackagesList()
         for r in remotes:
             result_pkg_list = PackagesList()
-            for ref, recipe_bundle, packages in package_list.walk():
+            for ref, packages in package_list.items():
                 ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
                 ref_no_rev.revision = None
                 try:
@@ -338,6 +338,7 @@ class ListAPI:
                         continue
                     if pref in prevs:
                         result_pkg_list.add_prefs(ref, [pref])
+                        recipe_bundle = package_list.recipe_info(ref)
                         info = recipe_bundle["packages"][pref.package_id]["info"]
                         result_pkg_list.add_configurations({pref: info})
             if result_pkg_list:

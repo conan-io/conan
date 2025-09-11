@@ -72,7 +72,8 @@ class DownloadCache:
 
         all_refs = set()
         if package_list is not None:
-            for ref, ref_info, packages in package_list.walk():
+            for ref, packages in package_list.items():
+                ref_info = package_list.recipe_info(ref)
                 if not only_upload or ref_info.get("upload") or any(p.get("upload") for p in packages.values()):
                     all_refs.add(str(ref))
 

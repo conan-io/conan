@@ -83,8 +83,9 @@ class DownloadAPI:
         """Download the recipes and packages specified in the ``package_list`` from the remote,
         parallelized based on ``core.download:parallel``"""
         def _download_pkglist(pkglist):
-            for ref, ref_dict, packages in pkglist.walk():
+            for ref, packages in pkglist.items():
                 self.recipe(ref, remote, metadata)
+                ref_dict = pkglist.recipe_info(ref)
                 ref_dict.pop("files", None)
                 ref_dict.pop("upload-urls", None)
                 for pref, pkg_dict in packages.items():

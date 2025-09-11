@@ -28,9 +28,10 @@ class UploadUpstreamChecker:
     def __init__(self, app: ConanApp):
         self._app = app
 
-    def check(self, upload_bundle, remote, force):
-        for ref, recipe_bundle, packages in upload_bundle.walk():
-            self._check_upstream_recipe(ref, recipe_bundle, remote, force)
+    def check(self, package_list, remote, force):
+        for ref, packages in package_list.items():
+            recipe_info = package_list.recipe_info(ref)
+            self._check_upstream_recipe(ref, recipe_info, remote, force)
             for pref, prev_bundle in packages.items():
                 self._check_upstream_package(pref, prev_bundle, remote, force)
 
@@ -85,7 +86,7 @@ class PackagePreparator:
 
     def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle, packages in pkg_list.walk():
+        for ref, packages in pkg_list.items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -97,6 +98,7 @@ class PackagePreparator:
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
             # Just in case it was defined from a previous run
+            bundle = pkg_list.recipe_info(ref)
             bundle.pop("files", None)
             bundle.pop("upload-urls", None)
             if bundle.get("upload"):
@@ -227,7 +229,8 @@ class UploadExecutor:
         self._app = app
 
     def upload(self, upload_data, remote):
-        for ref, bundle, packages in upload_data.walk():
+        for ref, packages in upload_data.items():
+            bundle = upload_data.recipe_info(ref)
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
             for pref, prev_bundle in packages.items():
@@ -317,7 +320,8 @@ def _metadata_files(folder, metadata):
 
 
 def gather_metadata(package_list, cache, metadata):
-    for rref, recipe_bundle, packages in package_list.walk():
+    for rref, packages in package_list.items():
+        recipe_bundle = package_list.recipe_info(rref)
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
             files = _metadata_files(metadata_folder, metadata)

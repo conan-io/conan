@@ -285,7 +285,7 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def walk(self):
+    def items(self):
         """ Iterate the contents of the package list.
         Every iteration returns [RecipeReference, dict, dict]
         The first dictionary is the information directly belonging to the recipe-revision.
@@ -305,7 +305,13 @@ class PackagesList:
                         t = prev_info.pop("timestamp", None)
                         pref = PkgReference(recipe, package_id, prev, t)
                         packages[pref] = prev_info
-                yield recipe, rrev_dict, packages
+                yield recipe, packages
+
+    def recipe_info(self, ref):
+        """ gives read/write access to the dictionary containing a specific RecipeReference
+        information
+        """
+        return self._data[str(ref)]["revisions"][ref.revision]
 
     @staticmethod
     def prefs(ref, recipe_bundle):

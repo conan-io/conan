@@ -82,7 +82,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list[cache_name]
-        refs_to_remove = list(package_list.walk())
+        refs_to_remove = list(package_list.items())
         if not refs_to_remove:  # the package list might contain only refs, no revs
             ConanOutput().warning("Nothing to remove, package list do not contain recipe revisions")
     else:

@@ -38,14 +38,14 @@ class UploadAPI:
             A ``force_upload`` key will be added to the entries that will be uploaded.
         """
         app = ConanApp(self._conan_api)
-        for ref, ref_info, _ in package_list.walk():
+        for ref, _ in package_list.items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
-                ref_info["packages"] = {}
+                package_list.recipe_info(ref)["packages"] = {}
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 

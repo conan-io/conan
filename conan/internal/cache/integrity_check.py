@@ -22,7 +22,7 @@ class IntegrityChecker:
 
     def check(self, pkg_list):
         corrupted = False
-        for ref, _, packages in pkg_list.walk():
+        for ref, packages in pkg_list.items():
             corrupted = self._recipe_corrupted(ref) or corrupted
             for pref, _ in packages.items():
                 corrupted = self._package_corrupted(pref) or corrupted

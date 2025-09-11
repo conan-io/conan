@@ -109,7 +109,7 @@ class CacheAPI:
             for f in backup_files:
                 remove(f)
 
-        for ref, _, packages in package_list.walk():
+        for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
@@ -135,10 +135,11 @@ class CacheAPI:
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
-        for ref, ref_bundle, packages in package_list.walk():
+        for ref, packages in package_list.items():
             ref_layout = cache.recipe_layout(ref)
             recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
             recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
+            ref_bundle = package_list.recipe_info(ref)
             ref_bundle["recipe_folder"] = recipe_folder
             out.info(f"Saving {ref}: {recipe_folder}")
             # Package only selected folders, not DOWNLOAD one
@@ -194,7 +195,8 @@ class CacheAPI:
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        for ref, ref_bundle, packages in package_list.walk():
+        for ref, packages in package_list.items():
+            ref_bundle = package_list.recipe_info(ref)
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
             try:
