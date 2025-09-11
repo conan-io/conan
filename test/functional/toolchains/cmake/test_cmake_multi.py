@@ -93,10 +93,10 @@ def test_multi_cMake():
     client.run("create . --name=multi --version=0.1")
 
     if platform.system() != "Windows":
-        "[100%] Built target hello_one" in client.out
-        "[100%] Built target hello_two" in client.out
-        "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
-        "multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a" in client.out
+        assert "[100%] Built target hello_one" in client.out
+        assert "[100%] Built target hello_two" in client.out
+        assert "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
+        assert "multi/0.1: package(): Packaged 1 '.a' file: libhello_two.a" in client.out
         package_folder = client.created_layout().package()
 
         assert not os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h"))
@@ -105,8 +105,8 @@ def test_multi_cMake():
         assert os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h"))
         assert os.path.exists(os.path.join(package_folder, "two", "lib", "libhello_two.a"))
     else:
-        "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
-        "multi/0.1: package(): Packaged 1 '.lib' file: hello_two.lib" in client.out
+        assert "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
+        assert "multi/0.1: package(): Packaged 1 '.lib' file: hello_two.lib" in client.out
         package_folder = client.created_layout().package()
 
         assert not os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h"))
