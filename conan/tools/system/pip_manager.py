@@ -45,7 +45,7 @@ def python_tools_system_paths(new_path):
 # conan_env()
 
 
-def pip_tool_requires(conanfile, package):
+def pip_tool_requires(conanfile, package, output_forlder):
     mode_check = "check"  # Check if installed, fail if not
     mode_install = "install"
     mode_report = "report"  # Only report what would be installed, no check (can run in any system)
@@ -57,7 +57,7 @@ def pip_tool_requires(conanfile, package):
     name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
 
     builder = venv.EnvBuilder(clear=True, with_pip=True)
-    env_dir = os.path.join(conanfile.folders.generators_folder, f"pip_venv_{name}")
+    env_dir = os.path.join(output_forlder or conanfile.folders.generators_folder, f"pip_venv_{name}")
     base_dir = os.path.join(env_dir, "Scripts" if platform.system() == "Windows" else "bin")
     python_exe = os.path.join(base_dir, "python.exe" if platform.system() == "Windows" else "python")
 
@@ -71,9 +71,9 @@ def pip_tool_requires(conanfile, package):
         return
 
     if os.path.exists(env_dir):
-        command = f'{python_exe} -m pip show {name} | grep "{name}"'
+        command = f'"{python_exe}" -m pip show {name} | grep "{name}"'
         if version:
-            command = f'{python_exe} -m pip show {name} | grep "{version}"'
+            command = f'"{python_exe}" -m pip show {name} | grep "{version}"'
         installed = conanfile_run(command, accepted_check_codes) != 0
     else:
         installed = False
@@ -92,7 +92,7 @@ def pip_tool_requires(conanfile, package):
                                                                                  mode_install))
     elif not installed:
         builder.create(env_dir)
-        command = f"{python_exe} -m pip install {package}"
+        command = f'"{python_exe}" -m pip install {package}'
         conanfile_run(command, accepted_install_codes)
         env = Environment()
         env.prepend_path("PATH", base_dir)
