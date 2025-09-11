@@ -90,7 +90,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "config_options"):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
-    elif "auto_shared_fpic" in conanfile.implements:
+    if "auto_shared_fpic" in conanfile.implements:
         auto_shared_fpic_config_options(conanfile)
 
     auto_language(conanfile)  # default implementation removes `compiler.cstd`
@@ -102,7 +102,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "configure"):
         with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
-    elif "auto_shared_fpic" in conanfile.implements:
+    if "auto_shared_fpic" in conanfile.implements:
         auto_shared_fpic_configure(conanfile)
 
     if initial_requires_count != len(conanfile.requires):

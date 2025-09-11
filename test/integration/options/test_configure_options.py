@@ -57,25 +57,21 @@ class TestConfigureOptions:
 
     @parameterized.expand([
         ["Linux", False, False, False, [False, False, False]],
-        ["Linux", False, False, True, [False, False, True]],
+        ["Windows", False, False, False, [False, None, False]],
+        ["Windows", True, False, False, [True, None, False]],
+        ["Windows", False, False, True, [None, None, True]],
+        ["Linux", False, False, True, [None, None, True]],
+        ["Linux", True, True, False, [True, None, False]],
+        ["Linux", True, False, False, [True, None, False]],
+        ["Linux", True, True, True, [None, None, True]],
+        ["Linux", True, True, True, [None, None, True]],
         ["Linux", False, True, False, [False, True, False]],
-        ["Linux", False, True, True, [False, True, True]],
-        ["Linux", True, False, False, [True, False, False]],
-        ["Linux", True, False, True, [True, False, True]],
-        ["Linux", True, True, False, [True, True, False]],
-        ["Linux", True, True, True, [True, True, True]],
-        ["Windows", False, False, False, [False, False, False]],
-        ["Windows", False, False, True, [False, False, True]],
-        ["Windows", False, True, False, [False, True, False]],
-        ["Windows", False, True, True, [False, True, True]],
-        ["Windows", True, False, False, [True, False, False]],
-        ["Windows", True, False, True, [True, False, True]],
-        ["Windows", True, True, False, [True, True, False]],
-        ["Windows", True, True, True, [True, True, True]],
+        ["Linux", False, True, False, [False, True, False]],
     ])
     def test_optout(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are not managed automatically when methods are defined even if implements = ["auto_shared_fpic", "auto_header_only"]
+        Test that options are managed automatically when implements = ["auto_shared_fpic", "auto_header_only"]
+        even if methods are defined.
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
