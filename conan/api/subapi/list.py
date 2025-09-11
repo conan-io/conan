@@ -374,7 +374,7 @@ class ListAPI:
                     continue
                 if not remote_ref_list:
                     continue
-                str_latest_ref = list(remote_ref_list._data.keys())[-1]
+                str_latest_ref = list(remote_ref_list.serialize().keys())[-1]
                 recipe_ref = RecipeReference.loads(str_latest_ref)
                 if (node_info["latest_remote"] is None
                         or node_info["latest_remote"]["ref"] < recipe_ref):
