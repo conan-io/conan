@@ -16,6 +16,7 @@ def _add_message_status_flags(client):
         cmakelists_file.write('message(STATUS "CONAN_OBJCXX_FLAGS: ${CONAN_OBJCXX_FLAGS}")\n')
 
 
+@pytest.mark.skip(reason="Bitcode is deprecated on Xcode >= 14")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
     ("watchOS", "8.1", "watchos", "armv7k"),
