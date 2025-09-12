@@ -94,9 +94,8 @@ class TestTestRequiresDiamond:
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
-               def requirements(self):
-                   self.test_requires("gtest/1.0", force=True)
                def build_requirements(self):
+                   self.test_requires("gtest/1.0", force=True)
                    self.test_requires("rapidcheck/1.0")
            """)
         c.save({"gtest/conanfile.py": GenConanfile("gtest"),
