@@ -36,6 +36,7 @@ class TestTestRequiresDiamond:
             class Pkg(ConanFile):
                 def requirements(self):
                     self.test_requires("gtest/1.0")
+                def build_requirements(self):
                     self.requires("zlib/1.0")
             """)
         c = TestClient(light=True)
@@ -70,8 +71,9 @@ class TestTestRequiresDiamond:
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
-               def requirements(self):
+               def build_requirements(self):
                    self.test_requires("gtest/1.0")
+               def requirements(self):
                    self.requires("engine/1.0")
            """)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
@@ -94,6 +96,7 @@ class TestTestRequiresDiamond:
            class Pkg(ConanFile):
                def requirements(self):
                    self.test_requires("gtest/1.0", force=True)
+               def build_requirements(self):
                    self.test_requires("rapidcheck/1.0")
            """)
         c.save({"gtest/conanfile.py": GenConanfile("gtest"),
@@ -214,8 +217,9 @@ def test_requires_transitive_diamond_components_order():
             name = "libc"
             version = "0.1"
 
-            def requirements(self):
+            def build_requirements(self):
                 self.test_requires("liba/1.0")
+            def requirements(self):
                 self.requires("libb/1.0")
 
             def package_info(self):
