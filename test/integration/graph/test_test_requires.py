@@ -35,8 +35,10 @@ class TestTestRequiresDiamond:
             from conan import ConanFile
             class Pkg(ConanFile):
                 def requirements(self):
+                    # Best practice is to declare test_requires in the build_requirements() method,
+                    # but this ensures it is also possible to declare them in requirements(),
+                    # as has historically been allowed.
                     self.test_requires("gtest/1.0")
-                def build_requirements(self):
                     self.requires("zlib/1.0")
             """)
         c = TestClient(light=True)
