@@ -197,6 +197,8 @@ class _PathGenerator:
 
     def generate(self):
         template = textwrap.dedent("""\
+        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
         {% for pkg_name, folder in pkg_paths.items() %}
         set({{pkg_name}}_DIR "{{folder}}")
         {% endfor %}

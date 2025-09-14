@@ -11,6 +11,7 @@ from conan.api.model import RecipeReference
 
 
 class DownloadAPI:
+    """ This API is used to download recipes and packages from a remote server."""
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
@@ -79,13 +80,17 @@ class DownloadAPI:
 
     def download_full(self, package_list: PackagesList, remote: Remote,
                       metadata: Optional[List[str]] = None):
-        """Download the recipes and packages specified in the package_list from the remote,
-        parallelized based on `core.download:parallel`"""
+        """Download the recipes and packages specified in the ``package_list`` from the remote,
+        parallelized based on ``core.download:parallel``"""
         def _download_pkglist(pkglist):
             for ref, recipe_bundle in pkglist.refs().items():
                 self.recipe(ref, remote, metadata)
-                for pref, _ in pkglist.prefs(ref, recipe_bundle).items():
+                recipe_bundle.pop("files", None)
+                recipe_bundle.pop("upload-urls", None)
+                for pref, pref_bundle in pkglist.prefs(ref, recipe_bundle).items():
                     self.package(pref, remote, metadata)
+                    pref_bundle.pop("files", None)
+                    pref_bundle.pop("upload-urls", None)
 
         t = time.time()
         parallel = self._conan_api.config.get("core.download:parallel", default=1, check_type=int)

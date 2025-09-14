@@ -96,9 +96,14 @@ class PackagePreparator:
                                          "This isn't a remote URL, the build won't be reproducible\n"
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
+            # Just in case it was defined from a previous run
+            bundle.pop("files", None)
+            bundle.pop("upload-urls", None)
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
             for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
+                prev_bundle.pop("files", None)  # If defined from a previous upload
+                prev_bundle.pop("upload-urls", None)
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 

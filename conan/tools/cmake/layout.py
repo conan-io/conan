@@ -8,7 +8,10 @@ from conan.errors import ConanException
 def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):
     """
     :param conanfile: The current recipe object. Always use ``self``.
-    :param generator: Allow defining the CMake generator. In most cases it doesn't need to be passed, as it will get the value from the configuration              ``tools.cmake.cmaketoolchain:generator``, or it will automatically deduce the generator from the ``settings``
+    :param generator: Allow defining the CMake generator. In most cases it doesn't need to be passed,
+                      as it will get the value from the configuration
+                      ``tools.cmake.cmaketoolchain:generator``, or it will automatically deduce
+                      the generator from the ``settings``
     :param src_folder: Value for ``conanfile.folders.source``, change it if your source code
                        (and CMakeLists.txt) is in a subfolder.
     :param build_folder: Specify the name of the "base" build folder. The default is "build", but
@@ -85,6 +88,8 @@ def get_build_folder_custom_vars(conanfile):
         tmp = None
         if group == "settings":
             tmp = conanfile.settings.get_safe(var)
+            if tmp and var == "arch":  # handle Apple multi-arch/universal binaries
+                tmp = tmp.replace("|", "_")
         elif group == "options":
             value = conanfile.options.get_safe(var)
             if value is not None:

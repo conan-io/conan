@@ -1,4 +1,3 @@
-from collections import defaultdict
 import os
 
 from conan.api.output import ConanOutput

@@ -10,7 +10,9 @@ import pytest
 from conan.test.utils.tools import TestClient
 from conan.test.assets.sources import gen_function_cpp
 
-@pytest.mark.skipif(platform.machine() != "x86_64", reason="Premake Legacy generator only supports x86_64 machines")
+
+@pytest.mark.skipif(platform.machine() != "x86_64",
+                    reason="Premake Legacy generator only supports x86_64 machines")
 @pytest.mark.tool("premake")
 def test_premake_legacy(matrix_client):
     c = matrix_client
@@ -78,7 +80,6 @@ def test_premake_legacy(matrix_client):
     assert "matrix/1.0: Hello World Debug!" in c.out
 
 
-
 @pytest.mark.tool("premake")
 def test_premake_new_generator():
     c = TestClient()
@@ -112,7 +113,8 @@ def test_premake_components(transitive_libs):
         includedirs=[".", "libb1", "libb2"],
         projects=[
             {"name": "libb1", "files": ["libb1/*.h", "libb1/*.cpp"], "kind": "StaticLib"},
-            {"name": "libb2", "files": ["libb2/*.h", "libb2/*.cpp"], "kind": "StaticLib", "links": ["libb1"]}
+            {"name": "libb2", "files": ["libb2/*.h", "libb2/*.cpp"], "kind": "StaticLib",
+             "links": ["libb1"]}
         ]
     )
     libb_conanfile = textwrap.dedent("""
@@ -144,11 +146,14 @@ def test_premake_components(transitive_libs):
 
             def package(self):
                 for lib in ("libb1", "libb2"):
-                    copy(self, "*.h", os.path.join(self.source_folder, lib), os.path.join(self.package_folder, "include", lib))
+                    copy(self, "*.h", os.path.join(self.source_folder, lib),
+                         os.path.join(self.package_folder, "include", lib))
 
                 for pattern in ("*.lib", "*.a", "*.so*", "*.dylib"):
-                    copy(self, pattern, os.path.join(self.build_folder, "bin"), os.path.join(self.package_folder, "lib"))
-                copy(self, "*.dll", os.path.join(self.build_folder, "bin"), os.path.join(self.package_folder, "bin"))
+                    copy(self, pattern, os.path.join(self.build_folder, "bin"),
+                         os.path.join(self.package_folder, "lib"))
+                copy(self, "*.dll", os.path.join(self.build_folder, "bin"),
+                     os.path.join(self.package_folder, "bin"))
 
             def package_info(self):
                 self.cpp_info.components["libb1"].libs = ["libb1"]
@@ -187,9 +192,11 @@ def test_premake_components(transitive_libs):
     # Create a consumer application which depends on libb
     c.run("new premake_exe -d name=consumer -d version=1.0 -o consumer -d requires=libb/1.0")
     # Adapt includes and usage of libb in the consumer application
-    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
+    replace_in_file(ConanFileMock(),
+                    os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
                     '#include "libb.h"', '#include "libb1/libb1.h"\n#include "libb2/libb2.h"')
-    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
+    replace_in_file(ConanFileMock(),
+                    os.path.join(c.current_folder, "consumer", "src", "consumer.cpp"),
                     'libb()', 'libb1();libb2()')
 
     c.run("create liba")
@@ -249,4 +256,3 @@ def test_transitive_headers_not_public(transitive_libraries):
     rmdir(ConanFileMock(), os.path.join(c.current_folder, "build-release"))
     c.run("build .", assert_error=True)
     # Error should be about not finding matrix
-

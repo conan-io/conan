@@ -87,7 +87,9 @@ class DownloadCache:
             if remove_if_dirty(os.path.join(path_backups, path)):
                 continue
             if path.endswith(dirty_ext):
-                # TODO: Clear the dirty file marker if it does not have a matching downloaded file
+                if not os.path.exists(os.path.join(path_backups, os.path.splitext(path)[0])):
+                    if os.path.exists(os.path.join(path_backups, path)):
+                        os.remove(os.path.join(path_backups, path))
                 continue
             if not path.endswith(".json"):
                 path_backups_contents.append(path)
