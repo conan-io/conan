@@ -24,7 +24,7 @@ class IntegrityChecker:
         corrupted = False
         for ref, packages in pkg_list.items():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref, _ in packages.items():
+            for pref in packages:
                 corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")

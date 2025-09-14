@@ -116,7 +116,7 @@ class CacheAPI:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in packages.items():
+            for pref in packages:
                 ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
                 if build:
