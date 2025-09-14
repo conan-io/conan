@@ -268,8 +268,10 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
 
+                # Packages dict has been listed, even if empty
                 select_bundle.recipe_dict(rrev)["packages"] = {}
                 for p in prefs:
+                    # the "packages" dict is not using the package-revision
                     pkg_info = packages.get(PkgReference(p.ref, p.package_id))
                     select_bundle.add_pref(p, pkg_info)
         return select_bundle
