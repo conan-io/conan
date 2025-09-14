@@ -152,11 +152,11 @@ class MultiPackagesList:
                         continue
                     pyref = RecipeReference.loads(pyref)
                     if any(r == "*" or r == pyrecipe for r in recipes):
-                        cache_list.add_refs([pyref])
+                        cache_list.add_ref(pyref)
                     pyremote = pyreq["remote"]
                     if pyremote:
                         remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
-                        remote_list.add_refs([pyref])
+                        remote_list.add_ref(pyref)
 
             recipe = node["recipe"]
             if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_PLATFORM):
@@ -167,18 +167,18 @@ class MultiPackagesList:
             ref.timestamp = node["rrev_timestamp"]
             recipe = recipe.lower()
             if any(r == "*" or r == recipe for r in recipes):
-                cache_list.add_refs([ref])
+                cache_list.add_ref(ref)
 
             remote = node["remote"]
             if remote:
                 remote_list = pkglist.lists.setdefault(remote, PackagesList())
-                remote_list.add_refs([ref])
+                remote_list.add_ref(ref)
             pref = PkgReference(ref, node["package_id"], node["prev"], node["prev_timestamp"])
             binary_remote = node["binary_remote"]
             if binary_remote:
                 remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())
-                remote_list.add_refs([ref])  # Binary listed forces recipe listed
-                remote_list.add_prefs(ref, [pref])
+                remote_list.add_ref(ref)  # Binary listed forces recipe listed
+                remote_list.add_pref(pref)
 
             binary = node["binary"]
             if binary in (BINARY_SKIP, BINARY_INVALID, BINARY_MISSING):
@@ -186,9 +186,9 @@ class MultiPackagesList:
 
             binary = binary.lower()
             if any(b == "*" or b == binary for b in binaries):
-                cache_list.add_refs([ref])  # Binary listed forces recipe listed
-                cache_list.add_prefs(ref, [pref])
-                cache_list.add_configurations({pref: node["info"]})
+                cache_list.add_ref(ref)  # Binary listed forces recipe listed
+                cache_list.add_pref(pref)
+                cache_list.add_configuration(pref, node["info"])
         return pkglist
 
 
@@ -241,36 +241,61 @@ class PackagesList:
                 rrev_dict.pop("packages", None)
 
     def add_refs(self, refs):
+        ConanOutput().warning("PackageLists.add_refs() non-public, non-documented method will be "
+                              "removed, use .add_ref() instead", warn_tag="deprecated")
         # RREVS alreday come in ASCENDING order, so upload does older revisions first
         for ref in refs:
-            ref_dict = self._data.setdefault(str(ref), {})
-            if ref.revision:
-                revs_dict = ref_dict.setdefault("revisions", {})
-                rev_dict = revs_dict.setdefault(ref.revision, {})
-                if ref.timestamp:
-                    rev_dict["timestamp"] = ref.timestamp
+            self.add_ref(ref)
+
+    def add_ref(self, ref: RecipeReference) -> None:
+        """
+        Adds a new RecipeReference to a pacakge list
+        """
+        ref_dict = self._data.setdefault(str(ref), {})
+        if ref.revision:
+            revs_dict = ref_dict.setdefault("revisions", {})
+            rev_dict = revs_dict.setdefault(ref.revision, {})
+            if ref.timestamp:
+                rev_dict["timestamp"] = ref.timestamp
 
     def add_prefs(self, rrev, prefs):
+        ConanOutput().warning("PackageLists.add_prrefs() non-public, non-documented method will be "
+                              "removed, use .add_pref() instead", warn_tag="deprecated")
         # Prevs already come in ASCENDING order, so upload does older revisions first
-        revs_dict = self._data[str(rrev)]["revisions"]
-        rev_dict = revs_dict[rrev.revision]
-        packages_dict = rev_dict.setdefault("packages", {})
+        for p in prefs:
+            self.add_pref(p)
 
-        for pref in prefs:
-            package_dict = packages_dict.setdefault(pref.package_id, {})
-            if pref.revision:
-                prevs_dict = package_dict.setdefault("revisions", {})
-                prev_dict = prevs_dict.setdefault(pref.revision, {})
-                if pref.timestamp:
-                    prev_dict["timestamp"] = pref.timestamp
+    def add_pref(self, pref: PkgReference) -> None:
+        """
+        Add a PkgReferene to an already existing RecipeReference inside a package list
+        """
+        # Prevs already come in ASCENDING order, so upload does older revisions first
+        rev_dict = self.recipe_dict(pref.ref)
+        packages_dict = rev_dict.setdefault("packages", {})
+        package_dict = packages_dict.setdefault(pref.package_id, {})
+        if pref.revision:
+            prevs_dict = package_dict.setdefault("revisions", {})
+            prev_dict = prevs_dict.setdefault(pref.revision, {})
+            if pref.timestamp:
+                prev_dict["timestamp"] = pref.timestamp
 
     def add_configurations(self, confs):
-        for pref, conf in confs.items():
-            rev_dict = self._data[str(pref.ref)]["revisions"][pref.ref.revision]
-            try:
-                rev_dict["packages"][pref.package_id]["info"] = conf
-            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
-                pass
+        ConanOutput().warning("PackageLists.add_configurations() non-public, non-documented method "
+                              "will be removed, use .add_configuration() instead",
+                              warn_tag="deprecated")
+        for k, v in confs.items():
+            self.add_configuration(k, v)
+
+    def add_configuration(self, pref: PkgReference, conf: dict) -> None:
+        """
+        Add the configuration information for the binary for an already existing PkgReference
+        in the package list
+        """
+        rev_dict = self.recipe_dict(pref.ref)
+        try:
+            rev_dict["packages"][pref.package_id]["info"] = conf
+        except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+            pass
 
     def refs(self):
         ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "
@@ -302,16 +327,23 @@ class PackagesList:
                 for package_id, pkg_info in rrev_dict.get("packages", {}).items():
                     prevs = pkg_info.get("revisions", {})
                     for prev, prev_info in prevs.items():
-                        t = prev_info.pop("timestamp", None)
+                        t = prev_info.get("timestamp")
                         pref = PkgReference(recipe, package_id, prev, t)
                         packages[pref] = prev_info
                 yield recipe, packages
 
-    def recipe_info(self, ref):
+    def recipe_dict(self, ref: RecipeReference):
         """ gives read/write access to the dictionary containing a specific RecipeReference
         information
         """
         return self._data[str(ref)]["revisions"][ref.revision]
+
+    def package_dict(self, pref: PkgReference):
+        """ gives read/write access to the dictionary containing a specific PkgReference
+        information
+        """
+        ref_dict = self.recipe_dict(pref.ref)
+        return ref_dict["packages"][pref.package_id]["revisions"][pref.revision]
 
     @staticmethod
     def prefs(ref, recipe_bundle):

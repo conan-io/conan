@@ -85,11 +85,12 @@ class DownloadAPI:
         def _download_pkglist(pkglist):
             for ref, packages in pkglist.items():
                 self.recipe(ref, remote, metadata)
-                ref_dict = pkglist.recipe_info(ref)
+                ref_dict = pkglist.recipe_dict(ref)
                 ref_dict.pop("files", None)
                 ref_dict.pop("upload-urls", None)
-                for pref, pkg_dict in packages.items():
+                for pref in packages:
                     self.package(pref, remote, metadata)
+                    pkg_dict = pkglist.package_dict(pref)
                     pkg_dict.pop("files", None)
                     pkg_dict.pop("upload-urls", None)
 

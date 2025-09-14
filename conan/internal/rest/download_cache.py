@@ -73,8 +73,9 @@ class DownloadCache:
         all_refs = set()
         if package_list is not None:
             for ref, packages in package_list.items():
-                ref_info = package_list.recipe_info(ref)
-                if not only_upload or ref_info.get("upload") or any(p.get("upload") for p in packages.values()):
+                ref_info = package_list.recipe_dict(ref)
+                if (not only_upload or ref_info.get("upload")
+                        or any(package_list.package_dict(p).get("upload") for p in packages)):
                     all_refs.add(str(ref))
 
         path_backups_contents = []

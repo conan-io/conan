@@ -121,24 +121,18 @@ def upload(conan_api: ConanAPI, parser, *args):
 
 def _ask_confirm_upload(conan_api, package_list):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    result = {}
-    for ref, ref_info in package_list.serialize().items():
-        result_ref = {}
-        for rrev, rrev_info in ref_info.get("revisions", {}).items():
-            msg = f"Are you sure you want to upload recipe '{ref}#{rrev}'?"
-            if ui.request_boolean(msg):
-                result_rrev = {}
-                if rrev_info.get("timestamp"):
-                    result_rrev["timestamp"] = rrev_info["timestamp"]
-                for pkg_id, pkg_id_info in rrev_info.get("packages", {}).items():
-                    for prev, prev_info in pkg_id_info.get("revisions", {}).items():
-                        msg = (f"Are you sure you want to upload package "
-                               f"'{ref}#{rrev}:{pkg_id}#{prev}'?")
-                        if ui.request_boolean(msg):
-                            pkg_info = result_rrev.setdefault("packages", {}).setdefault(pkg_id, {})
-                            pkg_info.setdefault("revisions", {})[prev] = prev_info
-                            pkg_info["info"] = pkg_id_info["info"]
-                result_ref.setdefault("revisions", {})[rrev] = result_rrev
-        result[ref] = result_ref
-    package_list = PackagesList.deserialize(result)
-    return package_list
+    result = PackagesList()
+    for ref, packages in package_list.items():
+        msg = f"Are you sure you want to upload recipe '{ref.repr_notime()}'?"
+        if ui.request_boolean(msg):
+            result.add_ref(ref)
+            ref_dict = package_list.recipe_dict(ref).copy()
+            ref_dict.pop("packages", None)
+            result.recipe_dict(ref).update(ref_dict)
+            for pref, pkg_id_info in packages.items():
+                msg = f"Are you sure you want to upload package '{pref.repr_notime()}'?"
+                if ui.request_boolean(msg):
+                    result.add_pref(pref)
+                    result.add_configuration(pref, pkg_id_info)
+                    result.package_dict(pref).update(package_list.package_dict(pref))
+    return result

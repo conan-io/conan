@@ -45,7 +45,7 @@ class UploadAPI:
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
-                package_list.recipe_info(ref)["packages"] = {}
+                package_list.recipe_dict(ref)["packages"] = {}
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
