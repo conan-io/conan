@@ -132,7 +132,6 @@ def _ask_confirm_upload(conan_api, package_list):
             for pref, pkg_id_info in packages.items():
                 msg = f"Are you sure you want to upload package '{pref.repr_notime()}'?"
                 if ui.request_boolean(msg):
-                    result.add_pref(pref)
-                    result.add_configuration(pref, pkg_id_info)
+                    result.add_pref(pref, pkg_id_info)
                     result.package_dict(pref).update(package_list.package_dict(pref))
     return result

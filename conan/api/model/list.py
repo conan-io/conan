@@ -187,8 +187,7 @@ class MultiPackagesList:
             binary = binary.lower()
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
-                cache_list.add_pref(pref)
-                cache_list.add_configuration(pref, node["info"])
+                cache_list.add_pref(pref, node["info"])
         return pkglist
 
 
@@ -265,7 +264,7 @@ class PackagesList:
         for p in prefs:
             self.add_pref(p)
 
-    def add_pref(self, pref: PkgReference) -> None:
+    def add_pref(self, pref: PkgReference, pkg_info: dict = None) -> None:
         """
         Add a PkgReferene to an already existing RecipeReference inside a package list
         """
@@ -278,24 +277,19 @@ class PackagesList:
             prev_dict = prevs_dict.setdefault(pref.revision, {})
             if pref.timestamp:
                 prev_dict["timestamp"] = pref.timestamp
+        if pkg_info is not None:
+            package_dict["info"] = pkg_info
 
     def add_configurations(self, confs):
         ConanOutput().warning("PackageLists.add_configurations() non-public, non-documented method "
-                              "will be removed, use .add_configuration() instead",
+                              "will be removed, use .add_pref() instead",
                               warn_tag="deprecated")
-        for k, v in confs.items():
-            self.add_configuration(k, v)
-
-    def add_configuration(self, pref: PkgReference, conf: dict) -> None:
-        """
-        Add the configuration information for the binary for an already existing PkgReference
-        in the package list
-        """
-        rev_dict = self.recipe_dict(pref.ref)
-        try:
-            rev_dict["packages"][pref.package_id]["info"] = conf
-        except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
-            pass
+        for pref, conf in confs.items():
+            rev_dict = self.recipe_dict(pref.ref)
+            try:
+                rev_dict["packages"][pref.package_id]["info"] = conf
+            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+                pass
 
     def refs(self):
         ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "

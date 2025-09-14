@@ -268,11 +268,10 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
 
+                select_bundle.recipe_dict(rrev)["packages"] = {}
                 for p in prefs:
-                    select_bundle.add_pref(p)
-                    conf = packages.get(p)
-                    if conf:
-                        select_bundle.add_configuration(p, conf)
+                    pkg_info = packages.get(PkgReference(p.ref, p.package_id))
+                    select_bundle.add_pref(p, pkg_info)
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
@@ -308,8 +307,7 @@ class ListAPI:
                 break
             candidate_distance = candidate.distance
             pref = candidate.pref
-            pkglist.add_pref(pref)
-            pkglist.add_configuration(pref, candidate.binary_config)
+            pkglist.add_pref(pref, candidate.binary_config)
             # Add the diff data
             rev_dict = pkglist.recipe_dict(ref)
             rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
@@ -342,8 +340,7 @@ class ListAPI:
                     except NotFoundException:
                         continue
                     if pref in prevs:
-                        result_pkg_list.add_pref(pref)
-                        result_pkg_list.add_configuration(pref, pkg_info)
+                        result_pkg_list.add_pref(pref, pkg_info)
             if result_pkg_list:
                 result.add(r.name, result_pkg_list)
         return result

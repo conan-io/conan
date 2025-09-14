@@ -112,8 +112,7 @@ def remove(conan_api: ConanAPI, parser, *args):
                         conan_api.remove.package(pref, remote=remote)
                     result.add_ref(ref)
                     result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages"
-                    result.add_pref(pref)
-                    result.add_configuration(pref, pkg_id_info)
+                    result.add_pref(pref, pkg_id_info)
                     pkg_dict = package_list.package_dict(pref)
                     result.package_dict(pref).update(pkg_dict)
     multi_package_list.add(cache_name, result)
