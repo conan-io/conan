@@ -523,6 +523,31 @@ def test_extra_flags_via_conf():
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
 
 
+def test_bitcode_enable_flag():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=apple-clang
+        compiler.version=17
+        compiler.libcxx=libc++
+        build_type=Release
+
+        [conf]
+        tools.apple:enable_bitcode=True
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+                              .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(BITCODE "-fembed-bitcode")' in toolchain
+
+
 def test_cmake_presets_binary_dir_available():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""
