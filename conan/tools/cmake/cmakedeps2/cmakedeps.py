@@ -202,6 +202,9 @@ class _PathGenerator:
         {% for pkg_name, folder in pkg_paths.items() %}
         set({{pkg_name}}_DIR "{{folder}}")
         {% endfor %}
+        {% for pkg_name, folders in pkg_paths_multi.items() %}
+        set({{pkg_name}}_DIR_MULTI {{folders}})
+        {% endfor %}
         {% if host_runtime_dirs %}
         set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
         # Only for VS, needs CMake>=3.27
@@ -233,6 +236,16 @@ class _PathGenerator:
         # if not, test_cmake_add_subdirectory test fails
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
         pkg_paths = {}
+
+        pkg_paths_multi = {}
+        if os.path.exists(self._conan_cmakedeps_paths):
+            existing_toolchain = load(self._conan_cmakedeps_paths)
+            pattern_lib_dirs = r"set\(([A-Za-z0-9-_]*)_DIR_MULTI ([^)]*)\)"
+            variable_match = re.search(pattern_lib_dirs, existing_toolchain)
+            if variable_match:
+                capture = variable_match.group(1)
+                matches = re.findall(r'"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>"', capture)
+
         for req, dep in all_reqs:
             cmake_find_mode = self._cmakedeps.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
@@ -254,12 +267,17 @@ class _PathGenerator:
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
                             pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
                                                                   "${CMAKE_CURRENT_LIST_DIR}")
+                    if self._cmakedeps:
+                        existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
+                        if pkg_folder not in existing_paths:
+                            existing_paths.append(pkg_folder)
                 continue
 
             # If CMakeDeps generated, the folder is this one
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
             pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
 
+        pkg_paths_multi = {k: " ".join(f'"{f}"' for f in v) for k, v in pkg_paths_multi.items()}
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")
         cmake_library_path = self._get_cmake_paths(host_test_reqs, "libdirs")
@@ -268,6 +286,7 @@ class _PathGenerator:
         cmake_module_path = self._get_cmake_paths(all_reqs, "builddirs")
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
+                   "pkg_paths_multi": pkg_paths_multi,
                    "cmake_program_path": _join_paths(self._conanfile, cmake_program_path),
                    "cmake_library_path": _join_paths(self._conanfile, cmake_library_path),
                    "cmake_include_path": _join_paths(self._conanfile, cmake_include_path),
