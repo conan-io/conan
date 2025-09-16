@@ -86,7 +86,13 @@ class DepsGraphBuilder:
                 raise GraphLoopError(node, require, prev_node)
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
-            if prev_require.force or prev_require.override:  # override
+            require_version = str(require.ref.version)
+            if require_version.startswith("<host_version") and require_version.endswith(">"):
+                if ":" in require_version:
+                    raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' "
+                                         "error when trying to use different name")
+                require.ref = prev_ref
+            elif prev_require.force or prev_require.override:  # override
                 if prev_require.defining_require is not require:
                     require.overriden_ref = require.overriden_ref or require.ref.copy()  # Old one
                     # require.override_ref can be !=None if lockfile-overrides defined
