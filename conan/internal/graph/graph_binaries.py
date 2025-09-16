@@ -1,6 +1,7 @@
 import json
 import os
 from collections import OrderedDict
+from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -448,8 +449,10 @@ class GraphBinariesAnalyzer:
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
             # PARALLEL, this is the slow part that can query servers for packages, and compatibility
-            for pref, pref_nodes in nodes.items():
-                _evaluate_single(pref_nodes[0])
+            tp = ThreadPool(len(nodes))
+            tp.map(_evaluate_single, [pref_nodes[0] for pref_nodes in nodes.values()])
+            tp.close()
+            tp.join()
             # END OF PARALLEL
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
