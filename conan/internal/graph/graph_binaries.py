@@ -454,12 +454,12 @@ class GraphBinariesAnalyzer:
             non_host_nodes = [pref_nodes[0] for pref_nodes in nodes.values()
                               if pref_nodes[0].context != "host"]
             if host_nodes:
-                tp = ThreadPool(len(host_nodes))
+                tp = ThreadPool(6)
                 tp.map(_evaluate_single, host_nodes)
                 tp.close()
                 tp.join()
             if non_host_nodes:
-                tp = ThreadPool(len(non_host_nodes))
+                tp = ThreadPool(6)
                 tp.map(_evaluate_single, non_host_nodes)
                 tp.close()
                 tp.join()
