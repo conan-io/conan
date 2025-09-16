@@ -657,3 +657,25 @@ def test_transitive_build_scripts_library_error():
     c.run("install --requires=tool/0.1", assert_error=True)
     assert ("ERROR: Package 'tool/0.1' with type 'build-scripts' cannot have "
             "a 'static-library' dependency to 'dep/0.1'") in c.out
+
+
+def test_host_version_transitive_contexts():
+    tc = TestClient(light=True)
+    tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1")
+                .with_requirement("protobuf/0.1")
+                .with_option("shared", [True, False])
+                .with_default_option("shared", False),
+             "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
+                .with_option("shared", [True, False])
+                .with_default_option("shared", False),
+             "conanfile.py": GenConanfile("app", "0.1")
+                .with_requires("grpc/0.1")
+                .with_requires("protobuf/[*]")
+                .with_tool_requirement("grpc/<host_version>")
+                .with_tool_requirement("protobuf/<host_version>")})
+    tc.run("export protobuf")
+    tc.run("export grpc")
+    tc.run("graph info . -o:a=*:shared=True")
+    assert "Conflict between" not in tc.out
+
+
