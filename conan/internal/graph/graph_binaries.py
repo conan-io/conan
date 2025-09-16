@@ -453,14 +453,16 @@ class GraphBinariesAnalyzer:
                           if pref_nodes[0].context == "host"]
             non_host_nodes = [pref_nodes[0] for pref_nodes in nodes.values()
                               if pref_nodes[0].context != "host"]
-            tp = ThreadPool(len(host_nodes))
-            tp.map(_evaluate_single, host_nodes)
-            tp.close()
-            tp.join()
-            tp = ThreadPool(len(non_host_nodes))
-            tp.map(_evaluate_single, non_host_nodes)
-            tp.close()
-            tp.join()
+            if host_nodes:
+                tp = ThreadPool(len(host_nodes))
+                tp.map(_evaluate_single, host_nodes)
+                tp.close()
+                tp.join()
+            if non_host_nodes:
+                tp = ThreadPool(len(non_host_nodes))
+                tp.map(_evaluate_single, non_host_nodes)
+                tp.close()
+                tp.join()
             # END OF PARALLEL
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
