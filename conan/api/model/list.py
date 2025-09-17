@@ -250,7 +250,7 @@ class PackagesList:
 
     def add_ref(self, ref: RecipeReference) -> None:
         """
-        Adds a new RecipeReference to a pacakge list
+        Adds a new RecipeReference to a package list
         """
         ref_dict = self._data.setdefault(str(ref), {})
         if ref.revision:
