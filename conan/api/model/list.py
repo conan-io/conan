@@ -260,7 +260,7 @@ class PackagesList:
                 rev_dict["timestamp"] = ref.timestamp
 
     def add_prefs(self, rrev, prefs):
-        ConanOutput().warning("PackageLists.add_prrefs() non-public, non-documented method will be "
+        ConanOutput().warning("PackageLists.add_prefs() non-public, non-documented method will be "
                               "removed, use .add_pref() instead", warn_tag="deprecated")
         # Prevs already come in ASCENDING order, so upload does older revisions first
         for p in prefs:
