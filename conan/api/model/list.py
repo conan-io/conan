@@ -3,6 +3,7 @@ import fnmatch
 import json
 import os
 from json import JSONDecodeError
+from typing import Iterable
 
 from conan.api.model import RecipeReference, PkgReference
 from conan.api.output import ConanOutput
@@ -197,6 +198,7 @@ class PackagesList:
         self._data = {}
 
     def __bool__(self):
+        """ Whether the package list contains any recipe"""
         return bool(self._data)
 
     def merge(self, other):
@@ -221,7 +223,7 @@ class PackagesList:
 
     def split(self):
         """
-        Returns a list of PackageList, splitted one per reference.
+        Returns a list of PackageList, split one per reference.
         This can be useful to parallelize things like upload, parallelizing per-reference
         """
         result = []
@@ -266,7 +268,7 @@ class PackagesList:
 
     def add_pref(self, pref: PkgReference, pkg_info: dict = None) -> None:
         """
-        Add a PkgReferene to an already existing RecipeReference inside a package list
+        Add a PkgReference to an already existing RecipeReference inside a package list
         """
         # Prevs already come in ASCENDING order, so upload does older revisions first
         rev_dict = self.recipe_dict(pref.ref)
@@ -304,12 +306,12 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def items(self):
+    def items(self) -> Iterable[tuple[RecipeReference, dict[PkgReference, dict]]]:
         """ Iterate the contents of the package list.
-        Every iteration returns [RecipeReference, dict, dict]
+
         The first dictionary is the information directly belonging to the recipe-revision.
-        The second dictionary contains PkgReference as keys, and a dictionariy with the values
-        belonging to that specific package reference.
+        The second dictionary contains PkgReference as keys, and a dictionary with the values
+        belonging to that specific package reference (settings, options, etc.).
         """
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
@@ -327,13 +329,13 @@ class PackagesList:
                 yield recipe, packages
 
     def recipe_dict(self, ref: RecipeReference):
-        """ gives read/write access to the dictionary containing a specific RecipeReference
-        information
+        """ Gives read/write access to the dictionary containing a specific RecipeReference
+        information.
         """
         return self._data[str(ref)]["revisions"][ref.revision]
 
     def package_dict(self, pref: PkgReference):
-        """ gives read/write access to the dictionary containing a specific PkgReference
+        """ Gives read/write access to the dictionary containing a specific PkgReference
         information
         """
         ref_dict = self.recipe_dict(pref.ref)
