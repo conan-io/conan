@@ -21,7 +21,7 @@ def test_upload_pkg_list():
         @conan_command(group="custom commands")
         def upload_pkglist(conan_api, parser, *args, **kwargs):
             \"""
-            create an upload piglist
+            create an upload pkglist
             \"""
             parser.add_argument('reference',
                                 help="Recipe reference or package reference, can contain * as "
