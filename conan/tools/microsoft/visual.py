@@ -70,7 +70,8 @@ def msvc_version_to_vs_ide_version(version):
                 '191': '15',
                 '192': '16',
                 '193': '17',
-                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
+                '194': '17',  # Note both 193 and 194 belong to VS 17 2022
+                '195': '18'}
     return _visuals[str(version)]
 
 
@@ -87,7 +88,8 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143',
-                "194": 'v143'}
+                "194": 'v143',
+                "195": 'v145'}
     return toolsets.get(str(version))
 
 
