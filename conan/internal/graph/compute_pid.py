@@ -61,7 +61,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
     node.package_id = info.package_id()
 
 
-def run_validate_package_id(conanfile, hook_manager=None):
+def run_validate_package_id(conanfile, hook_manager):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
@@ -76,11 +76,9 @@ def run_validate_package_id(conanfile, hook_manager=None):
         with conanfile_exception_formatter(conanfile, "validate"):
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
-                    if hook_manager:
-                        hook_manager.execute("pre_validate", conanfile=conanfile)
+                    hook_manager.execute("pre_validate", conanfile=conanfile)
                     conanfile.validate()
-                    if hook_manager:
-                        hook_manager.execute("post_validate", conanfile=conanfile)
+                    hook_manager.execute("post_validate", conanfile=conanfile)
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
 
@@ -89,7 +87,12 @@ def run_validate_package_id(conanfile, hook_manager=None):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
                 conanfile.package_id()
+                hook_manager.execute("post_package_id", conanfile=conanfile)
     elif "auto_header_only" in conanfile.implements:
         auto_header_only_package_id(conanfile)
+    if not hasattr(conanfile, "package_id"):
+        with conanfile_exception_formatter(conanfile, "package_id"):
+            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+                hook_manager.execute("post_package_id", conanfile=conanfile)
 
     conanfile.info.validate()

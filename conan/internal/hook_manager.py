@@ -9,7 +9,8 @@ valid_hook_methods = ["pre_export", "post_export",
                       "pre_generate", "post_generate",
                       "pre_build", "post_build", "post_build_fail",
                       "pre_package", "post_package",
-                      "pre_package_info", "post_package_info"]
+                      "pre_package_info", "post_package_info",
+                      "post_package_id"]  # package_id is called a lot more than others, only post
 
 
 class HookManager:

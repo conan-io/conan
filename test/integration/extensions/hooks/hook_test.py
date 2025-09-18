@@ -71,6 +71,9 @@ def pre_package_info(conanfile):
 
 def post_package_info(conanfile):
     conanfile.output.info("Hello")
+
+def post_package_id(conanfile):
+    conanfile.output.info("Hello")
 """
 
 
@@ -106,6 +109,7 @@ class TestHooks:
         assert f"pkg/0.1: {hook_msg} post_export(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_package(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_package(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} post_package_id(): Hello" in c.out
 
         c.run("create . ")
         assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
@@ -118,6 +122,7 @@ class TestHooks:
         assert f"pkg/0.1: {hook_msg} post_package(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} pre_package_info(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_package_info(): Hello" in c.out
+        assert f"pkg/0.1: {hook_msg} post_package_id(): Hello" in c.out
 
     def test_import_hook(self):
         """ Test that a hook can import another random python file
