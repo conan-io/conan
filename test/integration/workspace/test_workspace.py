@@ -134,6 +134,7 @@ class TestAddRemove:
         assert "Reference 'dep1/0.2' added to workspace" in c.out
         c.run("workspace info")
         assert "dep1/0.2" in c.out
+        assert "dep1/0.1" not in c.out
 
     @pytest.mark.parametrize("api", [False, True])
     def test_dynamic_editables(self, api):
