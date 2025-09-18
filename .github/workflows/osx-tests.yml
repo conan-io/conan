@@ -158,6 +158,7 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.4.app
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
+          clang --version
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
