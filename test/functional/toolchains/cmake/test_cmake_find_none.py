@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -148,15 +149,74 @@ def test_cmake_find_none_relocation():
     # Now it builds correctly without failing, because package is relocatable
 
 
-@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.27")
 @pytest.mark.tool("ninja")
 def test_cmake_find_none_relocation_multi():
     # What happens for multi-config
     c = TestClient(default_server_user=True)
     c.run("new cmake_lib -d name=pkg -d version=0.1")
-    conanfile = c.load("conanfile.py")
-    conanfile = conanfile + '        self.cpp_info.set_property("cmake_find_mode", "none")'
-    conanfile = conanfile + '\n        self.cpp_info.builddirs = ["pkg/cmake"]'
+    conanfile = textwrap.dedent("""
+        import os, textwrap
+        from conan import ConanFile
+        from conan.tools.files import save, load
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+
+        class pkgRecipe(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            # Sources are located in the same place as this recipe, copy them to the recipe
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+            implements = ["auto_shared_fpic"]
+
+            generators = "CMakeToolchain", "CMakeDeps"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+                p = os.path.join(self.package_folder, "pkg", "cmake", "pkgConfig.cmake")
+                new_config = textwrap.dedent('''
+                    # Create imported target pkg::pkg
+                    add_library(pkg::pkg STATIC IMPORTED)
+
+                    if(NOT DEFINED pkg_DIR_MULTI)
+                        get_filename_component(pkg_DIR_MULTI "${CMAKE_CURRENT_LIST_FILE}" PATH)
+                    endif()
+                    foreach(_IMPORT_PREFIX ${pkg_DIR_MULTI})
+                        get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+                        get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
+
+                        set_target_properties(pkg::pkg PROPERTIES
+                          INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"
+                        )
+
+                        # Load information for each installed configuration.
+                        file(GLOB CONFIG_FILES "${_IMPORT_PREFIX}/pkg/cmake/pkgConfig-*.cmake")
+                        foreach(f ${CONFIG_FILES})
+                          include(${f})
+                        endforeach()
+                    endforeach()
+                    ''')
+                save(self, p, new_config)
+
+            def package_info(self):
+                self.cpp_info.libs = ["pkg"]
+                self.cpp_info.set_property("cmake_find_mode", "none")
+                self.cpp_info.builddirs = ["pkg/cmake"]
+        """)
 
     cmake_export = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -183,18 +243,18 @@ def test_cmake_find_none_relocation_multi():
     c.save({"conanfile.py": conanfile,
             "CMakeLists.txt": cmake_export})
 
-    c.run("create . ")
+    c.run("create .")
     c.run("create . -s build_type=Debug")
     c.run("upload * -r=default -c")
     c.run("remove * -c")
 
     c2 = TestClient(servers=c.servers)
     c2.run("new cmake_exe -d name=myapp -d version=0.1 -d requires=pkg/0.1")
-    print(c2.current_folder)
+    env = r".\build\generators\conanbuild.bat &&" if platform.system() == "Windows" else ""
     conf = ('-c tools.cmake.cmaketoolchain:generator="Ninja Multi-Config" '
             '-c tools.cmake.cmakedeps:new=will_break_next')
     c2.run(f'install . {conf}')
     c2.run(f'install . {conf} -s build_type=Debug')
-    c2.run_command("cmake --preset conan-default")
-    c2.run_command("cmake --build --preset conan-release")
-    c2.run_command("cmake --build --preset conan-debug")
+    c2.run_command(f"{env} cmake --preset conan-default")
+    c2.run_command(f"{env} cmake --build --preset conan-release")
+    c2.run_command(f"{env} cmake --build --preset conan-debug")

@@ -240,11 +240,14 @@ class _PathGenerator:
         pkg_paths_multi = {}
         if os.path.exists(self._conan_cmakedeps_paths):
             existing_toolchain = load(self._conan_cmakedeps_paths)
-            pattern_lib_dirs = r"set\(([A-Za-z0-9-_]*)_DIR_MULTI ([^)]*)\)"
+            pattern_lib_dirs = r"set\(([A-Za-z0-9-_]*)_DIR_MULTI \"([^)]*)\"\)"
             variable_match = re.search(pattern_lib_dirs, existing_toolchain)
             if variable_match:
-                capture = variable_match.group(1)
-                matches = re.findall(r'"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>"', capture)
+                captured_name = variable_match.group(1)
+                captured_path = variable_match.group(2)  # FIXME: multiple paths matches
+                path_list = pkg_paths_multi.setdefault(captured_name, [])
+                if captured_path not in path_list:
+                    path_list.append(captured_path)
 
         for req, dep in all_reqs:
             cmake_find_mode = self._cmakedeps.get_property("cmake_find_mode", dep)
