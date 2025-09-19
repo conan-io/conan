@@ -1,7 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, OnceArgument, conan_subcommand, default_path_argument
+from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -28,7 +28,6 @@ def lock_create(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     # parameter validation
     validate_common_graph_args(args)
-    default_path_argument(args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -192,7 +191,6 @@ def lock_upgrade(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     # parameter validation
     validate_common_graph_args(args)
-    default_path_argument(args)
 
     if not any([args.update_requires, args.update_build_requires, args.update_python_requires, args.update_config_requires]):
         raise ConanException("At least one of --update-requires, --update-build-requires, "

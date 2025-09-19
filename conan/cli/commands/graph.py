@@ -4,7 +4,7 @@ import os
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
-from conan.cli.command import conan_command, conan_subcommand, default_path_argument
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.build_order_html import format_build_order_html
@@ -72,7 +72,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
                            help='Reduce the build order, output only those to build. Use this '
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
-    default_path_argument(args)
     # parameter validation
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
@@ -175,7 +174,6 @@ def graph_info(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     # parameter validation
     validate_common_graph_args(args)
-    default_path_argument(args)
     if args.format in ("html", "dot") and args.filter:
         raise ConanException(f"Formatted output '{args.format}' cannot filter fields")
 
@@ -259,7 +257,6 @@ def graph_explain(conan_api, parser,  subparser, *args):
     args = parser.parse_args(*args)
     # parameter validation
     validate_common_graph_args(args)
-    default_path_argument(args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -342,7 +339,6 @@ def graph_outdated(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     # parameter validation
     validate_common_graph_args(args)
-    default_path_argument(args)
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
