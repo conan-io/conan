@@ -119,6 +119,23 @@ class TestAddRemove:
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
 
+    def test_add_modified(self):
+        # https://github.com/conan-io/conan/issues/18942
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1")})
+        c.run("workspace add dep1")
+        assert "Reference 'dep1/0.1' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.1" in c.out
+        c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.2")})
+        c.run("workspace add dep1")
+        assert "Package dep1 already exists, updating its reference" in c.out
+        assert "Reference 'dep1/0.2' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.2" in c.out
+        assert "dep1/0.1" not in c.out
+
     @pytest.mark.parametrize("api", [False, True])
     def test_dynamic_editables(self, api):
         c = TestClient(light=True)

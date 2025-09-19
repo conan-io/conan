@@ -72,15 +72,15 @@ def run_validate_package_id(conanfile, hook_manager):
                     # This 'cant_build' will be ignored if we don't have to build the node.
                     conanfile.info.cant_build = str(e)
 
-    if hasattr(conanfile, "validate"):
-        with conanfile_exception_formatter(conanfile, "validate"):
-            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
-                try:
-                    hook_manager.execute("pre_validate", conanfile=conanfile)
+    with conanfile_exception_formatter(conanfile, "validate"):
+        with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
+            try:
+                hook_manager.execute("pre_validate", conanfile=conanfile)
+                if hasattr(conanfile, "validate"):
                     conanfile.validate()
-                    hook_manager.execute("post_validate", conanfile=conanfile)
-                except ConanInvalidConfiguration as e:
-                    conanfile.info.invalid = str(e)
+                hook_manager.execute("post_validate", conanfile=conanfile)
+            except ConanInvalidConfiguration as e:
+                conanfile.info.invalid = str(e)
 
     # Once we are done, call package_id() to narrow and change possible values
     if hasattr(conanfile, "package_id"):
