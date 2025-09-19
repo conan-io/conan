@@ -235,3 +235,8 @@ def conan_command(group=None, formatters=None):
 
 def conan_subcommand(formatters=None):
     return lambda f: ConanSubCommand(f, formatters=formatters)
+
+
+def resolve_path_requires(args):
+    if not args.requires and not args.tool_requires and args.path is None:
+        args.path = "."

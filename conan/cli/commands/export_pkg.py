@@ -15,7 +15,8 @@ def export_pkg(conan_api, parser, *args):
     """
     Create a package directly from pre-compiled binaries.
     """
-    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)",
+                        default=".")
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,

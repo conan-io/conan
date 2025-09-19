@@ -19,7 +19,8 @@ def editable_add(conan_api, parser, subparser, *args):
     Define the given <path> location as the package <reference>, so when this
     package is required, it is used from this <path> location instead of the cache.
     """
-    subparser.add_argument('path', help='Path to the package folder in the user workspace')
+    subparser.add_argument('path', help='Path to the package folder in the user workspace',
+                           default=".")  # TODO: Think about this default
     add_reference_args(subparser)
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -45,7 +46,8 @@ def editable_remove(conan_api, parser, subparser, *args):
     subparser.add_argument("path", nargs="?",
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
-                                "./my_project/conanfile.txt.")
+                                "./my_project/conanfile.txt.",
+                           default=".")  # TODO: Think about this default
     subparser.add_argument("-r", "--refs", action="append",
                            help='Directly provide reference patterns')
     args = parser.parse_args(*args)

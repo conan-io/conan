@@ -16,7 +16,8 @@ def test(conan_api, parser, *args):
     Test a package from a test_package folder.
     """
     parser.add_argument("path", action=OnceArgument,
-                        help="Path to a test_package folder containing a conanfile.py")
+                        help="Path to a test_package folder containing a conanfile.py",
+                        default=".")
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
     add_common_install_arguments(parser)
