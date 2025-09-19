@@ -64,9 +64,7 @@ def install(conan_api, parser, *args):
                                               profile_host, profile_build, lockfile, remotes,
                                               args.update, is_build_require=args.build_require)
     else:
-        requires = [req if "/" in req else f"{req}/[*]"
-                    for req in args.requires]
-        deps_graph = gapi.load_graph_requires(requires, args.tool_requires, profile_host,
+        deps_graph = gapi.load_graph_requires(args.requires, args.tool_requires, profile_host,
                                               profile_build, lockfile, remotes, args.update)
     print_graph_basic(deps_graph)
     deps_graph.report_graph_error()
