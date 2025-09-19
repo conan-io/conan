@@ -59,7 +59,7 @@ def test_path(relative_path):
         client.save({"current/conanfile.py": conanfile,
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
-            client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
+            client.run("export --name=hello --version=0.1 --user=lasote --channel=stable")
     ref_layoyt = client.exported_layout()
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)

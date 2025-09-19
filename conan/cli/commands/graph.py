@@ -72,10 +72,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
                            help='Reduce the build order, output only those to build. Use this '
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
-    # parameter validation
-    if args.requires and (args.name or args.version or args.user or args.channel):
-        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--requires")
+    validate_common_graph_args(args)
     if args.order_by is None:
         ConanOutput().warning("Please specify --order-by argument", warn_tag="deprecated")
 

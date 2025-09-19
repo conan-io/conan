@@ -122,6 +122,9 @@ class TestConanfilePath:
         client.run("graph info --requires=foo/1.0", assert_error=True)
         assert "ERROR: Package 'foo/1.0' not resolved: No remote defined." in client.out
 
+        client.run("graph info . --requires=foo/1.0", assert_error=True)
+        assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in client.out
+
 
 class TestFilters:
 

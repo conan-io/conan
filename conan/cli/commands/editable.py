@@ -44,16 +44,16 @@ def editable_remove(conan_api, parser, subparser, *args):
     Remove the "editable" mode for this reference.
     """
     subparser.add_argument("path", nargs="?",
-                           help="Path to a folder containing a recipe (conanfile.py "
-                                "or conanfile.txt) or to a recipe file. e.g., "
-                                "./my_project/conanfile.txt.",
+                           help="Path to a folder containing a recipe conanfile.py "
+                                "or to a recipe file. e.g., "
+                                "./my_project/conanfile.py.",
                            default=None)
     subparser.add_argument("-r", "--refs", action="append",
                            help='Directly provide reference patterns')
     args = parser.parse_args(*args)
-    cwd = os.getcwd()
     if not args.refs and args.path is None:
-        args.path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
+        args.path = "."
+    # TODO: Fix this API to use get_conanfile_path
     editables = conan_api.local.editable_remove(args.path, args.refs)
     out = ConanOutput()
     if editables:
