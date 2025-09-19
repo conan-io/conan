@@ -39,17 +39,26 @@ class Pip:
     def _install(self, packages):
         venv.EnvBuilder(clear=True, with_pip=True).create(self.env_dir)
         command = f'"{self.python_exe}" -m pip install {" ".join(packages)}'
-        self._conanfile_run(command, self.accepted_install_codes)
+        return self._conanfile_run(command, self.accepted_install_codes)
 
-    def configure_env(self):
+    def generate(self):
+        """
+        Will try to create a conan vvirtual env to use the python viertual env in the next steps.
+        We need to use this method in the generate step or earlier in order to use this environment in the following steps.
+        """
         env = Environment()
         env.prepend_path("PATH", self.base_dir)
         env.vars(self.conanfile).save_script(self.env_name)
 
     def install(self, packages):
+        """
+        Will try to install the list of pip packages passed as a parameter.
+
+        :param packages: try to install the list of pip packages passed as a parameter.
+        :return: the return code of the executed pip command.
+        """
         packages_to_install = self._check(packages)
 
         if packages_to_install:
-            self._install(packages_to_install)
-        else:
-            self.conanfile.output.info(f"Pip requirements: {' '.join(packages)} already installed")
+            return self._install(packages_to_install)
+        self.conanfile.output.info(f"Pip requirements: {' '.join(packages)} already installed")

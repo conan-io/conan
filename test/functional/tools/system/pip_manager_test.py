@@ -49,7 +49,7 @@ def test_build_pip_manager():
                 Pip(self).install(["{pip_package_folder}"])
 
             def generate(self):
-                Pip(self).configure_env()
+                Pip(self).generate()
 
             def build(self):
                 self.run("hello-world")
