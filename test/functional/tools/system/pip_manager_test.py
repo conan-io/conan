@@ -26,6 +26,8 @@ def test_pip_manager():
                {"setup.py": setup_py,
                 "hello/__init__.py": hello_py})
 
+    pip_package_folder = pip_package_folder.replace('\\', '/')
+
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.system.pip_manager import pip_tool_requires
@@ -43,7 +45,7 @@ def test_pip_manager():
                 basic_layout(self)
 
             def generate(self):
-                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder.replace('\\', '/')}"])
+                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder}"])
 
             def build(self):
                 self.run("hello-world")
