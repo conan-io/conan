@@ -10,7 +10,7 @@ def source(conan_api, parser, *args):
     Call the source() method.
     """
     parser.add_argument("path", help="Path to a folder containing a conanfile.py",
-                        default=".")
+                        default=".", nargs="?")
     add_reference_args(parser)
     args = parser.parse_args(*args)
 

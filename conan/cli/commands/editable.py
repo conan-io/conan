@@ -20,7 +20,7 @@ def editable_add(conan_api, parser, subparser, *args):
     package is required, it is used from this <path> location instead of the cache.
     """
     subparser.add_argument('path', help='Path to the package folder in the user workspace',
-                           default=".")  # TODO: Think about this default
+                           default=".", nargs='?')
     add_reference_args(subparser)
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
@@ -47,10 +47,13 @@ def editable_remove(conan_api, parser, subparser, *args):
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
                                 "./my_project/conanfile.txt.",
-                           default=".")  # TODO: Think about this default
+                           default=None)
     subparser.add_argument("-r", "--refs", action="append",
                            help='Directly provide reference patterns')
     args = parser.parse_args(*args)
+    cwd = os.getcwd()
+    if not args.refs and args.path is None:
+        args.path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     editables = conan_api.local.editable_remove(args.path, args.refs)
     out = ConanOutput()
     if editables:

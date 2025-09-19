@@ -140,6 +140,12 @@ def test_conan_audit_proxy():
         tc.run("audit scan --requires=zlib/1.2.11")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
+        tc.save({"conanfile.txt": "[requires]\nzlib/1.2.11\n"}, clean_first=True)
+        tc.run("audit scan")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit scan . --requires=zlib/1.2.11")
+
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
         tc.run("audit list zlib/1.2.11", assert_error=True)

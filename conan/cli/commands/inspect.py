@@ -24,7 +24,7 @@ def inspect(conan_api, parser, *args):
     Inspect a conanfile.py to return its public fields.
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)",
-                        default=".")
+                        default=".", nargs="?")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", default=None, action="append",
                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")

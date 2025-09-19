@@ -3,7 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
-from conan.cli.command import conan_command, resolve_path_requires
+from conan.cli.command import conan_command, default_path_argument
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
@@ -42,8 +42,8 @@ def install(conan_api, parser, *args):
     parser.add_argument("--envs-generation", default=None, choices=["false"],
                         help="Generation strategy for virtual environment files for the root")
     args = parser.parse_args(*args)
-    resolve_path_requires(args)
     validate_common_graph_args(args)
+    default_path_argument(args)
     # basic paths
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
