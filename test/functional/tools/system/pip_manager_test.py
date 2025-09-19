@@ -43,7 +43,7 @@ def test_pip_manager():
                 basic_layout(self)
 
             def generate(self):
-                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder}"], output_forlder=self.package_folder)
+                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder}"])
 
             def build(self):
                 self.run("hello-world")
@@ -74,7 +74,7 @@ def test_pip_manager():
                 self.run("hello-world")
         """)
 
-    client = TestClient()
+    client = TestClient(path_with_spaces=False)  # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip, "consumer/conanfile.py": conanfile})
 
     client.run("create pip/conanfile.py --version=0.1 -c tools.system.package_manager:mode=install")
