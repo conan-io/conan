@@ -43,7 +43,7 @@ def test_pip_manager():
                 basic_layout(self)
 
             def generate(self):
-                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder}"])
+                self._venv_dir = pip_tool_requires(self, ["{pip_package_folder.replace('\\', '/')}"])
 
             def build(self):
                 self.run("hello-world")
