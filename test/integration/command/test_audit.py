@@ -56,7 +56,7 @@ _sbom_zlib_1_2_11 = """
 
 @contextmanager
 def proxy_response(status, data, retry_after=60):
-    with patch("conan.api.conan_api.RemotesAPI.requester") as conanRequesterMock:
+    with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester") as conanRequesterMock:
         return_status = MagicMock()
         return_status.status_code = status
         return_status.json = MagicMock(return_value=data)
@@ -350,7 +350,7 @@ def test_audit_provider_env_credentials_with_proxy(monkeypatch):
         return response
 
     with environment_update({"CONAN_AUDIT_PROVIDER_TOKEN_CONANCENTER": "env_token_value"}):
-        with patch("conan.api.conan_api.RemotesAPI.requester",
+        with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester",
                    new_callable=MagicMock) as requester_mock:
             requester_mock.post = fake_post
             tc.run("audit list zlib/1.2.11")
