@@ -6,7 +6,7 @@ from conan.errors import ConanException
 from conan.tools.env.environment import Environment
 
 
-class Pip:
+class PipEnv:
     accepted_install_codes = [0]
     accepted_check_codes = [0, 1]
 
@@ -43,7 +43,7 @@ class Pip:
 
     def generate(self):
         """
-        Will try to create a conan vvirtual env to use the python viertual env in the next steps.
+        Will try to create a conan virtual env to use the python venv in the next steps.
         We need to use this method in the generate step or earlier in order to use this environment in the following steps.
         """
         env = Environment()

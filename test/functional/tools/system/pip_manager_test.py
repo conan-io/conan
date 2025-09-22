@@ -31,7 +31,7 @@ def test_build_pip_manager():
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system.pip_manager import Pip
+        from conan.tools.system import PipEnv
         from conan.tools.files import copy
         from conan.tools.layout import basic_layout
         import platform
@@ -45,11 +45,9 @@ def test_build_pip_manager():
             def layout(self):
                 basic_layout(self)
 
-            def build_requirements(self):
-                Pip(self).install(["{pip_package_folder}"])
-
             def generate(self):
-                Pip(self).generate()
+                PipEnv(self).install(["{pip_package_folder}"])
+                PipEnv(self).generate()
 
             def build(self):
                 self.run("hello-world")
@@ -71,7 +69,7 @@ def test_create_pip_manager():
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system.pip_manager import Pip
+        from conan.tools.system import PipEnv
         from conan.tools.files import copy
         from conan.tools.layout import basic_layout
         import platform
@@ -81,22 +79,20 @@ def test_create_pip_manager():
         class PipPackage(ConanFile):
             name = "pip_hello_test"
             version = "0.1"
+            build_policy = "missing"
+            upload_policy = "skip"
 
             def layout(self):
                 basic_layout(self)
 
-            def package(self):
-                Pip(self, self.package_folder).install(["{pip_package_folder}"])
-
             def finalize(self):
-                copy(self, "*", src=self.immutable_package_folder, dst=self.package_folder)
+                PipEnv(self, self.package_folder).install(["{pip_package_folder}"])
 
             def package_info(self):
                 self.cpp_info.includedirs = []
                 self.cpp_info.libdirs = []
                 python_root = os.path.join(self.package_folder, "pip_venv_pip_hello_test", "Scripts" if platform.system() == "Windows" else "bin")
                 self.buildenv_info.prepend_path("PATH", python_root)
-                self.runenv_info.prepend_path("PATH", python_root)
         """)
 
     conanfile = textwrap.dedent("""
@@ -108,7 +104,7 @@ def test_create_pip_manager():
             version = "0.1"
 
             def requirements(self):
-                self.requires("pip_hello_test/0.1")
+                self.tool_requires("pip_hello_test/0.1")
 
             def build(self):
                 self.run("hello-world")
