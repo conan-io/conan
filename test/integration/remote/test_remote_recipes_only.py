@@ -21,7 +21,7 @@ def client():
     assert PKG_ID == tc.created_package_id("pkg/1.0")
     tc.run("upload * -r=default -c")
     tc.run("remove * -c")
-    tc.run("remote update default -nbd")
+    tc.run("remote update default --recipes-only")
     return tc
 
 
@@ -72,7 +72,7 @@ def test_upload_still_works(client, pattern):
     client.run(f"upload {pattern} -r=default -c")
 
     # Now check that the binary was in fact uploaded
-    client.run("remote update default -abd")
+    client.run("remote update default --recipes-only=False")
     client.run("remove * -c")
     client.run("list pkg/2.0:* -r=default -f=json", redirect_stdout="list.json")
     result = json.loads(client.load("list.json"))
