@@ -242,7 +242,7 @@ class PackagesList:
                 rrev_dict.pop("packages", None)
 
     def add_refs(self, refs):
-        ConanOutput().warning("PackageLists.add_refs() non-public, non-documented method will be "
+        ConanOutput().warning("PackagesLists.add_refs() non-public, non-documented method will be "
                               "removed, use .add_ref() instead", warn_tag="deprecated")
         # RREVS alreday come in ASCENDING order, so upload does older revisions first
         for ref in refs:
