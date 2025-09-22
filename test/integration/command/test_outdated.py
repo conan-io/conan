@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient, TestServer
 
 @pytest.fixture
 def create_libs():
-    tc = TestClient(default_server_user=True)
+    tc = TestClient(default_server_user=True, light=True)
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=zlib --version=1.0")
     tc.run("create . --name=zlib --version=2.0")

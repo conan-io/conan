@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.model import ListPattern, MultiPackagesList, PackagesList
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -10,7 +10,7 @@ from conan.errors import ConanException
 
 def summary_upload_list(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package list, so it looks prettier on text output
     """
     ConanOutput().subtitle("Upload summary")
     info = results["results"]
@@ -97,10 +97,10 @@ def upload(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
-    if package_list.recipes:
+    if package_list:
         # If only if search with "*" we ask for confirmation
         if not args.list and not args.confirm and "*" in args.pattern:
-            _ask_confirm_upload(conan_api, package_list)
+            package_list = _ask_confirm_upload(conan_api, package_list)
 
         conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
                                      args.force, args.metadata, args.dry_run)
@@ -121,20 +121,17 @@ def upload(conan_api: ConanAPI, parser, *args):
 
 def _ask_confirm_upload(conan_api, package_list):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for ref, bundle in package_list.refs().items():
-        msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
-        ref_dict = package_list.recipes[str(ref)]["revisions"]
-        if not ui.request_boolean(msg):
-            ref_dict.pop(ref.revision)
-            # clean up empy refs
-            if not ref_dict:
-                package_list.recipes.pop(str(ref))
-        else:
-            for pref, prev_bundle in package_list.prefs(ref, bundle).items():
-                msg = "Are you sure you want to upload package '%s'?" % pref.repr_notime()
-                pkgs_dict = ref_dict[ref.revision]["packages"]
-                if not ui.request_boolean(msg):
-                    pref_dict = pkgs_dict[pref.package_id]["revisions"]
-                    pref_dict.pop(pref.revision)
-                    if not pref_dict:
-                        pkgs_dict.pop(pref.package_id)
+    result = PackagesList()
+    for ref, packages in package_list.items():
+        msg = f"Are you sure you want to upload recipe '{ref.repr_notime()}'?"
+        if ui.request_boolean(msg):
+            result.add_ref(ref)
+            ref_dict = package_list.recipe_dict(ref).copy()
+            ref_dict.pop("packages", None)
+            result.recipe_dict(ref).update(ref_dict)
+            for pref, pkg_id_info in packages.items():
+                msg = f"Are you sure you want to upload package '{pref.repr_notime()}'?"
+                if ui.request_boolean(msg):
+                    result.add_pref(pref, pkg_id_info)
+                    result.package_dict(pref).update(package_list.package_dict(pref))
+    return result

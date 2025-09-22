@@ -57,7 +57,7 @@ def print_serial(item, indent=None, color_index=None):
 
 def print_list_text(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package list, so it looks prettier on text output
     """
     info = results["results"]
 
