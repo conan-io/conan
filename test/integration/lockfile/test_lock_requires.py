@@ -19,13 +19,14 @@ def test_conanfile_txt_deps_ranges(requires):
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
+    rrev = client.exported_recipe_revision()
     client.run("lock create consumer/conanfile.txt")
     assert "pkg/0.1@user/testing#" in client.out
 
     client.run("create pkg --name=pkg --version=0.2 --user=user --channel=testing")
 
     client.run("install consumer/conanfile.txt")
-    assert "pkg/0.1@user/testing#" in client.out
+    assert f"pkg/0.1@user/testing#{rrev} (Locked)" in client.out
     assert "pkg/0.2" not in client.out
 
     os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))

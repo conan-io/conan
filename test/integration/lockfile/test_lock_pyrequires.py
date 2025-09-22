@@ -25,13 +25,14 @@ def test_transitive_py_requires():
                  "consumer/conanfile.py": consumer})
 
     client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
+    rrev = client.exported_recipe_revision()
     client.run("export pkg --name=pkg --version=0.1 --user=user --channel=channel")
     client.run("lock create consumer/conanfile.py")
 
     client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
 
     client.run("install consumer/conanfile.py")
-    assert "dep/0.1@user/channel" in client.out
+    assert f"dep/0.1@user/channel#{rrev} (Locked)" in client.out
     assert "dep/0.2" not in client.out
 
     os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))

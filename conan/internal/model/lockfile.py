@@ -286,7 +286,7 @@ class Lockfile(object):
             locked_refs = self._requires.refs()
             kind = "requires"
         try:
-            self._resolve(require, locked_refs, resolve_prereleases, kind)
+            return self._resolve(require, locked_refs, resolve_prereleases, kind)
         except ConanException:
             overrides = self._overrides.get(require.ref)
             if overrides is not None and len(overrides) > 1:
@@ -327,23 +327,28 @@ class Lockfile(object):
             for m in matches:
                 if version_range.contains(m.version, resolve_prereleases):
                     require.ref = m
-                    break
+                    return True
+            if self.partial:
+                return False
             else:
-                if not self.partial:
-                    raise ConanException(f"Requirement '{ref}' not in lockfile '{kind}'")
+                raise ConanException(f"Requirement '{ref}' not in lockfile '{kind}'")
         else:
             ref = require.ref
             if ref.revision is None:
                 for m in matches:
                     if m.version == ref.version:
                         require.ref = m
-                        break
+                        return True
                 else:
-                    if not self.partial:
+                    if self.partial:
+                        return False
+                    else:
                         raise ConanException(f"Requirement '{ref}' not in lockfile '{kind}'")
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile '{kind}'")
+                else:
+                    return True
 
     def replace_alias(self, require, alias):
         locked_alias = self._alias.get(alias)
@@ -355,4 +360,4 @@ class Lockfile(object):
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE
-        self._resolve(require, locked_refs, resolve_prereleases, "python_requires")
+        return self._resolve(require, locked_refs, resolve_prereleases, "python_requires")

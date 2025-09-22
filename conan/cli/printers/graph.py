@@ -16,16 +16,16 @@ def print_graph_basic(graph):
     for node in graph.nodes:
         if hasattr(node.conanfile, "python_requires"):
             for _, r in node.conanfile.python_requires.items():
-                python_requires[r.ref] = r.recipe, r.remote
+                python_requires[r.ref] = r.recipe, r.remote, r.locked
         if node.recipe in ("Consumer", "Cli"):
             continue
         if node.context == "build":
-            build_requires[node.ref] = node.recipe, node.remote
+            build_requires[node.ref] = node.recipe, node.remote, node.locked
         else:
             if node.test:
-                test_requires[node.ref] = node.recipe, node.remote
+                test_requires[node.ref] = node.recipe, node.remote, node.locked
             else:
-                requires[node.ref] = node.recipe, node.remote
+                requires[node.ref] = node.recipe, node.remote, node.locked
         if node.conanfile.deprecated:
             deprecated[node.ref] = node.conanfile.deprecated
 
@@ -37,10 +37,13 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for ref_, (recipe, remote) in sorted(reqs_to_print.items()):
+        for ref_, (recipe, remote, is_locked) in sorted(reqs_to_print.items()):
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)
-            output.info("    {} - {}".format(ref_.repr_notime(), recipe), Color.BRIGHT_CYAN)
+            info = ref_.repr_notime()
+            if is_locked:
+                info = f"{info} (Locked)"
+            output.info("    {} - {}".format(info, recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)

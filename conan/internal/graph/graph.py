@@ -71,6 +71,7 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+        self.locked = False
 
     @property
     def dependencies(self):

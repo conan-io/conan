@@ -372,9 +372,10 @@ class DepsGraphBuilder:
 
         resolved = self._resolved_system(node, require, profile_build, profile_host,
                                          self._resolve_prereleases)
+        locked = False
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
-            graph_lock.resolve_locked(node, require, self._resolve_prereleases)
+            locked = graph_lock.resolve_locked(node, require, self._resolve_prereleases)
 
         if resolved is None:
             try:
@@ -399,6 +400,7 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        new_node.locked = locked
 
         down_options = self._compute_down_options(node, require, new_ref)
 

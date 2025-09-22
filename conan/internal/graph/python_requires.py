@@ -13,6 +13,7 @@ class PyRequire:
         self.path = path
         self.recipe = recipe_status
         self.remote = remote
+        self.locked = False
 
     def serialize(self):
         return {"remote": self.remote.name if self.remote is not None else None,
@@ -96,7 +97,7 @@ class PyRequireLoader(object):
         for py_requires_ref in py_requires_refs:
             py_requires_ref = RecipeReference.loads(py_requires_ref)
             requirement = Requirement(py_requires_ref)
-            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update)
+            resolved_ref, locked = self._resolve_ref(requirement, graph_lock, remotes, update)
             try:
                 py_require = self._cached_py_requires[resolved_ref]
             except KeyError:
@@ -104,6 +105,7 @@ class PyRequireLoader(object):
                                                              remotes, update, check_update)
                 conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
+                py_require.locked = locked
                 self._cached_py_requires[resolved_ref] = py_require
             result.add_pyrequire(py_require)
         return result
@@ -112,12 +114,13 @@ class PyRequireLoader(object):
         if requirement.alias:
             raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
                                  "Please use version ranges instead")
+        locked = False
         if graph_lock:
-            graph_lock.resolve_locked_pyrequires(requirement, self._resolve_prereleases)
+            locked = graph_lock.resolve_locked_pyrequires(requirement, self._resolve_prereleases)
         # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
         self._range_resolver.resolve(requirement, "python_requires", remotes, update)
         ref = requirement.ref
-        return ref
+        return ref, locked
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
         try:
