@@ -26,11 +26,10 @@ class TestPackageTest:
         assert "hello/0.1@lasote/stable: Created package" in client.out
         client.run("test test_package hello/0.1@lasote/stable")
         assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
-        with client.chdir("test_package"):
-            client.run("test hello/0.1@lasote/stable")
-            assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
-            client.run("test . hello/0.1@lasote/stable")
-            assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
+        client.run("test hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
+        client.run("test test_package hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
 
     def test_basic_json(self):
         client = TestClient()
