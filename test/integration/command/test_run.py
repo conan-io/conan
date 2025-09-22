@@ -27,7 +27,6 @@ def test_run_basic(context):
     tc.save({"pkg/conanfile.py": conanfile})
     tc.run("create pkg")
     requires = "requires" if context == "host" else "tool-requires"
-    tc.run(f"install --{requires}=pkg/0.1")
-    tc.run(f"run myapp.sh --context={context}")
+    tc.run(f"run myapp.sh --{requires}=pkg/0.1 --context={context}")
     # Commented, find a way to test the output, right now we are not capturing it
     # assert "Hello World!" in tc.out

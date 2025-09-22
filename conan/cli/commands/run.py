@@ -54,5 +54,5 @@ def run(conan_api, parser, *args):
 
     generators_folder = deps_graph.root.conanfile.folders.generators_folder
     prefix = "conanbuild.sh" if args.context == "build" else "conanrun.sh"
-    composed_command = f". {os.path.join(generators_folder, prefix)} && {command}"
+    composed_command = f'. "{os.path.join(generators_folder, prefix)}" && {command}'
     subprocess.run(composed_command, shell=True, cwd=cwd, check=True)
