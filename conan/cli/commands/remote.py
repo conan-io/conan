@@ -119,16 +119,6 @@ def remote_update(conan_api, parser, subparser, *args):
     """
     Update a remote.
     """
-    def get_bool_from_text(value):
-        if value is None:
-            return None
-        value = value.lower()
-        if value in ["1", "yes", "y", "true"]:
-            return True
-        if value in ["0", "no", "n", "false"]:
-            return False
-        raise argparse.ArgumentTypeError("%s is not a valid value" % value)
-
     subparser.add_argument("remote", help="Name of the remote to update")
     subparser.add_argument("--url", action=OnceArgument, help="New url for the remote")
     subparser.add_argument("--secure", dest="secure", action='store_true',
@@ -139,8 +129,8 @@ def remote_update(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
                            help="Add recipe reference pattern to the list of allowed packages for this remote")
-    subparser.add_argument("--recipes-only", type=get_bool_from_text, nargs="?", default=None,
-                           const=True,
+    subparser.add_argument("--recipes-only", default=None, const="True", nargs="?",
+                           choices=["True", "False"],
                            help="Disallow binary downloads from this remote, only recipes will be downloaded")
 
     subparser.set_defaults(secure=None)
