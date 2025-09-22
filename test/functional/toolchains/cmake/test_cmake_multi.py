@@ -92,7 +92,7 @@ def test_multi_cMake():
 
     client.run("create . --name=multi --version=0.1")
     file_ext = '.a' if platform.system() != "Windows" else '.lib'
-    lib_prefix = '' if platform.system() != "Windows" else 'lib'
+    lib_prefix = 'lib' if platform.system() != "Windows" else ''
 
     assert "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
     assert f"multi/0.1: package(): Packaged 1 '{file_ext}' file: {lib_prefix}hello_two{file_ext}" in client.out
