@@ -43,8 +43,21 @@ def install(conan_api, parser, *args):
                         help="Generation strategy for virtual environment files for the root")
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-    # basic paths
     cwd = os.getcwd()
+
+    deps_graph, lockfile = run_install_command(conan_api, args, cwd)
+
+    # Update lockfile if necessary
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
+
+
+def run_install_command(conan_api, args, cwd):
+    # basic paths
+
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
     source_folder = os.path.dirname(path) if args.path else cwd
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
@@ -79,10 +92,4 @@ def install(conan_api, parser, *args):
                                        deploy_folder=args.deployer_folder,
                                        envs_generation=args.envs_generation)
     ConanOutput().success("Install finished successfully")
-
-    # Update lockfile if necessary
-    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                  clean=args.lockfile_clean)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return {"graph": deps_graph,
-            "conan_api": conan_api}
+    return deps_graph, lockfile
