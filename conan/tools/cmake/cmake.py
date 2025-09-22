@@ -60,7 +60,7 @@ class CMake:
     def is_multi_configuration(self):
         return is_multi_configuration(self._generator)
 
-    def configure(self, variables=None, build_script_folder=None, cli_args=None, build_subfolder=None,
+    def configure(self, variables=None, build_script_folder=None, cli_args=None, subfolder=None,
                   stdout=None, stderr=None):
         """
 
@@ -83,9 +83,9 @@ class CMake:
                                     ``self.folders.source`` at the ``layout()`` method.
         :param cli_args: List of arguments ``[arg1, arg2, ...]`` that will be passed
                          as extra CLI arguments to pass to cmake invocation
-        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                                and the ``package_folder``. If not provided, files will be placed
-                                                in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                          and the ``package_folder``. If not provided, files will be placed
+                                          in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -96,8 +96,8 @@ class CMake:
         cmakelist_folder = cmakelist_folder.replace("\\", "/")
 
         build_folder = self._conanfile.build_folder
-        if build_subfolder:
-            build_folder = os.path.join(self._conanfile.build_folder, build_subfolder)
+        if subfolder:
+            build_folder = os.path.join(self._conanfile.build_folder, subfolder)
         mkdir(self._conanfile, build_folder)
 
         arg_list = [self._cmake_program]
@@ -105,8 +105,8 @@ class CMake:
             arg_list.append('-G "{}"'.format(self._generator))
         if self._toolchain_file:
             toolpath = self._toolchain_file
-            if build_subfolder:
-                toolpath = os.path.relpath(self._toolchain_file, start=build_subfolder)
+            if subfolder:
+                toolpath = os.path.relpath(self._toolchain_file, start=subfolder)
             toolpath = toolpath.replace("\\", "/")
             arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
         if self._conanfile.package_folder:
@@ -149,11 +149,11 @@ class CMake:
         build_config = "--config {}".format(build_type) if build_type and is_multi else ""
         return build_config
 
-    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="", build_subfolder=None,
+    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env="", subfolder=None,
                stdout=None, stderr=None):
         bf = self._conanfile.build_folder
-        if build_subfolder:
-            bf = os.path.join(self._conanfile.build_folder, build_subfolder)
+        if subfolder:
+            bf = os.path.join(self._conanfile.build_folder, subfolder)
         build_config = self._config_arg(build_type)
 
         args = []
@@ -178,7 +178,7 @@ class CMake:
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command, env=env, stdout=stdout, stderr=stderr)
 
-    def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, build_subfolder=None,
+    def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, subfolder=None,
               stdout=None, stderr=None):
         """
 
@@ -193,16 +193,16 @@ class CMake:
         :param build_tool_args: A list of arguments ``[barg1, barg2, ...]`` for the underlying
                                 build system that will be passed to the command
                                 line after the ``--`` indicator: ``cmake --build ... -- barg1 barg2``
-        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                                and the ``package_folder``. If not provided, files will be placed
-                                                in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                          and the ``package_folder``. If not provided, files will be placed
+                                          in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.build()")
-        self._build(build_type, target, cli_args, build_tool_args, build_subfolder=build_subfolder, stdout=stdout, stderr=stderr)
+        self._build(build_type, target, cli_args, build_tool_args, subfolder=subfolder, stdout=stdout, stderr=stderr)
 
-    def install(self, build_type=None, component=None, build_subfolder=None, cli_args=None, stdout=None, stderr=None):
+    def install(self, build_type=None, component=None, subfolder=None, cli_args=None, stdout=None, stderr=None):
         """
         Equivalent to running ``cmake --install``
 
@@ -213,18 +213,18 @@ class CMake:
                            not build type.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` for the underlying build system
                          that will be passed to the command line: ``cmake --install ... arg1 arg2``
-        :param build_subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                                and the ``package_folder``. If not provided, files will be placed
-                                                in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
+                                          and the ``package_folder``. If not provided, files will be placed
+                                          in the ``build_folder`` and the ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.install()")
         package_folder = self._conanfile.package_folder
         build_folder = self._conanfile.build_folder
-        if build_subfolder:
-            package_folder = os.path.join(self._conanfile.package_folder, build_subfolder)
-            build_folder = os.path.join(self._conanfile.build_folder, build_subfolder)
+        if subfolder:
+            package_folder = os.path.join(self._conanfile.package_folder, subfolder)
+            build_folder = os.path.join(self._conanfile.build_folder, subfolder)
         mkdir(self._conanfile, package_folder)
 
         build_config = self._config_arg(build_type)

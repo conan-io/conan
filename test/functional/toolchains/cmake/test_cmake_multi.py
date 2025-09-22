@@ -28,15 +28,15 @@ def test_multi_cMake():
 
             def build_one(self):
                 cmake = CMake(self)
-                cmake.configure(build_script_folder="cmake_one", build_subfolder="one")
-                cmake.build(build_subfolder="one")
-                # cmake.install(build_subfolder="one")
+                cmake.configure(build_script_folder="cmake_one", subfolder="one")
+                cmake.build(subfolder="one")
+                # cmake.install(subfolder="one")
 
             def build_two(self):
                 cmake = CMake(self)
                 # CMAKE_PREFIX_PATH
-                cmake.configure(build_script_folder="cmake_two", build_subfolder="two")
-                cmake.build(build_subfolder="two")
+                cmake.configure(build_script_folder="cmake_two", subfolder="two")
+                cmake.build(subfolder="two")
 
             def build(self):
                 self.build_one()
@@ -44,7 +44,7 @@ def test_multi_cMake():
 
             def package(self):
                 cmake = CMake(self)
-                cmake.install(build_subfolder="two")
+                cmake.install(subfolder="two")
 
             def package_info(self):
                 self.cpp_info.libs = ["hello_two"]
