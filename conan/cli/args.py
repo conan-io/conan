@@ -142,8 +142,5 @@ def validate_common_graph_args(args):
     if not args.requires and not args.tool_requires and args.path is None:
         args.path = "."
 
-    if not args.path and not args.requires and not args.tool_requires:
-        raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
-
     if not args.path and getattr(args, "build_require", False):
         raise ConanException("--build-require should only be used with <path> argument")
