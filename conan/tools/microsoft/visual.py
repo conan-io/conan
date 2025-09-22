@@ -298,6 +298,7 @@ def _vcvars_path(version, vs_install_path):
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
     else:
         vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    vcpath = os.path.normpath(vcpath)
     return vcpath
 
 

@@ -244,3 +244,49 @@ def test_use_meson_toolchain():
     # Build locally
     c.run('build . --profile:host=android')
     assert "conanfile.py (hello/0.1): Calling build()" in c.out
+
+
+@pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Linker scripts in Linux only")
+def test_linker_script():
+    # https://github.com/conan-io/conan/issues/18535
+    conanfile_py = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import Meson
+    from conan.tools.files import load
+
+    class App(ConanFile):
+        settings = "os", "arch", "compiler", "build_type"
+        generators = "MesonToolchain"
+
+        def layout(self):
+            self.folders.build = "build"
+
+        def build(self):
+            meson = Meson(self)
+            try:
+                meson.configure()
+            finally:
+                errors = load(self, "meson-logs/meson-log.txt")
+                self.output.info(errors)
+    """)
+    meson_build = textwrap.dedent("""
+        project('tutorial', 'cpp')
+        executable('demo', 'main.cpp')
+        """)
+    main_cpp = gen_function_cpp(name="main")
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:linker_scripts=['{{profile_dir}}/mylinkscript.ld']
+        """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile_py,
+            "meson.build": meson_build,
+            "main.cpp": main_cpp,
+            "mylinkscript.ld": "",
+            "profile": profile})
+    c.run('build . -pr=profile', assert_error=True)
+    # This error means the linker script was fonud and loaded, it failed because empty
+    assert "PHDR segment not covered by LOAD segment" in c.out
