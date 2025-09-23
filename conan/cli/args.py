@@ -120,7 +120,9 @@ def common_graph_args(subparser):
     subparser.add_argument("path", nargs="?",
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
-                                "./my_project/conanfile.txt.",
+                                "./my_project/conanfile.txt. Defaults to the current "
+                                "directory when no --requires or --tool-requires is "
+                                "given",
                            default=None)
     add_reference_args(subparser)
     subparser.add_argument("--requires", action="append",

@@ -250,7 +250,7 @@ def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
                            help="Path to a folder where the workspace will be initialized. "
-                                "If does not exist")
+                                "Defaults to the current directory")
     args = parser.parse_args(*args)
     conan_api.workspace.init(args.path)
 
