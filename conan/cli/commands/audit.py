@@ -61,7 +61,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
                                 "By default raises an error for any critical CVSS (9.0 or higher). "
                                 " Use 100.0 to disable it.")
     subparser.add_argument("--context", help="Context to scan, by default both contexts are scanned",
-                           choices=["host", "build", "all"], default="all")
+                           choices=["host", "build", "both"], default="both")
 
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
