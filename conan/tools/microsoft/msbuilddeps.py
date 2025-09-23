@@ -1,4 +1,4 @@
-import fnmatch
+﻿import fnmatch
 import os
 import re
 import textwrap
@@ -11,7 +11,7 @@ from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.tools.microsoft.visual import msvc_platform_from_arch
-from conan.internal.util.files import load, save
+from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
@@ -64,22 +64,22 @@ class MSBuildDeps:
           </PropertyGroup>
           <ItemDefinitionGroup>
             <ClCompile>
-              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
               <AdditionalOptions>$(Conan{{name}}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ClCompile>
             <Link>
-              <AdditionalLibraryDirectories>$(Conan{{name}}LibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-              <AdditionalDependencies>$(Conan{{name}}Libraries)%(AdditionalDependencies)</AdditionalDependencies>
-              <AdditionalDependencies>$(Conan{{name}}SystemLibs)%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalLibraryDirectories>$(Conan{{name}}LibraryDirectories);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+              <AdditionalDependencies>$(Conan{{name}}Libraries);%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalDependencies>$(Conan{{name}}SystemLibs);%(AdditionalDependencies)</AdditionalDependencies>
               <AdditionalOptions>$(Conan{{name}}LinkerFlags) %(AdditionalOptions)</AdditionalOptions>
             </Link>
             <Midl>
-              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
             </Midl>
             <ResourceCompile>
-              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
             </ResourceCompile>
           </ItemDefinitionGroup>
           {% else %}
@@ -157,17 +157,9 @@ class MSBuildDeps:
         :return: varfile content
         """
 
-        def add_valid_ext(libname, libdirs=None):
+        def add_valid_ext(libname):
             ext = os.path.splitext(libname)[1]
-            if ext in VALID_LIB_EXTENSIONS:
-                return f"{libname};"
-
-            lib_name = f"{libname}.lib"
-            if libdirs and not any(lib_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
-                meson_name = f"lib{libname}.a"
-                if any(meson_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
-                    lib_name = meson_name
-            return f"{lib_name};"
+            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
         pkg_placeholder = "$(Conan{}RootFolder)".format(name)
 
@@ -187,7 +179,7 @@ class MSBuildDeps:
                     rel = full_path[len(root_folder)+1:]
                     full_path = ("%s/%s" % (pkg_placeholder, rel))
                 ret.append(full_path)
-            return "".join("{};".format(e) for e in ret)
+            return "".join("{};".format(e) for e in ret).removesuffix(";")
 
         root_folder = dep.recipe_folder if dep.package_folder is None else dep.package_folder
         root_folder = escape_path(root_folder)
@@ -199,10 +191,10 @@ class MSBuildDeps:
         res_dirs = join_paths(cpp_info.resdirs)
         include_dirs = join_paths(cpp_info.includedirs)
         lib_dirs = join_paths(cpp_info.libdirs)
-        libs = "".join([add_valid_ext(lib, cpp_info.libdirs) for lib in cpp_info.libs])
+        libs = "".join([add_valid_ext(lib) for lib in cpp_info.libs]).removesuffix(";")
         # TODO: Missing objects
-        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs])
-        definitions = "".join("%s;" % d for d in cpp_info.defines)
+        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]).removesuffix(";")
+        definitions = "".join("%s;" % d for d in cpp_info.defines).removesuffix(";")
         compiler_flags = " ".join(cpp_info.cxxflags + cpp_info.cflags)
         linker_flags = " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags)
 
