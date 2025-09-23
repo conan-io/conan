@@ -727,12 +727,13 @@ def test_compatibility_new_setting_forwards_compat():
 
 
 class TestCompatibleFlags:
+
     def test_compatible_flags(self):
         """ The compiler flags depends on the consumer settings, not on the binary compatible
         settings used to create that compatible binary. This test shows how the new info
         can be used to parameterize on the consumer settings
         """
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
 
@@ -740,12 +741,20 @@ class TestCompatibleFlags:
                 settings = "os"
 
                 def compatibility(self):
-                    if self.settings.os == "Windows":
+                    if self.settings.os == "Windows" or self.settings.os == "Macos":
                         return [{"settings": [("os", "Linux")]}]
 
                 def package_info(self):
-                    self.cpp_info.cxxflags = {"os=Linux": ["-mylinuxflag"],
-                                              "os=Windows": ["-mywinflag"]}
+                    def myflags(conanfile=None):
+                        if conanfile is None:
+                            return ["-no-flags"]
+                        if conanfile.settings.get_safe("os") == "Windows":
+                            return ["-mywinflag"]
+                        elif conanfile.settings.get_safe("os") == "Linux":
+                            return ["-mylinuxflag"]
+                        else:
+                            return ["-other-os-flag"]
+                    self.cpp_info.cxxflags = myflags
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -753,8 +762,10 @@ class TestCompatibleFlags:
                 settings = "os"
                 requires = "pkg/0.1"
                 def generate(self):
+                    flags = self.dependencies["pkg"].cpp_info.cxxflags
+                    self.output.info(f"FLAGS REGULAR: {flags}!!!")
                     flags = self.dependencies["pkg"].cpp_info.cxxflags_consumer(self)
-                    self.output.info(f"FLAGS: {flags}!!!")
+                    self.output.info(f"FLAGS CONDITION: {flags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
@@ -762,9 +773,14 @@ class TestCompatibleFlags:
         c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
         c.run("install consumer -s os=Linux")
-        assert "conanfile.py: FLAGS: ['-mylinuxflag']!!!" in c.out
+        assert "conanfile.py: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "conanfile.py: FLAGS CONDITION: ['-mylinuxflag']!!!" in c.out
         c.run("install consumer -s os=Windows")
-        assert "conanfile.py: FLAGS: ['-mywinflag']!!!" in c.out
+        assert "conanfile.py: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "conanfile.py: FLAGS CONDITION: ['-mywinflag']!!!" in c.out
+        c.run("install consumer -s os=Macos")
+        assert "conanfile.py: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "conanfile.py: FLAGS CONDITION: ['-other-os-flag']!!!" in c.out
 
     def test_compatible_flags_direct(self):
         """  same as above but without compatibility
@@ -775,8 +791,16 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def package_info(self):
-                    self.cpp_info.cxxflags = {"os=Linux": ["-mylinuxflag"],
-                                              "os=Windows": ["-mywinflag"]}
+                    def myflags(conanfile=None):
+                        if conanfile is None:
+                            return ["-no-flags"]
+                        if conanfile.settings.get_safe("os") == "Windows":
+                            return ["-mywinflag"]
+                        elif conanfile.settings.get_safe("os") == "Linux":
+                            return ["-mylinuxflag"]
+                        else:
+                            return ["-other-os-flag"]
+                    self.cpp_info.cxxflags = myflags
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -784,8 +808,10 @@ class TestCompatibleFlags:
                 settings = "os"
                 requires = "pkg/0.1"
                 def generate(self):
+                    flags = self.dependencies["pkg"].cpp_info.cxxflags
+                    self.output.info(f"FLAGS REGULAR: {flags}!!!")
                     flags = self.dependencies["pkg"].cpp_info.cxxflags_consumer(self)
-                    self.output.info(f"FLAGS: {flags}!!!")
+                    self.output.info(f"FLAGS CONDITION: {flags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
@@ -796,10 +822,18 @@ class TestCompatibleFlags:
 
         c.run("install --requires=dep1/0.1 --requires=dep2/0.1 "
               "-s os=Macos -s dep1/*:os=Linux -s dep2/*:os=Windows --build=missing")
-        assert "dep1/0.1: FLAGS: ['-mylinuxflag']!!!" in c.out
-        assert "dep2/0.1: FLAGS: ['-mywinflag']!!!" in c.out
+        assert "dep1/0.1: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "dep1/0.1: FLAGS CONDITION: ['-mylinuxflag']!!!" in c.out
+        assert "dep2/0.1: FLAGS CONDITION: ['-mywinflag']!!!" in c.out
 
         c.run("install --requires=dep1/0.1 --requires=dep2/0.1 "
               "-s os=Macos -s dep1/*:os=Windows -s dep2/*:os=Linux --build=missing")
-        assert "dep1/0.1: FLAGS: ['-mywinflag']!!!" in c.out
-        assert "dep2/0.1: FLAGS: ['-mylinuxflag']!!!" in c.out
+        assert "dep1/0.1: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "dep1/0.1: FLAGS CONDITION: ['-mywinflag']!!!" in c.out
+        assert "dep2/0.1: FLAGS CONDITION: ['-mylinuxflag']!!!" in c.out
+
+        c.run("install --requires=dep1/0.1 --requires=dep2/0.1 "
+              "-s os=Macos --build=missing")
+        assert "dep1/0.1: FLAGS REGULAR: ['-no-flags']!!!" in c.out
+        assert "dep1/0.1: FLAGS CONDITION: ['-other-os-flag']!!!" in c.out
+        assert "dep2/0.1: FLAGS CONDITION: ['-other-os-flag']!!!" in c.out
