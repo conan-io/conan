@@ -128,7 +128,8 @@ class XCRun:
         :param conanfile: Conanfile instance.
         :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
             sdk it automatically if ``None`` is passed.
-        :param use_settings_target: Try to use ``settings_target`` in case they exist (``False`` by default)
+        :param use_settings_target: Try to use ``settings_target`` in case they exist
+                                    (``False`` by default)
         """
         settings = conanfile.settings
         if use_settings_target and conanfile.settings_target is not None:
@@ -218,7 +219,7 @@ class XCRun:
 
 def _get_dylib_install_name(otool, path_to_dylib):
     command = f"{otool} -D {path_to_dylib}"
-    output =  iter(check_output_runner(command).splitlines())
+    output = iter(check_output_runner(command).splitlines())
     # Note: if otool return multiple entries for different architectures
     # assume they are the same and pick the first one.
     for line in output:
@@ -248,7 +249,8 @@ def fix_apple_shared_install_name(conanfile):
         return binary_type in check_output_runner(check_file)
 
     def _darwin_collect_binaries(folder, binary_type):
-        return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
+        return [os.path.join(folder, f) for f in os.listdir(folder)
+                if _darwin_is_binary(os.path.join(folder, f), binary_type)]
 
     def _fix_install_name(dylib_path, new_name):
         command = f"{install_name_tool} {dylib_path} -id {new_name}"
@@ -275,7 +277,7 @@ def fix_apple_shared_install_name(conanfile):
         ret = [s.split("(")[0].strip() for s in all_shared.splitlines()]
         return ret
 
-    def _fix_dylib_files(conanfile):
+    def _fix_dylib_files():
         substitutions = {}
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
@@ -287,7 +289,7 @@ def fix_apple_shared_install_name(conanfile):
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
                 install_name = _get_dylib_install_name(otool, shared_lib)
-                #TODO: we probably only want to fix the install the name if
+                # TODO: we probably only want to fix the install the name if
                 # it starts with `/`.
                 rpath_name = f"@rpath/{os.path.basename(install_name)}"
                 _fix_install_name(shared_lib, rpath_name)
@@ -300,7 +302,7 @@ def fix_apple_shared_install_name(conanfile):
 
         return substitutions
 
-    def _fix_executables(conanfile, substitutions):
+    def _fix_executables(substitutions):
         # Fix the install name for executables inside the package
         # that reference libraries we just patched
         bindirs = getattr(conanfile.cpp.package, "bindirs")
@@ -316,7 +318,8 @@ def fix_apple_shared_install_name(conanfile):
                 # Fix install names of libraries from within the same package
                 deps = _get_shared_dependencies(executable)
                 for dep in deps:
-                    dep_base = os.path.join(os.path.dirname(dep), os.path.basename(dep).split('.')[0])
+                    dep_base = os.path.join(os.path.dirname(dep),
+                                            os.path.basename(dep).split('.')[0])
                     match = [k for k in substitutions.keys() if k.startswith(dep_base)]
                     if match:
                         _fix_dep_name(executable, dep, substitutions[match[0]])
@@ -324,20 +327,21 @@ def fix_apple_shared_install_name(conanfile):
                 # Add relative rpath to library directories, avoiding possible
                 # existing duplicates
                 libdirs = getattr(conanfile.cpp.package, "libdirs")
-                libdirs = [os.path.join(conanfile.package_folder, dir) for dir in libdirs]
-                rel_paths = [f"@executable_path/{os.path.relpath(dir, full_folder)}" for dir in libdirs]
+                libdirs = [os.path.join(conanfile.package_folder, libdir) for libdir in libdirs]
+                rel_paths = [f"@executable_path/{os.path.relpath(libdir, full_folder)}"
+                             for libdir in libdirs]
                 existing_rpaths = _get_rpath_entries(executable)
                 rpaths_to_add = list(set(rel_paths) - set(existing_rpaths))
                 for entry in rpaths_to_add:
                     command = f"{install_name_tool} {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    substitutions = _fix_dylib_files(conanfile)
+    substitutes = _fix_dylib_files()
 
     # Only "fix" executables if dylib files were patched, otherwise
     # there is nothing to do.
-    if substitutions:
-        _fix_executables(conanfile, substitutions)
+    if substitutes:
+        _fix_executables(substitutes)
 
 
 def apple_extra_flags(conanfile):

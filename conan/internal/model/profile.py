@@ -154,7 +154,8 @@ class Profile:
         runner_type = self.runner.get("type")
         other_runner_type = other.runner.get("type")
         if runner_type and other_runner_type and runner_type != other_runner_type:
-            raise ConanException(f"Found different runner types in profile composition ({runner_type} and {other_runner_type})")
+            raise ConanException(f"Found different runner types in profile composition "
+                                 f"({runner_type} and {other_runner_type})")
         self.runner.update(other.runner)
 
         current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}
@@ -172,7 +173,7 @@ class Profile:
         """Mix the specified settings with the current profile.
         Specified settings are prioritized to profile"""
 
-        assert(isinstance(new_settings, OrderedDict))
+        assert isinstance(new_settings, OrderedDict)
 
         # apply the current profile
         res = copy.copy(self.settings)
