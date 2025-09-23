@@ -37,7 +37,8 @@ class XcodeBuild(object):
         :param target: the target to build, in case this argument is passed to the ``build()``
                        method it will add the ``-target`` argument to the build system call. If not passed, it
                        will build all the targets passing the ``-alltargets`` argument instead.
-        :param configuration: the configuration to build, defaults to profile's ``settings.build_type``.
+        :param configuration: Build configuration to use (e.g., ``Debug``, ``Release``).
+                              Defaults to the recipe's ``settings.build_type``.  
         :param build_options: Extra options to pass directly to ``xcodebuild`` (list of strings).
                               Examples: ``["-xcconfig", "<path/to/file.xcconfig>"]`` or custom
                               Xcode build settings like ``["BUILD_LIBRARY_FOR_DISTRIBUTION=YES"]``.
