@@ -6,8 +6,11 @@ class XcodeBuild(object):
     def __init__(self, conanfile, use_build_folder=False):
         """
         :param conanfile: The current recipe object. Always use ``self``.
-        :param use_build_folder: If build files/artifacts should be placed in ``self.build_folder``.
-                                 If ``False``, by default they will be placed in the directory of Xcode project.
+        :param use_build_folder: If ``True``, forces Xcode to place all intermediate and final
+                                 build files inside ``self.build_folder`` by setting
+                                 ``SYMROOT`` and ``OBJROOT``. If ``False`` (default), Xcode will
+                                 use its default location (usually under the project directory
+                                 or DerivedData, depending on the project settings).
         """
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")
@@ -44,7 +47,9 @@ class XcodeBuild(object):
                        method it will add the ``-target`` argument to the build system call. If not passed, it
                        will build all the targets passing the ``-alltargets`` argument instead.
         :param configuration: the configuration to build, defaults to profile's ``settings.build_type``.
-        :param build_options: arbitrary options (list of strings) to be passed to ``xcodebuild`` as is.
+        :param build_options: Extra options to pass directly to ``xcodebuild`` (list of strings).
+                              Examples: ``["-xcconfig", "<path/to/file.xcconfig>"]`` or custom
+                              Xcode build settings like ``["BUILD_LIBRARY_FOR_DISTRIBUTION=YES"]``.
         :return: the return code for the launched ``xcodebuild`` command.
         """
         target = "-target '{}'".format(target) if target else "-alltargets"
