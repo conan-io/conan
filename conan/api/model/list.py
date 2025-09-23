@@ -3,7 +3,7 @@ import fnmatch
 import json
 import os
 from json import JSONDecodeError
-from typing import Iterable
+from typing import Iterable, Tuple, Dict
 
 from conan.api.model import RecipeReference, PkgReference
 from conan.api.output import ConanOutput
@@ -306,7 +306,7 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def items(self) -> Iterable[tuple[RecipeReference, dict[PkgReference, dict]]]:
+    def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
         """ Iterate the contents of the package list.
 
         The first dictionary is the information directly belonging to the recipe-revision.

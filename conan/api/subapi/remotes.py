@@ -153,7 +153,7 @@ class RemotesAPI:
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
-               allowed_packages=None):
+               allowed_packages=None, recipes_only=None):
         """
         Update an existing remote
 
@@ -163,6 +163,8 @@ class RemotesAPI:
         :param disabled: optional disabled state
         :param index:  optional integer to change the order of the remote
         :param allowed_packages: optional list of packages allowed from this remote
+        :param recipes_only: optional boolean to only allow recipe downloads from this remote,
+            never package binaries
         """
         remotes = _load(self._remotes_file)
         try:
@@ -180,6 +182,8 @@ class RemotesAPI:
             remote.disabled = disabled
         if allowed_packages is not None:
             remote.allowed_packages = allowed_packages
+        if recipes_only is not None:
+            remote.recipes_only = recipes_only
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -290,7 +294,8 @@ def _load(remotes_file):
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"), r.get("remote_type"))
+                        r.get("allowed_packages"), r.get("remote_type"),
+                        r.get("recipes_only", False))
         result.append(remote)
     return result
 
@@ -305,6 +310,8 @@ def _save(remotes_file, remotes):
             remote["allowed_packages"] = r.allowed_packages
         if r.remote_type:
             remote["remote_type"] = r.remote_type
+        if r.recipes_only:
+            remote["recipes_only"] = r.recipes_only
         remote_list.append(remote)
     # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
     save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))
