@@ -138,6 +138,7 @@ def remote_update(conan_api, parser, subparser, *args):
     if (args.url is None and args.secure is None and args.index is None and
         args.allowed_packages is None and args.recipes_only is None):
         subparser.error("Please add at least one argument to update")
+    args.recipes_only = None if args.recipes_only is None else args.recipes_only == "True"
     conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index,
                              allowed_packages=args.allowed_packages,
                              recipes_only=args.recipes_only)

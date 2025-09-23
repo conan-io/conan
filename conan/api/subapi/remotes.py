@@ -313,14 +313,15 @@ def _load(remotes_file):
 def _save(remotes_file, remotes):
     remote_list = []
     for r in remotes:
-        remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl,
-                  "recipes_only": r.recipes_only}
+        remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
         if r.disabled:
             remote["disabled"] = True
         if r.allowed_packages:
             remote["allowed_packages"] = r.allowed_packages
         if r.remote_type:
             remote["remote_type"] = r.remote_type
+        if r.recipes_only:
+            remote["recipes_only"] = r.recipes_only
         remote_list.append(remote)
     # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
     save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))
