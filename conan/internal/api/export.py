@@ -30,6 +30,12 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
+    if not isinstance(ref.version.major.value, int) and ref.version.minor is not None:
+        scoped_output.warning("Using versions with alphanumeric majors is not recommended. "
+                              "Recipes with alphanumeric major versions risk misbehaving when "
+                              "checking for missing binaries "
+                              "due to unexpected package ID calculations. ",
+                              warn_tag="risk")
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 

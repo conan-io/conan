@@ -438,3 +438,12 @@ def test_export_json():
     info = json.loads(c.stdout)
     assert info["reference"] == "foo/0.1#4d670581ccb765839f2239cc8dff8fbd"
     assert len(info) == 1  # Only "reference" key yet
+
+
+def test_export_alphanumeric_major():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    c.run("export . --version=v1.3")
+    assert "Using versions with alphanumeric majors is not recommended" in c.out
+    c.run("export . --version=v1")
+    assert "Using versions with alphanumeric majors is not recommended" not in c.out
