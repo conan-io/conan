@@ -510,7 +510,7 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/downloader/" in self.client.out
 
     def test_list_urls_miss(self):
-        def custom_download(this, url, *args, **kwargs):
+        def custom_download(this, url, *args, **kwargs):  # noqa
             raise NotFoundException()
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
@@ -849,10 +849,10 @@ class TestDownloadCacheBackupSources:
             self.client.run("source .")
         assert f"{sha256} is dirty, removing it" in self.client.out
 
-    @pytest.mark.skip("Recover when .dirty files are properly handled")
+
     @pytest.mark.parametrize("exception", [Exception, ConanException])
     def test_backup_source_upload_when_dirty(self, exception):
-        def custom_download(this, *args, **kwargs):
+        def custom_download(this, *args, **kwargs):  # noqa
             raise exception()
 
         mkdir(os.path.join(self.download_cache_folder, "s"))
@@ -872,15 +872,16 @@ class TestDownloadCacheBackupSources:
 
         self.client.save_home(
             {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
-                            f"core.sources:download_urls=['{self.file_server.fake_url}/backup/', 'origin']\n"
-                            f"core.sources:upload_url={self.file_server.fake_url}/backup/"})
+                            "tools.files.download:retry=0\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backup/\n"})
 
         self.client.save({"conanfile.py": conanfile})
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader._download_file",
                         custom_download):
             self.client.run("source .", assert_error=True)
 
-        # A .dirty file was created, now try to source again, it should detect the dirty download and re-download it
+        # A .dirty file was created, now try to source again,
+        # it should detect the dirty download and clean it, but not re-source it
         self.client.run("export . --name=pkg2 --version=1.0")
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out

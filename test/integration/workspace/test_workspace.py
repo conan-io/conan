@@ -119,6 +119,23 @@ class TestAddRemove:
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
 
+    def test_add_modified(self):
+        # https://github.com/conan-io/conan/issues/18942
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1")})
+        c.run("workspace add dep1")
+        assert "Reference 'dep1/0.1' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.1" in c.out
+        c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.2")})
+        c.run("workspace add dep1")
+        assert "Package dep1 already exists, updating its reference" in c.out
+        assert "Reference 'dep1/0.2' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.2" in c.out
+        assert "dep1/0.1" not in c.out
+
     @pytest.mark.parametrize("api", [False, True])
     def test_dynamic_editables(self, api):
         c = TestClient(light=True)
@@ -160,7 +177,8 @@ class TestAddRemove:
                         for f in os.listdir(self.folder):
                             if os.path.isdir(os.path.join(self.folder, f)):
                                 conanfile = self.load_conanfile(f)
-                                result.append({"path": f, "ref": f"{conanfile.name}/{conanfile.version}"})
+                                result.append({"path": f,
+                                               "ref": f"{conanfile.name}/{conanfile.version}"})
                         return result
                """)
 
@@ -214,6 +232,34 @@ class TestAddRemove:
         info = json.loads(c.stdout)
         assert info["packages"] == [{"ref": "pkg/2.1", "path": "dep1"}]
         c.run("install --requires=pkg/2.1")
+        # it will not fail
+
+    def test_api_dynamic_any_version(self):
+        # For workspace, the version of the conanfile can be ignored if the
+        # workspace define a different version.
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name= "pkg"
+                version = "0.1"
+            """)
+
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    return [{"path": "dep1", "ref": "pkg/1.2.3"}]
+            """)
+
+        c.save({"conanws.py": workspace,
+                "dep1/conanfile.py": conanfile})
+        c.run("workspace info --format=json")
+        info = json.loads(c.stdout)
+        assert info["packages"] == [{"ref": "pkg/1.2.3", "path": "dep1"}]
+        c.run("install --requires=pkg/1.2.3")
         # it will not fail
 
     def test_error_uppercase(self):
@@ -687,7 +733,7 @@ class TestClean:
         c.save({"conanws.yml": "name: my_workspace"})
         pkga = GenConanfile("pkga", "0.1").with_settings("build_type")
         pkgb = GenConanfile("pkgb", "0.1").with_requires("pkga/0.1").with_settings("build_type")
-        c.save({"pkga/conanfile.py": pkga ,
+        c.save({"pkga/conanfile.py": pkga,
                 "pkgb/conanfile.py": pkgb,
                 "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")})
         c.run("workspace add pkga -of=build/pkga")
@@ -871,7 +917,6 @@ class TestCreate:
         assert "WARN: BUILD ZLIB!" not in c.out
         assert "pkgc/0.1: WARN: BUILD PKGC!" in c.out
 
-
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
             import os
@@ -892,7 +937,6 @@ class TestCreate:
         assert "pkga/0.1" in c.out
         c.run("workspace create")
         assert "Workspace create pkga/0.1" in c.out
-
 
     def test_host_build_require(self):
         c = TestClient()

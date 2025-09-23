@@ -56,7 +56,7 @@ _sbom_zlib_1_2_11 = """
 
 @contextmanager
 def proxy_response(status, data, retry_after=60):
-    with patch("conan.api.conan_api.RemotesAPI.requester") as conanRequesterMock:
+    with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester") as conanRequesterMock:
         return_status = MagicMock()
         return_status.status_code = status
         return_status.json = MagicMock(return_value=data)
@@ -139,6 +139,13 @@ def test_conan_audit_proxy():
 
         tc.run("audit scan --requires=zlib/1.2.11")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.save({"conanfile.txt": "[requires]\nzlib/1.2.11\n"}, clean_first=True)
+        tc.run("audit scan")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit scan . --requires=zlib/1.2.11", assert_error=True)
+        assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
 
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
@@ -350,7 +357,7 @@ def test_audit_provider_env_credentials_with_proxy(monkeypatch):
         return response
 
     with environment_update({"CONAN_AUDIT_PROVIDER_TOKEN_CONANCENTER": "env_token_value"}):
-        with patch("conan.api.conan_api.RemotesAPI.requester",
+        with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester",
                    new_callable=MagicMock) as requester_mock:
             requester_mock.post = fake_post
             tc.run("audit list zlib/1.2.11")
