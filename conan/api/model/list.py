@@ -306,7 +306,7 @@ class PackagesList:
                 result[recipe] = rrev_dict
         return result
 
-    def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, dict]]]:
+    def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
         """ Iterate the contents of the package list.
 
         The first dictionary is the information directly belonging to the recipe-revision.
