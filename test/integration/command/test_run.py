@@ -29,4 +29,4 @@ def test_run_basic(context):
     requires = "requires" if context == "host" else "tool-requires"
     tc.run(f"run myapp.sh --{requires}=pkg/0.1 --context={context}")
     # Commented, find a way to test the output, right now we are not capturing it
-    # assert "Hello World!" in tc.out
+    assert "Hello World!" in tc.out
