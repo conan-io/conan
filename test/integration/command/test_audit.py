@@ -475,7 +475,7 @@ def test_parse_error_crash_when_no_edges():
 
 
 @pytest.mark.parametrize("package_context", ["build", "host"])
-@pytest.mark.parametrize("filter_context", ["build", "host", "both"])
+@pytest.mark.parametrize("filter_context", ["build", "host", None])
 def test_audit_scan_context_filter(package_context, filter_context):
     successful_response = {
         "data": {
@@ -522,10 +522,11 @@ def test_audit_scan_context_filter(package_context, filter_context):
     tc.run("audit provider auth conancenter --token=valid_token")
 
     requires = "requires" if package_context == "host" else "tool-requires"
+    context = "" if filter_context is None else f"--context={filter_context}"
 
     with proxy_response(200, successful_response):
-        tc.run(f"audit scan --{requires}=zlib/1.2.11 --context={filter_context}")
-        if filter_context == "both" or filter_context == package_context:
+        tc.run(f"audit scan --{requires}=zlib/1.2.11 {context}")
+        if filter_context is None or filter_context == package_context:
             assert "zlib/1.2.11 1 vulnerability found" in tc.out
         else:
             assert "Total vulnerabilities found: 0" in tc.out
