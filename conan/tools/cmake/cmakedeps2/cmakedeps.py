@@ -68,7 +68,7 @@ class CMakeDeps2:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(self._conanfile)
+            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             config = ConfigTemplate2(self, require, dep, full_cpp_info)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
