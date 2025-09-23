@@ -133,7 +133,7 @@ class ConanLib(ConanFile):
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
-        client.run("source .")
+        client.run("source")
         assert "conanfile.py: Calling source() in" in client.out
         assert "conanfile.py: Running source!" in client.out
         assert "Hello World" == client.load("file1.txt")

@@ -8,7 +8,9 @@ from conan.cli.args import add_reference_args
 
 
 def common_args_export(parser):
-    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py). "
+                                     "Defaults to current directory",
+                        default=".", nargs="?")
     add_reference_args(parser)
 
 
