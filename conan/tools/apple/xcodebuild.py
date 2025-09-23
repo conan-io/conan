@@ -1,4 +1,5 @@
 from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_key
+from conan.tools.build import cmd_args_to_string
 
 
 class XcodeBuild(object):
@@ -58,5 +59,7 @@ class XcodeBuild(object):
         if deployment_target_key and self._os_version:
             cmd += f" {deployment_target_key}={self._os_version}"
 
-        cmd += f" {' '.join(build_options or [])}"
+        if build_options:
+            cmd += " " + cmd_args_to_string(build_options)
+
         self._conanfile.run(cmd)
