@@ -472,3 +472,60 @@ def test_parse_error_crash_when_no_edges():
     assert "conan_error" in scan_result
     assert "zlib/1.2.11" in scan_result["conan_error"]
     assert "7.0" in scan_result["conan_error"]
+
+
+@pytest.mark.parametrize("package_context", ["build", "host"])
+@pytest.mark.parametrize("filter_context", ["build", "host", "all"])
+def test_audit_scan_context_filter(package_context, filter_context):
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": {
+                                    "preferredBaseScore": 8.9
+                                },
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529"
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "error": None
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    requires = "requires" if package_context == "host" else "tool-requires"
+
+    with proxy_response(200, successful_response):
+        tc.run(f"audit scan --{requires}=zlib/1.2.11 --context={filter_context}")
+        if filter_context == "all" or filter_context == package_context:
+            assert "zlib/1.2.11 1 vulnerability found" in tc.out
+        else:
+            assert "Total vulnerabilities found: 0" in tc.out

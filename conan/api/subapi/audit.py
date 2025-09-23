@@ -28,12 +28,15 @@ class AuditAPI:
         }
 
     @staticmethod
-    def scan(deps_graph, provider):
+    def scan(deps_graph, provider, context="all"):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
+        is_all = context == "all"
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                          for node in deps_graph.nodes[1:]), key=lambda ref: ref.name)
+                          for node in deps_graph.nodes[1:]
+                          if is_all or node.context == context),
+                      key=lambda ref: ref.name)
         return provider.get_cves(refs)
 
     @staticmethod
