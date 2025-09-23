@@ -3,14 +3,9 @@ from conan.tools.build import cmd_args_to_string
 
 
 class XcodeBuild(object):
-    def __init__(self, conanfile, use_build_folder=False):
+    def __init__(self, conanfile):
         """
         :param conanfile: The current recipe object. Always use ``self``.
-        :param use_build_folder: If ``True``, forces Xcode to place all intermediate and final
-                                 build files inside ``self.build_folder`` by setting
-                                 ``SYMROOT`` and ``OBJROOT``. If ``False`` (default), Xcode will
-                                 use its default location (usually under the project directory
-                                 or DerivedData, depending on the project settings).
         """
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")
@@ -19,7 +14,6 @@ class XcodeBuild(object):
         self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
         self._os = conanfile.settings.get_safe("os")
         self._os_version = conanfile.settings.get_safe("os.version")
-        self._use_build_folder = use_build_folder
 
     @property
     def _verbosity(self):
@@ -57,9 +51,6 @@ class XcodeBuild(object):
         cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, build_config, self._arch, self._sdkroot,
                                 self._verbosity, target)
-        if self._use_build_folder:
-            cmd += f" SYMROOT='{self._conanfile.build_folder}' OBJROOT='{self._conanfile.build_folder}'"
-
         deployment_target_key = xcodebuild_deployment_target_key(self._os)
         if deployment_target_key and self._os_version:
             cmd += f" {deployment_target_key}={self._os_version}"
