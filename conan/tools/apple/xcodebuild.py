@@ -4,9 +4,6 @@ from conan.tools.build import cmd_args_to_string
 
 class XcodeBuild(object):
     def __init__(self, conanfile):
-        """
-        :param conanfile: The current recipe object. Always use ``self``.
-        """
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")
         self._arch = to_apple_arch(self._conanfile)
