@@ -142,5 +142,6 @@ def validate_common_graph_args(args):
     if not args.requires and not args.tool_requires and args.path is None:
         args.path = "."
 
+    # graph build-order command does not define a build-require argument
     if not args.path and getattr(args, "build_require", False):
         raise ConanException("--build-require should only be used with <path> argument")
