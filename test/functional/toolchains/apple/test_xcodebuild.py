@@ -204,8 +204,8 @@ def test_project_xcodebuild_cli_args(client, no_copy_source):
                 proj = os.path.join(self.source_folder, "app.xcodeproj")
                 xc = os.path.join(self.build_folder, "conan_config.xcconfig")
                 xb.build(proj, cli_args=["-xcconfig", xc,
-                                              f"SYMROOT={{self.build_folder}}",
-                                              f"OBJROOT={{self.build_folder}}"])
+                                        f"SYMROOT={{self.build_folder}}",
+                                        f"OBJROOT={{self.build_folder}}"])
 
             def package(self):
                 copy(self, "{{}}/app".format(self.settings.build_type), self.build_folder,
