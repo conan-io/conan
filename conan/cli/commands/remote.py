@@ -85,7 +85,7 @@ def remote_add(conan_api, parser, subparser, *args):
                                 "this remote")
     subparser.add_argument("-t", "--type", choices=[LOCAL_RECIPES_INDEX],
                            help="Define the remote type")
-    subparser.add_argument("--recipes-only", default=False,
+    subparser.add_argument("--recipes-only", action="store_true", default=False,
                            help="Disallow binary downloads from this remote, only recipes "
                                 "will be downloaded")
 
