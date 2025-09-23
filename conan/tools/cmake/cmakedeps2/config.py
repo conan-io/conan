@@ -11,10 +11,11 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, cmakedeps, require, conanfile):
+    def __init__(self, cmakedeps, require, conanfile, full_cpp_info):
         self._cmakedeps = cmakedeps
         self._require = require
         self._conanfile = conanfile
+        self._full_cpp_info = full_cpp_info
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -59,6 +60,18 @@ class ConfigTemplate2:
                     components.append(cmakename or name)
         components = " ".join(components) if components else ""
 
+        result = {"filename": f,
+                  "components": components,
+                  "pkg_name": pkg_name,
+                  "targets_include_file": targets_include,
+                  "build_modules_paths": build_modules_paths}
+
+        result.update(self._get_legacy_vars())
+        return result
+
+    def _get_legacy_vars(self):
+        # Auxiliary variables for legacy consumption and try_compile cases
+        pkg_name = self._conanfile.ref.name
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
                                                 self._conanfile, check_type=list) or []
 
@@ -66,10 +79,7 @@ class ConfigTemplate2:
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
-            # FIXME: This deduce_full_cpp_info will be called twice,
-            #  once here and another in targets file
-            cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
-            aggregated_cppinfo = cpp_info.aggregated_components()
+            aggregated_cppinfo = self._full_cpp_info.aggregated_components()
             # FIXME: Proper escaping of paths for CMake
             incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
@@ -79,18 +89,11 @@ class ConfigTemplate2:
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
-        return {"filename": f,
-                "components": components,
-                "pkg_name": pkg_name,
-                "targets_include_file": targets_include,
-                "build_modules_paths": build_modules_paths,
-                # Extra global variables
-                "additional_variables_prefixes": prefixes,
+        return {"additional_variables_prefixes": prefixes,
                 "version": self._conanfile.ref.version,
                 "include_dirs": include_dirs,
                 "definitions": definitions,
-                "libraries": libraries,
-                }
+                "libraries": libraries}
 
     @property
     def _template(self):

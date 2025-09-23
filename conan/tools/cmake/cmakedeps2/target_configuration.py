@@ -14,10 +14,11 @@ class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile, require):
+    def __init__(self, cmakedeps, conanfile, require, full_cpp_info):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
+        self._full_cpp_info = full_cpp_info
 
     def content(self):
         auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
@@ -102,7 +103,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
+        cpp_info = self._full_cpp_info
         assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
