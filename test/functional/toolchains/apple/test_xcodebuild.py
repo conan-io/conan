@@ -183,7 +183,7 @@ def test_missing_sdk(client):
 @pytest.mark.tool("xcodebuild")
 @pytest.mark.tool("xcodegen")
 @pytest.mark.parametrize("no_copy_source", [True, False])
-def test_project_xcodebuild_build_options(client, no_copy_source):
+def test_project_xcodebuild_cli_args(client, no_copy_source):
 
     conanfile = textwrap.dedent(f"""
         import os
@@ -203,7 +203,7 @@ def test_project_xcodebuild_build_options(client, no_copy_source):
                 xb = XcodeBuild(self)
                 proj = os.path.join(self.source_folder, "app.xcodeproj")
                 xc = os.path.join(self.build_folder, "conan_config.xcconfig")
-                xb.build(proj, build_options=["-xcconfig", xc,
+                xb.build(proj, cli_args=["-xcconfig", xc,
                                               f"SYMROOT={{self.build_folder}}",
                                               f"OBJROOT={{self.build_folder}}"])
 
