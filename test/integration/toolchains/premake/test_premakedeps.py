@@ -1,4 +1,6 @@
 import textwrap
+import pytest
+import os
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -134,3 +136,63 @@ def test_premakedeps_link_order():
     assert 'include "conanconfig_debug_x86_64.premake5.lua"' in contents
     contents = client.load("consumer/conanconfig_debug_x86_64.premake5.lua")
     assert 't_conan_deps_order["debug_x86_64"] = {"libc", "libb", "liba"}' in contents
+
+@pytest.mark.parametrize("transitive_headers", [True, False])
+@pytest.mark.parametrize("transitive_libs", [True, False])
+@pytest.mark.parametrize("brotli_package_type", ["unknown", "static-library", "shared-library"])
+@pytest.mark.parametrize("lib_package_type", ["unknown", "static-library", "shared-library"])
+def test_premakedeps_traits(transitive_headers, transitive_libs, brotli_package_type, lib_package_type):
+    client = TestClient()
+    profile = textwrap.dedent(
+        """
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+        """)
+
+    client.save(
+        {
+            "brotli/conanfile.py": GenConanfile("brotli", "1.0")
+            .with_package_type(brotli_package_type)
+            .with_package_info(
+                {"libs": ["brotlienc2"]}
+            ),
+            "lib/conanfile.py": GenConanfile("lib", "1.0")
+            .with_package_type(lib_package_type)
+            .with_requirement(
+                "brotli/1.0",
+                transitive_headers=transitive_headers,
+                transitive_libs=transitive_libs,
+            ),
+            "conanfile.py": GenConanfile("app", "1.0")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_require("lib/1.0")
+            .with_generator("PremakeDeps"),
+            "profile": profile,
+        }
+    )
+    client.run("create brotli -pr profile")
+    brotli_layout = client.created_layout()
+    client.run("create lib -pr profile")
+    client.run("install . -pr profile")
+
+    if not transitive_headers and not transitive_libs and brotli_package_type != "shared-library":
+        assert not os.path.exists(os.path.join(client.current_folder, "conan_brotli_vars_release_x86_64.premake5.lua"))
+        return
+
+    brotli_vars = client.load("conan_brotli_vars_release_x86_64.premake5.lua")
+    if transitive_libs:
+        assert 't_conandeps["release_x86_64"]["brotli"]["libs"] = {"brotlienc2"}' in brotli_vars
+    else:
+        assert 't_conandeps["release_x86_64"]["brotli"]["libs"] = {}' in brotli_vars
+
+    if transitive_headers:
+        include_path = os.path.join(brotli_layout.package(), "include").replace("\\", "/")
+        assert f't_conandeps["release_x86_64"]["brotli"]["includedirs"] = {{"{include_path}"}}' in brotli_vars
+    else:
+        assert 't_conandeps["release_x86_64"]["brotli"]["includedirs"] = {}' in brotli_vars

@@ -58,7 +58,7 @@ def export(conan_api, parser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     exported_list = PackagesList()
-    exported_list.add_refs([ref])
+    exported_list.add_ref(ref)
 
     pkglist = MultiPackagesList()
     pkglist.add("Local Cache", exported_list)

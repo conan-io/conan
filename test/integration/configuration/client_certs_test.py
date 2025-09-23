@@ -1,6 +1,5 @@
 import os
 import textwrap
-import unittest
 
 from requests import Response
 
@@ -35,7 +34,7 @@ class MyHttpRequester(TestRequester):
         return resp
 
 
-class ClientCertsTest(unittest.TestCase):
+class TestClientCerts:
 
     def test_pic_custom_path_client_certs(self):
         folder = temp_folder()

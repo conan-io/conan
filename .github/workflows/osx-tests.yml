@@ -9,7 +9,7 @@ on:
 
 jobs:
   osx_setup:
-    runs-on: macos-14
+    runs-on: macos-15
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -115,7 +115,7 @@ jobs:
 
   osx_tests:
     needs: osx_setup
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: true
       matrix:
@@ -152,6 +152,13 @@ jobs:
             ~/Applications/bazel/7.4.1
             ~/Applications/bazel/8.0.0
           key: ${{ runner.os }}-conan-tools-cache
+
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+          clang --version
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

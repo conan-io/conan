@@ -53,3 +53,45 @@ class TestTransitiveOptionsAffectPackageID:
         client.run("create . -o pkg*:noaffect=2 -o pkg*:affect=True")
         assert "EMBED MODE!!" in client.out
         client.assert_listed_binary({"app": (different_pkg_id, "Build")})
+
+    def test_transitive_shared(self):
+        # https://github.com/conan-io/conan/issues/18900
+        c = TestClient()
+
+        lib1 = GenConanfile("lib1", "0.1").with_shared_option(True)
+        lib2 = (GenConanfile("lib2", "0.1").with_shared_option(True)
+                .with_requirement("lib1/0.1", transitive_libs=True))
+        lib3 = (GenConanfile("lib3", "0.1").with_shared_option(True)
+                .with_requirement("lib2/0.1"))
+        lib4 = (GenConanfile("lib4", "0.1").with_shared_option(True)
+                .with_requirement("lib3/0.1"))
+        c.save({"lib1/conanfile.py": lib1,
+                "lib2/conanfile.py": lib2,
+                "lib3/conanfile.py": lib3,
+                "lib4/conanfile.py": lib4})
+        c.run("create lib1")
+        c.run("create lib2")
+        c.run("create lib3")
+        c.run("create lib4")
+
+        c.run("install --requires=lib4/0.1 -o lib1/*:shared=False --build=missing")
+        c.assert_listed_binary({"lib1/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Build"),
+                                "lib2/0.1": ("76844632e497abea8503d65ffd8324460dc70745", "Build"),
+                                "lib3/0.1": ("7b10301e532fc0269d6ac70470aee5780f0836cd", "Build"),
+                                "lib4/0.1": ("635372f179ad582c713637e361a7cd7ac7cd1d09", "Cache"),
+                                })
+
+        lib3 = (GenConanfile("lib3", "0.1").with_shared_option(True)
+                .with_requirement("lib2/0.1", transitive_libs=True))
+        c.save({"lib3/conanfile.py": lib3})
+        c.run("remove * -c")
+        c.run("create lib1")
+        c.run("create lib2")
+        c.run("create lib3")
+        c.run("create lib4")
+        c.run("install --requires=lib4/0.1 -o lib1/*:shared=False --build=missing")
+        c.assert_listed_binary({"lib1/0.1": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Build"),
+                                "lib2/0.1": ("76844632e497abea8503d65ffd8324460dc70745", "Build"),
+                                "lib3/0.1": ("7b10301e532fc0269d6ac70470aee5780f0836cd", "Build"),
+                                "lib4/0.1": ("dd8f5355b399fd7d96c883ddd39b992ae968cb14", "Build"),
+                                })

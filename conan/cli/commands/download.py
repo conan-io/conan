@@ -56,7 +56,7 @@ def download(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
 
-    if package_list.recipes:
+    if package_list:
         conan_api.download.download_full(package_list, remote, args.metadata)
     else:
         ConanOutput().warning(f"No packages were downloaded because the package list is empty.")

@@ -89,17 +89,20 @@ def migrate_compatibility_files(cache_folder):
     compatibility_file = os.path.join(compatible_folder, "compatibility.py")
     cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
 
-    def _should_migrate_file(file_path):
+    def _is_migratable(file_path):
         if not os.path.exists(file_path):
             return True
         content = load(file_path)
         first_line = content.lstrip().split("\n", 1)[0]
         return CONAN_GENERATED_COMMENT in first_line
 
-    if _should_migrate_file(compatibility_file) and _should_migrate_file(cppstd_compat_file):
-        if os.path.exists(compatibility_file) and load(compatibility_file) != _default_compat:
-            ConanOutput().success("Migration: Successfully updated compatibility.py")
-        save(compatibility_file, _default_compat)
+    if _is_migratable(compatibility_file) and _is_migratable(cppstd_compat_file):
+        compatibility_exists = os.path.exists(compatibility_file)
+        needs_update = not compatibility_exists or load(compatibility_file) != _default_compat
+        if needs_update:
+            save(compatibility_file, _default_compat)
+            if compatibility_exists:
+                ConanOutput().success("Migration: Successfully updated compatibility.py")
         if os.path.exists(cppstd_compat_file):
             os.remove(cppstd_compat_file)
 

@@ -213,6 +213,10 @@ def test_replace_requires_consumer_references(name, version):
     assert f"zlib/0.1: {name}/{version}" in c.out
     assert f"app/0.1: DEP ZLIB generate: {name}!" in c.out
     assert f"app/0.1: DEP ZLIB build: {name}!" in c.out
+    if name == "zlib-ng":
+        # CMakeDeps can not be used to consume replaced requires for different packages
+        # only CMakeConfigDeps has this capability
+        c.run("install --requires=app/0.1 -pr=profile -g CMakeDeps", assert_error=True)
 
 
 def test_replace_requires_consumer_references_error_multiple():

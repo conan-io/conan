@@ -85,13 +85,31 @@ def _color_enabled(stream):
 
 
 class ConanOutput:
+    """ A singleton class to handle output messages in Conan.
+
+    Recipes should only access this class through the ``self.output`` attribute of the recipe,
+    but custom commands or tools can instantiate it directly, where doing so for each message is
+    a valid practice.
+
+    It provides methods to write messages at different levels of verbosity, such as debug, info,
+    warning, and error. The output level can be controlled by the user through command-line options
+    or environment variables.
+
+    The output methods return the instance itself, so different methods can be chained together.
+    """
     # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
     lock = Lock()
 
-    def __init__(self, scope=""):
+    def __init__(self, scope: str = ""):
+        """ Initialize the ConanOutput instance.
+
+        :parameter scope: A string that represents the scope of the output. This is usually the
+            reference of the recipe being executed, like ``pkg/1.0@user/channel`` and is prefixed
+            to the output messages. If not provided, it defaults to an empty string.
+        """
         self.stream = sys.stderr
         self._scope = scope
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
@@ -108,12 +126,6 @@ class ConanOutput:
 
     @classmethod
     def define_log_level(cls, v):
-        """
-        Translates the verbosity level entered by a Conan command. If it's `None` (-v),
-        it will be defaulted to `verbose` level.
-
-        :param v: `str` or `None`, where `None` is the same as `verbose`.
-        """
         env_level = os.getenv("CONAN_LOG_LEVEL")
         v = env_level or v
         levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
@@ -175,11 +187,13 @@ class ConanOutput:
 
         return self
 
-    def box(self, msg):
+    def box(self, msg: str):
+        """ Draw a box around the message, useful for important messages"""
         color = Color.BRIGHT_GREEN
         self.writeln("\n**************************************************", fg=color)
         self.writeln(f'*{msg: ^48}*', fg=color)
         self.writeln(f"**************************************************\n", fg=color)
+        return self
 
     def login_msg(self, msg, newline=False):
         # unconditional to the error level, this has to show always
@@ -206,53 +220,91 @@ class ConanOutput:
                 ret = msg
 
         if newline:
-            ret += "\n"
+            ret = f"{ret}\n"
 
         with self.lock:
             self.stream.write(ret)
             self.stream.flush()
 
-    def trace(self, msg):
+    def trace(self, msg: str):
+        """ This is the most extreme level of detail.
+
+        Trace messages log every little step the system takes, including function entries and exits,
+        variable changes, and other very specific events.
+
+        This message won't be printed unless the user has set the log level to trace
+        (e.g., using the ``-vvv`` option in the command line).
+
+        It’s used when full visibility of everything happening in the system is required,
+        but should be used carefully due to the large amount of information it can generate."""
         if self._conan_output_level <= LEVEL_TRACE:
             self._write_message(msg, fg=Color.BLUE)
         return self
 
-    def debug(self, msg, fg=Color.MAGENTA, bg=None):
+    def debug(self, msg: str, fg: str = Color.MAGENTA, bg: str = None):
+        """ With a high level of detail, it is mainly used for debugging code.
+
+        This message won't be printed unless the user has set the log level to debug
+        (e.g., using the ``-vv`` option in the command line).
+
+        These messages provide useful information for developers, such as variable values
+        or execution flow details, to trace errors or analyze the program's behavior."""
         if self._conan_output_level <= LEVEL_DEBUG:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def verbose(self, msg, fg=None, bg=None):
+    def verbose(self, msg: str, fg: str = None, bg: str = None):
+        """ Displays additional and detailed information that, while not critical,
+        can be useful for better understanding how the system is working.
+
+        This message won't be printed unless the user has set the log level to verbose
+        (e.g., using the ``-v`` option in the command line).
+
+        It’s appropriate for gaining more context without overloading the logs with
+        excessive detail. Useful when more clarity is needed than a simple info."""
         if self._conan_output_level <= LEVEL_VERBOSE:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def status(self, msg, fg=None, bg=None):
+    def status(self, msg: str, fg: str = None, bg: str = None):
+        """ Provides general information about the system or ongoing operations.
+
+        Info messages are basic and used to inform about common events,
+        like the start or completion of processes, without implying specific problems or achievements."""
         if self._conan_output_level <= LEVEL_STATUS:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    # Remove in a later refactor of all the output.info calls
     info = status
 
-    def title(self, msg):
+    def title(self, msg: str):
+        """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
         return self
 
-    def subtitle(self, msg):
+    def subtitle(self, msg: str):
+        """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
         return self
 
-    def highlight(self, msg):
+    def highlight(self, msg: str):
+        """ Marks or emphasizes important events or processes that need to stand out but don’t necessarily
+        indicate success or error.
+
+        These messages draw attention to key points that may be relevant for the user or administrator."""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message(msg, fg=Color.BRIGHT_MAGENTA)
         return self
 
-    def success(self, msg):
+    def success(self, msg: str):
+        """ Shows that an operation has been completed successfully.
+
+        This type of message is useful to confirm that key processes or tasks have finished correctly,
+        which is essential for good application monitoring."""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message(msg, fg=Color.BRIGHT_GREEN)
         return self
@@ -262,7 +314,15 @@ class ConanOutput:
         lookup_tag = warn_tag or "unknown"
         return any(fnmatch.fnmatch(lookup_tag, pattern) for pattern in patterns)
 
-    def warning(self, msg, warn_tag=None):
+    def warning(self, msg: str, warn_tag: str = None):
+        """ Highlights a potential issue that, while not stopping the system,
+        could cause problems in the future or under certain conditions.
+
+        Warnings signal abnormal situations that should be
+        reviewed but don’t necessarily cause an immediate halt in operations.
+        Notice that if the tag matches the pattern in the ``core:warnings_as_errors`` configuration,
+        and is not skipped, this will be upgraded to an error, and raise an exception
+        when the output is printed, so that the error does not pass unnoticed."""
         _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
         if (self._conan_output_level <= LEVEL_WARNING or
                 (_treat_as_error and self._conan_output_level <= LEVEL_ERROR)):
@@ -277,7 +337,15 @@ class ConanOutput:
                 self._write_message(f"WARN: {output}", Color.YELLOW)
         return self
 
-    def error(self, msg, error_type=None):
+    def error(self, msg: str, error_type: str = None):
+        """ Indicates that a serious issue has occurred that prevents the system
+        or application from continuing to function correctly.
+
+        Typically, this represents a failure in the normal flow of execution,
+        such as a service crash or a critical exception.
+        Notice that if the user has set the ``core:warnings_as_errors`` configuration,
+        this will raise an exception when the output is printed,
+        so that the error does not pass unnoticed."""
         if self._warnings_as_errors and error_type != "exception":
             raise ConanException(msg)
         if self._conan_output_level <= LEVEL_ERROR:

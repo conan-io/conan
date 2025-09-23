@@ -130,14 +130,14 @@ def _infix_to_postfix(exp):
     stack = []
 
     i = -1
-    while(i < len(exp) - 1):
+    while i < len(exp) - 1:
         i += 1
         char = exp[i]
         if char == " ":  # Ignore spaces between expressions and operators
             continue
         if char == ")":  # Pop the stack until "(" and send them to output
             popped = None
-            while(popped != "(" and stack):
+            while popped != "(" and stack:
                 popped = stack.pop()
                 if popped != "(":
                     output.append(popped)
