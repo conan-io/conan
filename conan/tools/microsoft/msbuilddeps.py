@@ -179,7 +179,7 @@ class MSBuildDeps:
                     rel = full_path[len(root_folder)+1:]
                     full_path = ("%s/%s" % (pkg_placeholder, rel))
                 ret.append(full_path)
-            return "".join("{};".format(e) for e in ret).removesuffix(";")
+            return ";".join(ret)
 
         root_folder = dep.recipe_folder if dep.package_folder is None else dep.package_folder
         root_folder = escape_path(root_folder)
