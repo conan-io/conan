@@ -479,3 +479,23 @@ def test_parse_error_crash_when_no_edges():
     assert "conan_error" in scan_result
     assert "zlib/1.2.11" in scan_result["conan_error"]
     assert "7.0" in scan_result["conan_error"]
+
+
+@pytest.mark.parametrize("package_context", ["build", "host"])
+@pytest.mark.parametrize("filter_context", ["build", "host", None])
+def test_audit_scan_context_filter(package_context, filter_context):
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    requires = "requires" if package_context == "host" else "tool-requires"
+    context = "" if filter_context is None else f"--context={filter_context}"
+
+    with proxy_response(200, {}):
+        tc.run(f"audit scan --{requires}=zlib/1.2.11 {context}")
+        if filter_context is None or filter_context == package_context:
+            assert "Requesting vulnerability info for: zlib/1.2.11" in tc.out
+        else:
+            assert "Requesting vulnerability info for: zlib/1.2.11" not in tc.out
