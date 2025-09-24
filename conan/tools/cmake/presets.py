@@ -18,8 +18,8 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
     preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv, runenv,
-                                                      cmake_executable, absolute_paths)
+                                                      cache_variables, preset_prefix, buildenv,
+                                                      runenv, cmake_executable, absolute_paths)
     _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
                                absolute_paths)
 
@@ -28,8 +28,8 @@ class _CMakePresets:
     """ Conan generated main CMakePresets.json inside the generators_folder
     """
     @staticmethod
-    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv,
-                 cmake_executable, absolute_paths):
+    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv,
+                 runenv, cmake_executable, absolute_paths):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
         if not absolute_paths:
             try:  # Make it relative to the build dir if possible
@@ -104,7 +104,8 @@ class _CMakePresets:
         """
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                               multiconfig, preset_prefix, buildenv, cmake_executable)
+                                               multiconfig, preset_prefix, buildenv,
+                                               cmake_executable)
         build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
@@ -174,7 +175,7 @@ class _CMakePresets:
         if conanfile.build_folder:
             # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
             # we don't even have a conanfile with a `layout()` to determine the build folder.
-            # If we install a local conanfile: "conan install ." with a layout(), it will be available.
+            # If we install a local conanfile "conan install ." with a layout(), it will be available
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
@@ -216,7 +217,8 @@ class _CMakePresets:
     def _build_preset_fields(conanfile, multiconfig, preset_prefix):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
         build_preset_jobs = build_jobs(conanfile)
-        ret["jobs"] = build_preset_jobs
+        if build_preset_jobs:
+            ret["jobs"] = build_preset_jobs
         return ret
 
     @staticmethod
