@@ -7,8 +7,12 @@ new_value = "will_break_next"
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_package_info_extra_variables():
-    """ Issue: Dependencies have preference over dependencies, bad """
+@pytest.mark.parametrize("generator", ["CMakeDeps", "CMakeConfigDeps"])
+def test_package_info_extra_variables(generator):
+    """ The dependencies can define extra variables to be used in CMake,
+        but if the user is setting the cmake_extra_variables conf,
+        those should have precedence.
+    """
     client = TestClient()
     dep_conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -31,13 +35,13 @@ def test_package_info_extra_variables():
     """)
 
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(f"""
     from conan import ConanFile
     from conan.tools.cmake import CMake
 
     class Pkg(ConanFile):
         settings = "os", "arch", "compiler", "build_type"
-        generators = "CMakeDeps", "CMakeToolchain"
+        generators = "{generator}", "CMakeToolchain"
         requires = "dep/0.1"
         def build(self):
             cmake = CMake(self)
@@ -45,9 +49,9 @@ def test_package_info_extra_variables():
     """)
     client.save({"CMakeLists.txt": cmakelists,
                  "conanfile.py": conanfile})
-    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value} "
+    conf = f"-c tools.cmake.cmakedeps:new={new_value}" if generator == "CMakeConfigDeps" else ""
+    client.run(f"build . {conf} "
                """-c tools.cmake.cmaketoolchain:extra_variables="{'FOO': '9'}" """)
 
-    # This fails because the user is seeing -- FOO=42 coming from the dependency
     assert "-- FOO=9" in client.out
 

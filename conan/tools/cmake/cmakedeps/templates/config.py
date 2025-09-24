@@ -100,7 +100,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         # Definition of extra CMake variables from cmake_extra_variables
 
         {% for key, value in extra_variables.items() %}
+        if (NOT CONAN_ORIGIN_EXTRA_VARIABLE_{{ key }}_IS_TOOLCHAIN)
         set({{ key }} {{ value }})
+        endif()
         {% endfor %}
 
         # Only the last installed configuration BUILD_MODULES are included to avoid the collision
