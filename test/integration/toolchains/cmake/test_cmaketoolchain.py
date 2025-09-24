@@ -1396,6 +1396,9 @@ def test_presets_njobs():
     c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
+    c.run('install . -g CMakeToolchain -c tools.build:jobs=0')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert "jobs" not in presets["buildPresets"][0]
 
 
 def test_add_cmakeexe_to_presets():
