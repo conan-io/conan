@@ -25,7 +25,7 @@ def _create_py_hello_world(folder):
 
 def test_build_pip_manager():
 
-    pip_package_folder = temp_folder(path_with_spaces=False)
+    pip_package_folder = temp_folder(path_with_spaces=True)
     _create_py_hello_world(pip_package_folder)
     pip_package_folder = pip_package_folder.replace('\\', '/')
 
@@ -63,7 +63,7 @@ def test_build_pip_manager():
 
 def test_create_pip_manager():
 
-    pip_package_folder = temp_folder(path_with_spaces=False)
+    pip_package_folder = temp_folder(path_with_spaces=True)
     _create_py_hello_world(pip_package_folder)
     pip_package_folder = pip_package_folder.replace('\\', '/')
 
