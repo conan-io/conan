@@ -104,6 +104,14 @@ class _Component:
         self._location = None
         self._link_location = None
 
+        # consumer conditional evaluation
+        self._consumer = None
+
+    def set_consumer(self, consumer_conanfile):
+        # This might have race-conditions if consumers generate() of the same graph was
+        # concurrent, but it is not
+        self._consumer = consumer_conanfile
+
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -335,6 +343,8 @@ class _Component:
 
     @property
     def cflags(self):
+        if callable(self._cflags):
+            return self._cflags(self._consumer)
         if self._cflags is None:
             self._cflags = []
         return self._cflags
@@ -345,16 +355,11 @@ class _Component:
 
     @property
     def cxxflags(self):
+        if callable(self._cxxflags):
+            return self._cxxflags(self._consumer)
         if self._cxxflags is None:
             self._cxxflags = []
-        if callable(self._cxxflags):
-            return self._cxxflags()
         return self._cxxflags
-
-    def cxxflags_consumer(self, conanfile):
-        if not callable(self._cxxflags):
-            return self.cxxflags
-        return self._cxxflags(conanfile)
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -362,6 +367,8 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
+        if callable(self._sharedlinkflags):
+            return self._sharedlinkflags(self._consumer)
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
         return self._sharedlinkflags
@@ -372,6 +379,8 @@ class _Component:
 
     @property
     def exelinkflags(self):
+        if callable(self._exelinkflags):
+            return self._exelinkflags(self._consumer)
         if self._exelinkflags is None:
             self._exelinkflags = []
         return self._exelinkflags
@@ -679,6 +688,13 @@ class CppInfo:
         self.components = defaultdict(lambda: _Component(set_defaults))
         self.default_components = None
         self._package = _Component(set_defaults)
+
+    def set_consumer(self, consumer_conanfile):
+        # This might have race-conditions if consumers generate() of the same graph was
+        # concurrent, but it is not
+        self._package.set_consumer(consumer_conanfile)
+        for c in self.components.values():
+            c.set_consumer(consumer_conanfile)
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
