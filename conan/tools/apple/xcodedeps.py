@@ -93,7 +93,7 @@ class XcodeDeps(object):
         // Link options for {{pkg_name}}_{{comp_name}}
         LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
         OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
-         """)
+        """)
 
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file

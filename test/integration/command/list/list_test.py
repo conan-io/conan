@@ -8,16 +8,12 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
-from conan.test.assets.cmake import gen_cmakelists
+from conan.internal.errors import ConanConnectionError
+from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.sources import gen_function_h, gen_function_cpp
-from conan.test.utils.file_server import TestFileServer
-from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, zipdir
 from conan.test.utils.env import environment_update
-from conan.internal.util.files import save, save_files, sha256sum
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestParamErrors:
@@ -70,13 +66,15 @@ class TestParamErrors:
         c.run("list --graph graph.json --format=json", redirect_stdout="pkglist.json")
         c.run("list --graph pkglist.json", assert_error=True)
         assert (
-            'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running'
+            'Expected a graph file but found an unexpected JSON file format. '
+            'You can create a "graph" JSON file by running'
             in c.out
         )
         assert (
             "conan [ graph-info | create | export-pkg | install | test ] --format=json > graph.json"
             in c.out
         )
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -229,6 +227,17 @@ class TestListRefs:
                          'zlib/1.0.0@user/channel': {},
                          'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
+
+    def test_version_range_prerelease(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("foo", "1.0-pre.1")})
+        tc.run("export .")
+        tc.run("list * ",)
+        assert "foo/1.0-pre.1" in tc.out
+        tc.run("list foo/[>=1.0]")
+        assert "foo/1.0-pre.1" not in tc.out
+        tc.run("list foo/[>=1.0] -cc core.version_ranges:resolve_prereleases=True")
+        assert "foo/1.0-pre.1" in tc.out
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_versions_exact(self, client, remote):
@@ -857,7 +866,8 @@ class TestListCompact:
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*#*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#*",
-        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e"
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#"
+        "0ba8627bd47edc3a501e8f0eb9a79e5e"
     ])
     def test_list_compact_patterns(self, pattern):
         c = TestClient(light=True)
@@ -951,6 +961,7 @@ def test_overlapping_versions():
     tc.run("list * -c -f=json", redirect_stdout="list.json")
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
+
 
 def test_list_local_recipe_index():
     c = TestClient(light=True)

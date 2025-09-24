@@ -887,7 +887,7 @@ def test_info_build_order_editable():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("editable add dep")
     c.run("export pkg")
-    
+
     c.run("graph build-order consumer --build=missing --build=editable -f=json --order-by=recipe")
     bo_json = json.loads(c.stdout)
     pkg = bo_json["order"][0][0]["packages"][0][0]
@@ -900,3 +900,17 @@ def test_info_build_order_editable():
     pkg = bo_json["order"][0][0]
     assert pkg["binary"] == "EditableBuild"
     assert pkg["build_args"] == "--requires=dep/0.1 --build=dep/0.1"
+
+
+def test_build_order_path_reqs_mixed_args():
+    # This used not to crash in previous versions
+    # Also make sure we can properly used them separately
+    tc = TestClient(light=True)
+    tc.run("graph build-order . --requires=foo/1.0", assert_error=True)
+    assert "ERROR: --requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
+
+    tc.run("graph build-order --requires=foo/1.0", assert_error=True)
+    assert "Package 'foo/1.0' not resolved: No remote defined" in tc.out
+
+    tc.run("graph build-order .", assert_error=True)
+    assert "Conanfile not found" in tc.out

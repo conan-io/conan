@@ -46,7 +46,7 @@ class TestExportPkg:
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
+        client.run("export-pkg --name=hello --version=0.1 --user=lasote --channel=stable")
         assert ("conanfile.py (hello/0.1@lasote/stable): package(): "
                 "WARN: No files in this package!") in client.out
 

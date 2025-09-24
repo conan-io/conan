@@ -833,7 +833,7 @@ def check_build_vs_project_with_test_requires(vs_version):
             settings = "os", "build_type", "compiler", "arch"
             generators = "MSBuildDeps", "MSBuildToolchain"
 
-            def requirements(self):
+            def build_requirements(self):
                 self.test_requires("mydep.pkg.team/0.1")
 
             def build(self):

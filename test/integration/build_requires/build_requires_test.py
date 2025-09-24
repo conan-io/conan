@@ -602,7 +602,7 @@ def test_requirement_in_wrong_method():
 
 def test_transitive_build_scripts_error():
     # https://github.com/conan-io/conan/issues/18235
-    c = TestClient()
+    c = TestClient(light=True)
     meta = textwrap.dedent("""
         from conan import ConanFile
 
@@ -631,3 +631,29 @@ def test_transitive_build_scripts_error():
     c.run("create meta")
     c.run("install product")
     # It doesn't crash
+
+
+def test_transitive_build_scripts_library_error():
+    # https://github.com/conan-io/conan/issues/18856
+    c = TestClient(light=True)
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Product(ConanFile):
+            name = "tool"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("dep/0.1")
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "tool/conanfile.py": tool})
+    c.run("create dep")
+    c.run("create tool")
+    # Tool-requires, not an issue
+    c.run("install --tool-requires=tool/0.1")
+    # requires, it crashed with traceback, now a clear error message
+    c.run("install --requires=tool/0.1", assert_error=True)
+    assert ("ERROR: Package 'tool/0.1' with type 'build-scripts' cannot have "
+            "a 'static-library' dependency to 'dep/0.1'") in c.out

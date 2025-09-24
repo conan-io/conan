@@ -398,10 +398,10 @@ def test_crossbuild_to_android(build_env_mock):
     """
     Issue related: https://github.com/conan-io/conan/issues/17441
     """
-    vars = MagicMock()
+    buildvars = MagicMock()
     # VirtualBuildEnv defines these variables
-    vars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
-    build_env_mock.return_value = vars
+    buildvars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
+    build_env_mock.return_value = buildvars
 
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Android", "arch": "armv8"})

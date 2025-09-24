@@ -80,7 +80,8 @@ class RemoteManager:
                                      f"no conanmanifest.txt")
             self._signer.verify(ref, download_export, files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'", error_type="exception")
+            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
+                                              error_type="exception")
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
@@ -109,7 +110,8 @@ class RemoteManager:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            output.error(f"Error downloading metadata from remote '{remote.name}'", error_type="exception")
+            output.error(f"Error downloading metadata from remote '{remote.name}'",
+                         error_type="exception")
             raise
 
     def get_recipe_sources(self, ref, layout, remote):
@@ -156,13 +158,16 @@ class RemoteManager:
             self._call_remote(remote, "get_package", pref, download_pkg_folder,
                               metadata, only_metadata=True)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
-            output.error(f"Exception while getting package metadata: {str(pref.package_id)}", error_type="exception")
+            output.error(f"Exception while getting package metadata: {str(pref.package_id)}",
+                         error_type="exception")
             output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
 
     def _get_package(self, layout, pref, remote, scoped_output, metadata):
         try:
             assert pref.revision is not None
+            if remote.recipes_only:
+                raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -188,7 +193,8 @@ class RemoteManager:
             raise PackageNotFoundException(pref)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
             self._cache.remove_package_layout(layout)
-            scoped_output.error(f"Exception while getting package: {str(pref.package_id)}", error_type="exception")
+            scoped_output.error(f"Exception while getting package: {str(pref.package_id)}",
+                                error_type="exception")
             scoped_output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
 
@@ -202,6 +208,8 @@ class RemoteManager:
             return result
 
     def search_packages(self, remote, ref):
+        if remote.recipes_only:
+            return {}
         packages = self._call_remote(remote, "search_packages", ref)
         # Avoid serializing conaninfo in server side
         packages = {PkgReference(ref, pid): load_binary_info(data["content"])
@@ -230,6 +238,8 @@ class RemoteManager:
 
     def get_package_revisions_references(self, pref, remote, headers=None) -> List[PkgReference]:
         assert pref.revision is None, "get_package_revisions_references of a reference with revision"
+        if remote.recipes_only:
+            return []
         return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
 
     def get_latest_recipe_reference(self, ref, remote):
@@ -238,6 +248,8 @@ class RemoteManager:
 
     def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
+        if remote.recipes_only:
+            raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
         # These headers are useful to know what configurations are being requested in the server
         headers = None
         if info:

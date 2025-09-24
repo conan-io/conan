@@ -48,10 +48,13 @@ class Workspace:
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
         packages = self.conan_data.setdefault("packages", [])
-        if any(p["path"] == path for p in packages):
-            self.output.warning(f"Package {path} already exists, skipping")
-            return
-        packages.append(editable)
+        for p in packages:
+            if p["path"] == path:
+                self.output.warning(f"Package {path} already exists, updating its reference")
+                p["ref"] = editable["ref"]
+                break
+        else:
+            packages.append(editable)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
     def remove(self, path):
