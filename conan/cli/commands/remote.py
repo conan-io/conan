@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 from collections import OrderedDict
@@ -74,8 +73,11 @@ def remote_add(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("name", help="Name of the remote to add")
     subparser.add_argument("url", help="Url of the remote")
-    subparser.add_argument("--insecure", dest="secure", action='store_false',
-                           help="Allow insecure server connections when using SSL")
+    group = subparser.add_mutually_exclusive_group()
+    group.add_argument("--insecure", dest="secure", action='store_false',
+                       help="Allow insecure server connections when using SSL")
+    group.add_argument("--ca-path", dest="secure",
+                       help="Connect with this remote with SSL with this certificate")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-f", "--force", action='store_true',
@@ -121,10 +123,13 @@ def remote_update(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("remote", help="Name of the remote to update")
     subparser.add_argument("--url", action=OnceArgument, help="New url for the remote")
-    subparser.add_argument("--secure", dest="secure", action='store_true',
-                           help="Don't allow insecure server connections when using SSL")
-    subparser.add_argument("--insecure", dest="secure", action='store_false',
-                           help="Allow insecure server connections when using SSL")
+    group = subparser.add_mutually_exclusive_group()
+    group.add_argument("--secure", dest="secure", action='store_true',
+                       help = "Don't allow insecure server connections when using SSL")
+    group.add_argument("--insecure", dest="secure", action='store_false',
+                       help = "Allow insecure server connections when using SSL")
+    group.add_argument("--ca-path", dest="secure",
+                       help="Connect with this remote with SSL with this certificate")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
