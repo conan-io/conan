@@ -14,10 +14,11 @@ class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile, require):
+    def __init__(self, cmakedeps, conanfile, require, full_cpp_info):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
+        self._full_cpp_info = full_cpp_info
 
     def content(self):
         auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
@@ -102,7 +103,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
+        cpp_info = self._full_cpp_info
         assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
@@ -120,8 +121,6 @@ class TargetConfigurationTemplate2:
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
 
-        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
-                                                self._conanfile, check_type=list) or []
         seen_aliases = set()
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
@@ -139,20 +138,6 @@ class TargetConfigurationTemplate2:
                     raise ConanException(f"Alias '{alias}' already defined as a target in "
                                          f"{self._conanfile}. ")
 
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        prefixes = [f] + prefixes
-        include_dirs = definitions = libraries = None
-        if not self._require.build:  # To add global variables for try_compile and legacy
-            aggregated_cppinfo = cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake
-            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
-            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in incdirs]
-            include_dirs = ";".join(incdirs)
-            definitions = ""
-            root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-            libraries = root_target_name or f"{pkg_name}::{pkg_name}"
-
         pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
                                      "${CMAKE_CURRENT_LIST_DIR}")
         dependencies = self._get_dependencies()
@@ -162,13 +147,7 @@ class TargetConfigurationTemplate2:
                 "config": config,
                 "exes": exes,
                 "libs": libs,
-                "context": self._conanfile.context,
-                # Extra global variables
-                "additional_variables_prefixes": prefixes,
-                "version": self._conanfile.ref.version,
-                "include_dirs": include_dirs,
-                "definitions": definitions,
-                "libraries": libraries,
+                "context": self._conanfile.context
                 }
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
@@ -464,21 +443,6 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("sources") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
                      {{config_wrapper(config, lib_info["sources"] )}})
-        {% endif %}
-        {% endfor %}
-
-        ################# Global variables for try compile and legacy ##############
-        {% for prefix in additional_variables_prefixes %}
-        set({{ prefix }}_VERSION_STRING "{{ version }}")
-        {% if include_dirs is not none %}
-        set({{ prefix }}_INCLUDE_DIRS "{{ include_dirs }}" )
-        set({{ prefix }}_INCLUDE_DIR "{{ include_dirs }}" )
-        {% endif %}
-        {% if libraries is not none %}
-        set({{ prefix }}_LIBRARIES {{ libraries }} )
-        {% endif %}
-        {% if definitions is not none %}
-        set({{ prefix }}_DEFINITIONS {{ definitions}} )
         {% endif %}
         {% endfor %}
 
