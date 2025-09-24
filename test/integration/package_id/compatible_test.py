@@ -784,6 +784,39 @@ class TestCompatibleFlags:
         for f in ("CXXFLAGS", "CFLAGS", "EXEFLAGS", "SHAREDFLAGS"):
             assert f"conanfile.py: {f}: ['-other-os-flag']!!!" in c.out
 
+    def test_simple_lambda(self):
+        """ same as above, but more compact condition
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.microsoft import is_msvc
+
+            class Pkg(ConanFile):
+                def package_info(self):
+                    self.cpp_info.cxxflags = lambda c: ["-mywinflag"] if is_msvc(c) else []
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "compiler"
+                requires = "pkg/0.1"
+                def generate(self):
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
+                """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
+
+        settings = "-s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
+        c.run(f"create pkg --name=pkg --version=0.1 {settings}")
+
+        c.run(f"install consumer {settings}")
+        assert f"conanfile.py: CXXFLAGS: ['-mywinflag']!!!" in c.out
+        c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
+        assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
+
+
     def test_compatible_flags_direct(self):
         """  same as above but without compatibility
         """
