@@ -89,10 +89,8 @@ def test_create_pip_manager():
                 PipEnv(self, self.package_folder).install(["{pip_package_folder}"])
 
             def package_info(self):
-                self.cpp_info.includedirs = []
-                self.cpp_info.libdirs = []
-                python_root = os.path.join(self.package_folder, "pip_venv_pip_hello_test", "Scripts" if platform.system() == "Windows" else "bin")
-                self.buildenv_info.prepend_path("PATH", python_root)
+                python_env_bin = PipEnv(self, self.package_folder).bin_dir
+                self.buildenv_info.prepend_path("PATH", python_env_bin)
         """)
 
     conanfile = textwrap.dedent("""
