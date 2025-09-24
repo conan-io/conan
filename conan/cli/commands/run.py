@@ -15,8 +15,8 @@ def run(conan_api, parser, *args):
                         nargs='+')
     parser.add_argument("--context", help="Context to use, host or build",
                         choices=["host", "build"], default="host")
-    # Install commands
     parser.add_argument("-g", "--generator", action="append", help='Generators to use')
+    # TODO: Output folder? /tmp, $CWD/.conanrun, ~/.conan
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,
@@ -30,8 +30,6 @@ def run(conan_api, parser, *args):
 
     # TODO:
     # - Context: could be both host and build?
-    # - Output folder? /tmp, $CWD/.conanrun, ~/.conan
-    # - Conan internal loader: is it good idea to initialize conan_helpers in a virtual node?
     # - Tests
     scope = "run" if args.context == "host" else "build"
     deps_graph.root.conanfile.run(command, cwd=cwd, scope=scope)
