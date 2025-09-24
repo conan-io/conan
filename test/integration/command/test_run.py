@@ -29,7 +29,7 @@ def test_run(context, use_conanfile):
             os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
     """)
 
-    conanfile_consumer = GenConanfile("consumer", "1.0")
+    conanfile_consumer = GenConanfile("consumer", "1.0").with_settings("os")
     if context == "host":
         conanfile_consumer.with_requires("pkg/0.1")
     else:
