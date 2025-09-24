@@ -60,6 +60,9 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
                            help="Set threshold for severity level to raise an error. "
                                 "By default raises an error for any critical CVSS (9.0 or higher). "
                                 " Use 100.0 to disable it.")
+    subparser.add_argument("--context", help="Context to scan, by default both contexts are scanned "
+                                             "if not specified",
+                           choices=["host", "build"], default=None)
 
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
@@ -97,7 +100,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
-    scan_result = conan_api.audit.scan(deps_graph, provider)
+    scan_result = conan_api.audit.scan(deps_graph, provider, args.context)
     _parse_error_threshold(scan_result, args.severity_level)
     return scan_result
 
