@@ -38,8 +38,9 @@ class PipEnv:
         """
 
         venv.EnvBuilder(clear=True, with_pip=True).create(self._env_dir)
-        pip_args = list(pip_args) if pip_args else []
-        args = [self._python_exe, "-m", "pip", "install", "--disable-pip-version-check"] + pip_args
+        args = [self._python_exe, "-m", "pip", "install", "--disable-pip-version-check"]
+        if pip_args:
+            args += list(pip_args)
         args += list(packages)
         command = cmd_args_to_string(args)
 
