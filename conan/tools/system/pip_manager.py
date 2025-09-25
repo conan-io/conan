@@ -43,8 +43,4 @@ class PipEnv:
             args += list(pip_args)
         args += list(packages)
         command = cmd_args_to_string(args)
-
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=True)
-        if ret == 0:
-            return ret
-        raise ConanException("Command '%s' failed" % command)
+        self._conanfile.run(command)
