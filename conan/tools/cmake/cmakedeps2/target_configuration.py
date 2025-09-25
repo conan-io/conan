@@ -154,9 +154,11 @@ class TargetConfigurationTemplate2:
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
-        # Reading configuration from "cmake_extra_variables" property
-        extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
-                                                       check_type=dict) or {}
+        conf_extra_variables = self._conanfile._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                                   default={}, check_type=dict)
+        dep_extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile, check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones
+        extra_variables = {**dep_extra_variables, **conf_extra_variables}
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
@@ -495,9 +497,7 @@ class TargetConfigurationTemplate2:
         # Definition of extra CMake variables from cmake_extra_variables
 
         {% for key, value in extra_variables.items() %}
-        if (NOT CONAN_ORIGIN_EXTRA_VARIABLE_{{ key }}_IS_TOOLCHAIN)
         set({{ key }} {{ value }})
-        endif()
         {% endfor %}
 
         ################# Exes information ##############

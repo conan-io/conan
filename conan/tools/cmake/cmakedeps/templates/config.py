@@ -32,8 +32,12 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def parsed_extra_variables(self):
         # Reading configuration from "cmake_extra_variables" property
         from conan.tools.cmake.utils import parse_extra_variable
-        extra_variables = self.cmakedeps.get_property("cmake_extra_variables", self.conanfile,
-                                                      check_type=dict) or {}
+        conf_extra_variables = self.conanfile._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                                  default={}, check_type=dict)
+        dep_extra_variables = self.cmakedeps.get_property("cmake_extra_variables", self.conanfile,
+                                                          check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones
+        extra_variables = {**dep_extra_variables, **conf_extra_variables}
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
@@ -100,9 +104,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         # Definition of extra CMake variables from cmake_extra_variables
 
         {% for key, value in extra_variables.items() %}
-        if (NOT CONAN_ORIGIN_EXTRA_VARIABLE_{{ key }}_IS_TOOLCHAIN)
         set({{ key }} {{ value }})
-        endif()
         {% endfor %}
 
         # Only the last installed configuration BUILD_MODULES are included to avoid the collision

@@ -1194,7 +1194,6 @@ class ExtraVariablesBlock(Block):
 
         {% if extra_variables %}
         {% for key, value in extra_variables.items() %}
-        set(CONAN_ORIGIN_EXTRA_VARIABLE_{{ key }}_IS_TOOLCHAIN TRUE)
         set({{ key }} {{ value }})
         {% endfor %}
         {% endif %}
