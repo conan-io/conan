@@ -30,12 +30,21 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
+    # Even though the package_id_non_embed_mode is minor_mode by default,
+    # recipes with buggy versions that do not define the attribute will have
+    # the same problem regardless
     if not isinstance(ref.version.major.value, int) and ref.version.minor is not None:
-        scoped_output.warning("Using versions with alphanumeric majors is not recommended. "
-                              "Recipes with alphanumeric major versions risk misbehaving when "
-                              "checking for missing binaries "
-                              "due to unexpected package ID calculations. ",
-                              warn_tag="risk")
+        for mode in ("package_id_embed_mode", "package_id_non_embed_mode", "package_id_unknown_mode"):
+            if getattr(conanfile, mode, None) in ("patch_mode", "minor_mode"):
+                scoped_output.warning(f"{mode} is set to '{getattr(conanfile, mode)}', but the version '{ref.version}' contains "
+                                      f"an alphanumeric major '{ref.version.major}'.\n"
+                                      f"This is highly discouraged due to unexpected package ID calculation risks. "
+                                      f"Either a different version scheme should be used (e.g., semantic versioning), "
+                                      f"or the package_id modes should be changed (e.g 'full_mode').\n"
+                                      f"Refer to the documentation for more details: "
+                                      f"TODO",
+                                      warn_tag="risk")
+                break
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 

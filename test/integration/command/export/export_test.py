@@ -440,10 +440,16 @@ def test_export_json():
     assert len(info) == 1  # Only "reference" key yet
 
 
-def test_export_alphanumeric_major():
+@pytest.mark.parametrize("mode", ["patch_mode", "minor_mode", "major_mode", None])
+@pytest.mark.parametrize("mode_attr", ["package_id_embed_mode", "package_id_non_embed_mode", "package_id_unknown_mode"])
+def test_export_alphanumeric_major(mode, mode_attr):
     c = TestClient(light=True)
-    c.save({"conanfile.py": GenConanfile("pkg")})
+    conanfile = GenConanfile("pkg")
+    if mode:
+        conanfile = conanfile.with_class_attribute(f'{mode_attr} = "{mode}"')
+    c.save({"conanfile.py": conanfile})
     c.run("export . --version=v1.3")
-    assert "Using versions with alphanumeric majors is not recommended" in c.out
+    if mode in ("patch_mode", "minor_mode"):
+        assert f"{mode_attr} is set to '{mode}'" in c.out
     c.run("export . --version=v1")
-    assert "Using versions with alphanumeric majors is not recommended" not in c.out
+    assert f"This is not a recommended practice" not in c.out
