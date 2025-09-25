@@ -1,5 +1,6 @@
 import textwrap
 import json
+from symbol import pass_stmt
 
 import pytest
 
@@ -291,7 +292,8 @@ class TestCyclonedx:
         assert os.path.exists(os.path.join(tc.current_folder, "sbom", "sbom.cdx.json"))
         assert f'"name": "{result}"' in tc.load(os.path.join(tc.current_folder, "sbom", "sbom.cdx.json"))
 
-    def test_cyclonedx_check_content(self, cyclone_version):
+    @pytest.mark.parametrize("qualifiers", [None, ["os", "arch"]])
+    def test_cyclonedx_check_content(self, cyclone_version, qualifiers):
         _sbom_hook_post_package = textwrap.dedent("""
         import json
         import os
@@ -300,7 +302,7 @@ class TestCyclonedx:
         from conan.tools.sbom import {cyclone_version}
 
         def post_package(conanfile):
-            sbom_cyclonedx= {cyclone_version}(conanfile)
+            sbom_cyclonedx= {cyclone_version}(conanfile, qualifiers={qualifiers})
             metadata_folder = conanfile.package_metadata_folder
             file_name = "sbom.cdx.json"
             with open(os.path.join(metadata_folder, file_name), 'w') as f:
@@ -309,7 +311,7 @@ class TestCyclonedx:
         """)
         tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
-        save(hook_path, _sbom_hook_post_package.format(cyclone_version=cyclone_version))
+        save(hook_path, _sbom_hook_post_package.format(cyclone_version=cyclone_version, qualifiers=qualifiers))
         conanfile_bar = textwrap.dedent("""
                 from conan import ConanFile
                 class HelloConan(ConanFile):
@@ -353,6 +355,10 @@ class TestCyclonedx:
             assert not content_json["components"][0].get("author")
             assert content_json["components"][0]["authors"][0]["name"] == 'conan-dev'
             assert content_json["components"][0]["type"] == 'application'
+        if qualifiers:
+            assert all(q in content_json["components"][0]["purl"] for q in qualifiers)
+        else:
+            assert "pkg:conan/foo@1.0?rref=ec5797d63ec2eab8056fb3087fcd5039&pref=" in content_json["components"][0]["purl"]
 
     @pytest.mark.parametrize("user, channel, user_dep, channel_dep", [("user", None, "user_dep", None), ("user", "channel", "user_dep", "channel_dep")])
     def test_sbom_user_path(self, hook_setup_post_package_tl, user, channel, user_dep, channel_dep):
