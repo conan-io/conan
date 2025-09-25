@@ -226,6 +226,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                     except KeyError:  # The transitive dep might have been skipped
                         pass
                     else:
+                        if required_pkg == required_comp:
+                            # Depends on all components in `required_pkg` package
+                            required_comp = req.ref.name.split("/")[0]
                         public_comp_deps.append(self.get_component_alias(req, required_comp))
                 else:  # Points to a component of same package
                     public_comp_deps.append(self.get_component_alias(self.conanfile, required_comp))

@@ -236,6 +236,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                     # dependencies, maybe it has been filtered out by traits => Skip
                     pass
                 else:
+                    if dep_name == component_name:
+                        # Depends on all components in `dep_name` package
+                        component_name = req.ref.name.split("/")[0]
                     component_name = self.get_component_alias(req, component_name)
                     ret.append(component_name)
         elif transitive_reqs:
