@@ -140,15 +140,11 @@ class Node:
         # TODO: Might need to move to an update() for performance
         poped = self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
-        if poped:
-            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
-            # remove dead .edges, to avoid orphans
+        if poped is not None:  # adjust .edges, to avoid orphans
             for e in self.edges:
-                if e.dst not in direct_nodes:
-                    assert e.dst == poped.node
+                if e.dst == poped.node:
                     e.dst = node
                     break
-            #self.edges = [e for e in self.edges if e.dst in direct_nodes]
 
         if self.conanfile.vendor:
             return
