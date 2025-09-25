@@ -64,7 +64,8 @@ class AutotoolsToolchain:
         self._is_universal_arch = is_universal_arch(conanfile.settings.get_safe("arch"),
                                                     conanfile.settings.possible_values().get("arch"))
         if self._is_universal_arch and not is_apple_os(self._conanfile):
-            raise ConanException(f"Universal arch '{conanfile.settings.get_safe("arch")}' is only supported in Apple OSes")
+            arch_str = conanfile.settings.get_safe('arch')
+            raise ConanException(f"Universal arch '{arch_str}' is only supported in Apple OSes")
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
