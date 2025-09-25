@@ -852,3 +852,56 @@ def test_deactivate_relocatable_substitute():
     conanbuild = c.load("conanbuildenv.sh")
     result = os.path.join("$script_folder", "deactivate_conanbuildenv.sh")
     assert f'"{result}"' in conanbuild
+
+
+class TestDotEnv:
+    def test_dotenv(self):
+        c = TestClient()
+        other_path = os.path.join(c.current_folder, "my", "rel", "path")
+        myprofile = textwrap.dedent(f"""
+            [buildenv]
+            MYVAR1=MyVal1
+            MYVAR3+=MyVal3
+            MYPATH+=(path)/some/path/here
+            MYOTHER_PATH=+(path){other_path}
+
+            [runenv]
+            MYRUNVAR=SomeVal1
+
+            [conf]
+            tools.env:dotenv=True
+            """)
+        c.save({"conanfile.txt": "",
+                "myprofile": myprofile})
+        c.run("install . -pr=myprofile -s build_type=Release")
+        dotenv = c.load("conanbuildenv-Release.env")
+        expected = os.path.join(c.current_folder, "my", "rel", "path")
+        assert f'MYOTHER_PATH="{expected}"' in dotenv
+        assert f'MYPATH="/some/path/here"' in dotenv
+        assert 'MYVAR3="MyVal3"' in dotenv
+        assert 'MYVAR1="MyVal1"' in dotenv
+        dotenv = c.load("conanrunenv-Release.env")
+        assert f'MYRUNVAR="SomeVal1"' in dotenv
+
+    def test_generate_only_dotenv(self):
+        # If for some reason a recipe only wants the dot env files, doable
+        c = TestClient()
+        myprofile = textwrap.dedent(f"""
+            [buildenv]
+            MYVAR1=MyVal1
+            [runenv]
+            MYRUNVAR=SomeVal1
+            """)
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
+            class Lib(ConanFile):
+                def generate(self):
+                    VirtualBuildEnv(self).vars().save_dotenv("mybuild.env")
+                    VirtualRunEnv(self)
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": myprofile})
+        c.run("install . -pr=myprofile")
+        assert set(os.listdir(c.current_folder)) == {'conanfile.py', 'mybuild.env', 'myprofile'}
+        assert 'MYVAR1="MyVal1"' in c.load("mybuild.env")
