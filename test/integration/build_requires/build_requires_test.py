@@ -608,14 +608,9 @@ class TestBuildTrackHost:
     def test_host_version_transitive_contexts_orphan(self):
         tc = TestClient(light=True)
         tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1")
-                .with_requirement("protobuf/0.1")
-                .with_option("shared", [True, False])
-                .with_default_option("shared", False),
-                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
-                .with_option("shared", [True, False])
-                .with_default_option("shared", False),
-                 "conanfile.py": GenConanfile("app", "0.1")
-                .with_requires("grpc/0.1")
+                .with_requirement("protobuf/0.1").with_shared_option(False),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1").with_shared_option(False),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("grpc/0.1")
                 .with_requires("protobuf/[*]")
                 .with_tool_requirement("protobuf/<host_version>")
                 .with_tool_requirement("grpc/<host_version>")})

@@ -403,6 +403,8 @@ class DepsGraphBuilder:
         new_node.recipe = recipe_status
         new_node.remote = remote
 
+        # print(f"Created node {new_node} id: {id(new_node)} context: {new_node.context} required: {node} required_id: {id(node)}")
+
         down_options = self._compute_down_options(node, require, new_ref)
 
         if recipe_status != RECIPE_PLATFORM:
@@ -460,6 +462,15 @@ class DepsGraphBuilder:
         # when requires to the same thing with different visible=xxx converge, there can be orphans
         opened = {dep_graph.root}
         all_referenced = set()
+        #print("--Graph nodes--")
+        #for n in dep_graph.nodes:
+            #print(f"{str(n):15s}: {n.context:10s} {id(n)}")
+            #print("    -- edges --")
+            #for e in n.edges:
+                #print(f"    -> {str(e.dst):15s} {e.dst.context} {id(e.dst)}")
+            #print("    -- transitive deps --")
+            #for r, dep in n.transitive_deps.items():
+                #print(f"    -> {str(dep.node):15s} {dep.node.context} {id(dep.node)}")
         while opened:
             all_referenced.update(opened)
             next_open = set(edge.dst for node in opened for edge in node.edges
