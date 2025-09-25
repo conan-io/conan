@@ -26,7 +26,8 @@ def test_autotoolstoolchain_universal_binary_support():
                  .with_generator("AutotoolsToolchain"))
     client.save({"conanfile.py": conanfile})
 
-    client.run('install . --name=foo --version=1.0 -s="os=Macos" -s="arch=armv8|x86_64" -s="compiler=apple-clang"')
+    client.run('install . --name=foo --version=1.0 -s="os=Macos" -s="arch=armv8|x86_64" -s="compiler=apple-clang"'
+               ' -s="compiler.version=15.0"')
 
     toolchain = client.load("conanautotoolstoolchain.sh")
     assert "-arch arm64" in toolchain
