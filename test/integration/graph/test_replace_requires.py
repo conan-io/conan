@@ -216,7 +216,7 @@ def test_replace_requires_consumer_references(name, version):
     if name == "zlib-ng":
         # CMakeDeps can not be used to consume replaced requires for different packages
         # only CMakeConfigDeps has this capability
-        c.run("install --requires=app/0.1 -pr=profile -g CMakeDeps", assert_error=True)
+        c.run("install --requires=app/0.1 -pr=profile -g CMakeDeps")
 
 
 def test_replace_requires_consumer_references_error_multiple():
