@@ -2,7 +2,6 @@ import venv
 import platform
 import os
 
-from conan.errors import ConanException
 from conan.tools.build import cmd_args_to_string
 from conan.tools.env.environment import Environment
 
@@ -18,8 +17,7 @@ class PipEnv:
 
     def generate(self):
         """
-        Will try to create a conan virtual env to use the python venv in the next steps.
-        We need to use this method in the generate step or earlier in order to use this environment in the following steps.
+        Create a conan environment to use the python venv in the next steps of the conanfile.
         """
         env = Environment()
         env.prepend_path("PATH", self.bin_dir)
@@ -33,8 +31,6 @@ class PipEnv:
         :param pip_args: additional argument list to be passed to the 'pip install' command,
                          for example: ['--no-cache-dir', '--index-url', 'https://my.pypi.org/simple'].
                          Defaults to ``None``.
-
-        :return: the return code of the executed pip command.
         """
 
         venv.EnvBuilder(clear=True, with_pip=True).create(self._env_dir)
