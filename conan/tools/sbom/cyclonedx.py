@@ -218,8 +218,9 @@ def _calculate_licenses(component):
 def _calculate_bomref(component, qualifiers):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    _settings = dict(component.conanfile.settings_build.values_list) if hasattr(component, "conanfile") else {}
-    purl_qualifier = "".join(f"&{qualifier}={_settings.get(qualifier)}" for qualifier in qualifiers)
+    purl_qualifier = ""
+    if hasattr(component, "conanfile"):
+        purl_qualifier = "".join(f"&{qualifier}={component.conanfile.settings.get_safe(qualifier)}" for qualifier in qualifiers)
     return (f"pkg:conan/{component.name}@{component.ref.version}"
             f"?rref={component.ref.revision}&pref={component.pref.package_id}"
             f"{user}{channel}{purl_qualifier}")

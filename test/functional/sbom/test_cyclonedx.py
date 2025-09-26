@@ -319,6 +319,7 @@ class TestCyclonedx:
                     version = '1.0'
                     author = 'conan-dev'
                     package_type = 'application'
+                    settings = 'os', 'arch', 'compiler', 'build_type'
             """)
 
         conanfile_foo = textwrap.dedent("""
@@ -328,6 +329,7 @@ class TestCyclonedx:
                 version = '1.0'
                 author = 'conan-dev'
                 package_type = 'application'
+                settings = 'os', 'arch', 'compiler', 'build_type'
 
                 def requirements(self):
                     self.requires("bar/1.0")
@@ -336,6 +338,7 @@ class TestCyclonedx:
         tc.run("create .")
         tc.save({"conanfile.py": conanfile_foo})
         tc.run("create .")
+        foo_rrev = tc.exported_recipe_revision()
 
         create_layout = tc.created_layout()
         cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
@@ -358,7 +361,7 @@ class TestCyclonedx:
         if qualifiers:
             assert all(q in content_json["components"][0]["purl"] for q in qualifiers)
         else:
-            assert "pkg:conan/foo@1.0?rref=ec5797d63ec2eab8056fb3087fcd5039&pref=" in content_json["components"][0]["purl"]
+            assert f"pkg:conan/foo@1.0?rref={foo_rrev}&pref=" in content_json["components"][0]["purl"]
 
     @pytest.mark.parametrize("user, channel, user_dep, channel_dep", [("user", None, "user_dep", None), ("user", "channel", "user_dep", "channel_dep")])
     def test_sbom_user_path(self, hook_setup_post_package_tl, user, channel, user_dep, channel_dep):
