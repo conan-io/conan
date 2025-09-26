@@ -32,8 +32,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def parsed_extra_variables(self):
         # Reading configuration from "cmake_extra_variables" property
         from conan.tools.cmake.utils import parse_extra_variable
-        conf_extra_variables = self.conanfile._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
-                                                                  default={}, check_type=dict)
+        conf_extra_variables = self.conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                       default={}, check_type=dict)
         dep_extra_variables = self.cmakedeps.get_property("cmake_extra_variables", self.conanfile,
                                                           check_type=dict) or {}
         # The configuration variables have precedence over the dependency ones
