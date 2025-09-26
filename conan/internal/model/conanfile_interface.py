@@ -1,5 +1,7 @@
 from pathlib import Path
-from conan.internal.graph.graph import CONTEXT_BUILD
+
+from conan.internal.graph.graph import CONTEXT_BUILD, RECIPE_EDITABLE, RECIPE_PLATFORM
+from conan.internal.model.conan_file import ConanFile
 
 
 class ConanFileInterface:
@@ -10,7 +12,7 @@ class ConanFileInterface:
     def __str__(self):
         return str(self._conanfile)
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile: ConanFile):
         self._conanfile = conanfile
 
     def __eq__(self, other):
@@ -142,3 +144,15 @@ class ConanFileInterface:
     @property
     def extension_properties(self):
         return getattr(self._conanfile, "extension_properties", {})
+
+    @property
+    def recipe(self) -> str:
+        return self._conanfile._conan_node.recipe
+
+    @property
+    def is_editable(self) -> bool:
+        return self.recipe == RECIPE_EDITABLE
+
+    @property
+    def is_platform(self) -> bool:
+        return self.recipe == RECIPE_PLATFORM
