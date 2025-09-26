@@ -148,9 +148,17 @@ def test_cmake_find_none_relocation():
     c2.run('build .')
     # Now it builds correctly without failing, because package is relocatable
 
-
 @pytest.mark.tool("cmake", "3.27")
+def test_cmake_just_check_version():
+    # What happens for multi-config
+    c = TestClient()
+    c.run_command("cmake --version")
+    print(c.out)
+    assert "3.27" in c.out
+
+
 @pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.27")
 def test_cmake_find_none_relocation_multi():
     # What happens for multi-config
     c = TestClient(default_server_user=True)
