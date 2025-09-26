@@ -266,7 +266,9 @@ class ArchitectureBlock(Block):
         thread_flags_list = " ".join(threads_flags(self._conanfile))
         if not arch_flag and not arch_link_flag and not thread_flags_list:
             return
-        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag, "thread_flags_list": thread_flags_list}
+        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
+                "thread_flags_list": thread_flags_list}
+
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\

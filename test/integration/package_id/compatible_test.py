@@ -137,7 +137,7 @@ class TestCompatibleIDsTest:
             compiler.libcxx=libstdc++
             """)
         client.save_home({"global.conf":
-                              "core.package_id:default_unknown_mode=recipe_revision_mode"})
+                          "core.package_id:default_unknown_mode=recipe_revision_mode"})
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8

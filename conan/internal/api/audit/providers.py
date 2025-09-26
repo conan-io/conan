@@ -16,7 +16,7 @@ class ConanCenterProvider:
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = conan_api.remotes.requester
+        self._session = conan_api._api_helpers.requester  # noqa
         self._query_url = urljoin(self.url, "api/v1/query")
 
     def get_cves(self, refs):
@@ -111,7 +111,7 @@ class PrivateProvider:
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = conan_api.remotes.requester
+        self._session = conan_api._api_helpers.requester  # noqa
         self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
     def get_cves(self, refs):

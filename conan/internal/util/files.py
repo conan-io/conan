@@ -1,5 +1,4 @@
 import errno
-import gzip
 import hashlib
 import os
 import platform

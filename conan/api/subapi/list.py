@@ -203,7 +203,8 @@ class ListAPI:
 
         # Show only the recipe references
         if pattern.package_id is None and pattern.rrev is None:
-            select_bundle.add_refs(refs)
+            for r in refs:
+                select_bundle.add_ref(r)
             return select_bundle
 
         def msg_format(msg, item, total):
@@ -225,7 +226,8 @@ class ListAPI:
             if lru and pattern.package_id is None:  # Filter LRUs
                 rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
 
-            select_bundle.add_refs(rrevs)
+            for rr in rrevs:
+                select_bundle.add_ref(rr)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
                 continue
@@ -266,8 +268,12 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
 
-                select_bundle.add_prefs(rrev, prefs)
-                select_bundle.add_configurations(packages)
+                # Packages dict has been listed, even if empty
+                select_bundle.recipe_dict(rrev)["packages"] = {}
+                for p in prefs:
+                    # the "packages" dict is not using the package-revision
+                    pkg_info = packages.get(PkgReference(p.ref, p.package_id))
+                    select_bundle.add_pref(p, pkg_info)
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
@@ -295,7 +301,7 @@ class ListAPI:
 
         candidates.sort()
         pkglist = PackagesList()
-        pkglist.add_refs([ref])
+        pkglist.add_ref(ref)
         # Return the closest matches, stop adding when distance is increased
         candidate_distance = None
         for candidate in candidates:
@@ -303,10 +309,9 @@ class ListAPI:
                 break
             candidate_distance = candidate.distance
             pref = candidate.pref
-            pkglist.add_prefs(ref, [pref])
-            pkglist.add_configurations({pref: candidate.binary_config})
+            pkglist.add_pref(pref, candidate.binary_config)
             # Add the diff data
-            rev_dict = pkglist.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict = pkglist.recipe_dict(ref)
             rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
@@ -319,7 +324,7 @@ class ListAPI:
         result = MultiPackagesList()
         for r in remotes:
             result_pkg_list = PackagesList()
-            for ref, recipe_bundle in package_list.refs().items():
+            for ref, packages in package_list.items():
                 ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
                 ref_no_rev.revision = None
                 try:
@@ -328,8 +333,8 @@ class ListAPI:
                     continue
                 if ref not in revs:  # not found
                     continue
-                result_pkg_list.add_refs([ref])
-                for pref, pref_bundle in package_list.prefs(ref, recipe_bundle).items():
+                result_pkg_list.add_ref(ref)
+                for pref, pkg_info in packages.items():
                     pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
                     pref_no_rev.revision = None
                     try:
@@ -337,10 +342,8 @@ class ListAPI:
                     except NotFoundException:
                         continue
                     if pref in prevs:
-                        result_pkg_list.add_prefs(ref, [pref])
-                        info = recipe_bundle["packages"][pref.package_id]["info"]
-                        result_pkg_list.add_configurations({pref: info})
-            if result_pkg_list.recipes:
+                        result_pkg_list.add_pref(pref, pkg_info)
+            if result_pkg_list:
                 result.add(r.name, result_pkg_list)
         return result
 
@@ -371,9 +374,9 @@ class ListAPI:
                     remote_ref_list = self.select(ref_pattern, package_query=None, remote=remote)
                 except NotFoundException:
                     continue
-                if not remote_ref_list.recipes:
+                if not remote_ref_list:
                     continue
-                str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+                str_latest_ref = list(remote_ref_list.serialize().keys())[-1]
                 recipe_ref = RecipeReference.loads(str_latest_ref)
                 if (node_info["latest_remote"] is None
                         or node_info["latest_remote"]["ref"] < recipe_ref):

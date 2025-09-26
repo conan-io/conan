@@ -3,7 +3,8 @@ import textwrap
 from jinja2 import Template
 
 
-def gen_premake5(workspace, projects, includedirs=["."], language="CXX", std="17"):
+def gen_premake5(workspace, projects, includedirs=None):
+    includedirs = includedirs if includedirs is not None else ["."]
     premake5 = textwrap.dedent("""\
         workspace "{{workspace}}"
             cppdialect "C++17"
@@ -41,4 +42,3 @@ def gen_premake5(workspace, projects, includedirs=["."], language="CXX", std="17
             "projects": projects,
         }
     )
-

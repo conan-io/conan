@@ -54,8 +54,8 @@ class TestToolCopy:
         save(test2, "")
         gen_folder = os.path.join(build_folder, "gen")
         mkdir(gen_folder)
-        bin = os.path.join(gen_folder, "test.bin")
-        save(bin, "")
+        binfile = os.path.join(gen_folder, "test.bin")
+        save(binfile, "")
         sym_folder = os.path.join(build_folder, "sym")
         os.symlink(gen_folder, sym_folder)
 

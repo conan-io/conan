@@ -145,11 +145,11 @@ def test_cmakedeps_deployer_relative_paths():
     liba_config = c.load("liba-config.cmake")
     assert ('include("${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
             'host/liba/1.0/share/cmake/crypto.cmake")') in liba_config
+    assert ('set(liba_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
+            'host/liba/1.0/includea" )') in liba_config
     liba_targets = c.load("liba-Targets-release.cmake")
     assert ('set(liba_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
             'host/liba/1.0")') in liba_targets
-    assert ('set(liba_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
-            'host/liba/1.0/includea" )') in liba_targets
 
 
 def test_cmakeconfigdeps_recipe():

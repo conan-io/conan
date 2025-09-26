@@ -146,7 +146,7 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
 
-class ProvidesBuildRequireTest(GraphManagerTest):
+class TestProvidesBuildRequire(GraphManagerTest):
     def test_build_require_no_conflict(self):
         # app (provides libjpeg) -(build)-> br/v1 -> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
