@@ -1,1 +1,0 @@
-. "/mnt/c/Users/Diego/conanws/conan/deactivate_conanrunenv-release-x86_64.sh"

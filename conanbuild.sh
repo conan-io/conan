@@ -1,1 +1,0 @@
-. "/mnt/c/Users/Diego/conanws/conan/conanbuildenv-release-x86_64.sh"
