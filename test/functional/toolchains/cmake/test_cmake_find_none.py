@@ -148,16 +148,9 @@ def test_cmake_find_none_relocation():
     c2.run('build .')
     # Now it builds correctly without failing, because package is relocatable
 
-@pytest.mark.tool("cmake", "3.27")
-def test_cmake_just_check_version():
-    # What happens for multi-config
-    c = TestClient()
-    c.run_command("cmake --version")
-    print(c.out)
-    assert "3.27" in c.out
-
 
 @pytest.mark.tool("ninja")
+# It is IMPORTANT to do cmake-3.27 AFTER ninja, otherwise CI injects another cmake
 @pytest.mark.tool("cmake", "3.27")
 def test_cmake_find_none_relocation_multi():
     # What happens for multi-config
@@ -263,15 +256,6 @@ def test_cmake_find_none_relocation_multi():
             '-c tools.cmake.cmakedeps:new=will_break_next')
     c2.run(f'install . {conf}')
     c2.run(f'install . {conf} -s build_type=Debug')
-    print(c2.out)
-    import os
-    print(c2.current_folder)
-    print(os.listdir(c2.current_folder))
-    print(c2.load("CMakeUserPresets.json"))
-    c2.run_command("cmake --version")
-    print(c2.out)
-    c2.run_command("cmake --list-presets")
-    print(c2.out)
     c2.run_command(f"{env} cmake --preset conan-default")
     c2.run_command(f"{env} cmake --build --preset conan-release")
     c2.run_command(f"{env} cmake --build --preset conan-debug")
