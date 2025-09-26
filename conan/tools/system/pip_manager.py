@@ -31,6 +31,7 @@ class PipEnv:
         :param pip_args: additional argument list to be passed to the 'pip install' command,
                          for example: ['--no-cache-dir', '--index-url', 'https://my.pypi.org/simple'].
                          Defaults to ``None``.
+        :return: the return code of the executed pip command.
         """
 
         venv.EnvBuilder(clear=True, with_pip=True).create(self._env_dir)
@@ -39,4 +40,4 @@ class PipEnv:
             args += list(pip_args)
         args += list(packages)
         command = cmd_args_to_string(args)
-        self._conanfile.run(command)
+        return self._conanfile.run(command)

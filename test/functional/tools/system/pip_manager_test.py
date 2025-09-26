@@ -32,7 +32,6 @@ def test_build_pip_manager():
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.system import PipEnv
-        from conan.tools.files import copy
         from conan.tools.layout import basic_layout
         import platform
         import os
@@ -70,7 +69,6 @@ def test_create_pip_manager():
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.system import PipEnv
-        from conan.tools.files import copy
         from conan.tools.layout import basic_layout
         import platform
         import os
