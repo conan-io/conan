@@ -1,0 +1,1 @@
+. "/mnt/c/Users/Diego/conanws/conan/conanrunenv-release-x86_64.sh"

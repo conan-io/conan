@@ -255,6 +255,13 @@ def test_cmake_find_none_relocation_multi():
             '-c tools.cmake.cmakedeps:new=will_break_next')
     c2.run(f'install . {conf}')
     c2.run(f'install . {conf} -s build_type=Debug')
+    print(c2.out)
+    import os
+    print(c2.current_folder)
+    print(os.listdir(c2.current_folder))
+    print(c2.load("CMakeUserPresets.json"))
+    c2.run_command("cmake --list-presets")
+    print(c2.out)
     c2.run_command(f"{env} cmake --preset conan-default")
     c2.run_command(f"{env} cmake --build --preset conan-release")
     c2.run_command(f"{env} cmake --build --preset conan-debug")
