@@ -106,6 +106,11 @@ def resolve_apple_flags(conanfile, is_cross_building=False, is_universal=False):
         arch_ = conanfile.settings.get_safe("arch")
         apple_arch_flags = " ".join([f"-arch {_to_apple_arch(arch, default=arch)}" for arch in
                                      arch_.split(universal_arch_separator)])
+        sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+        if sdk_path:
+            # Ideally, -isysroot should be added whenever sdk_path is defined.
+            # For now, we only set it in this case to avoid changing existing behavior.
+            apple_isysroot_flag = f"-isysroot {sdk_path}"
     elif is_cross_building:
         arch = to_apple_arch(conanfile)
         sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)

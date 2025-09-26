@@ -36,6 +36,8 @@ def test_toolchain_universal_binary_support(toolchain):
     toolchain_content = client.load(script_name)
     assert "-arch arm64" in toolchain_content
     assert "-arch x86_64" in toolchain_content
+    # Verify isysroot flag is NOT present when sdk_path is not configured
+    assert "-isysroot" not in toolchain_content
 
 
 @parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
@@ -50,6 +52,27 @@ def test_toolchain_universal_binary_non_macos(toolchain):
     client.run('create . --name=foo --version=1.0 -s="os=Linux" -s="arch=armv8|x86_64"',
                assert_error=True)
     assert "Universal arch 'armv8|x86_64' is only supported in Apple OSes" in client.out
+
+
+@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_toolchain_universal_binary_with_sdk_path(toolchain):
+    """Test that toolchain sets isysroot when sdk_path is configured for universal binaries"""
+    client = TestClient()
+    conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                 .with_generator(toolchain))
+    client.save({"conanfile.py": conanfile})
+
+    client.run('install . --name=foo --version=1.0 -s="arch=armv8|x86_64" -c="tools.apple:sdk_path=mysdkpath"')
+
+    script_name = f"conan{toolchain.lower()}.sh"
+    toolchain_content = client.load(script_name)
+
+    assert "-arch arm64" in toolchain_content
+    assert "-arch x86_64" in toolchain_content
+
+    assert "-isysroot" in toolchain_content
+    assert "mysdkpath" in toolchain_content
 
 
 def test_create_universal_binary_test_package_folder():
