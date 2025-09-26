@@ -1,12 +1,6 @@
-import typing
 from pathlib import Path
 
 from conan.internal.graph.graph import CONTEXT_BUILD, RECIPE_EDITABLE, RECIPE_PLATFORM
-
-if typing.TYPE_CHECKING:
-    # Avoid circular import
-    from conan.internal.model.conan_file import ConanFile
-
 
 class ConanFileInterface:
     """ this is just a protective wrapper to give consumers
@@ -16,7 +10,7 @@ class ConanFileInterface:
     def __str__(self):
         return str(self._conanfile)
 
-    def __init__(self, conanfile: "ConanFile"):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
 
     def __eq__(self, other):
