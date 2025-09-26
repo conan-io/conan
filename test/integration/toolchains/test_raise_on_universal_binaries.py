@@ -79,5 +79,3 @@ def test_create_universal_binary_test_package_folder():
     c.run('create . -s="arch=armv8|x86_64"')
     c.run("list *:*")
     assert "arch: armv8|x86_64" in c.out
-
-
