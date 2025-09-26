@@ -29,7 +29,7 @@ def test_vcvars_generator(scope):
                '-s compiler.cppstd=14 -s compiler.runtime=static')
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
-
+    assert r"VC\Auxiliary\Build\vcvarsall.bat" in client.load("conanvcvars.bat")
     bat_contents = client.load("conanbuild.bat")
     if scope in ("build", None):
         assert "conanvcvars.bat" in bat_contents

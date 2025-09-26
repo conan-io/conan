@@ -463,7 +463,7 @@ class MesonToolchain:
                                                 check_type=list)
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[],
                                                   check_type=list)
-        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        linker_script_flags = ['-T' + linker_script for linker_script in linker_scripts]
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         ld = (sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags

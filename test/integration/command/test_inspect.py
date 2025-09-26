@@ -51,7 +51,7 @@ def test_missing_conanfile():
 def test_dot_and_folder_conanfile():
     t = TestClient()
     t.save({"conanfile.py": GenConanfile().with_name("foo")})
-    t.run("inspect .")
+    t.run("inspect")
     assert 'name: foo' in t.out
     t.save({"foo/conanfile.py": GenConanfile().with_name("foo")}, clean_first=True)
     t.run("inspect foo")

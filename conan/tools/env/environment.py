@@ -403,6 +403,14 @@ class EnvVars:
             os.environ.clear()
             os.environ.update(old_env)
 
+    def save_dotenv(self, file_location):
+        result = []
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_value(subsystem=self._subsystem, pathsep=self._pathsep)
+            result.append('{}="{}"'.format(varname, value))
+        content = "\n".join(result)
+        save(file_location, content)
+
     def save_bat(self, file_location, generate_deactivate=True):
         _, filename = os.path.split(file_location)
         deactivate_file = "deactivate_{}".format(filename)
@@ -487,7 +495,8 @@ class EnvVars:
         # It is very important to save it correctly with utf-16, the Conan util save() is broken
         # and powershell uses utf-16 files!!!
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
-        open(file_location, "w", encoding="utf-16").write(content)
+        with open(file_location, "w", encoding="utf-16") as f:
+            f.write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
@@ -567,6 +576,17 @@ class EnvVars:
             self.save_ps1(path)
         else:
             self.save_sh(path)
+
+        if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
+            bt = self._conanfile.settings.get_safe("build_type")
+            arch = self._conanfile.settings.get_safe("arch")
+            name = name.replace(bt.lower(), bt) if bt else name
+            name = name.replace(arch.lower(), arch) if arch else name
+            ConanOutput().warning(f"Creating dotenv file: {name}.env\n"
+                                  "Files generated with absolute paths, not interpolated.\n"
+                                  "When https://github.com/microsoft/vscode-cpptools/issues/13781 "
+                                  "solved, it will get interpolation", warn_tag="experimental")
+            self.save_dotenv(f"{name}.env")
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)

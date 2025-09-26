@@ -34,7 +34,7 @@ class GraphBinariesAnalyzer:
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
-        self._compatibility = BinaryCompatibility(compat_folder)
+        self._compatibility = BinaryCompatibility(compat_folder, hook_manager)
         unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
         non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")
         # recipe_revision_mode already takes into account the package_id
