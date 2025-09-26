@@ -21,26 +21,29 @@ def test_create_universal_binary(toolchain):
             f"Universal binaries not supported by toolchain.") in client.out
 
 
+@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-def test_autotoolstoolchain_universal_binary_support():
-    """Test that AutotoolsToolchain now supports universal binaries on macOS"""
+def test_toolchain_universal_binary_support(toolchain):
+    """Test that toolchain now supports universal binaries on macOS"""
     client = TestClient()
     conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                 .with_generator("AutotoolsToolchain"))
+                 .with_generator(toolchain))
     client.save({"conanfile.py": conanfile})
 
     client.run('install . --name=foo --version=1.0 -s="arch=armv8|x86_64"')
 
-    toolchain = client.load("conanautotoolstoolchain.sh")
-    assert "-arch arm64" in toolchain
-    assert "-arch x86_64" in toolchain
+    script_name = f"conan{toolchain.lower()}.sh"
+    toolchain_content = client.load(script_name)
+    assert "-arch arm64" in toolchain_content
+    assert "-arch x86_64" in toolchain_content
 
 
-def test_autotoolstoolchain_universal_binary_non_macos():
-    """Test that AutotoolsToolchain still raises error for universal binaries on non-macOS"""
+@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
+def test_toolchain_universal_binary_non_macos(toolchain):
+    """Test that toolchain still raises error for universal binaries on non-macOS"""
     client = TestClient()
     conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                 .with_generator("AutotoolsToolchain"))
+                 .with_generator(toolchain))
     client.save({"conanfile.py": conanfile})
 
     # This should still raise an error on non-macOS platforms
@@ -78,29 +81,3 @@ def test_create_universal_binary_test_package_folder():
     assert "arch: armv8|x86_64" in c.out
 
 
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-def test_gnutoolchain_universal_binary_support():
-    """Test that GnuToolchain now supports universal binaries on macOS"""
-    client = TestClient()
-    conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                 .with_generator("GnuToolchain"))
-    client.save({"conanfile.py": conanfile})
-
-    client.run('install . --name=foo --version=1.0 -s="arch=armv8|x86_64"')
-
-    toolchain = client.load("conangnutoolchain.sh")
-    assert "-arch arm64" in toolchain
-    assert "-arch x86_64" in toolchain
-
-
-def test_gnutoolchain_universal_binary_non_macos():
-    """Test that GnuToolchain still raises error for universal binaries on non-macOS"""
-    client = TestClient()
-    conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                 .with_generator("GnuToolchain"))
-    client.save({"conanfile.py": conanfile})
-
-    # This should still raise an error on non-macOS platforms
-    client.run('create . --name=foo --version=1.0 -s="os=Linux" -s="arch=armv8|x86_64"',
-               assert_error=True)
-    assert "Universal arch 'armv8|x86_64' is only supported in Apple OSes" in client.out
