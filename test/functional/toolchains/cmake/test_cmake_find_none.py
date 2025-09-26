@@ -260,6 +260,8 @@ def test_cmake_find_none_relocation_multi():
     print(c2.current_folder)
     print(os.listdir(c2.current_folder))
     print(c2.load("CMakeUserPresets.json"))
+    c2.run_command("cmake --version")
+    print(c2.out)
     c2.run_command("cmake --list-presets")
     print(c2.out)
     c2.run_command(f"{env} cmake --preset conan-default")
