@@ -46,7 +46,7 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
                                       f"should be set (to something other than 'major_mode', "
                                       f"'minor_mode', 'patch_mode' or 'semver_mode').\n"
                                       f"Refer to the documentation for more details: "
-                                      f"TODO",
+                                      f"https://docs.conan.io/2/knowledge/guidelines.html#guidelines-bad-alphanumeric-majors",
                                       warn_tag="risk")
         for mode in ("package_id_embed_mode", "package_id_non_embed_mode", "package_id_unknown_mode"):
             if getattr(conanfile, mode, None) in ("major_mode", "minor_mode", "patch_mode",
@@ -59,7 +59,7 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
                                       f"or {mode} should be changed (to something other than "
                                       f"'major_mode', 'minor_mode', 'patch_mode' or 'semver_mode').\n"
                                       f"Refer to the documentation for more details: "
-                                      f"TODO",
+                                      f"https://docs.conan.io/2/knowledge/guidelines.html#guidelines-bad-alphanumeric-majors",
                                       warn_tag="risk")
                 break
 
