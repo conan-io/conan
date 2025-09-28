@@ -31,16 +31,33 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
     # Even though the package_id_non_embed_mode is minor_mode by default,
+    # and package_id_unknown_mode is semver_mode by default,
     # recipes with buggy versions that do not define the attribute will have
     # the same problem regardless
     if not isinstance(ref.version.major.value, int) and ref.version.minor is not None:
+        for mode in ("package_id_non_embed_mode", "package_id_unknown_mode"):
+            if not hasattr(conanfile, mode):
+                scoped_output.warning(f"The version '{ref.version}' contains an alphanumeric major "
+                                      f"'{ref.version.major}' alongside a minor version, "
+                                      f"but it does not define a {mode} attribute.\n"
+                                      f"This is highly discouraged due to unexpected package ID calculation "
+                                      f"risks. Either a different version scheme should be used "
+                                      f"(e.g., semantic versioning), or the {mode} attribute "
+                                      f"should be set (to something other than 'major_mode', "
+                                      f"'minor_mode', 'patch_mode' or 'semver_mode').\n"
+                                      f"Refer to the documentation for more details: "
+                                      f"TODO",
+                                      warn_tag="risk")
         for mode in ("package_id_embed_mode", "package_id_non_embed_mode", "package_id_unknown_mode"):
-            if getattr(conanfile, mode, None) in ("patch_mode", "minor_mode"):
-                scoped_output.warning(f"{mode} is set to '{getattr(conanfile, mode)}', but the version '{ref.version}' contains "
+            if getattr(conanfile, mode, None) in ("major_mode", "minor_mode", "patch_mode",
+                                                  "semver_mode"):
+                scoped_output.warning(f"{mode} is set to '{getattr(conanfile, mode)}', "
+                                      f"but the version '{ref.version}' contains "
                                       f"an alphanumeric major '{ref.version.major}'.\n"
                                       f"This is highly discouraged due to unexpected package ID calculation risks. "
                                       f"Either a different version scheme should be used (e.g., semantic versioning), "
-                                      f"or the package_id modes should be changed (e.g 'full_mode').\n"
+                                      f"or {mode} should be changed (to something other than "
+                                      f"'major_mode', 'minor_mode', 'patch_mode' or 'semver_mode').\n"
                                       f"Refer to the documentation for more details: "
                                       f"TODO",
                                       warn_tag="risk")
