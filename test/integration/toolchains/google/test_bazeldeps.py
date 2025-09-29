@@ -1,6 +1,9 @@
 import os
 import pathlib
+import platform
 import textwrap
+
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -1259,6 +1262,7 @@ def test_pkg_with_duplicated_component_requires():
     assert myfirstcomp_expected in build_content
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix paths only")
 def test_apple_frameworks_and_frameworkdirs():
     """
     Testing that Apple frameworks are included as linkopts
