@@ -1259,7 +1259,7 @@ def test_pkg_with_duplicated_component_requires():
     assert myfirstcomp_expected in build_content
 
 
-def test_apple_frameworks():
+def test_apple_frameworks_and_frameworkdirs():
     """
     Testing that Apple frameworks are included as linkopts
     Issue: https://github.com/conan-io/conan/issues/18748
@@ -1271,6 +1271,7 @@ def test_apple_frameworks():
         class PkgConfigConan(ConanFile):
             def package_info(self):
                 self.cpp_info.frameworks = ["CoreFoundation", "Cocoa"]
+                self.cpp_info.frameworkdirs = ["/my/path/to/frw1"]
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -1293,6 +1294,8 @@ def test_apple_frameworks():
             "CoreFoundation",
             "-framework",
             "Cocoa",
+            "-F",
+            "/my/path/to/frw1",
         ],
         visibility = ["//visibility:public"],
     )
