@@ -31,3 +31,12 @@ def test_export_cci():
     c.run("export .")
     assert ("WARN: risk: Version 'cci.123' contains an alphanumeric "
             "major alongside a minor version") in c.out
+
+    c.save({"conanfile.py": GenConanfile("mypkg", "develop")})
+    c.run("export .")
+    assert "WARN" not in c.out
+
+    c.save({"conanfile.py": GenConanfile("mypkg", "cci.123")
+           .with_class_attribute("package_id_embed_mode='full_mode'")})
+    c.run("export .")
+    assert "WARN" not in c.out
