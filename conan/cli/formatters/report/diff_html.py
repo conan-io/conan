@@ -156,7 +156,7 @@ diff_html = r"""
             }
 
 
-            functino intersectionCallback(entries) {
+            function intersectionCallback(entries) {
               entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     let elem = entry.target;
