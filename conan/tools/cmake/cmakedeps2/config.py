@@ -76,6 +76,7 @@ class ConfigTemplate2:
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
                                                                key, value)
+        result["extra_variables"] = parsed_extra_variables
 
         result.update(self._get_legacy_vars())
         return result

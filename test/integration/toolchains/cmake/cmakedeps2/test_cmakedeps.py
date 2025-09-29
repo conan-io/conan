@@ -550,7 +550,7 @@ def test_package_info_extra_variables():
     client.run("create .")
 
     client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
-    target = client.load("pkg-Targets-release.cmake")
+    target = client.load("pkg-config.cmake")
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
     assert 'set(FOO 42)' in target
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target
