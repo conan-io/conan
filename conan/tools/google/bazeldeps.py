@@ -219,7 +219,7 @@ class _BazelDepBuildGenerator:
         for frw in cpp_info.frameworks:
             framework_flags.extend(["-framework", frw])
         for frw_dir in cpp_info.frameworkdirs:
-            frameworkdirs_flags.extend(["-F", frw_dir])
+            frameworkdirs_flags.extend(["-F", frw_dir.replace("\\", "/")])
         return [f'"{flag}"' for flag in (system_libs + shared_flags + framework_flags + frameworkdirs_flags)]
 
     def _get_copts(self, cpp_info):
