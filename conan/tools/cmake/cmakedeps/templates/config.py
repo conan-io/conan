@@ -37,7 +37,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         dep_extra_variables = self.cmakedeps.get_property("cmake_extra_variables", self.conanfile,
                                                           check_type=dict) or {}
         # The configuration variables have precedence over the dependency ones
-        extra_variables = {**dep_extra_variables, **conf_extra_variables}
+        extra_variables = {dep: value for dep, value in dep_extra_variables.items()
+                           if dep not in conf_extra_variables}
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",

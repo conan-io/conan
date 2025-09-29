@@ -938,6 +938,7 @@ def test_package_info_extra_variables():
 
             def package_info(self):
                 self.cpp_info.set_property("cmake_extra_variables", {"FOO": 42,
+                                           "BAR": 42,
                                            "CMAKE_GENERATOR_INSTANCE": "${GENERATOR_INSTANCE}/buildTools/",
                                            "CACHE_VAR_DEFAULT_DOC": {"value": "hello world",
                                                                      "cache": True, "type": "PATH"}})
@@ -945,8 +946,10 @@ def test_package_info_extra_variables():
     client.save({"conanfile.py": conanfile})
     client.run("create .")
 
-    client.run(f"install --requires=pkg/0.1 -g CMakeDeps")
+    client.run("install --requires=pkg/0.1 -g CMakeDeps "
+               """-c tools.cmake.cmaketoolchain:extra_variables="{'BAR': 9}" """)
     target = client.load("pkg-config.cmake")
+    assert 'set(BAR' not in target
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
     assert 'set(FOO 42)' in target
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target
