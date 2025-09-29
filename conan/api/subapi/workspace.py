@@ -303,6 +303,13 @@ class WorkspaceAPI:
         conanfile.workspace_packages_options = {}
         for node in deps_graph.nodes[1:]:  # Exclude the current root
             if node.recipe != RECIPE_EDITABLE:
+                # sanity check, a pacakge in the cache cannot have dependencies to the workspace
+                deps_edit = [d.node for d in node.transitive_deps.values()
+                             if d.node.recipe == RECIPE_EDITABLE]
+                if deps_edit:
+                    raise ConanException(f"Workspace definition error. Package {node} in the "
+                                         f"Conan cache has dependencies to packages "
+                                         f"in the workspace: {deps_edit}")
                 result.add_node(node)
                 continue
             conanfile.workspace_packages_options[node.ref] = node.conanfile.options.serialize()
