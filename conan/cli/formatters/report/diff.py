@@ -58,13 +58,6 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
 
-    def _get_line_numbers(line):
-        match = re.search(r"@@ -(\d+),\d+ \+(\d+),\d+ @@", line)
-        if not match:
-            return 0, 0
-        old, new = match.groups()
-        return int(old), int(new)
-
     per_folder = {"folders": {}, "files": {}}
     for file in content:
         replaced_path = _replace_paths(file)
