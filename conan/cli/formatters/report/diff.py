@@ -49,9 +49,6 @@ def _render_diff(content, template, template_folder, **kwargs):
         # Calculate base64 of the filename
         return base64.b64encode(filename.encode(), altchars=b'-_').decode()
 
-    def _get_diff_filename(line):
-        return _get_filenames(line, kwargs["src_prefix"], kwargs["dst_prefix"])[0]
-
     def _remove_prefixes(line):
         return line.replace(kwargs["src_prefix"][:-1], "").replace(kwargs["dst_prefix"][:-1], "")
 
@@ -113,8 +110,6 @@ def _render_diff(content, template, template_folder, **kwargs):
                            replace_paths=_replace_paths,
                            replace_cache_paths=_replace_cache_paths,
                            remove_prefixes=_remove_prefixes,
-                           get_diff_filename=_get_diff_filename,
-                           get_line_numbers=_get_line_numbers,
                            **kwargs)
 
 

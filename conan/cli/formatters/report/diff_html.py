@@ -83,6 +83,106 @@ diff_html = r"""
             }
         </style>
         <script>
+
+            const data = {{ content | tojson | safe }};
+
+            function extractLineNumbers(hunkHeader) {
+                const regex = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
+                const match = hunkHeader.match(regex);
+                if (!match) {
+                    return [0, 0];
+                }
+                return [parseInt(match[1]), parseInt(match[2])];
+            }
+
+
+            function makeDiffLines(lines) {
+                const element = document.createElement("div");
+                let seen_header = false;
+                let new_line_number = 0;
+                let old_line_number = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    let spanLine = document.createElement("span");
+                    if (line.startsWith("+++")) {
+                        seen_header = true;
+                        spanLine.className = "add";
+                        spanLine.textContent = line;
+                    } else if (line.startsWith("---")) {
+                        spanLine.className = "del";
+                        spanLine.textContent = line;
+                    } else if (line.startsWith("@@")) {
+                        const lineNumbers = extractLineNumbers(line);
+                        old_line_number = lineNumbers[0];
+                        new_line_number = lineNumbers[1];
+                        spanLine.className = "context-header";
+                        spanLine.textContent = line;
+                    } else if (line.startsWith("+")) {
+                        spanLine.className = "add";
+                        spanLine.textContent = line;
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number";
+                        lineNumberSpan.textContent = new_line_number;
+                        element.appendChild(lineNumberSpan);
+
+                        new_line_number += 1;
+                    } else if (line.startsWith("-")) {
+                        spanLine.className = "del";
+                        spanLine.textContent = line;
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number";
+                        lineNumberSpan.textContent = old_line_number;
+                        element.appendChild(lineNumberSpan);
+
+                        old_line_number += 1;
+                    } else {
+                        if (seen_header) {
+                            const lineNumberSpan = document.createElement("span");
+                            lineNumberSpan.className = "line-number";
+                            lineNumberSpan.textContent = new_line_number;
+                            element.appendChild(lineNumberSpan);
+                        }
+                        spanLine.className = "context";
+                        spanLine.textContent = line;
+                        new_line_number += 1;
+                        old_line_number += 1;
+                    }
+                    element.appendChild(spanLine);
+                    element.appendChild(document.createElement("br"));
+                }
+                return element;
+            }
+
+
+            functino intersectionCallback(entries) {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    let elem = entry.target;
+                    const path = elem.dataset.path;
+                    elem.querySelector(".diff-lines").appendChild(makeDiffLines(data[path]));
+                    observer.unobserve(elem);
+                }
+              });
+            }
+
+            const options = {
+                root: document.querySelector('.content'),
+                rootMargin: "0px",
+                scrollMargin: "0px",
+                threshold: 0.05,
+            };
+
+            const observer = new IntersectionObserver(intersectionCallback, options);
+
+
+            document.addEventListener("DOMContentLoaded", (e) => {
+                document.querySelectorAll('.diff-content').forEach((section) => {
+                    observer.observe(section);
+                });
+            });
+
             function debounce(func, delay) {
                 let timeout;
                 return function(...args) {
@@ -195,52 +295,19 @@ diff_html = r"""
                     </span>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
-                <div><!--placeholder-->
                 {%- for filename, lines in content.items() -%}
+                    <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-content">
+
+                        {% set firstLine = lines[0] if lines else "" %}
+                        <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(filename) }}">
+                            {{ remove_prefixes(firstLine) }}
+                        </h3>
+                        <div class="diff-lines">
+                        </div>
+                        <hr/>
                     </div>
-                    {% set ns = namespace() %}
-                    {% set ns.old_line_number = 0 %}
-                    {% set ns.new_line_number = 0 %}
-                    {% set ns.seen_header = false %}
-                    <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
-                    {%- for line in lines -%}
-                        {%- if loop.first -%}
-                            <hr/>
-                            <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(filename) }}">{{ remove_prefixes(line) }}</h3>
-                        {%- elif line.startswith('+++') %}
-                            {% set ns.seen_header = true %}
-                            <span class="add">{{ replace_paths(line) }}</span>
-                            <br/>
-                        {%- elif line.startswith('@@') %}
-                            {% set lines = get_line_numbers(line) %}
-                            {% set ns.old_line_number = lines[0] %}
-                            {% set ns.new_line_number = lines[1] %}
-                            <span class="context-header">{{ line }}</span>
-                            <br/>
-                        {%- elif line.startswith('---') %}
-                            <span class="del">{{ replace_paths(line) }}</span>
-                            <br/>
-                        {%- elif line.startswith('+') %}
-                            <span class="line-number">{{ ns.new_line_number }}</span><span class="add">{{ line }}</span>
-                            <br/>
-                            {% set ns.new_line_number = ns.new_line_number + 1 %}
-                        {%- elif line.startswith('-') %}
-                            <span class="line-number">{{ ns.old_line_number }}</span><span class="del">{{ line }}</span>
-                            <br/>
-                            {% set ns.old_line_number = ns.old_line_number + 1 %}
-                        {%- else %}
-                            {% if ns.seen_header %}
-                                <span class="line-number">{{ ns.new_line_number }}</span>
-                            {% endif %}
-                            <span class="context">{{ line }}</span>
-                            <br/>
-                            {% set ns.new_line_number = ns.new_line_number + 1 %}
-                            {% set ns.old_line_number = ns.old_line_number + 1 %}
-                        {%- endif %}
-                    {%- endfor -%}
                 {%- endfor -%}
-                <hr/>
-                </div>
+
             </div>
         </div>
     </body>
