@@ -223,6 +223,25 @@ def test_libcxx(config):
         assert expected_flag in env["CXXFLAGS"]
 
 
+def test_disable_libcxx():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings(
+        {"os": "Linux",
+         "build_type": "Release",
+         "arch": "x86",
+         "compiler": "clang",
+         "compiler.libcxx": "libc++",
+         "compiler.version": "7.1",
+         "compiler.cppstd": "17"})
+    conanfile.settings_build = conanfile.settings
+    conanfile.conf.define("tools.gnu:disable_stdlib_flag", True)
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    conanfile.conf.define("tools.gnu:disable_stdlib_flag", False)
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx == "-stdlib=libc++"
+
+
 def test_cxx11_abi_define():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings(

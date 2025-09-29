@@ -90,6 +90,8 @@ def libcxx_flags(conanfile):
     libcxx = conanfile.settings.get_safe("compiler.libcxx")
     if not libcxx:
         return None, None
+    if conanfile.conf.get("tools.gnu:disable_stdlib_flag", check_type=bool):
+        return None, None
     compiler = conanfile.settings.get_safe("compiler")
     lib = stdlib11 = None
     if compiler == "apple-clang":

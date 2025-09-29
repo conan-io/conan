@@ -104,6 +104,7 @@ BUILT_IN_CONFS = {
     "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
     "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
+    "tools.gnu:disable_stdlib_flag": "Disable the addition of '-stdlib=xxx' flags in builds",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
