@@ -1,6 +1,5 @@
 import textwrap
 import json
-from symbol import pass_stmt
 
 import pytest
 
