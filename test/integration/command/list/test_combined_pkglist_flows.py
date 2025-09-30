@@ -367,19 +367,29 @@ class TestListRemove:
     def test_remove_nothing_only_refs(self, client):
         # It is necessary to do *#* for actually removing something
         client.run(f"list * --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json -c")
+        client.run(f"remove --list=pkglist.json -c --format=json")
         assert "Nothing to remove, package list do not contain recipe revisions" in client.out
+        result = json.loads(client.stdout)
+        assert result["Local Cache"] == {}  # Nothing was removed
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_all(self, client, remote):
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
+        client.run(f"remove --list=pkglist.json {remote} -c --dry-run")
         assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
                " Removed recipe and all binaries" in client.out
         assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
                " Removed recipe and all binaries" in client.out
+
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        assert len(result[origin]["zli/1.0.0"]["revisions"]) == 1
+        assert len(result[origin]["zlib/1.0.0@user/channel"]["revisions"]) == 1
+        assert "packages" not in client.stdout  # Packages are not listed at all
+
         client.run(f"list * {remote}")
         assert "There are no matching recipe references" in client.out
 
@@ -388,22 +398,35 @@ class TestListRemove:
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
         assert "No binaries to remove for 'zli/1.0.0#f034dc90894493961d92dd32a9ee3b78'" in client.out
         assert "No binaries to remove for 'zlib/1.0.0@user/channel" \
                "#ffd4bc45820ddb320ab224685b9ba3fb" in client.out
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        assert result[origin] == {}  # Nothing was removed
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages(self, client, remote):
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
-
+        client.run(f"remove --list=pkglist.json {remote} -c --dry-run")
         assert "Removed recipe and all binaries" not in client.out
         assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78: Removed binaries" in client.out
         assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb: " \
                "Removed binaries" in client.out
+
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        zli_revs = result[origin]["zli/1.0.0"]["revisions"]
+        zli_uc_revs = result[origin]["zlib/1.0.0@user/channel"]["revisions"]
+        assert len(zli_revs) == 1
+        assert len(zli_uc_revs) == 1
+        assert len(zli_revs["f034dc90894493961d92dd32a9ee3b78"]["packages"]) == 1
+        assert len(zli_uc_revs["ffd4bc45820ddb320ab224685b9ba3fb"]["packages"]) == 1
+
         client.run(f"list *:* {remote}")
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out
