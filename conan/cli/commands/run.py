@@ -8,15 +8,13 @@ from conan.cli.commands.install import run_install_command
 @conan_command(group="Consumer")
 def run(conan_api, parser, *args):
     """
-    Run a command in the environment defined by a previous call to 'conan install'.
+    Run a command given a set of requirements from a recipe or from command line.
     """
     common_graph_args(parser)
-    parser.add_argument("command", help="Command to run",
-                        nargs='+')
+    parser.add_argument("command", help="Command to run", nargs='+')
     parser.add_argument("--context", help="Context to use, host or build",
-                        choices=["host", "build"], default="host")
+                        choices=["host", "build"], default="build")
     parser.add_argument("-g", "--generator", action="append", help='Generators to use')
-    # TODO: Output folder? /tmp, $CWD/.conanrun, ~/.conan
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,
@@ -26,10 +24,14 @@ def run(conan_api, parser, *args):
     command = " ".join(args.command)
     cwd = os.getcwd()
 
+    # If conanfile is provided, delegate output_folder definition to the conanfile layout
+    # Otherwise, use a hidden folder to avoid cluttering the workspace
+    if not args.path:
+        args.output_folder = ".conanrun"
+
     deps_graph, lockfile = run_install_command(conan_api, args, cwd)
 
     # TODO:
-    # - Context: could be both host and build?
     # - Tests
     scope = "run" if args.context == "host" else "build"
     deps_graph.root.conanfile.run(command, cwd=cwd, scope=scope)
