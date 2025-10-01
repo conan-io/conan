@@ -111,6 +111,7 @@ def test_compare_paths(fixture_client, old_args, new_args, formatter):
     elif "html" in formatter:
         output_html = tc.load("output.html")
         # We have patch information
-        assert "(new)/es/patches/patch.patch" in output_html
+        assert "(old)/es/patches/patch.patch" in output_html
+        assert "(new)/s/new-file-for-v2.txt" in output_html
         # We have exports information
         assert "(old)/e/v1.txt" in output_html
