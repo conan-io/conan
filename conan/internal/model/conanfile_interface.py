@@ -146,6 +146,7 @@ class ConanFileInterface:
 
     @property
     def recipe(self) -> str:
+        # IMPORTANT: this should be used only for "informational" purposes, see GH#18996.
         return self._conanfile._conan_node.recipe
 
     def conf(self):
