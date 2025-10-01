@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from conan.internal.graph.graph import CONTEXT_BUILD, RECIPE_EDITABLE, RECIPE_PLATFORM
+from conan.internal.graph.graph import CONTEXT_BUILD
 
 class ConanFileInterface:
     """ this is just a protective wrapper to give consumers
@@ -147,12 +147,5 @@ class ConanFileInterface:
     def recipe(self) -> str:
         return self._conanfile._conan_node.recipe
 
-    @property
-    def is_editable(self) -> bool:
-        return self.recipe == RECIPE_EDITABLE
-
-    @property
-    def is_platform(self) -> bool:
-        return self.recipe == RECIPE_PLATFORM
     def conf(self):
         return self._conanfile.conf

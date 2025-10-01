@@ -262,8 +262,6 @@ def test_dependency_interface():
                 self.output.info("RECIPE FOLDER: {}".format(dep.recipe_folder))
                 self.output.info("CONANDATA: {}".format(dep.conan_data))
                 self.output.info("RECIPE: {}".format(dep.recipe))
-                self.output.info("IS_EDITABLE: {}".format(dep.is_editable))
-                self.output.info("IS_PLATFORM: {}".format(dep.is_platform))
 
             """)
     c.save({"dep/conanfile.py": conanfile,
@@ -277,8 +275,6 @@ def test_dependency_interface():
     assert "conanfile.py: RECIPE FOLDER:" in c.out
     assert "conanfile.py: CONANDATA: {}" in c.out
     assert "conanfile.py: RECIPE: Cache" in c.out
-    assert "conanfile.py: IS_EDITABLE: False" in c.out
-    assert "conanfile.py: IS_PLATFORM: False" in c.out
 
 
 def test_dependency_interface_validate():
