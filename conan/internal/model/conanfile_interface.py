@@ -149,5 +149,6 @@ class ConanFileInterface:
         # IMPORTANT: this should be used only for "informational" purposes, see GH#18996.
         return self._conanfile._conan_node.recipe
 
+    @property
     def conf(self):
         return self._conanfile.conf
