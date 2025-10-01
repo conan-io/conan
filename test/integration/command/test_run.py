@@ -41,9 +41,9 @@ def test_run(context, use_conanfile):
 
     if use_conanfile:
         if platform.system() == "Windows":
-            tc.run(f"run . myapp.bat --context={context}")
+            tc.run(f"run myapp.bat --context={context}")
         else:
-            tc.run(f"run . myapp.sh --context={context}")
+            tc.run(f"run myapp.sh --context={context}")
     else:
         if platform.system() == "Windows":
             tc.run(f"run myapp.bat --{requires}=pkg/0.1 --context={context}")

@@ -1,8 +1,10 @@
 import os
 
+from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_VERBOSE, LEVEL_STATUS
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.commands.install import run_install_command
+from conan.internal.util.files import rmdir
 
 
 @conan_command(group="Consumer")
@@ -14,24 +16,31 @@ def run(conan_api, parser, *args):
     parser.add_argument("command", help="Command to run", nargs='+')
     parser.add_argument("--context", help="Context to use, host or build",
                         choices=["host", "build"], default="build")
-    parser.add_argument("-g", "--generator", action="append", help='Generators to use')
-    parser.add_argument("-of", "--output-folder",
-                        help='The root output folder for generated and build files')
-    parser.add_argument("--build-require", action='store_true', default=False,
-                        help='Whether the provided path is a build-require')
+    # TODO: is this needed?
+    # parser.add_argument("--build-require", action='store_true', default=False,
+    #                     help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
     command = " ".join(args.command)
     cwd = os.getcwd()
 
-    # If conanfile is provided, delegate output_folder definition to the conanfile layout
-    # Otherwise, use a hidden folder to avoid cluttering the workspace
-    if not args.path:
-        args.output_folder = ".conanrun"
+    # Default values for install
+    setattr(args, "build_require", False)
+    setattr(args, "output_folder", ".conanrun")
+    setattr(args, "generator", [])
 
+    previous_log_level = ConanOutput._conan_output_level
+    if previous_log_level == LEVEL_STATUS:
+        ConanOutput._conan_output_level = LEVEL_WARNING
     deps_graph, lockfile = run_install_command(conan_api, args, cwd)
+    ConanOutput._conan_output_level = previous_log_level
 
-    # TODO:
-    # - Tests
     scope = "run" if args.context == "host" else "build"
-    deps_graph.root.conanfile.run(command, cwd=cwd, scope=scope)
+    try:
+        deps_graph.root.conanfile.run(command, cwd=cwd, scope=scope)
+    except:
+        raise
+    finally:
+        # Remove previous output folder to ensure a clean install
+        if os.path.exists(args.output_folder):
+            rmdir(args.output_folder)
