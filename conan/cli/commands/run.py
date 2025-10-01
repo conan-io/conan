@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_VERBOSE, LEVEL_STATUS
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.commands.install import run_install_command
@@ -29,7 +30,11 @@ def run(conan_api, parser, *args):
     if not args.path:
         args.output_folder = ".conanrun"
 
+    previous_log_level = ConanOutput._conan_output_level
+    if previous_log_level == LEVEL_STATUS:
+        ConanOutput._conan_output_level = LEVEL_WARNING
     deps_graph, lockfile = run_install_command(conan_api, args, cwd)
+    ConanOutput._conan_output_level = previous_log_level
 
     # TODO:
     # - Tests
