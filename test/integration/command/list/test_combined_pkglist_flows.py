@@ -487,3 +487,42 @@ class TestListGraphContext:
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)
         assert "Note that the graph file should not be filtered" in tc.out
+
+
+class TestBuildOrderToPkgList:
+    @pytest.mark.parametrize("order_by", ["recipe", "configuration"])
+    def test_build_order_to_list(self, order_by):
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("export zlib")
+        c.run("export app")
+
+        c.run("graph build-order --requires=app/1.0 "
+              f"--order-by={order_by} --build=missing --format=json", redirect_stdout="bo.json")
+        c.run("list --graph=bo.json --format=json")
+        pkglist = json.loads(c.stdout)
+        pkgs = pkglist["Local Cache"]
+        zlib_pkgs = pkgs["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]["packages"]
+        assert zlib_pkgs == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        app_pkgs = pkgs["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]["packages"]
+        assert app_pkgs == {"594ed0eb2e9dfcc60607438924c35871514e6c2a":
+            {"info": {"requires": ["zlib/1.Y.Z"]}}}
+
+    @pytest.mark.parametrize("order_by", ["recipe", "configuration"])
+    def test_build_order_to_list_only_build(self, order_by):
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create zlib")
+        c.run("export app")
+
+        c.run("graph build-order --requires=app/1.0 "
+              f"--order-by={order_by} --build=missing --format=json", redirect_stdout="bo.json")
+        c.run("list --graph=bo.json --graph-binaries=build --format=json")
+        pkglist = json.loads(c.stdout)
+        pkgs = pkglist["Local Cache"]
+        assert "zlib/1.0" not in pkgs
+        app_pkgs = pkgs["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]["packages"]
+        assert app_pkgs == {"594ed0eb2e9dfcc60607438924c35871514e6c2a":
+                                {"info": {"requires": ["zlib/1.Y.Z"]}}}

@@ -98,6 +98,9 @@ class MultiPackagesList:
         try:
             base_context = context.split("-")[0] if context else None
             graph = json.loads(load(graphfile))
+            if "order_by" in graph:  # This is a "build-order" json, not a graph
+                return MultiPackagesList._define_build_order(graph, graph_binaries)
+
             # Check if input json is a graph file
             if "graph" not in graph:
                 raise ConanException(
@@ -189,6 +192,38 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
                 cache_list.add_pref(pref, node["info"])
+        return pkglist
+
+    @staticmethod
+    def _define_build_order(build_order, graph_binaries=None):
+        pkglist = MultiPackagesList()
+        cache_list = PackagesList()
+        if graph_binaries is None:
+            binaries = ["*"]
+        else:
+            binaries = [b.lower() for b in graph_binaries or []]
+
+        pkglist.lists["Local Cache"] = cache_list
+        order_by = build_order.get("order_by")
+        if order_by not in ("configuration", "recipe"):
+            raise ConanException(f"Invalid order_by value: {order_by}")
+
+        for level in build_order["order"]:
+            for node in level:
+                ref = node["ref"]
+                ref = RecipeReference.loads(ref)
+                pnodes = [node] if order_by == "configuration" else \
+                    [p for lev in node["packages"] for p in lev]
+                for pnode in pnodes:
+                    pref = PkgReference(ref, pnode["package_id"], pnode["prev"])
+                    binary = pnode["binary"]
+                    if binary in (BINARY_SKIP, BINARY_INVALID, BINARY_MISSING):
+                        continue
+                    binary = binary.lower()
+                    if any(b == "*" or b == binary for b in binaries):
+                        cache_list.add_ref(ref)  # Binary listed forces recipe listed
+                        cache_list.add_pref(pref, pnode["info"])
+
         return pkglist
 
 
