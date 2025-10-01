@@ -154,3 +154,5 @@ class ConanFileInterface:
     @property
     def is_platform(self) -> bool:
         return self.recipe == RECIPE_PLATFORM
+    def conf(self):
+        return self._conanfile.conf

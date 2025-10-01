@@ -526,3 +526,34 @@ def test_alias_cmakedeps_set_property():
 
     assert "add_library(component_alias" in targets_data
     assert "add_library(dep::my_aliased_component" in targets_data
+
+
+def test_package_info_extra_variables():
+    """ Test extra_variables property - This just shows that it works,
+    there are tests for cmaketoolchain that check the actual behavior
+    of parsing the variables"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_variables", {"FOO": 42,
+                                           "BAR": 42,
+                                           "CMAKE_GENERATOR_INSTANCE": "${GENERATOR_INSTANCE}/buildTools/",
+                                           "CACHE_VAR_DEFAULT_DOC": {"value": "hello world",
+                                                                     "cache": True, "type": "PATH"}})
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value} "
+               """-c tools.cmake.cmaketoolchain:extra_variables="{'BAR': 9}" """)
+    target = client.load("pkg-config.cmake")
+    assert 'set(BAR' not in target
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
+    assert 'set(FOO 42)' in target
+    assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target

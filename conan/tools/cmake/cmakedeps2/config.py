@@ -2,7 +2,7 @@ import textwrap
 
 import jinja2
 from jinja2 import Template
-
+from conan.tools.cmake.utils import parse_extra_variable
 from conan.internal.api.install.generators import relativize_path
 
 
@@ -65,6 +65,19 @@ class ConfigTemplate2:
                   "pkg_name": pkg_name,
                   "targets_include_file": targets_include,
                   "build_modules_paths": build_modules_paths}
+
+        conf_extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                        default={}, check_type=dict)
+        dep_extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
+                                                           check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones
+        extra_variables = {dep: value for dep, value in dep_extra_variables.items()
+                           if dep not in conf_extra_variables}
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
+                                                               key, value)
+        result["extra_variables"] = parsed_extra_variables
 
         result.update(self._get_legacy_vars())
         return result
@@ -142,5 +155,11 @@ class ConfigTemplate2:
         {% if definitions is not none %}
         set({{ prefix }}_DEFINITIONS {{ definitions}} )
         {% endif %}
+        {% endfor %}
+
+        # Definition of extra CMake variables from cmake_extra_variables
+
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
         {% endfor %}
         """)

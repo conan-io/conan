@@ -13,7 +13,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration, parse_extra_variable
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -1201,44 +1201,15 @@ class ExtraVariablesBlock(Block):
         {% endif %}
     """)
 
-    CMAKE_CACHE_TYPES = ["BOOL", "FILEPATH", "PATH", "STRING", "INTERNAL"]
-
-    def get_exact_type(self, key, value):
-        if isinstance(value, str):
-            return f"\"{value}\""
-        elif isinstance(value, (int, float)):
-            return value
-        elif isinstance(value, dict):
-            var_value = self.get_exact_type(key, value.get("value"))
-            is_force = value.get("force")
-            if is_force:
-                if not isinstance(is_force, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" must be a boolean')
-            is_cache = value.get("cache")
-            if is_cache:
-                if not isinstance(is_cache, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "cache" must be a boolean')
-                var_type = value.get("type")
-                if not var_type:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" needs "type" defined for cache variable')
-                if var_type not in self.CMAKE_CACHE_TYPES:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" invalid type "{var_type}" for cache variable. Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
-                # Set docstring as variable name if not defined
-                docstring = value.get("docstring") or key
-                force_str = " FORCE" if is_force else ""  # Support python < 3.11
-                return f"{var_value} CACHE {var_type} \"{docstring}\"{force_str}"
-            else:
-                if is_force:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" is only allowed for cache variables')
-                return var_value
-
     def context(self):
+        from conan.tools.cmake.utils import parse_extra_variable
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
-            parsed_extra_variables[key] = self.get_exact_type(key, value)
+            parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",
+                                                               key, value)
         return {"extra_variables": parsed_extra_variables}
 
 
