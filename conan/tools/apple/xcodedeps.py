@@ -257,7 +257,6 @@ class XcodeDeps(object):
 
             include_components_names = []
             if dep.cpp_info.has_components:
-                # Filter out skipped dependencies from external requirements
                 available_deps = self._conanfile.dependencies.filter({"build": False, "skip": False})
                 available_dep_names = [_format_name(dep.ref.name) for _, dep in available_deps.items()]
 
