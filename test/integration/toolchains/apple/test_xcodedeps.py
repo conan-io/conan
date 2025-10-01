@@ -633,3 +633,11 @@ def test_dont_add_skipped_xcconfigs_when_required_by_components():
     conandeps = client.load("conan_regular_lib_component.xcconfig")
     assert '#include "conan_header_skip.xcconfig"' not in conandeps
     assert '#include "conan_header_transitive.xcconfig"' in conandeps
+
+    # Verify that header_skip xcconfig files are NOT generated (skipped dependency)
+    skip_files = [f for f in os.listdir(client.current_folder) if 'header_skip' in f and f.endswith('.xcconfig')]
+    assert len(skip_files) == 0, f"Header skip files should not be generated: {skip_files}"
+
+    # Verify that header_transitive xcconfig files ARE generated (transitive dependency)
+    transitive_files = [f for f in os.listdir(client.current_folder) if 'header_transitive' in f and f.endswith('.xcconfig')]
+    assert len(transitive_files) > 0, f"Header transitive files should be generated: {transitive_files}"
