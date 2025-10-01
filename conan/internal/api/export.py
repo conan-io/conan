@@ -1,6 +1,7 @@
 import os
 import shutil
 
+from conan.internal.model.pkg_type import PackageType
 from conan.tools.files import copy
 from conan.api.output import ConanOutput
 from conan.tools.scm import Git
@@ -31,20 +32,23 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
     # Even though the package_id_non_embed_mode is minor_mode by default,
+    # and package_id_unknown_mode is semver_mode by default,
     # recipes with buggy versions that do not define the attribute will have
     # the same problem regardless
     if not isinstance(ref.version.major.value, int) and ref.version.minor is not None:
-        for mode in ("package_id_embed_mode", "package_id_non_embed_mode", "package_id_unknown_mode"):
-            if getattr(conanfile, mode, None) in ("patch_mode", "minor_mode"):
-                scoped_output.warning(f"{mode} is set to '{getattr(conanfile, mode)}', but the version '{ref.version}' contains "
-                                      f"an alphanumeric major '{ref.version.major}'.\n"
-                                      f"This is highly discouraged due to unexpected package ID calculation risks. "
-                                      f"Either a different version scheme should be used (e.g., semantic versioning), "
-                                      f"or the package_id modes should be changed (e.g 'full_mode').\n"
-                                      f"Refer to the documentation for more details: "
-                                      f"TODO",
-                                      warn_tag="risk")
-                break
+        modes = [getattr(conanfile, f"package_id_{m}_mode", None)
+                 for m in ("embed", "non_embed", "unknown")]
+        if (any(m in ("semver", "major", "minor", "patch") for m in modes) or
+                all(m is None for m in modes)):
+            msg = (f"Version '{ref.version}' contains an alphanumeric major alongside a minor "
+                   f"version, without correct 'package_id_xxx_mode' attributes.\n"
+                   f"This is highly discouraged due to unexpected package ID calculation "
+                   f"risks. Either a different version scheme should be used "
+                   f"(e.g., semantic versioning), or the 'package_id_xxx_mode' attributes "
+                   f"should be set (to something other than major, minor, patch or semver modes).\n"
+                   f"Refer to the documentation for more details: "
+                   f"https://docs.conan.io/2/knowledge/guidelines.html#guidelines-bad-alphanumeric-majors")
+            scoped_output.warning(msg, warn_tag="risk")
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 
