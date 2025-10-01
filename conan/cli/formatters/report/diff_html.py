@@ -30,7 +30,7 @@ diff_html = r"""
             .sidebar {
                 width: 17%;
                 min-width: 10%;
-                max-width: 20%;
+                max-width: 33%;
                 padding: 10px;
                 overflow: scroll;
                 background: #f4f4f466;
@@ -75,8 +75,8 @@ diff_html = r"""
             .content span {
                 white-space: pre-wrap;
             }
-            .add { background-color: #76ffbb; }
-            .del { background-color: #fdb9c1; }
+            .add { background-color: #76ffbbEE; }
+            .del { background-color: #fdb9c1EE; }
             .context, .context-header, .diff-content { background-color: #f8f8f8; }
             .diff-content {
                 padding: 0px 0px 3px 3px;
@@ -291,26 +291,11 @@ diff_html = r"""
                 includeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput(event);
             }
-
-            function toggleSidebar() {
-                const contents = document.querySelector('#sidebar-contents');
-                const sidebar = document.querySelector('.sidebar');
-                if (contents.style.display === 'none') {
-                    contents.style.display = 'initial';
-                    sidebar.style.minWidth = '17%';
-                    event.srcElement.textContent = 'Hide';
-                } else {
-                    contents.style.display = 'none';
-                    sidebar.style.minWidth = 'unset';
-                    event.srcElement.textContent = 'Show';
-                }
-            }
         </script>
     </head>
     <body>
         <div class='container'>
             <div class='sidebar'>
-                <button onclick="toggleSidebar()">Hide</button>
                 <div id="sidebar-contents">
                     <h2>File list:</h2>
                     <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
