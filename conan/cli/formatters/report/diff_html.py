@@ -3,7 +3,7 @@ diff_html = r"""
     {%- for name, sub_folder_info in folder_info["folders"].items() %}
         {% set folder_name = folder + "/" + name %}
         <li>
-            <details open>
+            <details open class="folder">
                 <summary>{{ name }}</summary>
                 <ul>
                     {{ render_folder(folder_name, sub_folder_info) }}
@@ -28,21 +28,35 @@ diff_html = r"""
             body { font-family: monospace; margin: 0px; }
             .container { display: flex; height: 100%; }
             .sidebar {
-                min-width: 17%;
+                width: 17%;
+                min-width: 10%;
                 max-width: 20%;
                 padding: 10px;
-                overflow-y: scroll;
-                background: #f4f4f4;
+                overflow: scroll;
+                background: #f4f4f466;
                 border-right: 1px solid #ccc;
+                resize: horizontal;
             }
-            details {
+            #sidebar-contents {
+                background: #f4f4f4;
+                border-radius: 7px;
+                //border: 1px solid #ccc;
+            }
+            details.folder {
                 text-wrap: nowrap;
             }
+
             .sidebar li { line-height: 1.5; list-style: none; list-style-position: inside; }
             .sidebar li.file-new { list-style: none; padding-left: 0; }
-            .sidebar li.file-new:before { content: "+"; color: green; }
+            .sidebar li.file-new:before { content: "+"; color: green; font-weight: bold; }
             .sidebar li.file-old { list-style: none; padding-left: 0;  }
             .sidebar li.file-old:before { content: "*"; color: black; }
+            .sidebar li a {
+                text-decoration: none;
+            }
+            .sidebar li a:hover {
+                text-decoration: underline;
+            }
             .side-link {
                 text-wrap: nowrap;
             }
@@ -56,22 +70,31 @@ diff_html = r"""
                 padding: 20px;
                 background: #fff;
                 overflow-y: scroll;
-                width: auto;
+                width: 100%;
             }
             .content span {
                 white-space: pre-wrap;
             }
-            .diff-header {
-                background-color: #f0f0f0;
-            }
             .add { background-color: #76ffbb; }
             .del { background-color: #fdb9c1; }
             .context, .context-header, .diff-content { background-color: #f8f8f8; }
+            .diff-content {
+                padding: 0px 0px 3px 3px;
+                border: 1px solid black;
+                border-radius: 7px;
+                margin-bottom: 10;
+                box-shadow: 6px 6px #00808022;
+             }
+            details.folder ul:hover {
+                background-color: #e0e0e033;
+                border-left: 2px solid #00000066;
+            }
+            details.diff-details summary { cursor: pointer; margin-top: 5px; }
             .context-header { color: gray; }
             .line-number { width: 4ch; display: inline-block; text-align: left; color: #888; user-select: none; }
-            .filename { background-color: #f0f0f0; }
-            a:visited {
-                color: blue;
+            hr { margin-left: -3px;}
+            .filename {
+                font-size: 1.2em;
             }
             #empty_result {
                 justify-content: center;
@@ -85,6 +108,9 @@ diff_html = r"""
         <script>
 
             const data = {{ content | tojson | safe }};
+
+            const oldPattern = "{{ src_prefix[:-1] }}{{ old_cache_path }}";
+            const newPattern = "{{ dst_prefix[:-1] }}{{ new_cache_path }}";
 
             function extractLineNumbers(hunkHeader) {
                 const regex = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
@@ -101,16 +127,16 @@ diff_html = r"""
                 let seen_header = false;
                 let new_line_number = 0;
                 let old_line_number = 0;
-                for (let i = 1; i < lines.length; i++) {
+                for (let i = 0; i < lines.length; i++) {
                     const line = lines[i];
                     let spanLine = document.createElement("span");
                     if (line.startsWith("+++")) {
                         seen_header = true;
                         spanLine.className = "add";
-                        spanLine.textContent = line;
+                        spanLine.textContent = line.replace(newPattern, "(new)");
                     } else if (line.startsWith("---")) {
                         spanLine.className = "del";
-                        spanLine.textContent = line;
+                        spanLine.textContent = line.replace(oldPattern, "(old)");
                     } else if (line.startsWith("@@")) {
                         const lineNumbers = extractLineNumbers(line);
                         old_line_number = lineNumbers[0];
@@ -138,14 +164,19 @@ diff_html = r"""
 
                         old_line_number += 1;
                     } else {
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number";
                         if (seen_header) {
-                            const lineNumberSpan = document.createElement("span");
-                            lineNumberSpan.className = "line-number";
                             lineNumberSpan.textContent = new_line_number;
-                            element.appendChild(lineNumberSpan);
+                            spanLine.className = "context";
+                            spanLine.textContent = line;
+                        } else {
+                            spanLine.textContent = line.replace(oldPattern, "(old)").replace(newPattern, "(new)");
+                            spanLine.className = "context-header";
                         }
-                        spanLine.className = "context";
-                        spanLine.textContent = line;
+                        element.appendChild(lineNumberSpan);
+
+
                         new_line_number += 1;
                         old_line_number += 1;
                     }
@@ -178,7 +209,7 @@ diff_html = r"""
 
 
             document.addEventListener("DOMContentLoaded", (e) => {
-                document.querySelectorAll('.diff-content').forEach((section) => {
+                document.querySelectorAll('.diff-container').forEach((section) => {
                     observer.observe(section);
                 });
             });
@@ -198,12 +229,14 @@ diff_html = r"""
 
             async function onSearchInput(event) {
                 const sidebar = document.querySelectorAll(".sidebar li");
-                const content = document.querySelectorAll(".content .diff-content");
+                const fileList = document.querySelector(".file-list");
+                const content = document.querySelectorAll(".content .diff-container .diff-content");
                 const searchingIcon = document.getElementById("searching_icon");
 
                 searchingIcon.style.display = "inline-block";
 
                 let emptySearch = true;
+                let includedFiles = 0;
 
                 sidebar.forEach(async function(item) {
                     const text = item.dataset.path.toLowerCase();
@@ -217,6 +250,7 @@ diff_html = r"""
                             item.style.display = "none";
                             contentItem.style.display = "none";
                         } else {
+                            includedFiles += 1;
                             item.style.display = "list-item";
                             contentItem.style.display = "block";
                             emptySearch = false;
@@ -234,10 +268,16 @@ diff_html = r"""
                 if (emptySearch) {
                     emptySearchTag.style.display = "block";
                     emptyResultTag.style.display = "block";
+                    fileList.style.display = "none";
                 } else {
                     emptySearchTag.style.display = "none";
                     emptyResultTag.style.display = "none";
+                    fileList.style.display = "block";
                 }
+
+                const fileCountTag = document.getElementById("file-count");
+                fileCountTag.textContent = includedFiles;
+
             }
 
             const debouncedOnSearchInput = debounce(onSearchInput, 500);
@@ -278,33 +318,37 @@ diff_html = r"""
                     <span id="searching_icon" style="display:none">...</span>
                     <ul class="file-list">
                         {{ render_folder("", per_folder) }}
-                        <span id="empty_search" style="display:none">No results found</span>
                     </ul>
+                    <span id="empty_search" style="display:none">No results found</span>
                 </div>
             </div>
             <div class='content'>
                 <div class="diff-header">
-                    <h2>Diff Report:</h2>
-                    <p>Total files: <b>{{ content|length }}</b></p>
+                    <h2>Diff Report Between <b>{{ old_reference.repr_notime() }}</b> And <b>{{ new_reference.repr_notime() }}</b></h2>
+                    <p>Showing a total of <b id="file-count">{{ content|length }}</b> files</p>
                     <span class="del" style="white-space: nowrap;">
-                        --- (old) belongs to <b>{{ old_reference.repr_notime() }}</b> reference
+                        --- (old) belongs to the <b>{{ old_reference.repr_notime() }}</b> reference
                     </span>
                     <br/>
                     <span class="add" style="white-space: nowrap;">
-                        +++ (new) belongs to <b>{{ new_reference.repr_notime() }}</b> reference
+                        +++ (new) belongs to the <b>{{ new_reference.repr_notime() }}</b> reference
                     </span>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
                 {%- for filename, lines in content.items() -%}
-                    <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-content">
+                    <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
+                        <div class="diff-content">
+                            <details open class="diff-details">
+                                <summary>
+                                    <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
+                                        {{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}
+                                    </b>
+                                    <hr/>
+                                </summary>
+                                <div class="diff-lines"></div>
+                            </details>
 
-                        {% set firstLine = lines[0] if lines else "" %}
-                        <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(filename) }}">
-                            {{ remove_prefixes(firstLine) }}
-                        </h3>
-                        <div class="diff-lines">
                         </div>
-                        <hr/>
                     </div>
                 {%- endfor -%}
 

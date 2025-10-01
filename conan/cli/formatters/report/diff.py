@@ -1,7 +1,6 @@
 import json
 import os
 import base64
-import re
 
 from jinja2 import Template
 
