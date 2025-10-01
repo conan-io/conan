@@ -582,3 +582,39 @@ def test_correctly_handle_transitive_components():
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
     assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
+
+
+def test_dont_add_skipped_xcconfigs_when_required_by_components():
+    client = TestClient()
+    regular_lib = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgWithComponents(ConanFile):
+            name = 'regular_lib'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def requirements(self):
+                self.requires('header_library/1.0')
+            def package_info(self):
+                self.cpp_info.libs = ["regular_lib"]
+                self.cpp_info.components['component'].requires = ['header_library::header_library']
+        """)
+
+    header_lib = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'header_library'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            package_type = 'header-library'
+            def package_info(self):
+                self.cpp_info.includedirs = ["include"]
+        """)
+
+    client.save({"header.py": header_lib,
+                 "regular_lib.py": regular_lib})
+    client.run("create header.py")
+    client.run("create regular_lib.py")
+    client.run("install --requires=regular_lib/1.0 -g XcodeDeps")
+
+    conandeps = client.load("conan_regular_lib_component.xcconfig")
+    assert '#include "conan_header_library.xcconfig"' not in conandeps
