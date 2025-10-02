@@ -269,7 +269,7 @@ class XcodeDeps(object):
                     def _get_component_requires(component):
                         requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
                                              component.requires if "::" in req
-                                             if req.split("::")[0] in available_dep_names]
+                                             and req.split("::")[0] in available_dep_names]
                         requires_internal = [dep.cpp_info.components.get(req) for req in
                                              component.requires if "::" not in req]
                         return requires_internal, requires_external
