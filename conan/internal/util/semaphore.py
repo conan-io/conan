@@ -60,10 +60,14 @@ def interprocess_lock(conan_home: Path) -> None:
     filelock_path = _filelock_path(conan_home)
     lock = fasteners.InterProcessLock(filelock_path)
     pid = os.getpid()
+    acquired = False
     try:
         ConanOutput().debug(f"{datetime.now()} [{pid}]: Acquiring semaphore lock: {filelock_path}.")
-        lock.acquire()
-        ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been locked.")
+        acquired = lock.acquire()
+        if acquired:
+            ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been locked.")
+        else:
+            ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore failed to acquire lock.")
         yield
     except Exception as error:
         if _raised_by_fasteners(error):
@@ -71,8 +75,9 @@ def interprocess_lock(conan_home: Path) -> None:
         else:
             raise
     finally:
-        lock.release()
-        ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been released.")
+        if acquired:
+            lock.release()
+            ConanOutput().debug(f"{datetime.now()} [{pid}]: Semaphore has been released.")
 
 
 @contextmanager
