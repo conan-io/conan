@@ -43,7 +43,10 @@ class PipEnv:
             python_executable = sys.executable
 
         if not python_executable:
-            python_executable = shutil.which('python3') or shutil.which('python')
+            if platform.system() == "Windows":
+                python_executable = shutil.which('python')
+            else:
+                python_executable = shutil.which('python3')
             if not python_executable:
                 raise ConanException("PipEnv could not find a Python executable path.")
 
