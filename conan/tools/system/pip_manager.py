@@ -34,10 +34,8 @@ class PipEnv:
                 candidate_names = ['python.exe', 'pythonw.exe']
             else:
                 candidate_names = ['python', 'python3']
-
             for name in candidate_names:
                 expected_path = os.path.join(sys._MEIPASS, name)
-                print(expected_path)
                 if os.path.exists(expected_path):
                     python_executable = expected_path
                     break
