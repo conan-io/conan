@@ -49,8 +49,10 @@ class PipEnv:
                 python_executable = shutil.which('python3')
             if not python_executable:
                 raise ConanException("PipEnv could not find a Python executable path.")
-
-        self._conanfile.run(cmd_args_to_string([python_executable, '-m', 'venv', self._env_dir]))
+        try:
+            self._conanfile.run(cmd_args_to_string([python_executable, '-m', 'venv', self._env_dir]))
+        except ConanException:
+            raise ConanException("PipEnv could not create a Python virtual environment.")
 
     def install(self, packages, pip_args=None):
         """
