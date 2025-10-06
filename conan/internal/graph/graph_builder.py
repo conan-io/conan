@@ -76,6 +76,12 @@ class DepsGraphBuilder:
         #    node -(require)-> previous (creates a diamond with a previously existing node)
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
+        if require.version_range is not None and require.ref.revision is not None:
+            node.conanfile.output.warning(f"Specifying a revision for requirement "
+                                          f"'{require.ref.repr_notime()}' together with "
+                                          f"a version range has no effect. "
+                                          f"The revision will be ignored.",
+                                          warn_tag="risk")
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous is not None:
