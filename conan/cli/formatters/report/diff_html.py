@@ -283,9 +283,11 @@ diff_html = r"""
                     let elem = entry.target;
                     const path = elem.dataset.path;
                     const [lines, new_count, old_count] = makeDiffLines(data[path]);
-
                     elem.querySelector(".diff-lines").appendChild(lines);
-                    elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
+
+                    if (new_count !== 0 && old_count !== 0) {
+                        elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
+                    }
 
                     observer.unobserve(elem);
                 }
