@@ -66,7 +66,7 @@ def _render_diff(content, template, template_folder, **kwargs):
         for folder in bits[:-1]:
             cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
         cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path,
-                                  "is_deleted": "+++ /dev/null" in content[file],
+                                  "is_deleted": "+++ /dev/null" in content[file][:10],
                                   "relative_path": replaced_path}
 
     def flatten_empty_folders(current_node):
