@@ -26,29 +26,12 @@ class PipEnv:
         env.vars(self._conanfile).save_script(self.env_name)
 
     def _create_venv(self):
-        python_executable = None
-
-        # https://pyinstaller.org/en/stable/runtime-information.html#run-time-information
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):  # Conan is bundled
-            if platform.system() == "Windows":
-                candidate_names = ['python.exe', 'pythonw.exe']
-            else:
-                candidate_names = ['python', 'python3']
-            for name in candidate_names:
-                expected_path = os.path.join(sys._MEIPASS, name)
-                if os.path.exists(expected_path):
-                    python_executable = expected_path
-                    break
-        else:  # Conan is running from source
-            python_executable = sys.executable
-
+        if platform.system() == "Windows":
+            python_executable = shutil.which('python')
+        else:
+            python_executable = shutil.which('python3')
         if not python_executable:
-            if platform.system() == "Windows":
-                python_executable = shutil.which('python')
-            else:
-                python_executable = shutil.which('python3')
-            if not python_executable:
-                raise ConanException("PipEnv could not find a Python executable path.")
+            raise ConanException("PipEnv could not find a Python executable path.")
         try:
             self._conanfile.run(cmd_args_to_string([python_executable, '-m', 'venv', self._env_dir]))
         except ConanException:
