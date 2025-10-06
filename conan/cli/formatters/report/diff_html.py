@@ -12,7 +12,8 @@ diff_html = r"""
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file-{{ "new" if file_info["is_new"] else "old" }}"
+        <li class="file-{{ "deleted" if file_info["is_deleted"] else (
+                            "new" if file_info["is_new"] else "old") }}"
             data-path="{{ file_info["relative_path"] }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
                 {{ name }}
@@ -51,6 +52,8 @@ diff_html = r"""
             .sidebar li.file-new:before { content: "+"; color: green; font-weight: bold; }
             .sidebar li.file-old { list-style: none; padding-left: 0;  }
             .sidebar li.file-old:before { content: "\00B1"; color: black; }
+            .sidebar li.file-deleted { list-style: none; padding-left: 0; }
+            .sidebar li.file-deleted:before { content: "-"; color: red; font-weight: bold; }
             .sidebar li a {
                 text-decoration: none;
             }
