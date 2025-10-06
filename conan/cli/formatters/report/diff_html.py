@@ -40,7 +40,7 @@ diff_html = r"""
             #sidebar-contents {
                 background: #f4f4f4;
                 border-radius: 7px;
-                //border: 1px solid #ccc;
+                overflow-y: hidden;
             }
             details.folder {
                 text-wrap: nowrap;
@@ -68,34 +68,84 @@ diff_html = r"""
             li ul { padding-left: 1ch; }
             .content {
                 padding: 20px;
-                background: #fff;
+                background: #f8f8f8;
                 overflow-y: scroll;
                 width: 100%;
             }
             .content span {
                 white-space: pre-wrap;
             }
-            .add { background-color: #76ffbbEE; }
-            .del { background-color: #fdb9c1EE; }
-            .context, .context-header, .diff-content { background-color: #f8f8f8; }
+            .add { background-color: #76ffbbBB; color: black; }
+            .del { background-color: #fdb9c1BB; color: black; }
+
+            .line-number.add { background-color: #76ffbb; }
+            .line-number.del { background-color: #fdb9c1; }
+
+            .new-lines-count { color: green; font-weight: bold; }
+            .old-lines-count { color: black; font-weight: bold; }
+            .changes-count-container {
+                font-size: 0.9em;
+                padding-right: 10px;
+            }
+
             .diff-content {
                 padding: 0px 0px 3px 3px;
                 border: 1px solid black;
                 border-radius: 7px;
                 margin-bottom: 10;
-                box-shadow: 6px 6px #00808022;
-             }
+                background-color: white;
+            }
             details.folder ul:hover {
                 background-color: #e0e0e033;
                 border-left: 2px solid #00000066;
             }
-            details.diff-details summary { cursor: pointer; margin-top: 5px; }
-            .context-header { color: gray; }
-            .line-number { width: 4ch; display: inline-block; text-align: left; color: #888; user-select: none; }
+            details.diff-details summary {
+                cursor: pointer;
+                margin-top: 5px;
+            }
+            .context-line { color: #888; }
+            .diff-details summary:hover { background-color: #e0e0e033; }
+            .line-number {
+                width: 4ch;
+                display: inline-block;
+                text-align: center;
+                user-select: none;
+            }
             hr { margin-left: -3px;}
             .filename {
                 font-size: 1.2em;
             }
+            .diff-summary {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            details:open .diff-summary b:before {
+                content: "\25BC";
+                display: inline-block;
+            }
+            details:not(:open) .diff-summary b:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .context-chunk-header {
+                list-style: none;
+                background-color: #cef8ff;
+                color: #888;
+            }
+
+            details:open .context-chunk-header .line-number:before {
+                content: "\25BC";
+                display: inline-block;
+            }
+
+            details:not(:open) .context-chunk-header .line-number:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
             #empty_result {
                 justify-content: center;
                 align-items: center;
@@ -125,65 +175,105 @@ diff_html = r"""
             function makeDiffLines(lines) {
                 const element = document.createElement("div");
                 let seen_header = false;
-                let new_line_number = 0;
-                let old_line_number = 0;
+                let new_line_index = 0;
+                let old_line_index = 0;
+                let new_line_count = 0;
+                let old_line_count = 0;
+                const headerDiv = document.createElement("div");
+                let currentDetails = null;
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i];
                     let spanLine = document.createElement("span");
+                    let shouldAddLine = true;
                     if (line.startsWith("+++")) {
                         seen_header = true;
                         spanLine.className = "add";
                         spanLine.textContent = line.replace(newPattern, "(new)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
                     } else if (line.startsWith("---")) {
                         spanLine.className = "del";
                         spanLine.textContent = line.replace(oldPattern, "(old)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
                     } else if (line.startsWith("@@")) {
+                        currentDetails = document.createElement("details");
+                        currentDetails.open = true;
+
+                        const summary = document.createElement("summary");
+                        summary.className = "context-chunk-header";
+                        const summaryArrow = document.createElement("span");
+                        summaryArrow.className = "line-number";
+                        const summaryText = document.createElement("span");
+                        summaryText.textContent = line;
+
+                        summary.appendChild(summaryArrow);
+                        summary.appendChild(summaryText);
+
+                        currentDetails.appendChild(summary);
+                        element.appendChild(currentDetails);
+                        shouldAddLine = false;
+
                         const lineNumbers = extractLineNumbers(line);
-                        old_line_number = lineNumbers[0];
-                        new_line_number = lineNumbers[1];
-                        spanLine.className = "context-header";
-                        spanLine.textContent = line;
+                        old_line_index = lineNumbers[0];
+                        new_line_index = lineNumbers[1];
                     } else if (line.startsWith("+")) {
                         spanLine.className = "add";
                         spanLine.textContent = line;
 
                         const lineNumberSpan = document.createElement("span");
-                        lineNumberSpan.className = "line-number";
-                        lineNumberSpan.textContent = new_line_number;
-                        element.appendChild(lineNumberSpan);
+                        lineNumberSpan.className = "line-number add";
+                        lineNumberSpan.textContent = new_line_index;
+                        currentDetails.appendChild(lineNumberSpan);
 
-                        new_line_number += 1;
+                        new_line_index += 1;
+                        new_line_count += 1;
                     } else if (line.startsWith("-")) {
                         spanLine.className = "del";
                         spanLine.textContent = line;
 
                         const lineNumberSpan = document.createElement("span");
-                        lineNumberSpan.className = "line-number";
-                        lineNumberSpan.textContent = old_line_number;
-                        element.appendChild(lineNumberSpan);
+                        lineNumberSpan.className = "line-number del";
+                        lineNumberSpan.textContent = old_line_index;
+                        currentDetails.appendChild(lineNumberSpan);
 
-                        old_line_number += 1;
+                        old_line_index += 1;
+                        old_line_count += 1;
                     } else {
-                        const lineNumberSpan = document.createElement("span");
-                        lineNumberSpan.className = "line-number";
-                        if (seen_header) {
-                            lineNumberSpan.textContent = new_line_number;
-                            spanLine.className = "context";
-                            spanLine.textContent = line;
-                        } else {
+                        spanLine.className = "context-line";
+                        if (!seen_header) {
                             spanLine.textContent = line.replace(oldPattern, "(old)").replace(newPattern, "(new)");
-                            spanLine.className = "context-header";
+                            headerDiv.appendChild(spanLine);
+                            headerDiv.appendChild(document.createElement("br"));
+                            continue;
+                        } else {
+                            spanLine.textContent = line;
                         }
-                        element.appendChild(lineNumberSpan);
 
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number context-line";
+                        lineNumberSpan.textContent = new_line_index;
+                        currentDetails.appendChild(lineNumberSpan);
 
-                        new_line_number += 1;
-                        old_line_number += 1;
+                        new_line_index += 1;
+                        old_line_index += 1;
                     }
-                    element.appendChild(spanLine);
-                    element.appendChild(document.createElement("br"));
+                    if (shouldAddLine) {
+                        currentDetails.appendChild(spanLine);
+                        currentDetails.appendChild(document.createElement("br"));
+                    }
                 }
-                return element;
+                if (!seen_header) {
+                    element.appendChild(headerDiv);
+                }
+                return [element, new_line_count, old_line_count];
+            }
+
+            function createChangesCountElement(new_count, old_count) {
+                const changes = document.createElement("span");
+                changes.className = "changes-count";
+                changes.innerHTML = `<span class="new-lines-count">+${new_count}</span> <span class="old-lines-count">-${old_count}</span>`;
+                return changes;
             }
 
 
@@ -192,7 +282,11 @@ diff_html = r"""
                 if (entry.isIntersecting) {
                     let elem = entry.target;
                     const path = elem.dataset.path;
-                    elem.querySelector(".diff-lines").appendChild(makeDiffLines(data[path]));
+                    const [lines, new_count, old_count] = makeDiffLines(data[path]);
+
+                    elem.querySelector(".diff-lines").appendChild(lines);
+                    elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
+
                     observer.unobserve(elem);
                 }
               });
@@ -324,19 +418,19 @@ diff_html = r"""
                     <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
                         <div class="diff-content">
                             <details open class="diff-details">
-                                <summary>
+                                <summary class="diff-summary">
                                     <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
-                                        {{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}
+                                        <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
                                     </b>
-                                    <hr/>
+                                    <div class="changes-count-container"></div>
                                 </summary>
+                                <hr/>
                                 <div class="diff-lines"></div>
                             </details>
 
                         </div>
                     </div>
                 {%- endfor -%}
-
             </div>
         </div>
     </body>
