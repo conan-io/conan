@@ -133,6 +133,9 @@ class ConanFileLoader:
                                      % (channel, conanfile.channel))
             conanfile.channel = channel
 
+        if conanfile.channel and not conanfile.user:
+            raise ConanException(f"{conanfile_path}: Can't specify channel '{conanfile.channel}' without user")
+
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
                 conanfile.set_name()
@@ -167,8 +170,6 @@ class ConanFileLoader:
                                     remotes, update, check_update,
                                     tested_python_requires=tested_python_requires)
 
-        if conanfile.channel and not conanfile.user:
-            raise ConanException(f"{conanfile_path}: Can't specify channel without user")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))

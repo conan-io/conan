@@ -142,3 +142,7 @@ class ConanFileInterface:
     @property
     def extension_properties(self):
         return getattr(self._conanfile, "extension_properties", {})
+
+    @property
+    def conf(self):
+        return self._conanfile.conf

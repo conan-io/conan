@@ -214,7 +214,13 @@ class _BazelDepBuildGenerator:
         link_opt = '/DEFAULTLIB:{}' if os_build == "Windows" else '-l{}'
         system_libs = [link_opt.format(lib) for lib in cpp_info.system_libs]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-        return [f'"{flag}"' for flag in (system_libs + shared_flags)]
+        frameworkdirs_flags = []
+        framework_flags = []
+        for frw in cpp_info.frameworks:
+            framework_flags.extend(["-framework", frw])
+        for frw_dir in cpp_info.frameworkdirs:
+            frameworkdirs_flags.extend(["-F", frw_dir.replace("\\", "/")])
+        return [f'"{flag}"' for flag in (system_libs + shared_flags + framework_flags + frameworkdirs_flags)]
 
     def _get_copts(self, cpp_info):
         # FIXME: long discussions between copts (-Iflag) vs includes in Bazel. Not sure yet

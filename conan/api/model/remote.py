@@ -7,12 +7,13 @@ class Remote:
     should not be created directly, but obtained from the relevant ``RemotesAPI`` subapi methods.
     """
     def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None,
-                 remote_type=None):
+                 remote_type=None, recipes_only=False):
         self.name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
         self.allowed_packages = allowed_packages
+        self.recipes_only = recipes_only
         self.remote_type = remote_type
         self._caching = {}
 
@@ -26,6 +27,8 @@ class Remote:
         allowed_msg = ""
         if self.allowed_packages:
             allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
+        if self.recipes_only:
+            allowed_msg += ", Recipes only"
         if self.remote_type == LOCAL_RECIPES_INDEX:
             return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, LOCAL_RECIPES_INDEX,
                                                        not self.disabled, allowed_msg)
@@ -36,4 +39,9 @@ class Remote:
         return str(self)
 
     def invalidate_cache(self):
+        """ If external operations might have modified the remote since it was instantiated,
+        this method can be called to invalidate the cache.
+        Note that this is done automatically when the remote is used in any operation by Conan,
+        such as uploading packages, so this method is not usually needed when only interacting
+        with the Conan API"""
         self._caching = {}

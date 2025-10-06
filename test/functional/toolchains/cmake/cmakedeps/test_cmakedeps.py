@@ -151,9 +151,11 @@ def test_system_libs():
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
 
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:CONAN_LIB::test_lib1_{build_type.upper()}>" in client.out
+        assert (f"Target libs: $<$<CONFIG:{build_type}>:>;"
+                f"$<$<CONFIG:{build_type}>:CONAN_LIB::test_lib1_{build_type.upper()}>") in client.out
         assert "Micro-target libs: test_DEPS_TARGET" in client.out
-        micro_target_deps = f"Micro-target deps: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>;" \
+        micro_target_deps = f"Micro-target deps: $<$<CONFIG:{build_type}>:>;" \
+                            f"$<$<CONFIG:{build_type}>:{library_name}>;" \
                             f"$<$<CONFIG:{build_type}>:>"
         assert micro_target_deps in client.out
 
@@ -216,7 +218,8 @@ def test_system_libs_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;" \
+               f"$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
@@ -321,7 +324,8 @@ def test_system_libs_components_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;test_test_foo_DEPS_TARGET" in client.out
+        assert (f"Target libs: $<$<CONFIG:{build_type}>:>;"
+                f"$<$<CONFIG:{build_type}>:>;test_test_foo_DEPS_TARGET") in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
@@ -412,7 +416,8 @@ def test_buildirs_working():
     to allow a cmake "include" function call after a find_package"""
     c = TestClient()
     conanfile = str(GenConanfile().with_name("my_lib").with_version("1.0")
-                                  .with_import("import os").with_import("from conan.tools.files import save"))
+                                  .with_import("import os")
+                                  .with_import("from conan.tools.files import save"))
     conanfile += """
     def package(self):
         save(self, os.path.join(self.package_folder, "my_build_dir", "my_cmake_script.cmake"),
@@ -478,7 +483,10 @@ def test_cpp_info_link_objects():
         add_executable(example example.cpp)
         target_link_libraries(example myobject::myobject)
     """)
-
+    test_conanfile = (GenConanfile().with_cmake_build().with_import("import os")
+                      .with_test('path = "{}".format(self.settings.build_type) '
+                                 'if self.settings.os == "Windows" else "."')
+                      .with_test('self.run("{}{}example".format(path, os.sep))'))
     client.save({"CMakeLists.txt": cmakelists,
                  "conanfile.py": GenConanfile("myobject", "1.0").with_package_info(cpp_info=cpp_info,
                                                                                    env_info={})
@@ -488,11 +496,7 @@ def test_cpp_info_link_objects():
                                                                               "cmake.install()"),
                  "myobject.cpp": object_cpp,
                  "myobject.h": object_h,
-                 "test_package/conanfile.py": GenConanfile().with_cmake_build()
-                                                            .with_import("import os")
-                                                            .with_test('path = "{}".format(self.settings.build_type) '
-                                                                       'if self.settings.os == "Windows" else "."')
-                                                            .with_test('self.run("{}{}example".format(path, os.sep))'),
+                 "test_package/conanfile.py": test_conanfile,
                  "test_package/example.cpp": test_package_cpp,
                  "test_package/CMakeLists.txt": test_package_cmakelists})
 
@@ -519,8 +523,10 @@ def test_private_transitive():
 def test_system_dep():
     """This test creates a zlib package and use the installation CMake FindZLIB.cmake to locate
     the library of the package. That happens because:
-    - The package declares: self.cpp_info.set_property("cmake_find_mode", "none") so CMakeDeps does nothing
-    - The toolchain set the CMAKE_LIBRARY_PATH to the "lib" of the package, so the library file is found
+    - The package declares: self.cpp_info.set_property("cmake_find_mode", "none")
+      so CMakeDeps does nothing
+    - The toolchain set the CMAKE_LIBRARY_PATH to the "lib" of the package,
+      so the library file is found
     """
     client = TestClient()
 
@@ -559,7 +565,7 @@ def test_system_dep():
 @pytest.mark.tool("cmake", "3.23")
 def test_error_missing_build_type(matrix_client):
     # https://github.com/conan-io/conan/issues/11168
-    client = matrix_client
+    c = matrix_client
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -586,23 +592,24 @@ def test_error_missing_build_type(matrix_client):
     """)
 
     if platform.system() != "Windows":
-        client.save({
+        c.save({
             "conanfile.txt": conanfile,
             "main.cpp": main,
             "CMakeLists.txt": cmakelists
         }, clean_first=True)
 
-        client.run("install .")
-        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'", assert_error=True)
-        assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
+        c.run("install .")
+        c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'",
+                      assert_error=True)
+        assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in c.out
 
-    client.save({
+    c.save({
         "conanfile.txt": conanfile,
         "main.cpp": main,
         "CMakeLists.txt": cmakelists
     }, clean_first=True)
 
-    client.run("install .")
+    c.run("install .")
 
     generator = {
         "Windows": '-G "Visual Studio 15 2017"',
@@ -610,17 +617,17 @@ def test_error_missing_build_type(matrix_client):
         "Linux": '-G "Ninja Multi-Config"'
     }.get(platform.system())
 
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
-    client.run_command("cmake --build . --config Release")
+    c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
+    c.run_command("cmake --build . --config Release")
     run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
-    client.run_command(run_app)
-    assert "matrix/1.0: Hello World Release!" in client.out
+    c.run_command(run_app)
+    assert "matrix/1.0: Hello World Release!" in c.out
 
 
 @pytest.mark.tool("cmake")
 def test_map_imported_config(transitive_libraries):
     # https://github.com/conan-io/conan/issues/12041
-    client = transitive_libraries
+    c = transitive_libraries
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -641,25 +648,25 @@ def test_map_imported_config(transitive_libraries):
         target_link_libraries(app engine::engine)
         """)
 
-    client.save({
+    c.save({
         "conanfile.txt": conanfile,
         "main.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"]),
         "CMakeLists.txt": cmakelists
     }, clean_first=True)
 
-    client.run("install . -s build_type=Release")
+    c.run("install . -s build_type=Release")
     if platform.system() != "Windows":
-        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
-                           "-DCMAKE_BUILD_TYPE=DEBUG")
-        client.run_command("cmake --build .")
-        client.run_command("./app")
+        c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                      "-DCMAKE_BUILD_TYPE=DEBUG")
+        c.run_command("cmake --build .")
+        c.run_command("./app")
     else:
-        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
-        client.run_command("cmake --build . --config Debug")
-        client.run_command("Debug\\app.exe")
-    assert "matrix/1.0: Hello World Release!" in client.out
-    assert "engine/1.0: Hello World Release!" in client.out
-    assert "main: Debug!" in client.out
+        c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+        c.run_command("cmake --build . --config Debug")
+        c.run_command("Debug\\app.exe")
+    assert "matrix/1.0: Hello World Release!" in c.out
+    assert "engine/1.0: Hello World Release!" in c.out
+    assert "main: Debug!" in c.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -667,9 +674,9 @@ def test_map_imported_config(transitive_libraries):
 def test_cmake_target_runtime_dlls(transitive_libraries):
     # https://github.com/conan-io/conan/issues/13504
 
-    client = transitive_libraries
+    c = transitive_libraries
 
-    client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=engine/1.0 -f")
+    c.run("new cmake_exe -d name=foo -d version=1.0 -d requires=engine/1.0 -f")
     cmakelists = textwrap.dedent("""
     set(CMAKE_CXX_COMPILER_WORKS 1)
     set(CMAKE_CXX_ABI_COMPILED 1)
@@ -684,14 +691,16 @@ def test_cmake_target_runtime_dlls(transitive_libraries):
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:foo> $<TARGET_FILE_DIR:foo>
         COMMAND_EXPAND_LISTS)
     """)
-    client.save({"CMakeLists.txt": cmakelists})
-    client.run('install . -s build_type=Release -o "engine/*":shared=True')
-    client.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
-    client.run_command("cmake --build build --config Release")
-    client.run_command("build\\Release\\foo.exe")
+    c.save({"CMakeLists.txt": cmakelists})
+    c.run('install . -s build_type=Release -o "engine/*":shared=True')
+    c.run_command("cmake -S . -B build/ "
+                  "-DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    c.run_command("cmake --build build --config Release")
+    c.run_command("build\\Release\\foo.exe")
 
-    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "engine.dll"))
-    assert "engine/1.0: Hello World Release!" in client.out  # if the DLL wasn't copied, the application would not run and show output
+    assert os.path.exists(os.path.join(c.current_folder, "build", "Release", "engine.dll"))
+    assert "engine/1.0: Hello World Release!" in c.out
+    # if the DLL wasn't copied, the application would not run and show output
 
 
 @pytest.mark.tool("cmake")
@@ -735,6 +744,7 @@ def test_quiet():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows and MSVC")
 @pytest.mark.tool("meson")
+@pytest.mark.tool("pkg_config")
 @pytest.mark.tool("ninja")
 @pytest.mark.tool("cmake", "3.23")
 def test_meson_and_cmakedeps_and_static_builds():
@@ -799,11 +809,13 @@ def test_meson_and_cmakedeps_and_static_builds():
     shutil.copytree(os.path.join(client.current_folder, "test_package", "src"),
                     os.path.join(client.current_folder, "test_package_cmake", "src"))
     client.run("create . -pr:a win")  # meson + pkgconfigdeps (test_package) runs OK
-    client.run("test --profile:all=win test_package_cmake hello/1.0")  # meson + CMakeDeps (test_package_cmake) runs OK
+    # meson + CMakeDeps (test_package_cmake) runs OK
+    client.run("test --profile:all=win test_package_cmake hello/1.0")
     # Now, let's use the CMakeConfigDeps to demonstrate that it works with/without changing
     replace_in_file(ConanFileMock(),
                     os.path.join(client.current_folder, "test_package_cmake", "conanfile.py"),
                     '"CMakeDeps"',
                     '"CMakeConfigDeps"')
+    # meson + CMakeConfigDeps (test_package_cmake) runs OK
     client.run("test --profile:all=win test_package_cmake hello/1.0 "
-               "-c tools.cmake.cmakedeps:new=will_break_next") # meson + CMakeConfigDeps (test_package_cmake) runs OK
+               "-c tools.cmake.cmakedeps:new=will_break_next")

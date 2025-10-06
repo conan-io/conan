@@ -29,7 +29,7 @@ def test_build_output_json():
     client = TestClient()
     conanfile = GenConanfile()
     client.save({"conanfile.py": conanfile})
-    client.run("build . --format=json", redirect_stdout=_OUTPUT_FILE)
+    client.run("build --format=json", redirect_stdout=_OUTPUT_FILE)
     output = json.loads(client.load(_OUTPUT_FILE))
 
     assert "graph" in output

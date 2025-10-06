@@ -1,15 +1,22 @@
 import copy
 import numbers
+import platform
 import re
 import os
 import fnmatch
+import textwrap
 
 from collections import OrderedDict
 
+from jinja2 import Environment, FileSystemLoader
+
 from conan.errors import ConanException
+from conan.internal.api.detect import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
+from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -115,7 +122,7 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
     "tools.microsoft.bash:path": "The path to the shell to run when conanfile.win_bash==True",
-    "tools.microsoft.bash:active": "If Conan is already running inside bash terminal in Windows",
+    "tools.microsoft.bash:active": "Set True only when Conan runs in a POSIX Bash (MSYS2/Cygwin) where Python's subprocess (shell=True) uses a POSIX-compatible shell (e.g., /bin/sh). Do not set when using Conan from cmd/PowerShell or with native Windows Python ('win32').",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apk', 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
@@ -127,6 +134,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -136,7 +144,7 @@ BUILT_IN_CONFS = {
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Toolchain installation
-    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake and Meson",
+    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -732,3 +740,32 @@ class ConfDefinition:
 
     def clear(self):
         self._pattern_confs.clear()
+
+
+def load_global_conf(home_folder):
+    home_paths = HomePaths(home_folder)
+    global_conf_path = home_paths.global_conf_path
+    new_config = ConfDefinition()
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+        home_folder = home_folder.replace("\\", "/")
+        from conan import conan_version
+        content = template.render({"platform": platform, "os": os, "distro": distro,
+                                   "conan_version": conan_version,
+                                   "conan_home_folder": home_folder,
+                                   "detect_api": detect_api})
+        new_config.loads(content)
+    else:  # creation of a blank global.conf file for user convenience
+        default_global_conf = textwrap.dedent("""\
+            # Core configuration (type 'conan config list' to list possible values)
+            # e.g, for CI systems, to raise if user input would block
+            # core:non_interactive = True
+            # some tools.xxx config also possible, though generally better in profiles
+            # tools.android:ndk_path = my/path/to/android/ndk
+            """)
+        save(global_conf_path, default_global_conf)
+    return new_config

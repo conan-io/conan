@@ -395,7 +395,7 @@ class TestLockTestPackage:
         # https://github.com/conan-io/conan/issues/11763
         c = client
         with c.chdir("app"):
-            c.run("lock create .")
+            c.run("lock create")
             lock = c.load("conan.lock")
             assert "cmake/1.0" not in lock
             assert "dep/1.0" in lock

@@ -1,6 +1,5 @@
 import os
 import textwrap
-import unittest
 
 from conan.internal.model.info import load_binary_info
 from conan.api.model import RecipeReference
@@ -9,7 +8,7 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import load, save
 
 
-class SettingsTest(unittest.TestCase):
+class TestSettings:
 
     def _get_conaninfo(self, reference, client):
         ref = client.cache.get_latest_recipe_reference(RecipeReference.loads(reference))
@@ -32,7 +31,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing", assert_error=True)
-        self.assertIn("ERROR: settings.yml: null setting can't have subsettings", client.out)
+        assert "ERROR: settings.yml: null setting can't have subsettings" in client.out
 
     def test_settings_constraint_error_type(self):
         # https://github.com/conan-io/conan/issues/3022
@@ -45,7 +44,7 @@ class Test(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
-        self.assertIn("pkg/0.1@user/testing: OS!!: Linux", client.out)
+        assert "pkg/0.1@user/testing: OS!!: Linux" in client.out
 
     def test_settings_as_a_str(self):
         content = """
@@ -61,13 +60,13 @@ class SayConan(ConanFile):
         client.run("create . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info["settings"]["os"], "Windows")
+        assert conan_info["settings"]["os"] == "Windows"
 
         client.run("remove say/0.1 -c")
         client.run("create . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info["settings"]["os"], "Linux")
+        assert conan_info["settings"]["os"] == "Linux"
 
     def test_settings_as_a_list_conanfile(self):
         # Now with conanfile as a list
@@ -83,7 +82,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info["settings"]["os"], "Windows")
+        assert conan_info["settings"]["os"] == "Windows"
 
     def test_settings_as_a_dict_conanfile(self):
         # Now with conanfile as a dict
@@ -100,7 +99,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info["settings"]["os"], "Windows")
+        assert conan_info["settings"]["os"] == "Windows"
 
     def test_invalid_settings3(self):
         client = TestClient()
@@ -115,7 +114,7 @@ class SayConan(ConanFile):
 
         client.save({CONANFILE: content})
         client.run("install . --build missing", assert_error=True)
-        self.assertIn("'settings.invalid' doesn't exist", client.out)
+        assert "'settings.invalid' doesn't exist" in client.out
 
         # Test wrong values in conanfile
     def test_invalid_settings4(self):
@@ -154,7 +153,7 @@ class SayConan(ConanFile):
         client.run("remove say/0.1 -c")
         client.run("create . --build missing")
         conan_info = self._get_conaninfo("say/0.1", client)
-        self.assertEqual(conan_info.get("settings"), None)
+        assert conan_info.get("settings") == None
 
         # Settings is {}
         content = """
@@ -170,4 +169,4 @@ class SayConan(ConanFile):
         client.run("create . --build missing")
         conan_info = self._get_conaninfo("say/0.1", client)
 
-        self.assertEqual(conan_info.get("settings"), None)
+        assert conan_info.get("settings") == None

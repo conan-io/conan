@@ -68,14 +68,15 @@ class CMakeDeps2:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            config = ConfigTemplate2(self, dep)
+            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
+            config = ConfigTemplate2(self, require, dep, full_cpp_info)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
             ret[config_version.filename] = config_version.content()
 
             targets = TargetsTemplate2(self, dep)
             ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(self, dep, require)
+            target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -197,6 +198,8 @@ class _PathGenerator:
 
     def generate(self):
         template = textwrap.dedent("""\
+        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
         {% for pkg_name, folder in pkg_paths.items() %}
         set({{pkg_name}}_DIR "{{folder}}")
         {% endfor %}

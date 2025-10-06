@@ -1,6 +1,5 @@
 import os
 import platform
-import sys
 import textwrap
 
 import pytest
@@ -10,7 +9,6 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
 def test_cross_x86():
     conanfile_py = textwrap.dedent("""

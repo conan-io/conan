@@ -51,7 +51,8 @@ def test_cross_build():
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
-    assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
+    # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct
+    # assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
     client.run("install . --profile:build=windows --profile:host=embedwin")
     toolchain = client.load("conan_toolchain.cmake")
@@ -88,7 +89,8 @@ def test_cross_build_linux_to_macos():
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
-    assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
+    # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct
+    # assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
 
 def test_cross_build_user_toolchain():
@@ -521,6 +523,31 @@ def test_extra_flags_via_conf():
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
 
 
+def test_bitcode_enable_flag():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=apple-clang
+        compiler.version=17
+        compiler.libcxx=libc++
+        build_type=Release
+
+        [conf]
+        tools.apple:enable_bitcode=True
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+                              .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(BITCODE "-fembed-bitcode")' in toolchain
+
+
 def test_cmake_presets_binary_dir_available():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""
@@ -777,7 +804,7 @@ def test_toolchain_cache_variables():
     assert cache_variables["NUMBER"] == 1
 
     def _format_val(val):
-        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+        return f'"{val}"' if isinstance(val, str) and " " in val else f"{val}"
 
     for var, value in cache_variables.items():
         assert f"-D{var}={_format_val(value)}" in client.out
@@ -1369,6 +1396,11 @@ def test_presets_njobs():
     c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
+    assert presets["testPresets"][0]["execution"]["jobs"] == 42
+    c.run('install . -g CMakeToolchain -c tools.build:jobs=0')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert "jobs" not in presets["buildPresets"][0]
+    assert "execution" not in presets["testPresets"][0]
 
 
 def test_add_cmakeexe_to_presets():
@@ -1774,6 +1806,7 @@ def test_cmake_presets_compiler():
     # https://github.com/microsoft/vscode-cmake-tools/blob/a1ceda25ea93fc0060324de15970a8baa69addf6/src/presets/preset.ts#L1095C23-L1095C35
     assert cache_variables["CMAKE_C_COMPILER"] == "cl"
     assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
+
 
 @pytest.mark.parametrize(
     "threads, flags",
