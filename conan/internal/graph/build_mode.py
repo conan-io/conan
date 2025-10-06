@@ -56,6 +56,9 @@ class BuildMode:
                     else:
                         self.patterns.append(clean_pattern)
 
+            if  self._build_compatible_patterns and self._build_compatible_patterns != ["&"]:
+                raise ConanException("compatible build mode only supports --build=compatible:& syntax for now")
+
             if self.never and (self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
 
