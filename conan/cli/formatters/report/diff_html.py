@@ -42,6 +42,7 @@ diff_html = r"""
                 background: #f4f4f4;
                 border-radius: 7px;
                 overflow-y: hidden;
+                padding-top: 5px;
             }
             details.folder {
                 text-wrap: nowrap;
