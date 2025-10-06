@@ -176,6 +176,10 @@ class DepsGraphBuilder:
             conflict = _conflicting_refs(prev_ref, require.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+            # If there is no conflict, then the incomplete require without revision can be updated
+            # with the previous revision to avoid the later conflict
+            if prev_ref.revision is not None and require.ref.revision is None:
+                require.ref.revision = prev_ref.revision
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options, define_consumers=False):

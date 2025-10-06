@@ -600,7 +600,7 @@ class TestBuildTrackHost:
                    self.tool_requires("lib_with_tool/<host_version>@foobar")
 
                def requirements(self):
-                   self.requires("lib_with_tool/[>=1]@foobar")
+                   self.requires("lib_with_tool/1.1.0@foobar")
            """)
         c.save({"conanfile.py": dep}, clean_first=True)
         c.run("create . --version=1.0.0 --user=foobar")
@@ -612,6 +612,7 @@ class TestBuildTrackHost:
             """)
         c.save({"conanfile.txt": conanfile}, clean_first=True)
         c.run("install .")
+        # No longer produces a conflict
 
 
 def test_build_missing_build_requires():
