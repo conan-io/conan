@@ -5,6 +5,7 @@ import pytest
 from conan.errors import ConanException
 from conan.internal.model.version import Version
 from conan.internal.model.version_range import VersionRange
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 values = [
@@ -171,3 +172,19 @@ def test_version_range_error_ux():
     c.run("export . --name=mypkg --version=0.1")
     c.run("install --requires=mypkg/0.1", assert_error=True)
     assert "Recipe 'mypkg/0.1' requires 'mydep/[>1.0 < 3]' version-range definition error" in c.out
+
+
+def test_version_range_with_pinned_revision_warn():
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    tc.run("export .")
+    rrev1 = tc.exported_recipe_revision()
+    tc.save({"conanfile.py": GenConanfile("pkg", "1.0").with_class_attribute("# a comment")})
+    tc.run("export .")
+    rrev2 = tc.exported_recipe_revision()
+    assert rrev1 != rrev2
+
+    tc.run(f"install --requires=pkg/[>=1.0]#{rrev1} --build=missing -vv")
+    assert f"WARN: risk: Specifying a revision for requirement 'pkg/[>=1.0]#{rrev1}' together with a version range has no effect" in tc.out
+    # Note, rrev2 instead of the requested rrev1
+    assert f"pkg/1.0#{rrev2} - Cache" in tc.out
