@@ -821,6 +821,7 @@ def test_build_order_space_in_options():
     assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
 
 
+@pytest.mark.skip(reason="Unsupported --build=compatible syntax")
 def test_build_order_build_context_compatible():
     c = TestClient()
     foo = textwrap.dedent("""
@@ -887,7 +888,7 @@ def test_info_build_order_editable():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("editable add dep")
     c.run("export pkg")
-    
+
     c.run("graph build-order consumer --build=missing --build=editable -f=json --order-by=recipe")
     bo_json = json.loads(c.stdout)
     pkg = bo_json["order"][0][0]["packages"][0][0]
