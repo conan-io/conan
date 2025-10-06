@@ -50,7 +50,7 @@ diff_html = r"""
             .sidebar li.file-new { list-style: none; padding-left: 0; }
             .sidebar li.file-new:before { content: "+"; color: green; font-weight: bold; }
             .sidebar li.file-old { list-style: none; padding-left: 0;  }
-            .sidebar li.file-old:before { content: "*"; color: black; }
+            .sidebar li.file-old:before { content: "\00B1"; color: black; }
             .sidebar li a {
                 text-decoration: none;
             }
@@ -285,7 +285,7 @@ diff_html = r"""
                     const [lines, new_count, old_count] = makeDiffLines(data[path]);
                     elem.querySelector(".diff-lines").appendChild(lines);
 
-                    if (new_count !== 0 && old_count !== 0) {
+                    if (new_count !== 0 || old_count !== 0) {
                         elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
                     }
 
@@ -302,7 +302,6 @@ diff_html = r"""
             };
 
             const observer = new IntersectionObserver(intersectionCallback, options);
-
 
             document.addEventListener("DOMContentLoaded", (e) => {
                 document.querySelectorAll('.diff-container').forEach((section) => {
@@ -393,15 +392,14 @@ diff_html = r"""
         <div class='container'>
             <div class='sidebar'>
                 <div id="sidebar-contents">
-                    <h2>File list:</h2>
                     <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                     <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
                     <span id="searching_icon" style="display:none">...</span>
                     <ul class="file-list">
                         {{ render_folder("", per_folder) }}
                     </ul>
-                    <span id="empty_search" style="display:none">No results found</span>
                 </div>
+                <span id="empty_search" style="display:none">No results found</span>
             </div>
             <div class='content'>
                 <div class="diff-header">
@@ -429,7 +427,6 @@ diff_html = r"""
                                 <hr/>
                                 <div class="diff-lines"></div>
                             </details>
-
                         </div>
                     </div>
                 {%- endfor -%}
