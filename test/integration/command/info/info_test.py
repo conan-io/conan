@@ -111,13 +111,19 @@ class TestConanfilePath:
         client = TestClient()
 
         client.run("graph info", assert_error=True)
-        assert "ERROR: Please specify a path" in client.out
+        assert "ERROR: Conanfile not found" in client.out
 
         client.run("graph info not_real_path", assert_error=True)
         assert "ERROR: Conanfile not found" in client.out
 
         client.run("graph info conanfile.txt", assert_error=True)
         assert "ERROR: Conanfile not found" in client.out
+
+        client.run("graph info --requires=foo/1.0", assert_error=True)
+        assert "ERROR: Package 'foo/1.0' not resolved: No remote defined." in client.out
+
+        client.run("graph info . --requires=foo/1.0", assert_error=True)
+        assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in client.out
 
 
 class TestFilters:

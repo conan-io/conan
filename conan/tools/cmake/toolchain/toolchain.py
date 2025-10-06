@@ -249,7 +249,8 @@ class CMakeToolchain:
                        '14': '14 2015',
                        '15': '15 2017',
                        '16': '16 2019',
-                       '17': '17 2022'}
+                       '17': '17 2022',
+                       '18': '18 2026'}
 
         if compiler == "msvc":
             if compiler_version is None:

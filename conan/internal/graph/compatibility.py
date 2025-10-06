@@ -89,24 +89,28 @@ def migrate_compatibility_files(cache_folder):
     compatibility_file = os.path.join(compatible_folder, "compatibility.py")
     cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
 
-    def _should_migrate_file(file_path):
+    def _is_migratable(file_path):
         if not os.path.exists(file_path):
             return True
         content = load(file_path)
         first_line = content.lstrip().split("\n", 1)[0]
         return CONAN_GENERATED_COMMENT in first_line
 
-    if _should_migrate_file(compatibility_file) and _should_migrate_file(cppstd_compat_file):
-        if os.path.exists(compatibility_file) and load(compatibility_file) != _default_compat:
-            ConanOutput().success("Migration: Successfully updated compatibility.py")
-        save(compatibility_file, _default_compat)
+    if _is_migratable(compatibility_file) and _is_migratable(cppstd_compat_file):
+        compatibility_exists = os.path.exists(compatibility_file)
+        needs_update = not compatibility_exists or load(compatibility_file) != _default_compat
+        if needs_update:
+            save(compatibility_file, _default_compat)
+            if compatibility_exists:
+                ConanOutput().success("Migration: Successfully updated compatibility.py")
         if os.path.exists(cppstd_compat_file):
             os.remove(cppstd_compat_file)
 
 
 class BinaryCompatibility:
 
-    def __init__(self, compatibility_plugin_folder):
+    def __init__(self, compatibility_plugin_folder, hook_manager):
+        self._hook_manager = hook_manager
         compatibility_file = os.path.join(compatibility_plugin_folder, "compatibility.py")
         if not os.path.exists(compatibility_file):
             raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want "
@@ -143,7 +147,7 @@ class BinaryCompatibility:
             conanfile.settings = c.settings
             conanfile.settings_target = c.settings_target
             conanfile.options = c.options
-            run_validate_package_id(conanfile)
+            run_validate_package_id(conanfile, self._hook_manager)
             pid = c.package_id()
             if pid not in result and not c.invalid:
                 result[pid] = c

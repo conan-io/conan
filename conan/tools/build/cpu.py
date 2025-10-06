@@ -22,10 +22,7 @@ def build_jobs(conanfile):
     :param conanfile: The current recipe object. Always use ``self``.
     :return: ``int`` with the number of jobs
     """
-    njobs = conanfile.conf.get("tools.build:jobs",
-                               default=_cpu_count(),
-                               check_type=int)
-    return njobs
+    return conanfile.conf.get("tools.build:jobs", default=_cpu_count(), check_type=int)
 
 
 def _cpu_count():

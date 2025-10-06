@@ -156,7 +156,7 @@ class TestAlias(GraphManagerTest):
         _check_transitive(app, [(liba, True, True, False, False)])
 
 
-class AliasBuildRequiresTest(GraphManagerTest):
+class TestAliasBuildRequires(GraphManagerTest):
 
     def test_non_conflicting_alias(self):
         # https://github.com/conan-io/conan/issues/5468

@@ -397,7 +397,7 @@ class InstallGraph:
 
     def merge(self, other):
         """
-        @type other: InstallGraph
+        :type other: InstallGraph
         """
         if self.reduced or other.reduced:
             raise ConanException("Reduced build-order files cannot be merged")

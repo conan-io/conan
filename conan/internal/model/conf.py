@@ -134,6 +134,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -143,7 +144,7 @@ BUILT_IN_CONFS = {
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Toolchain installation
-    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake and Meson",
+    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }

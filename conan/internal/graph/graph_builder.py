@@ -8,7 +8,8 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, GraphError
+from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
+                                              GraphError)
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.graph.provides import check_graph_provides
 from conan.errors import ConanException
@@ -181,7 +182,8 @@ class DepsGraphBuilder:
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
-        profile_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        profile_options = profile_host.options if node.context == CONTEXT_HOST \
+            else profile_build.options
         assert isinstance(profile_options, Options), type(profile_options)
         run_configure_method(conanfile, down_options, profile_options, ref)
 
@@ -270,7 +272,10 @@ class DepsGraphBuilder:
             graph.aliased[alias] = pointed_ref  # Caching the alias
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
-            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for compatibility and upgrade from Conan 1, but it is an undocumented and legacy feature. Please update to use standard versioning mechanisms", warn_tag="legacy")
+            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for "
+                                          "compatibility and upgrade from Conan 1, but it is an "
+                                          "undocumented and legacy feature. Please update to use "
+                                          "standard versioning mechanisms", warn_tag="legacy")
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
