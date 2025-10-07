@@ -149,7 +149,7 @@ def test_cppstd_server():
 
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
-    assert "dep/0.1: Compatible configurations not found in cache, checking servers" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking 1 servers" in c.out
     assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" \
            in c.out
     assert "Found compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
@@ -159,7 +159,7 @@ def test_cppstd_server():
     # second time, not download, already in cache
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
-    assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking 1 servers" not in c.out
     assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" in c.out
     assert "Found compatible package '326c500588d969f55133fdda29506ef61ef03eee': " \
            "compiler.cppstd=20" in c.out
@@ -173,7 +173,7 @@ def test_cppstd_server():
 
     c.run(f"install consumer {base_settings} -s compiler.cppstd=17 --update")
     assert "dep/0.1: Checking 3 compatible configurations" in c.out
-    assert "dep/0.1: Compatible configurations not found in cache, checking servers" not in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking 1 servers" not in c.out
     assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" in c.out
     assert "Found compatible package 'ce92fac7c26ace631e30875ddbb3a58a190eb601': " \
            "compiler.cppstd=14" in c.out

@@ -43,8 +43,8 @@ class TestCompatibleIDsTest:
         assert "pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!" in client.out
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                      ("1ded27c9546219fbd04d4440e05b2298f8230047", "Build")})
-        assert "lib/0.1@user/stable: Compatible configurations not found in cache, checking servers" not in client.out
-        assert "pkg/0.1@user/stable: Compatible configurations not found in cache, checking servers" in client.out
+        assert "lib/0.1@user/stable: Compatible configurations not found in cache, checking 0 servers" not in client.out
+        assert "pkg/0.1@user/stable: Compatible configurations not found in cache, checking 0 servers" in client.out
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
