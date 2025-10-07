@@ -724,3 +724,30 @@ def test_compatibility_new_setting_forwards_compat():
     tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
     assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
            f"libc_version=2" in tc.out
+
+
+def test_check_server_non_existing_recipes():
+    c = TestClient(default_server_user=True)
+    compatibles = textwrap.dedent("""\
+        def compatibility(conanfile):
+            return [{"settings": [("arch", v)]} for v in ("x86", "x86_64", "armv7", "armv8")]
+        """)
+    c.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
+
+    conanfile = GenConanfile("dep", "0.1").with_settings("arch")
+    c.save({"dep/conanfile.py": conanfile,
+            "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+
+    c.run(f"export dep")
+
+    c.run(f"install --requires=dep/0.1 -s arch=x86", assert_error=True)
+
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking 0 servers" in c.out
+
+    c.run(f"upload dep/0.1 -r=default -c")
+
+    c.run(f"install --requires=dep/0.1 -s arch=x86", assert_error=True)
+
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Compatible configurations not found in cache, checking 1 servers" in c.out

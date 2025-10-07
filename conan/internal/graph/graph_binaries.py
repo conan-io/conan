@@ -168,13 +168,15 @@ class GraphBinariesAnalyzer:
                 self._compatible_found(conanfile, package_id, compatible_package)
                 return
         if not should_update_reference(conanfile.ref, update):
-            conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
+            remotes_to_check = self._filter_compat_remotes(node, remotes)
+            conanfile.output.info("Compatible configurations not found in cache, "
+                                  f"checking {len(remotes_to_check)} servers")
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._evaluate_download(node, remotes, update)
+                self._evaluate_download(node, remotes_to_check, update)
                 if node.binary == BINARY_DOWNLOAD:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
@@ -198,6 +200,24 @@ class GraphBinariesAnalyzer:
                 return
         node.binary = original_binary
         node._package_id = original_package_id
+
+    def _filter_compat_remotes(self, node, remotes):
+        # For each node, check if the remote contains the recipe,
+        # so that we can skip checking for packages in remotes that don't have the recipe
+        # TODO: Cache this, but make sure to reset when changing remotes
+        remotes_to_check = []
+        for remote in remotes:
+            try:
+                self._remote_manager.get_recipe_revision_reference(node.ref, remote)
+                remotes_to_check.append(remote)
+            except NotFoundException:
+                continue
+            except ConanConnectionError:
+                node.conanfile.output.error(f"Failed checking for recipe '{node.ref}' in remote "
+                                            f"'{remote.name}': remote not available")
+                raise
+
+        return remotes_to_check
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"

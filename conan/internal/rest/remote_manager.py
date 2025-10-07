@@ -285,7 +285,26 @@ class RemoteManager:
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"
-        return self._call_remote(remote, "get_recipe_revision_reference", ref)
+
+        cached_method = remote._caching.setdefault("get_recipe_revision_reference", {})
+        try:
+            result = cached_method[ref]
+        except KeyError:
+            try:
+                result = self._call_remote(remote, "get_recipe_revision_reference", ref)
+                cached_method[ref] = result
+                return result
+            except NotFoundException as e:
+                # Let's avoid leaking memory by saving all the exception objects,
+                # which translates to a ~2x memory increase. Now, it only saves the type and the
+                # final message. For now, let's cache only the NotFoundException one.
+                cached_method[ref] = self._ErrorMsg(str(e))
+                raise e
+        else:
+            if isinstance(result, self._ErrorMsg):
+                # Let's raise it
+                raise NotFoundException(result.message)
+            return result
 
     def get_package_revision_reference(self, pref, remote) -> bool:
         assert pref.revision is not None, "get_package_revision_reference needs a revision"
