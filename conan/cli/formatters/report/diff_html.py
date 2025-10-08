@@ -26,8 +26,12 @@ diff_html = r"""
         <meta charset="utf-8">
         <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
-            body { font-family: monospace; margin: 0px; }
-            .container { display: flex; height: 100%; }
+            body { font-family: monospace; margin: 0px; background-color: #f8f8f8; }
+            .container {
+                display: flex;
+                height: 100%;
+                overflow: scroll;
+            }
             .sidebar {
                 width: 17%;
                 min-width: 10%;
@@ -37,6 +41,8 @@ diff_html = r"""
                 background: #f4f4f466;
                 border-right: 1px solid #ccc;
                 resize: horizontal;
+                position: sticky;
+                top: 0;
             }
             #sidebar-contents {
                 background: #f4f4f4;
@@ -64,7 +70,14 @@ diff_html = r"""
             .side-link {
                 text-wrap: nowrap;
             }
-            .file-list { padding-left: 10px; }
+            .file-list {
+                padding-left: 10px;
+                width: 100%;
+                overflow-x: clip;
+            }
+            .file-list ul li {
+                width: 100%;
+            }
             .file-list li ul {
                 border-left: 2px solid #ddd;
                 margin-left: 3px;
@@ -73,7 +86,7 @@ diff_html = r"""
             .content {
                 padding: 20px;
                 background: #f8f8f8;
-                overflow-y: scroll;
+                //overflow-y: scroll;
                 width: 100%;
             }
             .content span {
@@ -92,6 +105,20 @@ diff_html = r"""
                 padding-right: 10px;
             }
 
+            .folder > summary {
+                cursor: pointer;
+            }
+
+            /*.folder:open > summary:before {
+                content: "\1F4C2";
+            }
+
+            .folder:not(:open) > summary:before {
+                content: "\1F4C1";
+            }*/
+
+            .folder > summary:hover { background-color: #e0e0e033; }
+
             .diff-content {
                 padding-bottom: 7px;
                 border: 1px solid black;
@@ -103,12 +130,22 @@ diff_html = r"""
                 background-color: #e0e0e033;
                 border-left: 2px solid #00000066;
             }
-            details.diff-details summary {
+            details.diff-details summary.diff-summary {
                 cursor: pointer;
-                margin-top: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #ccc;
+                padding: 5px 0px;
+                position: sticky;
+                top: 0;
+                background-color: #f8f8f8;
+                border-radius: 7px 7px 0px 0px;
+            }
+            details.diff-details summary.diff-summary:hover {
+                background-color: #e0e0e033;
             }
             .context-line { color: #888; }
-            .diff-details summary:hover { background-color: #e0e0e033; }
             .line-number {
                 width: 4ch;
                 display: inline-block;
@@ -119,11 +156,7 @@ diff_html = r"""
                 font-size: 1.2em;
                 padding-left: 10px;
             }
-            .diff-summary {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+
 
             details:open .diff-summary b:before {
                 content: "\25BC";
@@ -158,6 +191,27 @@ diff_html = r"""
                 font-weight: bold;
                 font-size: 4em;
                 text-align: center;
+            }
+
+            .diff-header {
+                padding: 0px 5px 5px 5px;
+            }
+
+            .diff-subheader {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .search-field {
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                padding: 5px;
+                margin: 5px;
+            }
+
+            .search-area {
+                border-bottom: 1px solid #ccc;
             }
         </style>
         <script>
@@ -408,9 +462,12 @@ diff_html = r"""
         <div class='container'>
             <div class='sidebar'>
                 <div id="sidebar-contents">
-                    <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
-                    <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                    <span id="searching_icon" style="display:none">...</span>
+                    <div class="search-area">
+                        <input type="text" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                        <input type="text" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                        <span id="searching_icon" style="display:none">...</span>
+                        <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
+                    </div>
                     <ul class="file-list">
                         {{ render_folder("", per_folder) }}
                     </ul>
@@ -418,16 +475,10 @@ diff_html = r"""
                 <span id="empty_search" style="display:none">No results found</span>
             </div>
             <div class='content'>
-                <div class="diff-header">
-                    <h2>Diff Report Between <b>{{ old_reference.repr_notime() }}</b> And <b>{{ new_reference.repr_notime() }}</b></h2>
-                    <p>Showing a total of <b id="file-count">{{ content|length }}</b> files</p>
-                    <span class="del" style="white-space: nowrap;">
-                        --- (old) belongs to the <b>{{ old_reference.repr_notime() }}</b> reference
-                    </span>
-                    <br/>
-                    <span class="add" style="white-space: nowrap;">
-                        +++ (new) belongs to the <b>{{ new_reference.repr_notime() }}</b> reference
-                    </span>
+                <div class="diff-header"><div class="diff-header">
+                    <h2>Diff Report Between <b class="del">{{ old_reference.repr_notime() }}</b> And <b class="add">{{ new_reference.repr_notime() }}</b></h2>
+                    <div class="diff-subheader">
+                    </div>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
                 {%- for filename, lines in content.items() -%}
@@ -440,7 +491,6 @@ diff_html = r"""
                                     </b>
                                     <div class="changes-count-container"></div>
                                 </summary>
-                                <hr/>
                                 <div class="diff-lines"></div>
                             </details>
                         </div>
