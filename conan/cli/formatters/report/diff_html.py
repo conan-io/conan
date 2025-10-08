@@ -24,7 +24,7 @@ diff_html = r"""
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>{{ old_reference }} - {{ new_reference }}</title>
+        <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
             body { font-family: monospace; margin: 0px; }
             .container { display: flex; height: 100%; }
@@ -93,7 +93,7 @@ diff_html = r"""
             }
 
             .diff-content {
-                padding: 0px 0px 3px 3px;
+                padding-bottom: 7px;
                 border: 1px solid black;
                 border-radius: 7px;
                 margin-bottom: 10;
@@ -115,9 +115,9 @@ diff_html = r"""
                 text-align: center;
                 user-select: none;
             }
-            hr { margin-left: -3px;}
             .filename {
                 font-size: 1.2em;
+                padding-left: 10px;
             }
             .diff-summary {
                 display: flex;
@@ -138,6 +138,7 @@ diff_html = r"""
                 list-style: none;
                 background-color: #cef8ff;
                 color: #888;
+                line-height: 1.5;
             }
 
             details:open .context-chunk-header .line-number:before {
