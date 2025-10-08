@@ -659,13 +659,13 @@ def test_nullify_settings():
                     self.output.info(f"I am a {self.settings.build_type} pkg!!!")
         """)
     c.save({"conanfile.py": conanfile,
-            "profile": "[settings]\nbuild_type=Release\npkg1/*:build_type=@None@"})
+            "profile": "[settings]\nbuild_type=Release\npkg1/*:build_type=~"})
     c.run("create . --name=pkg1 --version=0.1")
     c.run("create . --name=pkg2 --version=0.1")
     c.run("create . --name=pkg3 --version=0.1")
     c.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1", "pkg3/0.1")})
 
-    c.run("graph info . -s build_type=Release -s pkg1/*:build_type=@None@")
+    c.run("graph info . -s build_type=Release -s pkg1/*:build_type=~")
     assert "pkg1/0.1: BUILD TYPE NOT DEFINED!!!" in c.out
     assert "pkg2/0.1: I am a Release pkg!!!" in c.out
     assert "pkg3/0.1: I am a Release pkg!!!" in c.out
