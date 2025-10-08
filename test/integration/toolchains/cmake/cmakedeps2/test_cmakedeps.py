@@ -485,6 +485,43 @@ class TestRequiresToApp:
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::automake" not in targets
 
+    def test_requires_from_library_component_to_app_component(self):
+        c = TestClient()
+        automake = textwrap.dedent("""
+            from conan import ConanFile
+            class Dependent(ConanFile):
+                name = "automake"
+                version = "0.1"
+
+                def package_info(self):
+                    self.cpp_info.components["myapp"].exe = "myapp"
+                    self.cpp_info.components["myapp"].location = "path/to/myapp"
+                    self.cpp_info.components["mylibapp"].type = "header-library"
+            """)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "libtool"
+                version = "0.1"
+                package_type = "static-library"
+
+                def requirements(self):
+                    self.requires('automake/0.1')
+                def package_info(self):
+                    self.cpp_info.components["mycomp"].requires = ["automake::myapp"]
+            """)
+
+        c.save({"automake/conanfile.py": automake,
+                "libtool/conanfile.py": conanfile})
+        c.run("create automake")
+        c.run("create libtool")
+        c.run("install --requires=libtool/0.1 -g CMakeDeps "
+              f"-c tools.cmake.cmakedeps:new={new_value}")
+        targets = c.load("libtool-Targets-release.cmake")
+        # The libtool shouldn't depend on the automake::automake target
+        assert "automake::myapp" not in targets
+        assert "automake::automake" not in targets
+
 
 
 def test_alias_cmakedeps_set_property():
