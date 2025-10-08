@@ -238,6 +238,7 @@ diff_html = r"""
                 background-color: #cef8ff;
                 color: #888;
                 line-height: 1.5;
+                cursor: pointer;
             }
 
             details:open .context-chunk-header .line-number:before {
