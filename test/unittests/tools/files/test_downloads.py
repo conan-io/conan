@@ -156,7 +156,8 @@ class TestDownload:
         file_location = os.path.join(temp_folder(), "file.txt")
         save(file_location, "this is some content")
 
-        file_url = f"file:///{file_location.lstrip("/")}"
+        file_location = file_location.lstrip("/")
+        file_url = f"file:///{file_location}"
         file_md5 = "736db904ad222bf88ee6b8d103fceb8e"
 
         dest = os.path.join(temp_folder(), "downloaded_file.txt")
