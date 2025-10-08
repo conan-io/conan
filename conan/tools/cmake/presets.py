@@ -224,6 +224,9 @@ class _CMakePresets:
     @staticmethod
     def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        build_preset_jobs = build_jobs(conanfile)
+        if build_preset_jobs:
+            ret.setdefault("execution", {})["jobs"] = build_preset_jobs
         if runenv:
             ret["environment"] = runenv
         return ret
