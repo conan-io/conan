@@ -184,15 +184,15 @@ diff_html = r"""
             }
 
             details.diff-details summary.diff-summary:hover {
-                background-color: #e0e0e033;
+                background-color: #f0f0f0;
             }
 
-            details:open .diff-summary filename:before {
+            details:open .diff-summary .filename:before {
                 content: "\25BC";
                 display: inline-block;
             }
 
-            details:not(:open) .diff-summary filename:before {
+            details:not(:open) .diff-summary .filename:before {
                 content: "\25B6";
                 display: inline-block;
             }
