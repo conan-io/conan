@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.tools.build.flags import cppstd_msvc_flag
+from conan.tools.build.flags import cppstd_msvc_flag, disable_flag
 from conan.internal.model.options import _PackageOption
 
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
@@ -107,15 +107,17 @@ def to_meson_value(value):
     return value
 
 
-def to_cppstd_flag(compiler, compiler_version, cppstd):
+def to_cppstd_flag(conanfile, compiler, compiler_version, cppstd):
     """Gets a valid cppstd flag.
-
+    :param conanfile: ``ConanFile`` instance.
     :param compiler: ``str`` compiler name.
     :param compiler_version: ``str`` compiler version.
     :param cppstd: ``str`` cppstd version.
     :return: ``str`` cppstd flag.
     """
     if cppstd is None:
+        return None
+    if disable_flag(conanfile, "cppstd"):
         return None
     if compiler == "msvc":
         # Meson's logic with 'vc++X' vs 'c++X' is possibly a little outdated.
@@ -127,10 +129,11 @@ def to_cppstd_flag(compiler, compiler_version, cppstd):
         return f"gnu++{cppstd[3:]}" if cppstd.startswith("gnu") else f"c++{cppstd}"
 
 
-def to_cstd_flag(cstd):
+def to_cstd_flag(conanfile, cstd):
     """Gets a valid cstd flag.
     """
     if cstd is None:
         return None
-    else:
-        return cstd if cstd.startswith("gnu") else f"c{cstd}"
+    if disable_flag(conanfile, "cppstd"):
+        return None
+    return cstd if cstd.startswith("gnu") else f"c{cstd}"

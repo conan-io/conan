@@ -50,7 +50,7 @@ def test_meson_subsystem_helper(apple_sdk, subsystem):
     (None, None)
 ])
 def test_meson_to_cstd_flag(cstd, expected):
-    assert to_cstd_flag(cstd) == expected
+    assert to_cstd_flag(ConanFileMock(), cstd) == expected
 
 
 @pytest.mark.parametrize("compiler, compiler_version, cppstd, expected", [
@@ -64,7 +64,7 @@ def test_meson_to_cstd_flag(cstd, expected):
     (None, None, None, None)
 ])
 def test_meson_to_cppstd_flag(compiler, compiler_version, cppstd, expected):
-    assert to_cppstd_flag(compiler, compiler_version, cppstd) == expected
+    assert to_cppstd_flag(ConanFileMock(), compiler, compiler_version, cppstd) == expected
 
 
 def test_meson_install_strip():

@@ -232,14 +232,48 @@ def test_disable_libcxx():
          "compiler": "clang",
          "compiler.libcxx": "libc++",
          "compiler.version": "7.1",
-         "compiler.cppstd": "17"})
+         "compiler.cppstd": "17",
+         "compiler.cstd": "99"})
     conanfile.settings_build = conanfile.settings
-    conanfile.conf.define("tools.gnu:disable_stdlib_flag", True)
+    # Disable just one
+    conanfile.conf.define("tools.gnu:disable_flags", ["libcxx"])
     be = AutotoolsToolchain(conanfile)
     assert be.libcxx is None
-    conanfile.conf.define("tools.gnu:disable_stdlib_flag", False)
+    assert be.arch_flag == "-m32"
+    assert be.build_type_flags == ['-O3']
+    assert be.cppstd == "-std=c++17"
+    assert be.cstd == "-std=c99"
+    # Disable two
+    conanfile.conf.define("tools.gnu:disable_flags", ["libcxx", "cppstd"])
     be = AutotoolsToolchain(conanfile)
-    assert be.libcxx == "-stdlib=libc++"
+    assert be.libcxx is None
+    assert be.arch_flag == "-m32"
+    assert be.build_type_flags == ['-O3']
+    assert be.cppstd == ""
+    assert be.cstd == "-std=c99"
+    # Error value
+    conanfile.conf.define("tools.gnu:disable_flags", ["other"])
+    try:
+        AutotoolsToolchain(conanfile)
+    except ConanException as e:
+        assert "tools.gnu:disable_flags value 'other', must be one of:" in str(e)
+    conanfile.conf.define("tools.gnu:disable_flags",
+                          ["arch", "arch_link", "libcxx", "build_type",
+                           "build_type_link", "threads", "cppstd", "cstd"])
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    assert be.arch_flag == ""
+    assert be.build_type_flags == []
+    assert be.cppstd == ""
+    assert be.cstd == ""
+    # Disable all
+    conanfile.conf.define("tools.gnu:disable_flags", "all")
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    assert be.arch_flag == ""
+    assert be.build_type_flags == []
+    assert be.cppstd == ""
+    assert be.cstd == ""
 
 
 def test_cxx11_abi_define():
