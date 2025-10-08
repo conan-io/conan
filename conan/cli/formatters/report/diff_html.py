@@ -12,8 +12,8 @@ diff_html = r"""
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file-{{ "deleted" if file_info["is_deleted"] else (
-                            "new" if file_info["is_new"] else "old") }}"
+        <li class="file file-{{ "deleted" if file_info["is_deleted"] else (
+                                "new" if file_info["is_new"] else "old") }}"
             data-path="{{ file_info["relative_path"] }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
                 {{ name }}
@@ -376,6 +376,17 @@ diff_html = r"""
 
                 const fileCountTag = document.getElementById("file-count");
                 fileCountTag.textContent = includedFiles;
+
+                const allDetails = document.querySelectorAll(".sidebar details.folder");
+                allDetails.forEach(function(details) {
+                    details.style.display = "none";
+                    details.querySelectorAll("li.file").forEach(function(li) {
+                        if (li.style.display !== "none") {
+                            details.style.display = "block";
+                            return;
+                        }
+                    });
+                });
 
             }
 
