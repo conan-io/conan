@@ -26,12 +26,22 @@ diff_html = r"""
         <meta charset="utf-8">
         <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
-            body { font-family: monospace; margin: 0px; background-color: #f8f8f8; }
+            /* --- Global Styles --- */
+
+            body {
+                font-family: monospace;
+                margin: 0px;
+                background-color: #f8f8f8;
+            }
+
+            /* --- Main Layout --- */
+
             .container {
                 display: flex;
                 height: 100%;
                 overflow: scroll;
             }
+
             .sidebar {
                 width: 17%;
                 min-width: 10%;
@@ -44,80 +54,113 @@ diff_html = r"""
                 position: sticky;
                 top: 0;
             }
+
+            .content {
+                padding: 20px;
+                background: #f8f8f8;
+                width: 100%;
+            }
+
+            /* --- Sidebar & File Tree --- */
+
             #sidebar-contents {
                 background: #f4f4f4;
                 border-radius: 7px;
                 overflow-y: hidden;
                 padding-top: 5px;
             }
-            details.folder {
-                text-wrap: nowrap;
+
+            .search-area {
+                border-bottom: 1px solid #ccc;
             }
 
-            .sidebar li { line-height: 1.5; list-style: none; list-style-position: inside; }
-            .sidebar li.file-new { list-style: none; padding-left: 0; }
-            .sidebar li.file-new:before { content: "+"; color: green; font-weight: bold; }
-            .sidebar li.file-old { list-style: none; padding-left: 0;  }
-            .sidebar li.file-old:before { content: "\00B1"; color: black; }
-            .sidebar li.file-deleted { list-style: none; padding-left: 0; }
-            .sidebar li.file-deleted:before { content: "-"; color: red; font-weight: bold; }
-            .sidebar li a {
-                text-decoration: none;
+            .search-field {
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                padding: 5px;
+                margin: 5px;
             }
-            .sidebar li a:hover {
-                text-decoration: underline;
-            }
-            .side-link {
-                text-wrap: nowrap;
-            }
+
             .file-list {
                 padding-left: 10px;
                 width: 100%;
                 overflow-x: clip;
             }
+
             .file-list ul li {
                 width: 100%;
             }
+
             .file-list li ul {
                 border-left: 2px solid #ddd;
                 margin-left: 3px;
             }
-            li ul { padding-left: 1ch; }
-            .content {
-                padding: 20px;
-                background: #f8f8f8;
-                //overflow-y: scroll;
-                width: 100%;
-            }
-            .content span {
-                white-space: pre-wrap;
-            }
-            .add { background-color: #76ffbbBB; color: black; }
-            .del { background-color: #fdb9c1BB; color: black; }
 
-            .line-number.add { background-color: #76ffbb; }
-            .line-number.del { background-color: #fdb9c1; }
+            li ul {
+                padding-left: 1ch;
+            }
 
-            .new-lines-count { color: green; font-weight: bold; }
-            .old-lines-count { color: black; font-weight: bold; }
-            .changes-count-container {
-                font-size: 0.9em;
-                padding-right: 10px;
+            details.folder {
+                text-wrap: nowrap;
             }
 
             .folder > summary {
                 cursor: pointer;
             }
 
-            /*.folder:open > summary:before {
-                content: "\1F4C2";
+            .folder > summary:hover {
+                background-color: #e0e0e033;
             }
 
-            .folder:not(:open) > summary:before {
-                content: "\1F4C1";
-            }*/
+            details.folder ul:hover {
+                background-color: #e0e0e033;
+                border-left: 2px solid #00000066;
+            }
 
-            .folder > summary:hover { background-color: #e0e0e033; }
+            .sidebar li {
+                line-height: 1.5;
+                list-style: none;
+                list-style-position: inside;
+            }
+
+            .sidebar li a {
+                text-decoration: none;
+            }
+
+            .sidebar li a:hover {
+                text-decoration: underline;
+            }
+
+            .side-link {
+                text-wrap: nowrap;
+            }
+
+            /* File Status Indicators */
+            .sidebar li.file-new,
+            .sidebar li.file-old,
+            .sidebar li.file-deleted {
+                list-style: none;
+                padding-left: 0;
+            }
+
+            .sidebar li.file-new:before {
+                content: "+";
+                color: green;
+                font-weight: bold;
+            }
+
+            .sidebar li.file-old:before {
+                content: "\00B1";
+                color: black;
+            }
+
+            .sidebar li.file-deleted:before {
+                content: "-";
+                color: red;
+                font-weight: bold;
+            }
+
+            /* --- Diff View Components --- */
 
             .diff-content {
                 padding-bottom: 7px;
@@ -126,10 +169,7 @@ diff_html = r"""
                 margin-bottom: 10;
                 background-color: white;
             }
-            details.folder ul:hover {
-                background-color: #e0e0e033;
-                border-left: 2px solid #00000066;
-            }
+
             details.diff-details summary.diff-summary {
                 cursor: pointer;
                 display: flex;
@@ -142,29 +182,55 @@ diff_html = r"""
                 background-color: #f8f8f8;
                 border-radius: 7px 7px 0px 0px;
             }
+
             details.diff-details summary.diff-summary:hover {
                 background-color: #e0e0e033;
             }
-            .context-line { color: #888; }
-            .line-number {
-                width: 4ch;
+
+            details:open .diff-summary filename:before {
+                content: "\25BC";
                 display: inline-block;
-                text-align: center;
-                user-select: none;
             }
+
+            details:not(:open) .diff-summary filename:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .diff-header {
+                padding: 0px 5px 5px 5px;
+            }
+
+            .diff-subheader {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
             .filename {
                 font-size: 1.2em;
                 padding-left: 10px;
             }
 
-
-            details:open .diff-summary b:before {
-                content: "\25BC";
-                display: inline-block;
+            .changes-count-container {
+                font-size: 0.9em;
+                padding-right: 10px;
             }
-            details:not(:open) .diff-summary b:before {
-                content: "\25B6";
-                display: inline-block;
+
+            .new-lines-count {
+                color: green;
+                font-weight: bold;
+            }
+
+            .old-lines-count {
+                color: black;
+                font-weight: bold;
+            }
+
+            /* --- Diff Line Styles --- */
+
+            .content span {
+                white-space: pre-wrap;
             }
 
             .context-chunk-header {
@@ -184,6 +250,37 @@ diff_html = r"""
                 display: inline-block;
             }
 
+            .line-number {
+                width: 4ch;
+                display: inline-block;
+                text-align: center;
+                user-select: none;
+            }
+
+            .context-line {
+                color: #888;
+            }
+
+            .add {
+                background-color: #76ffbbBB;
+                color: black;
+            }
+
+            .del {
+                background-color: #fdb9c1BB;
+                color: black;
+            }
+
+            .line-number.add {
+                background-color: #76ffbb;
+            }
+
+            .line-number.del {
+                background-color: #fdb9c1;
+            }
+
+            /* --- Utility & Page States --- */
+
             #empty_result {
                 justify-content: center;
                 align-items: center;
@@ -191,27 +288,6 @@ diff_html = r"""
                 font-weight: bold;
                 font-size: 4em;
                 text-align: center;
-            }
-
-            .diff-header {
-                padding: 0px 5px 5px 5px;
-            }
-
-            .diff-subheader {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .search-field {
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                padding: 5px;
-                margin: 5px;
-            }
-
-            .search-area {
-                border-bottom: 1px solid #ccc;
             }
         </style>
         <script>
@@ -445,7 +521,7 @@ diff_html = r"""
 
             }
 
-            const debouncedOnSearchInput = debounce(onSearchInput, 500);
+            const debouncedOnSearchInput = debounce(onSearchInput, 300);
 
              async function onExcludeSearchInput(event) {
                 excludeSearchQuery = event.currentTarget.value.toLowerCase();
