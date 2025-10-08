@@ -39,3 +39,7 @@ def parse_extra_variable(source, key, value):
             return var_value
     raise ConanException(f'{source} "{key}" has invalid type. Allowed types: str, int, float, dict,'
                          f' got {type(value)}')
+
+
+def cmake_escape_value(v):
+    return v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
