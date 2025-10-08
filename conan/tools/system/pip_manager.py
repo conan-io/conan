@@ -26,14 +26,14 @@ class PipEnv:
         env.vars(self._conanfile).save_script(self.env_name)
 
     def _create_venv(self):
-        if platform.system() == "Windows":
-            python_executable = shutil.which('python')
-        else:
-            python_executable = shutil.which('python3')
-        if not python_executable:
+        python_interpreter = self._conanfile.conf.get(
+            "tools.system.pip_manager:python_interpreter",
+            default=shutil.which('python') if platform.system() == "Windows" else shutil.which('python3'))
+        if not python_interpreter:
             raise ConanException("PipEnv could not find a Python executable path.")
+
         try:
-            self._conanfile.run(cmd_args_to_string([python_executable, '-m', 'venv', self._env_dir]))
+            self._conanfile.run(cmd_args_to_string([python_interpreter, '-m', 'venv', self._env_dir]))
         except ConanException:
             raise ConanException("PipEnv could not create a Python virtual environment.")
 
