@@ -149,7 +149,7 @@ class MyConanfile(ConanFile):
         tmp = temp_folder()
         profile = os.path.join(tmp, 'myprofile')
         save(profile, "[settings]\nos=FreeBSD\n")
-        with environment_update({'CONAN_DEFAULT_PROFILE_BUILD': profile}):
+        with environment_update({'CONAN_DEFAULT_BUILD_PROFILE': profile}):
             c.run("profile show")
             assert "os=FreeBSD" in c.out  # build profiles
 
