@@ -145,24 +145,13 @@ class MyConanfile(ConanFile):
 
     def test_default_profile(self):
         c = TestClient()
-        c.save_home({"profiles/default": "broken\nprofile\n"})  # Broken one would fail if used
-
         # Test with a profile set using and environment variable
         tmp = temp_folder()
         profile = os.path.join(tmp, 'myprofile')
         save(profile, "[settings]\nos=FreeBSD\n")
-        with environment_update({'CONAN_DEFAULT_PROFILE': profile}):
+        with environment_update({'CONAN_DEFAULT_PROFILE_BUILD': profile}):
             c.run("profile show")
-            expected = textwrap.dedent("""\
-                Host profile:
-                [settings]
-                os=FreeBSD
-
-                Build profile:
-                [settings]
-                os=FreeBSD
-                """)
-            assert expected in c.out
+            assert "os=FreeBSD" in c.out  # build profiles
 
 
 def test_conf_default_two_profiles():

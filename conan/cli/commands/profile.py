@@ -10,10 +10,10 @@ from conan.errors import ConanException
 
 def _print_profiles(profiles):
     if "host" in profiles:
-        cli_out_write("Host profile:")
+        ConanOutput().info("Host profile:")
         cli_out_write(profiles["host"].dumps())
     if "build" in profiles:
-        cli_out_write("Build profile:")
+        ConanOutput().info("Build profile:")
         cli_out_write(profiles["build"].dumps())
 
 
