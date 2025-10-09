@@ -176,7 +176,7 @@ class Lockfile(object):
         return json.dumps(self.serialize(), indent=4)
 
     def save(self, path):
-        save(path, self.dumps())
+        save(path, self.dumps() + "\n")
 
     def merge(self, other):
         """

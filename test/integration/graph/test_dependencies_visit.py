@@ -255,11 +255,13 @@ def test_dependency_interface():
         class User(ConanFile):
             requires = "dep/1.0"
             def generate(self):
-                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
-                self.output.info("URL: {}".format(self.dependencies["dep"].url))
-                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
-                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
-                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+                dep = self.dependencies["dep"]
+                self.output.info("HOME: {}".format(dep.homepage))
+                self.output.info("URL: {}".format(dep.url))
+                self.output.info("LICENSE: {}".format(dep.license))
+                self.output.info("RECIPE FOLDER: {}".format(dep.recipe_folder))
+                self.output.info("CONANDATA: {}".format(dep.conan_data))
+                self.output.info("RECIPE: {}".format(dep.recipe))
 
             """)
     c.save({"dep/conanfile.py": conanfile,
@@ -270,8 +272,9 @@ def test_dependency_interface():
     assert "conanfile.py: HOME: myhome" in c.out
     assert "conanfile.py: URL: myurl" in c.out
     assert "conanfile.py: LICENSE: MIT" in c.out
-    assert "conanfile.py: RECIPE:" in c.out
+    assert "conanfile.py: RECIPE FOLDER:" in c.out
     assert "conanfile.py: CONANDATA: {}" in c.out
+    assert "conanfile.py: RECIPE: Cache" in c.out
 
 
 def test_dependency_interface_validate():
