@@ -143,6 +143,16 @@ class MyConanfile(ConanFile):
                        assert_error=True)
             assert "You need to create a default profile" in client.out
 
+    def test_default_profile(self):
+        c = TestClient()
+        # Test with a profile set using and environment variable
+        tmp = temp_folder()
+        profile = os.path.join(tmp, 'myprofile')
+        save(profile, "[settings]\nos=FreeBSD\n")
+        with environment_update({'CONAN_DEFAULT_BUILD_PROFILE': profile}):
+            c.run("profile show")
+            assert "os=FreeBSD" in c.out  # build profiles
+
 
 def test_conf_default_two_profiles():
     client = TestClient()

@@ -43,8 +43,11 @@ class ProfilesAPI:
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        global_conf = self._api_helpers.global_conf
-        default_profile = global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
+        default_profile = os.environ.get("CONAN_DEFAULT_BUILD_PROFILE")
+        if default_profile is None:
+            global_conf = self._api_helpers.global_conf
+            default_profile = global_conf.get("core:default_build_profile",
+                                              default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default build profile '{}' doesn't exist.\n"

@@ -6,7 +6,6 @@ from collections import OrderedDict
 from textwrap import dedent
 
 import pytest
-from parameterized import parameterized
 
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
@@ -645,3 +644,33 @@ def test_compose_numeric_values_scoped_pkg():
 
     tc.run("create . -pr=profile")
     assert "user.var.value: 10" in tc.out
+
+
+def test_nullify_settings():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "build_type"
+            def configure(self):
+                if not self.settings.build_type:
+                    self.output.info("BUILD TYPE NOT DEFINED!!!")
+                else:
+                    self.output.info(f"I am a {self.settings.build_type} pkg!!!")
+        """)
+    c.save({"conanfile.py": conanfile,
+            "profile": "[settings]\nbuild_type=Release\npkg1/*:build_type=~"})
+    c.run("create . --name=pkg1 --version=0.1")
+    c.run("create . --name=pkg2 --version=0.1")
+    c.run("create . --name=pkg3 --version=0.1")
+    c.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1", "pkg3/0.1")})
+
+    c.run("graph info . -s build_type=Release -s pkg1/*:build_type=~")
+    assert "pkg1/0.1: BUILD TYPE NOT DEFINED!!!" in c.out
+    assert "pkg2/0.1: I am a Release pkg!!!" in c.out
+    assert "pkg3/0.1: I am a Release pkg!!!" in c.out
+
+    c.run("graph info . -pr=profile")
+    assert "pkg1/0.1: BUILD TYPE NOT DEFINED!!!" in c.out
+    assert "pkg2/0.1: I am a Release pkg!!!" in c.out
+    assert "pkg3/0.1: I am a Release pkg!!!" in c.out
