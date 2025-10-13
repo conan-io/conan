@@ -12,7 +12,6 @@ from conan.errors import ConanException
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference, PkgReference
-from conan.internal.model.settings import load_settings_yml
 from conan.internal.util.files import load, save, rmdir, remove
 
 
