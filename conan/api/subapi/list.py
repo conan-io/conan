@@ -185,10 +185,6 @@ class ListAPI:
         if remote and lru:
             raise ConanException("'--lru' cannot be used in remotes, only in cache")
 
-        if lru and not pattern.rrev:
-            raise ConanException("'--lru' must be used with recipe revision pattern, "
-                                 "use '#<rrev-pattern>' argument")
-
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
