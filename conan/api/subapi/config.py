@@ -12,6 +12,7 @@ from conan.errors import ConanException
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference, PkgReference
+from conan.internal.model.settings import load_settings_yml
 from conan.internal.util.files import load, save, rmdir, remove
 
 
@@ -25,6 +26,7 @@ class ConfigAPI:
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
         self._helpers = helpers
+        self._settings_yml = None
 
     def home(self):
         """ return the current Conan home folder containing the configuration files like
@@ -150,3 +152,33 @@ class ConfigAPI:
         self._conan_api.reinit()
         # CHECK: This also generates a remotes.json that is not there after a conan profile show?
         self._conan_api.migrate()
+
+    @property
+    def settings_definitions(self):
+        """ Get the contents of the settings.yml and user_settings.yml files,
+         which define the possible values for settings."""
+        class SettingsInterface:
+            def __init__(self, settings):
+                self._settings = settings
+
+            def possible_values(self):
+                """ returns a dict with the possible values for each setting """
+                return self._settings.possible_values()
+
+            @property
+            def fields(self):
+                """ returns a dict with the fields of each setting """
+                return self._settings.fields
+
+            def __getattr__(self, item):
+                return SettingsInterface(getattr(self._settings, item))
+
+            def __str__(self):
+                return str(self._settings)
+
+        if self._settings_yml is None:
+            self._settings_yml = SettingsInterface(load_settings_yml(self.home()))
+        return self._settings_yml
+
+    def reinit(self):
+        self._settings_yml = None
