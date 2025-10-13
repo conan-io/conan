@@ -342,7 +342,7 @@ class ListAPI:
                         prevs = self.package_revisions(pref_no_rev, remote=r)
                     except NotFoundException:
                         continue
-                    if pref in prevs:
+                    for pref in prevs:
                         result_pkg_list.add_pref(pref, pkg_info)
             if result_pkg_list:
                 result.add(r.name, result_pkg_list)
