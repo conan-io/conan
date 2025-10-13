@@ -96,7 +96,6 @@ class ConanAPI:
         """
         self._api_helpers.reinit()
         self.local.reinit()
-        self.config.reinit()
 
     def migrate(self):
         # Migration system

@@ -25,7 +25,6 @@ class ConfigAPI:
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
         self._helpers = helpers
-        self._settings_yml = None
 
     def home(self):
         """ return the current Conan home folder containing the configuration files like
@@ -176,9 +175,4 @@ class ConfigAPI:
             def __str__(self):
                 return str(self._settings)
 
-        if self._settings_yml is None:
-            self._settings_yml = SettingsInterface(self._helpers.settings_yml)
-        return self._settings_yml
-
-    def reinit(self):
-        self._settings_yml = None
+        return SettingsInterface(self._helpers.settings_yml)
