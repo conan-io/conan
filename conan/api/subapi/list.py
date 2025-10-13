@@ -178,11 +178,16 @@ class ListAPI:
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
         """
+        # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
         if remote and lru:
             raise ConanException("'--lru' cannot be used in remotes, only in cache")
+
+        if lru and not pattern.rrev:
+            raise ConanException("'--lru' must be used with recipe revision pattern, "
+                                 "use '#<rrev-pattern>' argument")
 
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
