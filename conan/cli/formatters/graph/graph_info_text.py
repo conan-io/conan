@@ -6,8 +6,21 @@ from conan.api.output import ConanOutput, cli_out_write
 
 def filter_graph(graph, package_filter=None, field_filter=None):
     if package_filter is not None:
+        def _matching(node, pattern):
+            if fnmatch.fnmatch(node["ref"] or "", pattern):
+                return True
+            if pattern == "&":
+                if node["recipe"] == "Consumer":
+                    return True
+                # How to deal with --requires=xxx "consumers"
+                root = graph["nodes"]["0"]
+                if root["recipe"] == "Cli":
+                    for dep_index, dep in root["dependencies"].items():
+                        if dep["direct"] and dep["ref"] == f'{node["name"]}/{node["version"]}':
+                            return True
+
         graph["nodes"] = {id_: n for id_, n in graph["nodes"].items()
-                          if any(fnmatch.fnmatch(n["ref"] or "", p) for p in package_filter)}
+                          if any(_matching(n, p) for p in package_filter)}
     if field_filter is not None:
         if "ref" not in field_filter:
             field_filter.append("ref")
