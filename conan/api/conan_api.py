@@ -96,7 +96,6 @@ class ConanAPI:
         """
         self._api_helpers.reinit()
         self.local.reinit()
-        self.config.reinit()
 
     def migrate(self):
         # Migration system
@@ -113,6 +112,7 @@ class ConanAPI:
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -138,10 +138,35 @@ class ConanAPI:
             self._init_global_conf()
             self.hook_manager.reinit()
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         @property
         def settings_yml(self):
-            return load_settings_yml(self._conan_api.home_folder)
+            """ Get the contents of the settings.yml and user_settings.yml files,
+                which define the possible values for settings."""
+
+            class SettingsInterface:
+                def __init__(self, settings):
+                    self._settings = settings
+
+                def possible_values(self):
+                    """ returns a dict with the possible values for each setting """
+                    return self._settings.possible_values()
+
+                @property
+                def fields(self):
+                    """ returns a dict with the fields of each setting """
+                    return self._settings.fields
+
+                def __getattr__(self, item):
+                    return SettingsInterface(getattr(self._settings, item))
+
+                def __str__(self):
+                    return str(self._settings)
+
+            if self._settings_yml is None:
+                self._settings_yml = SettingsInterface(load_settings_yml(self._conan_api.home_folder))
+            return self._settings_yml
 
         @property
         def requester(self):
