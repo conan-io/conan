@@ -501,7 +501,7 @@ def test_custom_command_settings_access():
             \"""
             test
             \"""
-            settings = conan_api.config.settings_definitions
+            settings = conan_api.config.settings_yml
             ConanOutput().info(f"settings.fields: {settings.fields}")
             ConanOutput().info(f"settings.possible_values(): {settings.possible_values()}")
             ConanOutput().info(f"settings.compiler: {settings.compiler}")
