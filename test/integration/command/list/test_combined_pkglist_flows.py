@@ -395,7 +395,7 @@ class TestListRemove:
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages_no_revisions(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c --format=json")
@@ -408,7 +408,7 @@ class TestListRemove:
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c --dry-run")
