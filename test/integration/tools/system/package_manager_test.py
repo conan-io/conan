@@ -439,7 +439,7 @@ def test_tools_install_archless_with_version(tool_class, result):
 ])
 def test_tools_check(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.settings = Settings()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
@@ -463,7 +463,7 @@ def test_tools_check(tool_class, result):
 ])
 def test_tools_check_with_version(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.settings = Settings()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
