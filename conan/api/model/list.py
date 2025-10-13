@@ -321,11 +321,14 @@ class PackagesList:
                     recipe.timestamp = t
                 packages = {}
                 for package_id, pkg_info in rrev_dict.get("packages", {}).items():
-                    prevs = pkg_info.get("revisions", {})
-                    for prev, prev_info in prevs.items():
-                        t = prev_info.get("timestamp")
-                        pref = PkgReference(recipe, package_id, prev, t)
-                        packages[pref] = prev_info
+                    if "revisions" not in pkg_info:
+                        pref = PkgReference(recipe, package_id)
+                        packages[pref] = None
+                    else:
+                        for prev, prev_info in pkg_info["revisions"].items():
+                            t = prev_info.get("timestamp")
+                            pref = PkgReference(recipe, package_id, prev, t)
+                            packages[pref] = prev_info
                 yield recipe, packages
 
     def recipe_dict(self, ref: RecipeReference):
