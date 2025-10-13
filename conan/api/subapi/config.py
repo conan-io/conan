@@ -26,6 +26,7 @@ class ConfigAPI:
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
         self._helpers = helpers
+        self._settings_yml = None
 
     def home(self):
         """ return the current Conan home folder containing the configuration files like
@@ -155,5 +156,30 @@ class ConfigAPI:
     @property
     def settings_yml(self):
         """ Get the contents of the settings.yml and user_settings.yml files,
-                 which define the possible values for settings."""
-        return self._helpers.settings_yml
+            which define the possible values for settings."""
+
+        class SettingsInterface:
+            def __init__(self, settings):
+                self._settings = settings
+
+            def possible_values(self):
+                """ returns a dict with the possible values for each setting """
+                return self._settings.possible_values()
+
+            @property
+            def fields(self):
+                """ returns a dict with the fields of each setting """
+                return self._settings.fields
+
+            def __getattr__(self, item):
+                return SettingsInterface(getattr(self._settings, item))
+
+            def __str__(self):
+                return str(self._settings)
+
+        if self._settings_yml is None:
+            self._settings_yml = SettingsInterface(self._helpers.settings_yml)
+        return self._settings_yml
+
+    def reinit(self):
+        self._settings_yml = None
