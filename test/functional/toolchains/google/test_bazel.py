@@ -382,4 +382,5 @@ def test_empty_bazel_query():
     client.run("install consumer")
     with client.chdir("consumer"):
         client.run_command("bazel query //...")
-    assert "INFO: Empty results" in client.out
+    assert "//conan/zlib:zlib" in client.out
+    assert "//conan/zlib:zlib_binaries" in client.out
