@@ -142,7 +142,7 @@ class Node:
         self.transitive_deps[require] = TransitiveRequirement(require, node)
         if poped is not None:  # adjust .edges, to avoid orphans
             for e in self.edges:
-                if e.dst == poped.node:
+                if e.dst is poped.node:  # check for identity, pointing to that node
                     e.dst = node
                     break
 

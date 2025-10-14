@@ -253,6 +253,10 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
             self.cpp_info.system_libs.append("m")
         else:
             self.cpp_info.system_libs.append("ws2_32")
+        # Issue: https://github.com/conan-io/conan/issues/18748
+        from conan.tools.apple.apple import is_apple_os
+        if is_apple_os(self):
+            self.cpp_info.frameworks = ["CoreFoundation"]
         """
         client.save({"conanfile.py": conanfile})
         client.run(f"create . -o '*:shared={shared}' -tf ''")  # skipping tests

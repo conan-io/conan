@@ -1,6 +1,9 @@
 import os
 import pathlib
+import platform
 import textwrap
+
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -1257,3 +1260,48 @@ def test_pkg_with_duplicated_component_requires():
     )
     """)
     assert myfirstcomp_expected in build_content
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix paths only")
+def test_apple_frameworks_and_frameworkdirs():
+    """
+    Testing that Apple frameworks are included as linkopts
+    Issue: https://github.com/conan-io/conan/issues/18748
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.frameworks = ["CoreFoundation", "Cocoa"]
+                self.cpp_info.frameworkdirs = ["/my/path/to/frw1"]
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g BazelDeps")
+    build_content = load(None, os.path.join(client.current_folder, "mylib", "BUILD.bazel"))
+    build_file_expected = textwrap.dedent("""\
+    cc_library(
+        name = "mylib",
+        hdrs = glob([
+            "include/**",
+        ]),
+        includes = [
+            "include",
+        ],
+        linkopts = [
+            "-framework",
+            "CoreFoundation",
+            "-framework",
+            "Cocoa",
+            "-F",
+            "/my/path/to/frw1",
+        ],
+        visibility = ["//visibility:public"],
+    )
+    """)
+    assert build_file_expected in build_content

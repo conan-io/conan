@@ -348,6 +348,8 @@ class _ProfileValueParser(object):
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
             result_value = _unquote(result_value)
+            if result_value == "~":  # Can be used to undefine an already defined setting
+                result_value = None
             return packagename, result_name, result_value
 
         package_settings = OrderedDict()
@@ -388,6 +390,8 @@ def _profile_parse_args(settings, options, conf):
         package_items = defaultdict(list)
         tuples = _get_tuples_list_from_extender_arg(items)
         for name, value in tuples:
+            if value == "~":  # Can be used to undefine an already defined setting
+                value = None
             if ":" in name:  # Scoped items
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
