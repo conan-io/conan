@@ -87,10 +87,14 @@ class TargetConfigurationTemplate2:
                                    f"'{required_pkg}::{required_comp}' but component "
                                    f"'{required_comp}' not found in {required_pkg}")
                             raise ConanException(msg)
+                        if dep.package_type is PackageType.APP:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED
                     else:
+                        if dep_comp.type is PackageType.APP or dep_comp.exe:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and

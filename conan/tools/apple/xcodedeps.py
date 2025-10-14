@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 from collections import OrderedDict
 
@@ -20,8 +21,7 @@ GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
 def _format_name(name):
-    name = name.replace(".", "_").replace("-", "_")
-    return name.lower()
+    return re.sub(r'[^A-Za-z0-9_]', '_', name).lower()
 
 
 def _xcconfig_settings_filename(settings, configuration):
