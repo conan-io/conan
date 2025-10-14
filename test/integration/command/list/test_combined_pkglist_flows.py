@@ -214,6 +214,30 @@ class TestPkgListFindRemote:
         assert "app/1.0: Retrieving recipe metadata from remote 'remote2'" in c.out
         assert "app/1.0: Retrieving package metadata" in c.out
 
+    @pytest.mark.parametrize("list_pattern", ["*#*", "*:*", "*#*:*#*"])
+    def test_graph_pkg_list_of_recipes_and_binaries(self, list_pattern):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list {list_pattern} --format=json", redirect_stdout="mylist.json")
+
+        pkglist_request = json.loads(c.load("mylist.json"))
+        input_rev = pkglist_request["Local Cache"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        pkglist_request = json.loads(c.stdout)
+        rev = pkglist_request["default"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
+        assert rev, "find-remote shall always list the revision"
+
+        if "packages" in input_rev:
+            assert rev["packages"], "Result does not contain information about binaries"
+            assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in rev["packages"]
+        else:
+            assert "packages" not in rev, "Result contains information about binaries even if not requested"
+
 
 class TestPkgListMerge:
     """ deep merge lists
