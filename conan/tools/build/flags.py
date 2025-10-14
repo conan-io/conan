@@ -3,13 +3,9 @@ from conan.internal.model.version import Version
 
 
 def disable_flag(conanfile, flag):
-    disable_flags = conanfile.conf.get("tools.gnu:disable_flags")
+    disable_flags = conanfile.conf.get("tools.gnu:disable_flags", check_type=list)
     if disable_flags is None:
         return False
-    if disable_flags == "all":
-        return True
-    if not isinstance(disable_flags, list):
-        raise ConanException(f"tools.gnu:disable_flags must be 'all' or list, not '{disable_flags}'")
     valid = ["arch", "arch_link", "libcxx", "build_type", "build_type_link", "threads",
              "cppstd", "cstd"]
     for v in disable_flags:
@@ -246,7 +242,7 @@ def llvm_clang_front(conanfile):
     compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
     if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
         return "clang-cl"  # The MSVC-compatible front
-    return "clang" # The GNU-compatible front
+    return "clang"  # The GNU-compatible front
 
 
 def cppstd_flag(conanfile) -> str:

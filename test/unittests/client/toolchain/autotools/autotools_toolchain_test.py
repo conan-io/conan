@@ -266,14 +266,6 @@ def test_disable_libcxx():
     assert be.build_type_flags == []
     assert be.cppstd == ""
     assert be.cstd == ""
-    # Disable all
-    conanfile.conf.define("tools.gnu:disable_flags", "all")
-    be = AutotoolsToolchain(conanfile)
-    assert be.libcxx is None
-    assert be.arch_flag == ""
-    assert be.build_type_flags == []
-    assert be.cppstd == ""
-    assert be.cstd == ""
 
 
 def test_cxx11_abi_define():
@@ -337,6 +329,7 @@ def test_architecture_flag(config):
     assert expected in env["CFLAGS"]
     assert expected in env["LDFLAGS"]
     assert "-debug" not in env["LDFLAGS"]
+
 
 @pytest.mark.parametrize("config", [
     ("gcc", "x86_64", ""),
