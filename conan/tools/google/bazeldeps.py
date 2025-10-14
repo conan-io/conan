@@ -64,7 +64,9 @@ class _BazelDepBuildGenerator:
             {% for header in obj["headers"] %}
             {{ header }},
             {% endfor %}
-        ]),
+        ],
+        allow_empty = True
+        ),
         {% endif %}
         {% if obj["includes"] %}
         includes = [
