@@ -153,12 +153,19 @@ def test_build_consumer():
     client.run("create dep2")
     client.run("export .")
 
-    # Makes little sense, but just to test the logic
-    client.run("create . --build=!&", assert_error=True)
+
+    # Still makes little sense, but just to test the logic
+    client.run("create . --build=* --build=!&", assert_error=True)
     assert "TEST: Building consumer" not in client.out
 
-    client.run("graph info --requires=consumer/1.0 --build=& -f=json", redirect_stdout="graph.json")
+    client.run(f"graph info --requires=consumer/1.0 --build=& -f=json", redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
     assert graph["graph"]["nodes"]["1"]["binary"] == "Build"  # Would be missing if not built
     assert graph["graph"]["nodes"]["2"]["binary"] == "Cache"
     assert graph["graph"]["nodes"]["3"]["binary"] == "Cache"
+
+    client.run(f"graph info . --build=& -f=json", redirect_stdout="graph.json")
+    graph = json.loads(client.load("graph.json"))
+    assert graph["graph"]["nodes"]["0"]["binary"] == "Build"  # Would be missing if not built
+    assert graph["graph"]["nodes"]["1"]["binary"] == "Cache"
+    assert graph["graph"]["nodes"]["2"]["binary"] == "Cache"
