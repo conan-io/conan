@@ -215,15 +215,78 @@ class TestPkgListFindRemote:
         assert "app/1.0: Retrieving recipe metadata from remote 'remote2'" in c.out
         assert "app/1.0: Retrieving package metadata" in c.out
 
-    @pytest.mark.parametrize("list_pattern", ["*#*", "*:*", "*#*:*#*"])
-    def test_graph_pkg_list_of_recipes_and_binaries(self, list_pattern):
+    def test_input_only_name_version(self):
         c = TestClient(default_server_user=True, light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
         c.run("create zlib")
         c.run("upload zlib* -c -r=default")
 
         # Create input pkglist for find-remote
-        c.run(f"list {list_pattern} --format=json", redirect_stdout="mylist.json")
+        c.run(f"list * --format=json", redirect_stdout="mylist.json")
+        print(c.load("mylist.json"))
+        pkglist = json.loads(c.load("mylist.json"))
+        expected = {"zlib/1.0": {}}
+        assert pkglist["Local Cache"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        print(c.out)
+        # TODO: Is this the expected output? This is failing now
+        #  Or it should error saying that at least recipe-revisions are mandatory
+        #  Or the find-remotes should complete information of the things found, like at least the
+        #  last revision? or all revisions found that match?
+        assert pkglist["default"] == expected
+
+    def test_input_recipe_revisions(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#* --format=json", redirect_stdout="mylist.json")
+        print(c.load("mylist.json"))
+        pkglist = json.loads(c.load("mylist.json"))
+        revs = pkglist["Local Cache"]["zlib/1.0"]["revisions"]
+        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        print(c.out)
+        pkglist = json.loads(c.stdout)
+        revs = pkglist["default"]["zlib/1.0"]["revisions"]
+        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+    def test_input_only_package_ids(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
+        print(c.load("mylist.json"))
+        pkglist = json.loads(c.load("mylist.json"))
+        revs = pkglist["Local Cache"]["zlib/1.0"]["revisions"]
+        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+        assert (revs["c570d63921c5f2070567da4bf64ff261"]["packages"] ==
+                {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}})
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        print(c.out)
+        pkglist = json.loads(c.stdout)
+        revs = pkglist["default"]["zlib/1.0"]["revisions"]
+        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+    def test_graph_pkg_list_of_recipes_and_binaries(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#*:*#* --format=json", redirect_stdout="mylist.json")
         pkglist_request = json.loads(c.load("mylist.json"))
         input_rev = pkglist_request["Local Cache"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
 
