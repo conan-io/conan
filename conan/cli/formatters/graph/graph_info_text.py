@@ -1,6 +1,7 @@
 import fnmatch
 from collections import OrderedDict
 
+from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
 
 
@@ -9,14 +10,16 @@ def filter_graph(graph, package_filter=None, field_filter=None):
         def _matching(node, pattern):
             if fnmatch.fnmatch(node["ref"] or "", pattern):
                 return True
-            if pattern == "&":
+            if pattern == "&":  # Handle the consumer pattern
                 if node["recipe"] == "Consumer":
                     return True
-                # How to deal with --requires=xxx "consumers"
+                # How to deal with --requires=xxx --package-filter=& "consumers"
                 root = graph["nodes"]["0"]
-                if root["recipe"] == "Cli":
-                    for dep_index, dep in root["dependencies"].items():
-                        if dep["direct"] and dep["ref"] == f'{node["name"]}/{node["version"]}':
+                if root["recipe"] == "Cli" and node is not root:
+                    # We look if the current node is a direct dependency of the root node
+                    node_ref = RecipeReference.loads(node["ref"])
+                    for dep in root["dependencies"].values():
+                        if dep["direct"] and node_ref == RecipeReference.loads(dep["ref"]):
                             return True
 
         graph["nodes"] = {id_: n for id_, n in graph["nodes"].items()
