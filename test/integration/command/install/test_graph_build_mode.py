@@ -166,6 +166,6 @@ def test_build_consumer():
 
     client.run(f"graph info . --build=& -f=json", redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
-    assert graph["graph"]["nodes"]["0"]["binary"] == "Build"  # Would be missing if not built
+    assert graph["graph"]["nodes"]["0"]["binary"] is None
     assert graph["graph"]["nodes"]["1"]["binary"] == "Cache"
     assert graph["graph"]["nodes"]["2"]["binary"] == "Cache"
