@@ -52,6 +52,23 @@ class TestLRU:
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" not in c.out
         assert "dep" not in c.out
 
+    def test_lru_just_created(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run("list * --lru=1d", assert_error=True)
+        assert "'--lru' must be used with recipe revision pattern" in c.out
+        c.run("list *#* --lru=1d")
+        assert "pkg/0.1" not in c.out
+        # What if no revision, but package id is passed
+        c.run("list pkg/0.1:* --lru=1d", assert_error=True)
+        assert "'--lru' must be used with package revision pattern" in c.out
+        # Doesn't fail, but packages is empty
+        c.run("list pkg/0.1:*#* --lru=1d --format=json")
+        pkgs = json.loads(c.stdout)
+        rev = pkgs["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
+        assert rev["packages"] == {}
+
     def test_update_lru_when_used_as_dependency(self):
         """Show that using a recipe as a dependency will update its LRU"""
         c = TestClient()

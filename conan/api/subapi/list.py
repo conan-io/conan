@@ -178,6 +178,7 @@ class ListAPI:
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
         """
+        # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
