@@ -4,6 +4,7 @@ from collections import OrderedDict
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, TestServer
 
 
@@ -223,7 +224,6 @@ class TestPkgListFindRemote:
 
         # Create input pkglist for find-remote
         c.run(f"list {list_pattern} --format=json", redirect_stdout="mylist.json")
-
         pkglist_request = json.loads(c.load("mylist.json"))
         input_rev = pkglist_request["Local Cache"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
 
@@ -237,6 +237,35 @@ class TestPkgListFindRemote:
             assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in rev["packages"]
         else:
             assert "packages" not in rev, "Result contains information about binaries even if not requested"
+
+    def test_graph_pkg_list_counter_example(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("zlib", "1.0").with_package_file("file.txt",
+                                                                              env_var="MY_VAR")})
+
+        with environment_update({"MY_VAR": "1"}):
+            c.run("create .")
+        with environment_update({"MY_VAR": "2"}):
+            c.run("create .")
+        c.run("upload zlib*:*#* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list zlib/1.0#latest:*#latest --format=json", redirect_stdout="mylist.json")
+
+        def pkg_revs(origin):
+            prevs = origin["zlib/1.0"]["revisions"]
+            input_pkgs = prevs["212b9babae6a4b8a8362703cec4257ad"]["packages"]
+            input_pkg_revs = input_pkgs["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
+            return input_pkg_revs
+
+        pkglist = json.loads(c.load("mylist.json"))
+        revs = pkg_revs(pkglist["Local Cache"])
+        assert len(revs) == 1
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        pkglist = json.loads(c.stdout)
+        revs = pkg_revs(pkglist["default"])
+        assert len(revs) == 1
 
 
 class TestPkgListMerge:

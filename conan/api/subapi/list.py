@@ -342,6 +342,7 @@ class ListAPI:
                         prevs = self.package_revisions(pref_no_rev, remote=r)
                     except NotFoundException:
                         continue
+                    # FIXME: This is broken, see test test_graph_pkg_list_counter_example
                     for pref in prevs:
                         result_pkg_list.add_pref(pref, pkg_info)
             if result_pkg_list:
