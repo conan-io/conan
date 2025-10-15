@@ -202,12 +202,19 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+                content = ". " + " && . ".join('"{}"'.format(s) for s in files) + "\n"
+                content += f"deactivate_conan{group}() {{\n"
+                for s in reversed(files):
+                    deactivate_name = os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                    content += f"    deactivate_{deactivate_name} \n"
+                    content += "}\n"
+                return content
             filename = "conan{}.sh".format(group)
+
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 sh_content(deactivates(shs)))
+            # save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+            #      sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
