@@ -211,7 +211,7 @@ def _generate_aggregated_env(conanfile):
                 content += f"deactivate_conan{group}() {{\n"
                 for deactivate_name in deactivate_names(shs):
                     content += f"    deactivate_{deactivate_name} \n"
-                    content += "}\n"
+                content += "}\n"
                 return content
             filename = "conan{}.sh".format(group)
 
