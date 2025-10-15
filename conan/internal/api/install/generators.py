@@ -182,11 +182,12 @@ def _generate_aggregated_env(conanfile):
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
 
-    # To replace the function above once everything works with the new approach
-    def deactivate_names(filenames):
+    def deactivate_function_names(filenames):
         return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
                 for s in reversed(filenames)]
 
+    use_deactivate_function = conanfile.conf.get("tools.env:deactivate_function", default=False,
+                                                 check_type=bool)
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
@@ -207,19 +208,23 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                content = ". " + " && . ".join('"{}"'.format(s) for s in files) + "\n"
-                content += f"deactivate_conan{group}() {{\n"
-                for deactivate_name in deactivate_names(shs):
-                    content += f"    deactivate_{deactivate_name} \n"
-                content += "}\n"
-                return content
+                aggregated_calls = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                if use_deactivate_function:
+                    content = aggregated_calls + "\n"
+                    content += f"deactivate_conan{group}() {{\n"
+                    for deactivate_name in deactivate_function_names(shs):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += "}\n"
+                    return content
+                else:
+                    return aggregated_calls
             filename = "conan{}.sh".format(group)
 
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            # TODO: Flag to keep these? The code gets a bit harder to maintain
-            # save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-            #      sh_content(deactivates(shs)))
+            if not use_deactivate_function:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])

@@ -345,6 +345,8 @@ class EnvVars:
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
+        self._use_deactivate_function = conanfile.conf.get("tools.env:deactivate_function",
+                                                           default=False, check_type=bool)
 
     @property
     def _pathsep(self):
@@ -500,21 +502,7 @@ class EnvVars:
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
-        deactivate_name = os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
-        # The variable handling can be improved, now it is very basic
-        deactivate = textwrap.dedent("""\
-            deactivate_{deactivate_name} () {{
-                echo "Restoring environment"
-                for v in {vars}
-                do
-                    OLD_VARIABLE="_CONAN_OLD_${{v}}"
-                    export $(eval echo "$v")="$(printenv $(eval echo "${{OLD_VARIABLE}}"))"
-                    unset "${{OLD_VARIABLE}}"
-                done
-                unset -f deactivate_{deactivate_name}
-            }}
-            """.format(vars=" ".join(self._values.keys()), filename=filename,
-                       deactivate_name=deactivate_name))
+        deactivate = _sh_deactivate_contents(self._use_deactivate_function, self._values, filename)
         capture = textwrap.dedent("""\
               {deactivate}
               """).format(deactivate=deactivate if generate_deactivate else "")
@@ -524,7 +512,8 @@ class EnvVars:
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
-            result.append(f'export _CONAN_OLD_{varname}="$(printenv {varname})"')
+            if self._use_deactivate_function:
+                result.append(f'export _CONAN_OLD_{varname}="$(printenv {varname})"')
             if value:
                 result.append(f'export {varname}="{value}"')
             else:
@@ -591,6 +580,42 @@ class EnvVars:
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)
+
+
+def _sh_deactivate_contents(use_deactivate_function, values, filename):
+    if use_deactivate_function:
+        # The variable handling can be improved, now it is very basic
+        deactivate_name = os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
+        deactivate = textwrap.dedent("""\
+        deactivate_{deactivate_name} () {{
+            echo "Restoring environment"
+            for v in {vars}
+            do
+                OLD_VARIABLE="_CONAN_OLD_${{v}}"
+                export $(eval echo "$v")="$(printenv $(eval echo "${{OLD_VARIABLE}}"))"
+                unset "${{OLD_VARIABLE}}"
+            done
+            unset -f deactivate_{deactivate_name}
+        }}
+        """.format(vars=" ".join(values.keys()), filename=filename,
+                   deactivate_name=deactivate_name))
+    else:
+        deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
+        deactivate = textwrap.dedent("""\
+        echo "echo Restoring environment" > "{deactivate_file}"
+        for v in {vars}
+        do
+           is_defined="true"
+           value=$(printenv $v) || is_defined="" || true
+           if [ -n "$value" ] || [ -n "$is_defined" ]
+           then
+               echo export "$v='$value'" >> "{deactivate_file}"
+           else
+               echo unset $v >> "{deactivate_file}"
+           fi
+        done
+        """.format(deactivate_file=deactivate_file, vars=" ".join(values.keys())))
+    return deactivate
 
 
 class ProfileEnvironment:
