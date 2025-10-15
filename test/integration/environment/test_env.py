@@ -519,7 +519,7 @@ def test_multiple_deactivate():
         if platform.system() == "Windows":
             cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
         else:
-            cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+            cmd = '. ./conanbuild.sh && ./display.sh && deactivate_conanbuild && ./display.sh'
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
         out = out.decode()
@@ -564,7 +564,7 @@ def test_multiple_deactivate_order():
         if platform.system() == "Windows":
             cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
         else:
-            cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+            cmd = '. ./conanbuild.sh && ./display.sh && deactivate_conanbuild && ./display.sh'
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
         out = out.decode()
@@ -664,39 +664,13 @@ def test_profile_build_env_spaces():
     if platform.system() == "Windows":
         cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
     else:
-        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        cmd = '. ./conanbuild.sh && ./display.sh && deactivate_conanbuild && ./display.sh'
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
     assert "VAR1= VALUE1!!" in out
     assert "Restoring environment" in out
     assert "VAR1=!!" in out
-
-
-def test_deactivate_location():
-    conanfile = textwrap.dedent(r"""
-        from conan import ConanFile
-        from conan.tools.env import Environment
-        class Pkg(ConanFile):
-            def package_info(self):
-                self.buildenv_info.define("FOO", "BAR")
-        """)
-    client = TestClient()
-    client.save({"pkg.py": conanfile})
-    client.run("create pkg.py --name pkg --version 1.0")
-    client.run("install --requires pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
-
-    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
-    cmd = "{}conanbuild{}".format(source_cmd, script_ext)
-
-    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                     cwd=client.current_folder).communicate()
-
-    assert not os.path.exists(os.path.join(client.current_folder,
-                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
-
-    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
-                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires sh")
@@ -841,17 +815,6 @@ def test_runenv_info_propagated():
     c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
     assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
     assert "MYLIBVAR=MYLIBVALUE:Release" in c.out
-
-
-def test_deactivate_relocatable_substitute():
-    c = TestClient()
-    # this cannot be tested in CI, because permissions over root folder
-    # c.current_folder = "/build"
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("install . -s os=Linux -s:b os=Linux")
-    conanbuild = c.load("conanbuildenv.sh")
-    result = os.path.join("$script_folder", "deactivate_conanbuildenv.sh")
-    assert f'"{result}"' in conanbuild
 
 
 class TestDotEnv:
