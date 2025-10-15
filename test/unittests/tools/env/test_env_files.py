@@ -130,7 +130,8 @@ def test_env_files_ps1(env, prevenv):
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
-def test_env_files_sh(env, prevenv):
+@pytest.mark.parametrize("use_function", [True, False])
+def test_env_files_sh(env, prevenv, use_function):
     display = textwrap.dedent("""\
         echo MyVar=$MyVar!!
         echo MyVar1=$MyVar1!!
@@ -146,12 +147,16 @@ def test_env_files_sh(env, prevenv):
         """)
 
     with chdir(temp_folder()):
-        env = env.vars(ConanFileMock())
+        conanfile = ConanFileMock()
+        if use_function:
+            conanfile.conf.define("tools.env:deactivate_function", True)
+        env = env.vars(conanfile)
         env.save_sh("test.sh")
         save("display.sh", display)
         os.chmod("display.sh", 0o777)
         # We include the "set -e" to test it is robust against errors
-        cmd = 'set -e && . ./test.sh && ./display.sh && deactivate_test && ./display.sh'
+        deactivate_cmd = "deactivate_test" if use_function else ". ./deactivate_test.sh"
+        cmd = f'set -e && . ./test.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
         check_env_files_output(cmd, prevenv)
 
 

@@ -515,7 +515,7 @@ class EnvVars:
             if self._use_deactivate_function:
                 result.append(f'export _CONAN_OLD_{varname}="$(printenv {varname})"')
             if value:
-                result.append(f'export {varname}="{value}"')
+                result.append('export {}="{}"'.format(varname, value))
             else:
                 result.append('unset {}'.format(varname))
 

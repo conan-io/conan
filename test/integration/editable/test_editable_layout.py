@@ -101,6 +101,8 @@ def test_editable_matching_folder_names():
     data = client.load("hello/say-release-data.cmake")
     hello_say_folder = os.path.join(client.current_folder, "hello-say").replace("\\", "/")
     assert f'set(say_PACKAGE_FOLDER_RELEASE "{hello_say_folder}")' in data
+    env = client.load("hello/conanbuildenv-release.sh")
+    assert "$script_folder/deactivate_conanbuildenv-release.sh" in env.replace("\\", "/")
 
 
 def test_install_editable_build_folder_vars():
