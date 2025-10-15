@@ -182,6 +182,11 @@ def _generate_aggregated_env(conanfile):
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
 
+    # To replace the function above once everything works with the new approach
+    def deactivate_names(filenames):
+        return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                for s in reversed(filenames)]
+
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
@@ -204,8 +209,7 @@ def _generate_aggregated_env(conanfile):
             def sh_content(files):
                 content = ". " + " && . ".join('"{}"'.format(s) for s in files) + "\n"
                 content += f"deactivate_conan{group}() {{\n"
-                for s in reversed(files):
-                    deactivate_name = os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                for deactivate_name in deactivate_names(shs):
                     content += f"    deactivate_{deactivate_name} \n"
                     content += "}\n"
                 return content
@@ -213,6 +217,7 @@ def _generate_aggregated_env(conanfile):
 
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            # TODO: Flag to keep these? The code gets a bit harder to maintain
             # save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
             #      sh_content(deactivates(shs)))
         if bats:
