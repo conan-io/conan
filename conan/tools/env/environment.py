@@ -1,5 +1,6 @@
 import os
 import textwrap
+from shlex import quote
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -513,8 +514,12 @@ class EnvVars:
                                       root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
             if self._use_deactivate_function:
-                deactivate_name = _sh_get_deactivate_name(filename)
-                result.append(f'export _CONAN_OLD_{deactivate_name}_{varname}="$(printenv {varname})"')
+                # Check environment variable existence before saving value
+                result.append(
+                    f'if [ -n "${{{varname}+x}}" ]; then '
+                    f'export {_sh_get_old_prefix(filename)}_{varname}="${{{varname}}}"; '
+                    f'fi;'
+                )
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -583,27 +588,33 @@ class EnvVars:
             register_env_script(self._conanfile, path, self._scope)
 
 
-def _sh_get_deactivate_name(filename):
-    # TODO: Consolidate into one if all the deactivate_name are the same
+def _sh_get_deactivate_func_name(filename):
     return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
 
+def _sh_get_old_prefix(filename):
+    return f"_CONAN_OLD_{_sh_get_deactivate_func_name(filename).upper()}"
 
 def _sh_deactivate_contents(use_deactivate_function, values, filename):
     if use_deactivate_function:
         # The variable handling can be improved, now it is very basic
         deactivate = textwrap.dedent("""\
-        deactivate_{deactivate_name} () {{
+        # sh-like function to restore environment
+        deactivate_{func_name} () {{
             echo "Restoring environment"
-            for v in {vars}
-            do
-                OLD_VARIABLE="_CONAN_OLD_{deactivate_name}_${{v}}"
-                export $(eval echo "$v")="$(printenv $(eval echo "${{OLD_VARIABLE}}"))"
-                unset "${{OLD_VARIABLE}}"
+            for v in {vars_list}; do
+                old_var="{var_prefix}_${{v}}"
+                # Use eval for indirect expansion (POSIX safe)
+                eval "old_value=\\${{${{old_var}}}}"
+                if [ -n "${{old_value+x}}" ]; then
+                    eval "export ${{v}}=\\${{old_value}}"
+                    unset "${{old_var}}"
+                fi
             done
-            unset -f deactivate_{deactivate_name}
+            unset -f deactivate_{func_name} 2>/dev/null || true
         }}
-        """.format(vars=" ".join(values.keys()), filename=filename,
-                   deactivate_name=_sh_get_deactivate_name(filename)))
+        """.format(vars_list=" ".join(quote(v) for v in values.keys()),
+                   var_prefix=_sh_get_old_prefix(filename),
+                   func_name=_sh_get_deactivate_func_name(filename)))
     else:
         deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
