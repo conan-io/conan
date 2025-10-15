@@ -1,5 +1,6 @@
 import math
 import multiprocessing
+import os
 
 from conan.internal.util.files import load
 
