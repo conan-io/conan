@@ -1,4 +1,4 @@
-import unittest
+import pytest
 from collections import OrderedDict
 from time import sleep
 
@@ -8,7 +8,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 
 
-class ExportsSourcesMissingTest(unittest.TestCase):
+class TestExportsSourcesMissing:
 
     def test_exports_sources_missing(self):
         client = TestClient(default_server_user=True)
@@ -24,27 +24,28 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remote remove default")
         client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
-        self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
-                      "not found in local cache.", client2.out)
-        self.assertIn("Probably it was installed from a remote that is no longer available.",
-                      client2.out)
+        assert "The 'pkg/0.1@user/testing' package has 'exports_sources' but sources " \
+                      "not found in local cache." in client2.out
+        assert "Probably it was installed from a remote that is no longer available." \
+                      in client2.out
 
         # Failure because remote removed the package
         client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
         client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remove * -r=default -c")
         client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
-        self.assertIn("pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' ",
-                      client2.out)
-        self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
-                      "not found in local cache.", client2.out)
-        self.assertIn("Probably it was installed from a remote that is no longer available.",
-                      client2.out)
+        assert "pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' " \
+                      in client2.out
+        assert "The 'pkg/0.1@user/testing' package has 'exports_sources' but sources " \
+                      in client2.out
+        assert "Probably it was installed from a remote that is no longer available." \
+                      in client2.out
 
 
-class MultiRemotesTest(unittest.TestCase):
+class TestMultiRemotes:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.servers = OrderedDict()
         self.servers["default"] = TestServer()
         self.servers["local"] = TestServer()
@@ -74,17 +75,17 @@ class MultiRemotesTest(unittest.TestCase):
         # Update hello0 with client_a and reupload
         self._create(client_a, "hello0", "0.0", modifier="\n")
         client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
-        self.assertIn("Uploading recipe 'hello0/0.0@lasote/stable", client_a.out)
+        assert "Uploading recipe 'hello0/0.0@lasote/stable" in client_a.out
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("graph info --requires=hello0/0.0@lasote/stable --check-updates")
-        self.assertIn("recipe: Update available", client_b.out)
-        self.assertIn("binary: Cache", client_b.out)
+        assert "recipe: Update available" in client_b.out
+        assert "binary: Cache" in client_b.out
 
         # Now try to update the package with install -u
         client_b.run("install --requires=hello0/0.0@lasote/stable -u --build='*'")
-        self.assertIn("hello0/0.0@lasote/stable#64fd8ae21db9eff69c6c681b0e2fc178 - Updated",
-                      client_b.out)
+        assert "hello0/0.0@lasote/stable#64fd8ae21db9eff69c6c681b0e2fc178 - Updated" \
+                      in client_b.out
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload hello0 to local and default from client_a
@@ -95,23 +96,23 @@ class MultiRemotesTest(unittest.TestCase):
         # Now client_b checks for updates without -r parameter
         # TODO: cache2.0 conan info not yet implemented with new cache
         client_b.run("graph info --requires=hello0/0.0@lasote/stable --check-updates")
-        self.assertIn("recipe: Update available", client_b.out)
-        # self.assertIn("Recipe: Cache", client_b.out)
+        assert "recipe: Update available" in client_b.out
+        # assert "Recipe: Cache" in client_b.out
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         # TODO: cache2.0 conan info not yet implemented with new cache
         client_b.run("graph info --requires=hello0/0.0@lasote/stable -r default --check-updates")
-        # self.assertIn("Remote: local", client_b.out)
-        self.assertIn("recipe: Update available", client_b.out)
+        # assert "Remote: local" in client_b.out
+        assert "recipe: Update available" in client_b.out
 
         # Well, now try to update the package with -r default -u
         client_b.run("install --requires=hello0/0.0@lasote/stable -r default -u --build='*'")
-        self.assertIn("hello0/0.0@lasote/stable: Forced build from source",
-                      str(client_b.out))
+        assert "hello0/0.0@lasote/stable: Forced build from source" \
+                      in str(client_b.out)
         # TODO: cache2.0 conan info not yet implemented with new cache
         client_b.run("graph info --requires=hello0/0.0@lasote/stable -u")
-        self.assertIn("recipe: Cache", client_b.out)
-        self.assertIn("binary: Cache", client_b.out)
+        assert "recipe: Cache" in client_b.out
+        assert "binary: Cache" in client_b.out
 
     def test_conan_install_update(self):
         """
@@ -139,8 +140,8 @@ class MultiRemotesTest(unittest.TestCase):
         assert f"hello0/0.0@lasote/stable#{local_remote_rev} - Updated" in client.out
 
         client.run("install --requires=hello0/0.0@lasote/stable --update -r default")
-        self.assertIn(f"hello0/0.0@lasote/stable#{local_remote_rev} - Newer",
-                      client.out)
+        assert f"hello0/0.0@lasote/stable#{local_remote_rev} - Newer" \
+                      in client.out
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
@@ -153,9 +154,10 @@ class MultiRemotesTest(unittest.TestCase):
         assert f"hello0/0.0@lasote/stable#{new_local_remote_rev} - Updated" in client.out
 
 
-class MultiRemoteTest(unittest.TestCase):
+class TestMultiRemote:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.servers = OrderedDict()
         self.users = {}
         for i in range(3):
@@ -184,12 +186,12 @@ class MultiRemoteTest(unittest.TestCase):
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
         client2 = TestClient(servers=servers)
         client2.run("install --requires=mylib/0.1@conan/testing --build=missing", assert_error=True)
-        self.assertIn("mylib/0.1@conan/testing: Checking remote: s0", client2.out)
-        self.assertIn("mylib/0.1@conan/testing: Checking remote: s1", client2.out)
-        self.assertIn("Unable to connect to remote s1=http://asdlhaljksdhlajkshdljakhsd.com",
-                      client2.out)
+        assert "mylib/0.1@conan/testing: Checking remote: s0" in client2.out
+        assert "mylib/0.1@conan/testing: Checking remote: s1" in client2.out
+        assert "Unable to connect to remote s1=http://asdlhaljksdhlajkshdljakhsd.com" \
+                      in client2.out
         # s2 is not even tried
-        self.assertNotIn("mylib/0.1@conan/testing: Trying with 's2'...", client2.out)
+        assert "mylib/0.1@conan/testing: Trying with 's2'..." not in client2.out
 
     def test_install_from_remotes(self):
         for i in range(3):

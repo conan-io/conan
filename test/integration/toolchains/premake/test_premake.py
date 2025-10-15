@@ -138,4 +138,4 @@ def test_premake_msbuild_platform():
     tc.save({"conanfile.py": conanfile, "win": windows_profile})
     tc.run("build . -pr win")
     assert 'conanfile.premake5.lua" vs2022 --arch=x86_64!!' in tc.out
-    assert 'Running msbuild.exe "App.sln" -p:Configuration="Release" -p:Platform=Win64!!' in tc.out
+    assert 'Running msbuild.exe "App.sln" -p:Configuration="Release" -p:Platform="Win64"!!' in tc.out

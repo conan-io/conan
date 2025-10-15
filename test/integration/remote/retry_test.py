@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 from collections import namedtuple, Counter
 
 from requests.exceptions import HTTPError
@@ -43,9 +43,10 @@ class _ConfigMock:
         return 0
 
 
-class RetryDownloadTests(unittest.TestCase):
+class TestRetryDownload:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.filename = os.path.join(temp_folder(), "anyfile")
         save(self.filename, "anything")
 
@@ -54,38 +55,38 @@ class RetryDownloadTests(unittest.TestCase):
         with redirect_output(output):
             uploader = FileUploader(requester=_RequesterMock(401, "content"),
                                     verify=False, config=_ConfigMock())
-            with self.assertRaisesRegex(AuthenticationException, "content"):
+            with pytest.raises(AuthenticationException, match="content"):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["ERROR: content"], 0)
-            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+            assert counter["ERROR: content"] == 0
+            assert counter["Waiting 0 seconds to retry..."] == 0
 
     def test_error_403_forbidden(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
-            with self.assertRaisesRegex(ForbiddenException, "content"):
+            with pytest.raises(ForbiddenException, match="content"):
                 auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["ERROR: content"], 0)
-            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+            assert counter["ERROR: content"] == 0
+            assert counter["Waiting 0 seconds to retry..."] == 0
 
     def test_error_403_authentication(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
             uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                     verify=False, config=_ConfigMock())
-            with self.assertRaisesRegex(AuthenticationException, "content"):
+            with pytest.raises(AuthenticationException, match="content"):
                 auth = namedtuple("auth", "bearer")
                 uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["ERROR: content"], 0)
-            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+            assert counter["ERROR: content"] == 0
+            assert counter["Waiting 0 seconds to retry..."] == 0
 
     def test_error_requests(self):
         class _RequesterMock:
@@ -96,21 +97,21 @@ class RetryDownloadTests(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             uploader = FileUploader(requester=_RequesterMock(), verify=False, config=_ConfigMock())
-            with self.assertRaisesRegex(Exception, "any exception"):
+            with pytest.raises(Exception, match="any exception"):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["WARN: network: any exception"], 2)
-            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+            assert counter["WARN: network: any exception"] == 2
+            assert counter["Waiting 0 seconds to retry..."] == 2
 
     def test_error_500(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
             uploader = FileUploader(requester=_RequesterMock(500, "content"), verify=False,
                                     config=_ConfigMock())
-            with self.assertRaisesRegex(Exception, "500 Server Error: content"):
+            with pytest.raises(Exception, match="500 Server Error: content"):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["WARN: network: 500 Server Error: content"], 2)
-            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+            assert counter["WARN: network: 500 Server Error: content"] == 2
+            assert counter["Waiting 0 seconds to retry..."] == 2

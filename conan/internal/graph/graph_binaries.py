@@ -12,27 +12,28 @@ from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNL
                                         BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                         BINARY_PLATFORM)
 from conan.internal.graph.proxy import should_update_reference
-from conan.internal.errors import conanfile_exception_formatter, ConanConnectionError, NotFoundException, \
-    PackageNotFoundException
+from conan.internal.errors import (conanfile_exception_formatter, ConanConnectionError,
+                                   NotFoundException, PackageNotFoundException)
 from conan.errors import ConanException
 from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import RecipeReference
+from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import load
 
 
 class GraphBinariesAnalyzer:
 
-    def __init__(self, conan_app, global_conf):
+    def __init__(self, conan_app, global_conf, hook_manager):
         self._cache = conan_app.cache
         self._home_folder = conan_app.cache_folder
         self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
-        self._hook_manager = conan_app.conan_api.config.hook_manager
+        self._hook_manager = hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
-        self._compatibility = BinaryCompatibility(compat_folder)
+        self._compatibility = BinaryCompatibility(compat_folder, hook_manager)
         unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
         non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")
         # recipe_revision_mode already takes into account the package_id
@@ -227,8 +228,8 @@ class GraphBinariesAnalyzer:
             if conanfile.vendor and not conanfile.conf.get("tools.graph:vendor", choices=("build",)):
                 node.conanfile.info.invalid = f"The package '{conanfile.ref}' is a vendoring one, " \
                                               f"needs to be built from source, but it " \
-                                              "didn't enable 'tools.graph:vendor=build' to compute " \
-                                              "its dependencies"
+                                              "didn't enable 'tools.graph:vendor=build' to compute" \
+                                              " its dependencies"
                 node.binary = BINARY_INVALID
             if any(n.node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD)
                    for n in node.transitive_deps.values()):
@@ -430,7 +431,10 @@ class GraphBinariesAnalyzer:
             self._evaluate_node(n, mode, remotes, update)
 
         levels = deps_graph.by_levels()
-        config_version = self._config_version()
+        # When creating a "conan config install-pkg" package, it should be independent of conf
+        root_pkg_type = deps_graph.root.edges[0].dst.conanfile.package_type \
+            if deps_graph.root.edges else None
+        config_version = self._config_version() if root_pkg_type is not PackageType.CONF else None
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node, config_version)

@@ -1,7 +1,7 @@
 import os
 import textwrap
-import unittest
 
+import pytest
 import yaml
 
 from conan.api.conan_api import ConanAPI
@@ -20,8 +20,9 @@ from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import save
 
 
-class GraphManagerTest(unittest.TestCase):
+class GraphManagerTest:
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         cache_folder = temp_folder()
         cache = PkgCache(cache_folder, ConfDefinition())
@@ -130,18 +131,18 @@ class GraphManagerTest(unittest.TestCase):
 
         conanfile = node.conanfile
         ref = RecipeReference.loads(str(ref))
-        self.assertEqual(node.ref, ref)
+        assert node.ref == ref
         if conanfile:
-            self.assertEqual(conanfile.name, ref.name)
+            assert conanfile.name == ref.name
 
-        self.assertEqual(len(node.edges), len(deps))
+        assert len(node.edges) == len(deps)
         for d in node.neighbors():
             assert d in deps
 
         dependants = node.inverse_neighbors()
-        self.assertEqual(len(dependants), len(dependents))
+        assert len(dependants) == len(dependents)
         for d in dependents:
-            self.assertIn(d, dependants)
+            assert d in dependants
 
         if settings is not None:
             for k, v in settings.items():

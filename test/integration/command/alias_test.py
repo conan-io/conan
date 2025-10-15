@@ -1,12 +1,11 @@
 import os
 import textwrap
-import unittest
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class ConanAliasTest(unittest.TestCase):
+class TestConanAlias:
 
     def test_repeated_alias(self):
         client = TestClient(light=True)
@@ -33,7 +32,8 @@ class ConanAliasTest(unittest.TestCase):
         client.save({"conanfile.txt": "[requires]\nchat/1.0@lasote/channel"}, clean_first=True)
 
         client.run("install . --build=missing")
-        assert "chat/1.0@lasote/channel: WARN: legacy: Requirement 'alias' is provided in Conan 2" in client.out
+        assert ("chat/1.0@lasote/channel: WARN: legacy: Requirement 'alias' is provided in Conan 2"
+                in client.out)
 
         client.assert_listed_require({"hello/0.1@lasote/channel": "Cache"})
         assert "hello/0.x@lasote/channel: hello/0.1@lasote/channel" in client.out
@@ -43,8 +43,8 @@ class ConanAliasTest(unittest.TestCase):
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
-        self.assertIn("hello/0.1", conaninfo)
-        self.assertNotIn("hello/0.x", conaninfo)
+        assert "hello/0.1" in conaninfo
+        assert "hello/0.x" not in conaninfo
 
         client.run('upload "*" --confirm -r default')
         client.run('remove "*" -c')
@@ -52,12 +52,12 @@ class ConanAliasTest(unittest.TestCase):
         client.run("install .")
         assert "'alias' is a Conan 1.X legacy feature" in client.out
         client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
-        self.assertNotIn("hello/0.x@lasote/channel from", client.out)
+        assert "hello/0.x@lasote/channel from" not in client.out
 
         client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
         client.run("install . --build=missing")
-        self.assertIn("hello/0.2", client.out)
-        self.assertNotIn("hello/0.1", client.out)
+        assert "hello/0.2" in client.out
+        assert "hello/0.1" not in client.out
 
     def test_not_override_package(self):
         """ Do not override a package with an alias

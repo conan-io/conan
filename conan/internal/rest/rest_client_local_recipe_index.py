@@ -12,7 +12,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.export import cmd_export
 from conan.internal.hook_manager import HookManager
 from conan.internal.loader import ConanFileLoader
-from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
@@ -79,7 +79,7 @@ class RestApiClientLocalRecipesIndex:
     def get_recipe_sources(self, ref, dest_folder):
         try:
             export_sources = self._app.cache.recipe_layout(ref).export_sources()
-        except ConanReferenceDoesNotExistInDB as e:
+        except ConanReferenceDoesNotExistInDB:
             # This can happen when there a local-recipes-index is being queried for sources it
             # doesn't contain
             # If that is the case, check if they are in the repo, try to export

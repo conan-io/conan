@@ -8,13 +8,13 @@ from conan.errors import ConanException
 
 
 class ConanProxy:
-    def __init__(self, conan_app, editable_packages):
+    def __init__(self, conan_app, editable_packages, legacy_update=None):
         # collaborators
         self._editable_packages = editable_packages
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
-        self._legacy_update = conan_app.global_conf.get("core:update_policy", choices=["legacy"])
+        self._legacy_update = legacy_update
 
     def get_recipe(self, ref, remotes, update, check_update):
         """

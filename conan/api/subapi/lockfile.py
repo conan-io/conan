@@ -10,7 +10,7 @@ from conan.internal.model.lockfile import Lockfile, LOCKFILE
 class LockfileAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     @staticmethod
     def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False, overrides=None):

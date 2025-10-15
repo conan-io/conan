@@ -155,3 +155,11 @@ class TestCustomTestPackage:
                 "pkg/my/test/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST!')")})
         c.run("create pkg/conan")
         assert "MYTEST!" in c.out
+
+    def test_custom_test_package_export_pkg(self):
+        c = TestClient(light=True)
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute('test_package_folder="mytest"')
+        c.save({"pkg/conanfile.py": conanfile,
+                "pkg/mytest/conanfile.py": GenConanfile().with_test("self.output.info('MYTEST!')")})
+        c.run("export-pkg pkg")
+        assert "MYTEST!" in c.out
