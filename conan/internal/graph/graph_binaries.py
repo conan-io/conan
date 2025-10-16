@@ -78,6 +78,8 @@ class GraphBinariesAnalyzer:
         for r in remotes:
             try:
                 info = node.conanfile.info
+                if self._block_prevs:
+                    latests = self._remote_manager.get_package_revisions(pref, r)
                 latest_pref = self._remote_manager.get_latest_package_revision(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not should_update_reference(node.ref, update):

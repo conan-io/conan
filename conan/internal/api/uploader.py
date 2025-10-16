@@ -1,3 +1,4 @@
+import copy
 import fnmatch
 import gzip
 import os
@@ -27,6 +28,7 @@ class UploadUpstreamChecker:
     """
     def __init__(self, app: ConanApp):
         self._app = app
+        self._block_prevs = app.conan_api._api_helpers.global_conf.get("core:block_prevs")
 
     def check(self, package_list, remote, force):
         for ref, packages in package_list.items():
@@ -63,8 +65,15 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
-            assert server_revisions
+            pref_no_rev = copy.copy(pref)
+            pref_no_rev.revision = None
+            # This is not slower, because the API always asks for all revisions!
+            server_refs = self._app.remote_manager.get_package_revisions(pref_no_rev, remote)
+            if self._block_prevs and any(r != pref for r in server_refs):
+                raise ConanException(f"Cannot upload a new package revision to {remote}, it already "
+                                     f"contains another package revision")
+            if not any(r == pref for r in server_refs):
+                raise NotFoundException()
         except NotFoundException:
             prev_bundle["force_upload"] = False
             prev_bundle["upload"] = True
