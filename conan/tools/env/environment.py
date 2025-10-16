@@ -488,7 +488,8 @@ class EnvVars:
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
-        deactivate = _sh_deactivate_contents(self._use_deactivate_function, self._values, filename)
+        deactivate = _sh_deactivate_contents(self._use_deactivate_function, self._values, filename,
+                                             self._verbose)
         capture = textwrap.dedent("""\
               {deactivate}
               """).format(deactivate=deactivate if generate_deactivate else "")
