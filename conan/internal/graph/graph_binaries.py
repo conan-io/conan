@@ -42,6 +42,7 @@ class GraphBinariesAnalyzer:
         python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
         build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
         self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
+        self._block_prevs = global_conf.get("core:block_prevs")
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -80,8 +81,11 @@ class GraphBinariesAnalyzer:
                 info = node.conanfile.info
                 if self._block_prevs:
                     latests = self._remote_manager.get_package_revisions(pref, r)
-                latest_pref = self._remote_manager.get_latest_package_revision(pref, r, info)
-                results.append({'pref': latest_pref, 'remote': r})
+                    for latest_pref in latests:
+                        results.append({'pref': latest_pref, 'remote': r})
+                else:
+                    latest_pref = self._remote_manager.get_latest_package_revision(pref, r, info)
+                    results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not should_update_reference(node.ref, update):
                     break
             except NotFoundException:
@@ -94,6 +98,12 @@ class GraphBinariesAnalyzer:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
+            if self._block_prevs:
+                repeated = {}
+                for r in results:
+                    repeated.setdefault(r["pref"], []).append(r)
+                if len(repeated) > 1:
+                    raise ConanException(f"Multiple different package revisions:\n {repeated}")
             remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
             result = remotes_results[0]
             node.prev = result.get("pref").revision
