@@ -587,13 +587,18 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename):
                 for v in {vars_list}; do
                     old_var="{var_prefix}_${{v}}"
                     # Use eval for indirect expansion (POSIX safe)
-                    eval "old_value=\\${{${{old_var}}}}"
-                    if [ -n "${{old_value+x}}" ]; then
+                    eval "is_set=\\${{${{old_var}}+x}}"
+                    if [ -n "${{is_set}}" ]; then
+                        eval "old_value=\\${{${{old_var}}}}"
+                        echo "Restoring ${{v}} to ${{old_value}}"
                         eval "export ${{v}}=\\${{old_value}}"
-                        unset "${{old_var}}"
+                    else
+                        echo "Unsetting ${{v}}"
+                        unset "${{v}}"
                     fi
+                    unset "${{old_var}}"
                 done
-                unset -f deactivate_{func_name} 2>/dev/null || true
+                unset -f deactivate_{func_name}
             }}
         """.format(vars_list=" ".join(quote(v) for v in values.keys()),
                    var_prefix=_old_env_prefix(filename),
