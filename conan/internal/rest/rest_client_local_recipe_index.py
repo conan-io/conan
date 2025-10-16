@@ -124,7 +124,7 @@ class RestApiClientLocalRecipesIndex:
         ref = self._export_recipe(ref)
         return [ref]
 
-    def get_package_revisions_references(self, pref, headers=None):
+    def get_package_revisions_references(self, pref):
         raise PackageNotFoundException(pref)
 
     def get_latest_recipe_reference(self, ref):
