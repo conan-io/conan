@@ -455,31 +455,7 @@ class EnvVars:
 
     def save_ps1(self, file_location, generate_deactivate=True,):
         _, filename = os.path.split(file_location)
-        deactivate_file = "deactivate_{}".format(filename)
-        deactivate = textwrap.dedent("""\
-            Push-Location $PSScriptRoot
-            "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
-            $vars = (Get-ChildItem env:*).name
-            $updated_vars = @({vars})
-
-            foreach ($var in $updated_vars)
-            {{
-                if ($var -in $vars)
-                {{
-                    $var_value = (Get-ChildItem env:$var).value
-                    Add-Content "{deactivate_file}" "`n`$env:$var = `"$var_value`""
-                }}
-                else
-                {{
-                    Add-Content "{deactivate_file}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
-                }}
-            }}
-            Pop-Location
-        """).format(
-            deactivate_file=deactivate_file,
-            vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
-        )
-
+        deactivate = _ps1_deactivate_contents(self._use_deactivate_function, self._values, filename)
         capture = textwrap.dedent("""\
             {deactivate}
         """).format(deactivate=deactivate if generate_deactivate else "")
@@ -488,6 +464,11 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
+            if self._use_deactivate_function:
+                # Check environment variable existence before saving value
+                result.append(
+                    f'if ($env:{varname}) {{ $env:CONAN_OLD_{varname} = $env:{varname} }}'
+                )
             if value:
                 value = value.replace('"', '`"')  # escape quotes
                 result.append('$env:{}="{}"'.format(varname, value))
@@ -591,8 +572,10 @@ class EnvVars:
 def _sh_get_deactivate_func_name(filename):
     return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
 
+
 def _sh_get_old_prefix(filename):
     return f"_CONAN_OLD_{_sh_get_deactivate_func_name(filename).upper()}"
+
 
 def _sh_deactivate_contents(use_deactivate_function, values, filename):
     if use_deactivate_function:
@@ -631,6 +614,37 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename):
            fi
         done
         """.format(deactivate_file=deactivate_file, vars=" ".join(values.keys())))
+    return deactivate
+
+
+def _ps1_deactivate_contents(use_deactivate_function, values, filename):
+    if use_deactivate_function:
+        deactivate = textwrap.dedent("""""")
+    else:
+        deactivate_file = "deactivate_{}".format(filename)
+        deactivate = textwrap.dedent("""\
+                    Push-Location $PSScriptRoot
+                    "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
+                    $vars = (Get-ChildItem env:*).name
+                    $updated_vars = @({vars})
+
+                    foreach ($var in $updated_vars)
+                    {{
+                        if ($var -in $vars)
+                        {{
+                            $var_value = (Get-ChildItem env:$var).value
+                            Add-Content "{deactivate_file}" "`n`$env:$var = `"$var_value`""
+                        }}
+                        else
+                        {{
+                            Add-Content "{deactivate_file}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                        }}
+                    }}
+                    Pop-Location
+                """).format(
+            deactivate_file=deactivate_file,
+            vars=",".join(['"{}"'.format(var) for var in values.keys()])
+        )
     return deactivate
 
 
