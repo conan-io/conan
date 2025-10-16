@@ -12,10 +12,22 @@ class TestPackageTest:
 
     def test_basic(self):
         client = TestClient()
+        test_package = textwrap.dedent("""
+        from conan import ConanFile
+        class TestPackage(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                self.output.info("TESTING")
+        """)
         client.save({CONANFILE: GenConanfile("hello", "0.1"),
-                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+                     "test_package/conanfile.py": test_package})
         client.run("create . --user=lasote --channel=stable")
         assert "hello/0.1@lasote/stable: Created package" in client.out
+        client.run("test test_package hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
+        client.run("test hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
 
     def test_basic_json(self):
         client = TestClient()

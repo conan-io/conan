@@ -1,6 +1,7 @@
 import os
 from io import StringIO
 
+from conan.internal.internal_tools import universal_arch_separator
 from conan.internal.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
@@ -85,27 +86,39 @@ def apple_min_version_flag(conanfile):
     }.get(os_sdk, "")
 
 
-def resolve_apple_flags(conanfile, is_cross_building=False):
+def resolve_apple_flags(conanfile, is_cross_building=False, is_universal=False):
     """
     Gets the most common flags in Apple systems. If it's a cross-building context
     SDK path is mandatory so if it could raise an exception if SDK is not found.
 
     :param conanfile: <ConanFile> instance.
     :param is_cross_building: boolean to indicate if it's a cross-building context.
-    :return: tuple of Apple flags (apple_min_version_flag, apple_arch, apple_isysroot_flag).
+    :param is_universal: boolean to indicate if it's a universal binary.
+    :return: tuple of Apple flags (apple_min_version_flag, apple_arch_flags, apple_isysroot_flag).
     """
     if not is_apple_os(conanfile):
         # Keeping legacy defaults
         return "", None, None
 
-    apple_arch_flag = apple_isysroot_flag = None
-    if is_cross_building:
+    apple_arch_flags = apple_isysroot_flag = None
+
+    if is_universal:
+        arch_ = conanfile.settings.get_safe("arch")
+        apple_arch_flags = " ".join([f"-arch {_to_apple_arch(arch, default=arch)}" for arch in
+                                     arch_.split(universal_arch_separator)])
+        sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+        if sdk_path:
+            # Ideally, -isysroot should be added whenever sdk_path is defined.
+            # For now, we only set it in this case to avoid changing existing behavior.
+            apple_isysroot_flag = f"-isysroot {sdk_path}"
+    elif is_cross_building:
         arch = to_apple_arch(conanfile)
         sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)
         apple_isysroot_flag = f"-isysroot {sdk_path}" if sdk_path else ""
-        apple_arch_flag = f"-arch {arch}" if arch else ""
+        apple_arch_flags = f"-arch {arch}" if arch else ""
+
     min_version_flag = apple_min_version_flag(conanfile)
-    return min_version_flag, apple_arch_flag, apple_isysroot_flag
+    return min_version_flag, apple_arch_flags, apple_isysroot_flag
 
 
 def xcodebuild_deployment_target_key(os_name):

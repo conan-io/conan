@@ -8,7 +8,6 @@ from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanBasicApp
-from conan.internal.rest.conan_requester import ConanRequester
 from conan.internal.rest.remote_credentials import RemoteCredentials
 from conan.internal.rest.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
@@ -35,11 +34,6 @@ class RemotesAPI:
         self._api_helpers = api_helpers
         self._home_folder = conan_api.home_folder
         self._remotes_file = HomePaths(self._home_folder).remotes_path
-        # Wraps an http_requester to inject proxies, certs, etc
-        self._requester = ConanRequester(api_helpers.global_conf, self._home_folder)
-
-    def reinit(self):
-        self._requester = ConanRequester(self._api_helpers.global_conf, self._home_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -159,7 +153,7 @@ class RemotesAPI:
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
-               allowed_packages=None):
+               allowed_packages=None, recipes_only=None):
         """
         Update an existing remote
 
@@ -169,6 +163,8 @@ class RemotesAPI:
         :param disabled: optional disabled state
         :param index:  optional integer to change the order of the remote
         :param allowed_packages: optional list of packages allowed from this remote
+        :param recipes_only: optional boolean to only allow recipe downloads from this remote,
+            never package binaries
         """
         remotes = _load(self._remotes_file)
         try:
@@ -186,6 +182,8 @@ class RemotesAPI:
             remote.disabled = disabled
         if allowed_packages is not None:
             remote.allowed_packages = allowed_packages
+        if recipes_only is not None:
+            remote.recipes_only = recipes_only
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -282,10 +280,6 @@ class RemotesAPI:
         user, token, _ = localdb.get_login(remote.url)
         return user
 
-    @property
-    def requester(self):
-        return self._requester
-
 
 def _load(remotes_file):
     if not os.path.exists(remotes_file):
@@ -300,7 +294,8 @@ def _load(remotes_file):
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"), r.get("remote_type"))
+                        r.get("allowed_packages"), r.get("remote_type"),
+                        r.get("recipes_only", False))
         result.append(remote)
     return result
 
@@ -315,6 +310,8 @@ def _save(remotes_file, remotes):
             remote["allowed_packages"] = r.allowed_packages
         if r.remote_type:
             remote["remote_type"] = r.remote_type
+        if r.recipes_only:
+            remote["recipes_only"] = r.recipes_only
         remote_list.append(remote)
     # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
     save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))

@@ -1,5 +1,3 @@
-import copy
-
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
@@ -76,6 +74,7 @@ class DepsGraphBuilder:
         #    node -(require)-> previous (creates a diamond with a previously existing node)
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
+        self._deduce_host_version(require, node)
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous is not None:
@@ -135,6 +134,7 @@ class DepsGraphBuilder:
     @staticmethod
     def _conflicting_version(require, node,
                              prev_require, prev_node, prev_ref, base_previous, resolve_prereleases):
+        # As we are closing a diamond, there can be conflicts. This will raise if so
         version_range = require.version_range
         prev_version_range = prev_require.version_range if prev_node is None else None
         if version_range:
@@ -154,28 +154,16 @@ class DepsGraphBuilder:
                     raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         elif prev_version_range is not None:
             if require.ref.user != prev_require.ref.user or \
-                    require.ref.channel != prev_require.ref.channel:
-                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
-            if not prev_version_range.contains(require.ref.version, resolve_prereleases):
+                    require.ref.channel != prev_require.ref.channel or \
+                    not prev_version_range.contains(require.ref.version, resolve_prereleases):
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         else:
-            def _conflicting_refs(ref1, ref2):
-                ref1_norev = copy.copy(ref1)
-                ref1_norev.revision = None
-                ref2_norev = copy.copy(ref2)
-                ref2_norev.revision = None
-                if ref2_norev != ref1_norev:
-                    return True
-                # Computed node, if is Editable, has revision=None
-                # If new_ref.revision is None we cannot assume any conflict, user hasn't specified
-                # a revision, so it's ok any previous_ref
-                if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
-                    return True
-
-            # As we are closing a diamond, there can be conflicts. This will raise if so
-            conflict = _conflicting_refs(prev_ref, require.ref)
-            if conflict:  # It is possible to get conflict from alias, try to resolve it
+            if prev_ref != require.ref:
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+            # If there is no conflict, then the incomplete require without revision can be updated
+            # with the previous revision to avoid the later conflict
+            if prev_ref.revision is not None and require.ref.revision is None:
+                require.ref.revision = prev_ref.revision
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options, define_consumers=False):
@@ -351,7 +339,8 @@ class DepsGraphBuilder:
             node.replaced_requires[original_require] = require
             break  # First match executes the alternative and finishes checking others
 
-    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+    @staticmethod
+    def _deduce_host_version(require, node):
         require_version = str(require.ref.version)
         if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
@@ -370,6 +359,7 @@ class DepsGraphBuilder:
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system(node, require, profile_build, profile_host,
                                          self._resolve_prereleases)
         if graph_lock is not None:

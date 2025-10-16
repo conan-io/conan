@@ -166,6 +166,8 @@ class RemoteManager:
     def _get_package(self, layout, pref, remote, scoped_output, metadata):
         try:
             assert pref.revision is not None
+            if remote.recipes_only:
+                raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -206,6 +208,8 @@ class RemoteManager:
             return result
 
     def search_packages(self, remote, ref, list_only=False):
+        if remote.recipes_only:
+            return {}
         packages = self._call_remote(remote, "search_packages", ref, list_only)
         if list_only:
             packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
@@ -237,6 +241,8 @@ class RemoteManager:
 
     def get_package_revisions_references(self, pref, remote, headers=None) -> List[PkgReference]:
         assert pref.revision is None, "get_package_revisions_references of a reference with revision"
+        if remote.recipes_only:
+            return []
         return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
 
     def get_latest_recipe_reference(self, ref, remote):
@@ -245,6 +251,8 @@ class RemoteManager:
 
     def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
+        if remote.recipes_only:
+            raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
         # These headers are useful to know what configurations are being requested in the server
         headers = None
         if info:

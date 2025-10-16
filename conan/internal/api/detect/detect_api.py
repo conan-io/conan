@@ -462,7 +462,7 @@ def detect_default_compiler():
 
 
 def default_msvc_ide_version(version):
-    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"195": "18", "194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     if version:
         return Version(version)
 
@@ -579,7 +579,8 @@ def detect_clang_compiler(compiler_exe="clang"):
 
 def detect_msvc_compiler():
     ide_version = _detect_vs_ide_version()
-    version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
+    # Map to compiler
+    version = {"18": "195", "17": "193", "16": "192", "15": "191"}.get(str(ide_version))
     if ide_version == "17":
         update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
         if update and int(update) >= 10:

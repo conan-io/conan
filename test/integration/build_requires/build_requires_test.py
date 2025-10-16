@@ -565,6 +565,117 @@ class TestBuildTrackHost:
         else:
             assert "pkg/0.1: Package '39f6a091994d2d080081ea888d75ef65c1d04c8d' created" in c.out
 
+    @pytest.mark.parametrize("shared", [True, False])
+    def test_host_version_transitive_contexts(self, shared):
+        # app ---------------------------------------> protobuf (shared)
+        #   \---tool-require-> grpc/<host> (shared) -> protobuf (shared)
+        #    \--tool-require-------(host)----------------/
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1").with_shared_option(shared)
+                .with_requirement("protobuf/0.1"),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
+                .with_shared_option(shared),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("protobuf/[*]")
+                .with_tool_requirement("grpc/[*]")
+                .with_tool_requirement("protobuf/<host_version>")
+                 })
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info .")
+        assert "Conflict between" not in tc.out
+
+    @pytest.mark.parametrize("shared", [True, False])
+    def test_host_version_transitive_contexts2(self, shared):
+        # app -> grpc (shared) -> protobuf (shared)
+        #  \-----------------------/
+        #   \---tool-require-> grpc/<host> (shared) -> protobuf (shared)
+        #    \--tool-require-------(host)----------------/
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1").with_shared_option(shared)
+                .with_requirement("protobuf/0.1"),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
+                .with_shared_option(shared),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("grpc/0.1")
+                .with_requires("protobuf/[*]")
+                .with_tool_requirement("grpc/<host_version>")
+                .with_tool_requirement("protobuf/<host_version>")
+                 })
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info .")
+        assert "Conflict between" not in tc.out
+
+    def test_host_version_transitive_contexts_orphan(self):
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1")
+                .with_requirement("protobuf/0.1").with_shared_option(False),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1").with_shared_option(False),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("grpc/0.1")
+                .with_requires("protobuf/[*]")
+                .with_tool_requirement("protobuf/<host_version>")
+                .with_tool_requirement("grpc/<host_version>")})
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info . -o:a=*:shared=True -f=json", redirect_stdout="graph.json")
+        data = json.loads(tc.load("graph.json"))
+
+        def _assert_no_orphan(deps_graph):
+            ids = set(deps_graph["nodes"].keys())
+            seen = set(deps_graph["root"].keys())
+            for node in deps_graph["nodes"].values():
+                seen.update(node["dependencies"].keys())
+            assert not ids - seen, f"Orphan nodes found: {ids - seen}"
+        _assert_no_orphan(data["graph"])
+
+    def test_user_channel_error(self):
+        lib = textwrap.dedent("""
+           from conan import ConanFile
+           class LibWithToolConan(ConanFile):
+               name = "lib_with_tool"
+               package_type = "static-library"
+               settings = "os", "arch"
+               # {}
+           """)
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": lib.format(1)})
+        c.run("create . --version 1.0.0 --user foobar")
+        c.save({"conanfile.py": lib.format(2)})
+        c.run("create . --version 1.1.0 --user foobar")
+        rev1 = c.exported_recipe_revision()
+        c.save({"conanfile.py": lib.format(3)})
+        c.run("create . --version 1.1.0 --user foobar")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+
+        c.run(f"upload lib_with_tool/1.1.0@foobar#{rev2} -r=default")
+        c.run(f"remove lib_with_tool/1.1.0@foobar#{rev2} -c")
+
+        dep = textwrap.dedent("""
+           from conan import ConanFile
+           class DepLibConan(ConanFile):
+               name = "dep_lib"
+
+               package_type = "static-library"
+               settings = "os", "arch"
+
+               def build_requirements(self):
+                   self.tool_requires("lib_with_tool/<host_version>@foobar")
+
+               def requirements(self):
+                   self.requires("lib_with_tool/1.1.0@foobar")
+           """)
+        c.save({"conanfile.py": dep}, clean_first=True)
+        c.run("create . --version=1.0.0 --user=foobar")
+
+        conanfile = textwrap.dedent(f"""
+            [requires]
+            dep_lib/1.0.0@foobar
+            lib_with_tool/1.1.0@foobar#{rev2}
+            """)
+        c.save({"conanfile.txt": conanfile}, clean_first=True)
+        c.run("install .")
+        # No longer produces a conflict
+
 
 def test_build_missing_build_requires():
     c = TestClient(light=True)

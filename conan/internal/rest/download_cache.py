@@ -70,15 +70,13 @@ class DownloadCache:
                            for excluded_url in excluded_urls)
                        for url in backup_urls)
 
-        def should_upload_sources(package):
-            return any(prev.get("upload") for prev in package["revisions"].values())
-
         all_refs = set()
         if package_list is not None:
-            for k, ref in package_list.refs().items():
-                packages = ref.get("packages", {}).values()
-                if not only_upload or ref.get("upload") or any(should_upload_sources(p) for p in packages):
-                    all_refs.add(str(k))
+            for ref, packages in package_list.items():
+                ref_info = package_list.recipe_dict(ref)
+                if (not only_upload or ref_info.get("upload")
+                        or any(package_list.package_dict(p).get("upload") for p in packages)):
+                    all_refs.add(str(ref))
 
         path_backups_contents = []
 
