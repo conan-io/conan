@@ -1,7 +1,7 @@
 import os
 
 from conan.internal.loader import load_python_file
-from conan.errors import ConanException
+from conan.errors import ConanException, ConanInvalidConfiguration
 
 valid_hook_methods = ["pre_export", "post_export",
                       "pre_validate", "post_validate",
@@ -32,6 +32,8 @@ class HookManager:
                 conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
                                                                    method_name)
                 method(conanfile)
+            except ConanInvalidConfiguration as e:
+                raise
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
@@ -59,3 +61,7 @@ class HookManager:
                     self.hooks.setdefault(method, []).append((hook_name, hook_method))
         except Exception as e:
             raise ConanException("Error loading hook '%s': %s" % (hook_path, str(e)))
+
+    def reinit(self):
+        self.hooks.clear()
+        self._load_hooks()

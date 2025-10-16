@@ -26,6 +26,7 @@ architecture_map = {
     's390x': 's390x',
     'asm.js': None,
     'wasm': None,
+    'wasm64': None,
     'sh4le': 'sh'
 }
 

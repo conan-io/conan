@@ -1,8 +1,8 @@
 import os
 import textwrap
-import unittest
 
 import yaml
+import pytest
 from jinja2 import Template
 
 from conan.internal.cache.cache import PkgCache
@@ -16,9 +16,10 @@ from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import save
 
 
-class SettingsCppStdTests(unittest.TestCase):
+class TestSettingsCppStd:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.cache_folder = temp_folder()
         self.cache = PkgCache(self.cache_folder, ConfDefinition())
         self.home_paths = HomePaths(self.cache_folder)
@@ -54,8 +55,8 @@ class SettingsCppStdTests(unittest.TestCase):
             """)
         save(fullpath, t)
         profile_loader = ProfileLoader(self.cache_folder)
-        with self.assertRaisesRegex(ConanException,
-                                    "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
+        with pytest.raises(ConanException,
+                                    match="'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
             profile = profile_loader.from_cli_args(["default"], None, None, None, None)
             settings = Settings(yaml.safe_load(default_settings_yml.replace("cppstd", "foobar")))
             profile.process_settings(settings)
@@ -64,13 +65,13 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile()
         profile_loader = ProfileLoader(self.cache_folder)
         r = profile_loader.from_cli_args(["default"], None, None, None, None)
-        self.assertNotIn("compiler.cppstd", r.settings)
+        assert "compiler.cppstd" not in r.settings
 
     def test_value_none(self):
         self._save_profile(compiler_cppstd="None")
         profile_loader = ProfileLoader(self.cache_folder)
         # It is incorrect to assign compiler.cppstd=None in the profile
-        with self.assertRaisesRegex(ConanException, "Invalid setting"):
+        with pytest.raises(ConanException, match="Invalid setting"):
             r = profile_loader.from_cli_args(["default"], None, None, None, None)
             settings = Settings(yaml.safe_load(default_settings_yml))
             r.process_settings(settings)
@@ -79,13 +80,13 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="11")
         profile_loader = ProfileLoader(self.cache_folder)
         r = profile_loader.from_cli_args(["default"], None, None, None, None)
-        self.assertEqual(r.settings["compiler.cppstd"], "11")
-        self.assertNotIn("cppstd", r.settings)
+        assert r.settings["compiler.cppstd"] == "11"
+        assert "cppstd" not in r.settings
 
     def test_value_invalid(self):
         self._save_profile(compiler_cppstd="13")
         profile_loader = ProfileLoader(self.cache_folder)
-        with self.assertRaisesRegex(ConanException, "Invalid setting '13' is not a valid "
+        with pytest.raises(ConanException, match="Invalid setting '13' is not a valid "
                                                     "'settings.compiler.cppstd' value"):
             r = profile_loader.from_cli_args(["default"], None, None, None, None)
             settings = Settings(yaml.safe_load(default_settings_yml))

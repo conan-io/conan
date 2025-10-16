@@ -64,6 +64,19 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     return path
 
 
+@conan_subcommand(formatters={"text": cli_out_write})
+def cache_ref(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Show the reference for a given Conan cache folder
+    """
+    subparser.add_argument("path", help="Path to a Conan cache folder")
+    args = parser.parse_args(*args)
+    ref = conan_api.cache.path_to_ref(args.path)
+    if ref is None:
+        raise ConanException("Reference for this path not found in cache")
+    return ref.repr_notime()
+
+
 @conan_subcommand()
 def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     """
@@ -187,5 +200,6 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
+    args = parser.parse_args(*args)
     files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

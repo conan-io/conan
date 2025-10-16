@@ -1,11 +1,9 @@
-import unittest
-
 from conan.internal import REVISIONS
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
 from collections import namedtuple
 
 
-class Error200NoJson(unittest.TestCase):
+class TestError200NoJson:
 
     def test_error_no_json(self):
         class RequesterMock(TestRequester):
@@ -20,7 +18,7 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Response from remote is not json, but 'None'", client.out)
+        assert "Response from remote is not json, but 'None'" in client.out
 
     def test_error_broken_json(self):
         class RequesterMock(TestRequester):
@@ -37,7 +35,7 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Remote responded with broken json: <>", client.out)
+        assert "Remote responded with broken json: <>" in client.out
 
     def test_error_json(self):
         class RequesterMock(TestRequester):
@@ -55,4 +53,4 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Unexpected server response [1, 2, 3]", client.out)
+        assert "Unexpected server response [1, 2, 3]" in client.out

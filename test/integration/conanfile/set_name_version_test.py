@@ -1,17 +1,15 @@
 import os
 import textwrap
-import unittest
-
-from parameterized import parameterized
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conan.internal.util.files import mkdir
 
 
-class SetVersionNameTest(unittest.TestCase):
+class TestSetVersionName:
 
-    @parameterized.expand([("", ), ("@user/channel", )])
+    @pytest.mark.parametrize("user_channel", ["", "@user/channel"])
     def test_set_version_name(self, user_channel):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -25,8 +23,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         user_channel_arg = "--user=user --channel=channel" if user_channel else ""
         client.run("export . %s" % user_channel_arg)
-        self.assertIn("pkg/2.1%s: Exported" % user_channel,
-                      client.out)
+        assert "pkg/2.1%s: Exported" % user_channel in client.out
         # installing it doesn't break
         client.run("install --requires=pkg/2.1%s --build=missing" % (user_channel or "@"))
         client.assert_listed_require({f"pkg/2.1{user_channel}": "Cache"})
@@ -38,7 +35,7 @@ class SetVersionNameTest(unittest.TestCase):
 
         # Local flow should also work
         client.run("install .")
-        self.assertIn("conanfile.py (pkg/2.1):", client.out)
+        assert "conanfile.py (pkg/2.1):" in client.out
 
     def test_set_version_name_file(self):
         client = TestClient()
@@ -55,14 +52,14 @@ class SetVersionNameTest(unittest.TestCase):
                      "name.txt": "pkg",
                      "version.txt": "2.1"})
         client.run("export . --user=user --channel=testing")
-        self.assertIn("pkg/2.1@user/testing: Exported", client.out)
+        assert "pkg/2.1@user/testing: Exported" in client.out
         client.run("install --requires=pkg/2.1@user/testing --build=missing")
         client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         client.run("install --requires=pkg/2.1@user/testing")
         client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Cache")})
         # Local flow should also work
         client.run("install .")
-        self.assertIn("conanfile.py (pkg/2.1):", client.out)
+        assert "conanfile.py (pkg/2.1):" in client.out
 
     def test_set_version_name_errors(self):
         client = TestClient()
@@ -76,16 +73,16 @@ class SetVersionNameTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=other --version=1.1 --user=user --channel=testing")
-        self.assertIn("pkg/2.1@user/testing", client.out)
+        assert "pkg/2.1@user/testing" in client.out
         client.run("export .  --version=1.1 --user=user --channel=testing")
-        self.assertIn("pkg/2.1@user/testing", client.out)
+        assert "pkg/2.1@user/testing" in client.out
         # These are checked but match and don't conflict
         client.run("export . --version=2.1 --user=user --channel=testing")
         client.run("export . --name=pkg --version=2.1 --user=user --channel=testing")
 
         # Local flow should also fail
         client.run("install . --name=other --version=1.2")
-        self.assertIn("", client.out)
+        assert "" in client.out
 
     def test_set_version_name_appending(self):
         client = TestClient()
@@ -99,7 +96,7 @@ class SetVersionNameTest(unittest.TestCase):
                """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0")
-        self.assertIn("pkg.extra/1.0.extra: Exported", client.out)
+        assert "pkg.extra/1.0.extra: Exported" in client.out
 
     def test_set_version_name_only_not_cli(self):
         client = TestClient()
@@ -113,17 +110,17 @@ class SetVersionNameTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=other --version=1.1 --user=user --channel=testing")
-        self.assertIn("other/1.1@user/testing: Exported", client.out)
+        assert "other/1.1@user/testing: Exported" in client.out
         client.run("export .  --version=1.1 --user=user --channel=testing")
-        self.assertIn("pkg/1.1@user/testing: Exported", client.out)
+        assert "pkg/1.1@user/testing: Exported" in client.out
         client.run("export . --user=user --channel=testing")
-        self.assertIn("pkg/2.0@user/testing: Exported", client.out)
+        assert "pkg/2.0@user/testing: Exported" in client.out
 
         # Local flow should also work
         client.run("install . --name=other --version=1.2")
-        self.assertIn("conanfile.py (other/1.2)", client.out)
+        assert "conanfile.py (other/1.2)" in client.out
         client.run("install .")
-        self.assertIn("conanfile.py (pkg/2.0)", client.out)
+        assert "conanfile.py (pkg/2.0)" in client.out
 
     def test_set_version_name_crash(self):
         client = TestClient()
@@ -135,8 +132,8 @@ class SetVersionNameTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in set_name() method, line 5", client.out)
-        self.assertIn("name 'error' is not defined", client.out)
+        assert "ERROR: conanfile.py: Error in set_name() method, line 5" in client.out
+        assert "name 'error' is not defined" in client.out
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            class Lib(ConanFile):
@@ -145,8 +142,8 @@ class SetVersionNameTest(unittest.TestCase):
            """)
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
-        self.assertIn("name 'error' is not defined", client.out)
+        assert "ERROR: conanfile.py: Error in set_version() method, line 5" in client.out
+        assert "name 'error' is not defined" in client.out
 
     def test_set_version_cwd(self):
         client = TestClient()
@@ -164,7 +161,7 @@ class SetVersionNameTest(unittest.TestCase):
         with client.chdir("build"):
             client.save({"version.txt": "2.1"}, clean_first=True)
             client.run("export .. ")
-            self.assertIn("pkg/2.1: Exported", client.out)
+            assert "pkg/2.1: Exported" in client.out
 
 
 def test_set_version_forbidden_chars():

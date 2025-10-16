@@ -5,6 +5,7 @@ import pytest
 from conan.tools.meson import Meson
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.test_files import temp_folder
 from conan.tools.meson.helpers import get_apple_subsystem, to_cstd_flag, to_cppstd_flag
 
 
@@ -64,3 +65,28 @@ def test_meson_to_cstd_flag(cstd, expected):
 ])
 def test_meson_to_cppstd_flag(compiler, compiler_version, cppstd, expected):
     assert to_cppstd_flag(compiler, compiler_version, cppstd) == expected
+
+
+def test_meson_install_strip():
+    """When the configuration `tools.build:install_strip` is set to True,
+        the Meson install command should include the `--strip` option.
+    """
+    c = ConfDefinition()
+    c.loads("tools.build:install_strip=True")
+
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "7",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.conf = c.get_conanfile_conf(None)
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.folders.set_base_package(temp_folder())
+
+    meson = Meson(conanfile)
+    meson.install()
+
+    assert '--strip' in str(conanfile.command)

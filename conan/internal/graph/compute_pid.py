@@ -3,7 +3,8 @@ from collections import OrderedDict
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
-from conan.internal.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
+from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
+                                       PythonRequiresInfo)
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -73,15 +74,15 @@ def run_validate_package_id(conanfile, hook_manager=None):
 
     if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
-            if hook_manager:
-                hook_manager.execute("pre_validate", conanfile=conanfile)
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
+                    if hook_manager:
+                        hook_manager.execute("pre_validate", conanfile=conanfile)
                     conanfile.validate()
+                    if hook_manager:
+                        hook_manager.execute("post_validate", conanfile=conanfile)
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
-            if hook_manager:
-                hook_manager.execute("post_validate", conanfile=conanfile)
 
     # Once we are done, call package_id() to narrow and change possible values
     if hasattr(conanfile, "package_id"):

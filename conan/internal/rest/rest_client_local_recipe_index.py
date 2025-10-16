@@ -12,7 +12,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.api.export import cmd_export
 from conan.internal.hook_manager import HookManager
 from conan.internal.loader import ConanFileLoader
-from conan.internal.errors import ConanReferenceDoesNotExistInDB, NotFoundException, RecipeNotFoundException, \
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, RecipeNotFoundException, \
     PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
@@ -79,10 +79,12 @@ class RestApiClientLocalRecipesIndex:
     def get_recipe_sources(self, ref, dest_folder):
         try:
             export_sources = self._app.cache.recipe_layout(ref).export_sources()
-        except ConanReferenceDoesNotExistInDB as e:
+        except ConanReferenceDoesNotExistInDB:
             # This can happen when there a local-recipes-index is being queried for sources it
             # doesn't contain
-            raise NotFoundException(str(e))
+            # If that is the case, check if they are in the repo, try to export
+            exported_ref = self._export_recipe(ref)  # This will raise NotFound if non existing
+            export_sources = self._app.cache.recipe_layout(exported_ref).export_sources()
         return self._copy_files(export_sources, dest_folder)
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
@@ -197,6 +199,9 @@ class _LocalRecipesIndexLayout:
     def get_recipes_references(self, pattern):
         name_pattern = pattern.split("/", 1)[0]
         recipes_dir = os.path.join(self._base_folder, "recipes")
+        if not os.path.isdir(recipes_dir):
+            raise ConnectionError("Cannot connect to 'local-recipes-index' repository, missing "
+                                  f"'recipes' folder: {recipes_dir}")
         recipes = os.listdir(recipes_dir)
         recipes.sort()
         ret = []
@@ -210,6 +215,8 @@ class _LocalRecipesIndexLayout:
             pattern = f"{pattern_ref.name}/{pattern_ref.version}"
         except:
             # pattern = pattern
+            pattern = f"{name_pattern}/*"
+            original_pattern = pattern
             pass
 
         loader = ConanFileLoader(None)

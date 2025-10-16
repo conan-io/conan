@@ -1,9 +1,7 @@
-import unittest
-
 from conan.test.utils.tools import TestClient
 
 
-class SysrootTest(unittest.TestCase):
+class TestSysroot:
 
     def test(self):
         client = TestClient()
@@ -36,7 +34,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
-        self.assertIn("pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
+        assert "pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot" in client.out
+        assert "pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot" in client.out
 
         client.run("install .")

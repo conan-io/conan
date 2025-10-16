@@ -268,19 +268,16 @@ def test_config_reinit():
 
     cache_folder = temp_folder()
     conan_api = ConanAPI(cache_folder=cache_folder)
-    # Ensure reinitialization does not invalidate references
-    config_api = conan_api.config
-    assert config_api.global_conf.get("core.upload:retry", check_type=int) != 7
+    assert conan_api._api_helpers.global_conf.get("core.upload:retry", check_type=int) != 7
 
     conan_api.config.install(global_conf_folder, verify_ssl=False)
     # Already has an effect, the config installation reinitializes the config
-    assert config_api.global_conf.get("core.upload:retry", check_type=int) == 7
+    assert conan_api._api_helpers.global_conf.get("core.upload:retry", check_type=int) == 7
 
 
 def test_config_reinit_core_conf():
     tc = TestClient(light=True)
     tc.save_home({"extensions/commands/cmd_foo.py": textwrap.dedent("""
-        import json
         from conan.cli.command import conan_command
         from conan.api.output import ConanOutput
 
@@ -288,7 +285,7 @@ def test_config_reinit_core_conf():
         def foo(conan_api, parser, *args, **kwargs):
             ''' Foo '''
             parser.parse_args(*args)
-            ConanOutput().info(f"Retry: {conan_api.config.global_conf.get('core.upload:retry', check_type=int)}")
+            ConanOutput().info(f"Retry: {conan_api.config.get('core.upload:retry', check_type=int)}")
     """)})
     tc.run("foo -cc core.upload:retry=7")
     assert "Retry: 7" in tc.out

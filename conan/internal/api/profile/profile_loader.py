@@ -80,7 +80,7 @@ class ProfileLoader:
     def __init__(self, cache_folder):
         self._home_paths = HomePaths(cache_folder)
 
-    def from_cli_args(self, profiles, settings, options, conf, cwd):
+    def from_cli_args(self, profiles, settings, options, conf, cwd, context=None):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
@@ -89,20 +89,20 @@ class ProfileLoader:
 
         result = Profile()
         for p in profiles:
-            tmp = self.load_profile(p, cwd)
+            tmp = self.load_profile(p, cwd, context)
             result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
         return result
 
-    def load_profile(self, profile_name, cwd=None):
+    def load_profile(self, profile_name, cwd=None, context=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile = self._load_profile(profile_name, cwd)
+        profile = self._load_profile(profile_name, cwd, context)
         return profile
 
-    def _load_profile(self, profile_name, cwd):
+    def _load_profile(self, profile_name, cwd, context):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
@@ -117,13 +117,14 @@ class ProfileLoader:
         # All profiles will be now rendered with jinja2 as first pass
         base_path = os.path.dirname(profile_path)
         file_path = os.path.basename(profile_path)
-        context = {"platform": platform,
+        renderc = {"platform": platform,
                    "os": os,
                    "subprocess": subprocess,
                    "profile_dir": base_path,
                    "profile_name": file_path,
                    "conan_version": conan_version,
-                   "detect_api": detect_api}
+                   "detect_api": detect_api,
+                   "context": context}
 
         # Always include the root Conan home "profiles" folder as secondary route for loading
         # imports and includes from jinja2 templates.
@@ -131,17 +132,17 @@ class ProfileLoader:
 
         try:
             rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
-            text = rtemplate.render(context)
+            text = rtemplate.render(renderc)
         except Exception as e:
             raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
                                  f"Check your Jinja2 syntax: {str(e)}")
 
         try:
-            return self._recurse_load_profile(text, profile_path)
+            return self._recurse_load_profile(text, profile_path, context)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
-    def _recurse_load_profile(self, text, profile_path):
+    def _recurse_load_profile(self, text, profile_path, context):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -153,7 +154,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.includes:
                 # Recursion !!
-                profile = self._load_profile(include, cwd)
+                profile = self._load_profile(include, cwd, context)
                 inherited_profile.compose_profile(profile)
 
             # Current profile before update with parents (but parent variables already applied)

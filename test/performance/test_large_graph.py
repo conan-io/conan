@@ -1,5 +1,5 @@
 import cProfile
-import json
+import os
 import pstats
 import time
 from pstats import SortKey
@@ -11,7 +11,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skip(reason="This is a performance test, skip for normal runs")
 def test_large_graph():
-    c = TestClient(cache_folder="T:/mycache")
+    c = TestClient(cache_folder=os.path.join(os.path.dirname(__file__), "cache"))
     num_test = 40
     num_pkgs = 40
 
@@ -47,7 +47,7 @@ def test_large_graph():
 
 @pytest.mark.skip(reason="This is a performance test, skip for normal runs")
 def test_large_graph2():
-    c = TestClient(cache_folder="T:/mycache")
+    c = TestClient(cache_folder=os.path.join(os.path.dirname(__file__), "cache"))
     num_test = 20
     num_pkgs = 20
     branches = ["a", "b", "c"]

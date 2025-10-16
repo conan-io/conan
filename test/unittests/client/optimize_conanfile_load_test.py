@@ -1,9 +1,8 @@
-import unittest
 
 from conan.test.utils.tools import TestClient
 
 
-class OptimizeConanFileLoadTest(unittest.TestCase):
+class TestOptimizeConanFileLoad:
 
     def test_multiple_load(self):
         """ when a conanfile is used more than once in a dependency graph, the python file
@@ -40,4 +39,4 @@ class Pkg(ConanFile):
                      "myprofile": "[tool_requires]\nbuild/0.1@user/testing"})
 
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
-        self.assertIn("build/0.1@user/testing: MyCounter1 2, MyCounter2 1", client.out)
+        assert "build/0.1@user/testing: MyCounter1 2, MyCounter2 1" in client.out

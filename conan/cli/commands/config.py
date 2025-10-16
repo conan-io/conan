@@ -1,4 +1,3 @@
-from conan.api.input import UserInput
 from conan.api.model import Remote
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -7,7 +6,7 @@ from conan.errors import ConanException
 
 
 @conan_command(group='Consumer')
-def config(conan_api, parser, *args):
+def config(conan_api, parser, *args):  # noqa
     """
     Manage the Conan configuration in the Conan home.
     """
@@ -95,13 +94,13 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
-def list_text_formatter(confs):
+def _list_text_formatter(confs):
     for k, v in confs.items():
         cli_out_write(f"{k}: {v}")
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
-def config_home(conan_api, parser, subparser, *args):
+def config_home(conan_api, parser, subparser, *args):  # noqa
     """
     Show the Conan home folder.
     """
@@ -109,7 +108,7 @@ def config_home(conan_api, parser, subparser, *args):
     return conan_api.config.home()
 
 
-@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": _list_text_formatter, "json": default_json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
     Show all the Conan available configurations: core and tools.
@@ -117,14 +116,14 @@ def config_list(conan_api, parser, subparser, *args):
     subparser.add_argument('pattern', nargs="?",
                            help="Filter configuration items that matches this pattern")
     args = parser.parse_args(*args)
-    confs = conan_api.config.builtin_confs
+    confs = conan_api.config.conf_list()
     if args.pattern:
         p = args.pattern.lower()
         confs = {k: v for k, v in confs.items() if p in k.lower() or p in v.lower()}
     return confs
 
 
-@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": _list_text_formatter, "json": default_json_formatter})
 def config_show(conan_api, parser, subparser, *args):
     """
     Get the value of the specified conf
@@ -136,9 +135,10 @@ def config_show(conan_api, parser, subparser, *args):
 
 
 @conan_subcommand()
-def config_clean(conan_api, parser, subparser, *args):
+def config_clean(conan_api, parser, subparser, *args):  # noqa
     """
-    (Experimental) Clean the configuration files in the Conan home folder, while keeping installed packages
+    (Experimental) Clean the configuration files in the Conan home folder, while keeping
+    installed packages
     """
     parser.parse_args(*args)
     conan_api.config.clean()

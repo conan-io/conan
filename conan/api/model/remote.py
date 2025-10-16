@@ -36,4 +36,9 @@ class Remote:
         return str(self)
 
     def invalidate_cache(self):
+        """ If external operations might have modified the remote since it was instantiated,
+        this method can be called to invalidate the cache.
+        Note that this is done automatically when the remote is used in any operation by Conan,
+        such as uploading packages, so this method is not usually needed when only interacting
+        with the Conan API"""
         self._caching = {}

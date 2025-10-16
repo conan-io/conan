@@ -127,3 +127,16 @@ class RecipesDBTable(BaseDbTable):
             r = conn.execute(query)
             ret = [self._as_dict(self.row_type(*row))["ref"] for row in r.fetchall()]
         return ret
+
+    def path_to_ref(self, path):
+        query = f'SELECT * FROM {self.table_name} ' \
+                f"WHERE {self.columns.path}='{path}'"
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if not row:
+                return None
+            ref = RecipeReference.loads(row[0])
+            ref.revision = row[1]
+            ref.timestamp = row[3]
+            return ref

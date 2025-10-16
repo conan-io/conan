@@ -1,12 +1,11 @@
 import os
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import mkdir
 
 
-class RemoveSubsettingTest(unittest.TestCase):
+class TestRemoveSubsetting:
 
     def test_remove_options(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -28,8 +27,8 @@ class Pkg(ConanFile):
         client.current_folder = build_folder
         client.run("install ..")
         client.run("build ..", assert_error=True)
-        self.assertIn("ConanException: option 'opt2' doesn't exist", client.out)
-        self.assertIn("Possible options are ['opt1']", client.out)
+        assert "ConanException: option 'opt2' doesn't exist" in client.out
+        assert "Possible options are ['opt1']" in client.out
 
     def test_remove_setting(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -49,7 +48,7 @@ class Pkg(ConanFile):
         client.current_folder = build_folder
 
         client.run("build ..", assert_error=True)
-        self.assertIn("'settings.build_type' doesn't exist", client.out)
+        assert "'settings.build_type' doesn't exist" in client.out
 
 
 def test_settings_and_options_rm_safe():

@@ -644,7 +644,7 @@ def test_with_editable_layout():
         # Bazel 7.x
         content = client.load("conan_deps_module_extension.bzl")
         assert textwrap.dedent(f"""\
-        def _load_dependenies_impl(mctx):
+        def _load_dependencies_impl(mctx):
             conan_dependency_repo(
                 name = "dep",
                 package_path = "{recipes_folder}/dep",

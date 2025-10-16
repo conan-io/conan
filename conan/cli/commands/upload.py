@@ -23,6 +23,7 @@ def summary_upload_list(results):
                     v.pop("info", None)
                     v.pop("timestamp", None)
                     v.pop("files", None)
+                    v.pop("upload-urls", None)
                     upload_value = v.pop("upload", None)
                     if upload_value is not None:
                         msg = "Uploaded" if upload_value else "Skipped, already in server"

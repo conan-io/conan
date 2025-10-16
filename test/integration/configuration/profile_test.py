@@ -2,7 +2,6 @@ import json
 import os
 import platform
 import textwrap
-import unittest
 from collections import OrderedDict
 from textwrap import dedent
 
@@ -40,18 +39,19 @@ def create_profile(folder, name, settings=None, package_settings=None, options=N
     save(os.path.join(folder, name), content)
 
 
-class ProfileTest(unittest.TestCase):
+class TestProfile:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.client = TestClient()
 
     def test_profile_relative_cwd(self):
         self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
         self.client.current_folder = os.path.join(self.client.current_folder, "sub")
         self.client.run("install .. -pr=sub/profile2", assert_error=True)
-        self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
+        assert "ERROR: Profile not found: sub/profile2" in self.client.out
         self.client.run("install .. -pr=sub/profile")
-        self.assertIn("Installing packages", self.client.out)
+        assert "Installing packages" in self.client.out
 
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -64,8 +64,8 @@ class ProfileTest(unittest.TestCase):
         save(clang_profile_path, profile)
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
-        self.assertIn("Error reading 'clang' profile", self.client.out)
-        self.assertIn("Bad syntax", self.client.out)
+        assert "Error reading 'clang' profile" in self.client.out
+        assert "Bad syntax" in self.client.out
 
         profile = '''
         [settings]
@@ -74,8 +74,8 @@ class ProfileTest(unittest.TestCase):
         save(clang_profile_path, profile)
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
-        self.assertIn("Unrecognized field 'invented'", self.client.out)
-        self.assertIn("Error reading 'clang' profile", self.client.out)
+        assert "Unrecognized field 'invented'" in self.client.out
+        assert "Error reading 'clang' profile" in self.client.out
 
         profile = '''
         [settings]
@@ -84,8 +84,7 @@ class ProfileTest(unittest.TestCase):
         save(clang_profile_path, profile)
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
-        self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'",
-                      self.client.out)
+        assert "Error reading 'clang' profile: Invalid setting line 'as'" in self.client.out
 
         profile = '''
         [settings]
@@ -95,9 +94,9 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
                         assert_error=True)
         # stripped "a value"
-        self.assertIn("'a value' is not a valid 'settings.os'", self.client.out)
+        assert "'a value' is not a valid 'settings.os'" in self.client.out
 
-    @parameterized.expand([("", ), ("./local_profiles/", ), (None, )])
+    @pytest.mark.parametrize("path", ["", "./local_profiles/", None])
     def test_install_with_missing_profile(self, path):
         if path is None:
             # Not good practice to introduce temp_folder() in the expand because it randomize
@@ -105,8 +104,8 @@ class ProfileTest(unittest.TestCase):
             path = temp_folder() + "/"
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
-        self.assertIn("ERROR: Profile not found:", self.client.out)
-        self.assertIn("scopes_env", self.client.out)
+        assert "ERROR: Profile not found:" in self.client.out
+        assert "scopes_env" in self.client.out
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows profiles")
     def test_install_profile_settings(self):
@@ -124,16 +123,16 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.out
         for setting, value in profile_settings.items():
-            self.assertIn("%s=%s" % (setting, value), info)
+            assert "%s=%s" % (setting, value) in info
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=191")
         info = self.client.out
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
-                self.assertIn("%s=%s" % (setting, value), info)
+                assert "%s=%s" % (setting, value) in info
             else:
-                self.assertIn("compiler.version=191", info)
+                assert "compiler.version=191" in info
 
         # Use package settings in profile
         tmp_settings = OrderedDict()
@@ -147,8 +146,8 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_hello0_gcc -s compiler.version=191")
         info = self.client.out
-        self.assertIn("compiler=gcc", info)
-        self.assertIn("compiler.libcxx=libstdc++11", info)
+        assert "compiler=gcc" in info
+        assert "compiler.libcxx=libstdc++11" in info
 
         # If other package is specified compiler is not modified
         package_settings = {"NoExistsRecipe": tmp_settings}
@@ -165,9 +164,9 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install . --build missing -pr vs_12_86_hello0_gcc"
                         " -s compiler.version=191 -s hello0/*:compiler.libcxx=libstdc++")
         info = self.client.out
-        self.assertIn("compiler=gcc", info)
-        self.assertNotIn("compiler.libcxx=libstdc++11", info)
-        self.assertIn("compiler.libcxx=libstdc++", info)
+        assert "compiler=gcc" in info
+        assert "compiler.libcxx=libstdc++11" not in info
+        assert "compiler.libcxx=libstdc++" in info
 
     def test_install_profile_package_settings(self):
 
@@ -202,8 +201,8 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --user=lasote --channel=testing -pr myprofile")
         info = self.client.out
-        self.assertIn("(hello0/0.1@lasote/testing): gcc", info)
-        self.assertIn("(hello0/0.1@lasote/testing): 4.8", info)
+        assert "(hello0/0.1@lasote/testing): gcc" in info
+        assert "(hello0/0.1@lasote/testing): 4.8" in info
 
         package_settings = {"*@other/*": tmp_settings}
         _create_profile(self.client.paths.profiles_path,
@@ -212,10 +211,10 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --user=lasote --channel=testing -pr myprofile")
         info = self.client.out
-        self.assertIn("(hello0/0.1@lasote/testing): msvc", info)
-        self.assertIn("(hello0/0.1@lasote/testing): 191", info)
-        self.assertNotIn("(hello0/0.1@lasote/testing): gcc", info)
-        self.assertNotIn("(hello0/0.1@lasote/testing): 4.8", info)
+        assert "(hello0/0.1@lasote/testing): msvc" in info
+        assert "(hello0/0.1@lasote/testing): 191" in info
+        assert "(hello0/0.1@lasote/testing): gcc" not in info
+        assert "(hello0/0.1@lasote/testing): 4.8" not in info
 
     def test_package_settings_no_user_channel(self):
         conanfile = textwrap.dedent("""
@@ -250,8 +249,8 @@ class ProfileTest(unittest.TestCase):
                           .with_option("static", [True, False])})
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.out
-        self.assertIn("language=1", info)
-        self.assertIn("static=False", info)
+        assert "language=1" in info
+        assert "static=False" in info
 
     def test_scopes_env(self):
         # Create a profile and use it
@@ -308,8 +307,8 @@ class DefaultNameConan(ConanFile):
 
         # Install with the previous profile
         self.client.run("graph info --requires=hello/0.1@lasote/stable --profile scopes_env")
-        self.assertNotIn('''Requires:
-                winrequire/0.1@lasote/stable''', self.client.out)
+        assert '''Requires:
+                winrequire/0.1@lasote/stable''' not in self.client.out
 
         # Create a profile that activate the require
         create_profile(self.client.paths.profiles_path, "scopes_env",
@@ -317,10 +316,10 @@ class DefaultNameConan(ConanFile):
 
         # Install with the previous profile
         self.client.run("graph info --requires=hello/0.1@lasote/stable --profile scopes_env")
-        self.assertIn(' winrequire/0.1@lasote/stable', self.client.out)
+        assert ' winrequire/0.1@lasote/stable' in self.client.out
 
 
-class ProfileAggregationTest(unittest.TestCase):
+class TestProfileAggregation:
 
     profile1 = dedent("""
     [settings]
@@ -359,7 +358,8 @@ class ProfileAggregationTest(unittest.TestCase):
         requires = "lib/1.0@user/channel"
     """)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.client = TestClient()
         self.client.save({CONANFILE: self.conanfile,
                           "profile1": self.profile1, "profile2": self.profile2})
@@ -371,12 +371,12 @@ class ProfileAggregationTest(unittest.TestCase):
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("graph info . --profile profile1 --profile profile2")
-        self.assertIn(self._pkg_lib_10_id, self.client.out)
+        assert self._pkg_lib_10_id in self.client.out
 
     def test_export_pkg(self):
         self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
-        self.assertIn(self._pkg_lib_10_id, self.client.out)
+        assert self._pkg_lib_10_id in self.client.out
 
     def test_profile_crazy_inheritance(self):
         profile1 = dedent("""
@@ -396,14 +396,14 @@ class ProfileAggregationTest(unittest.TestCase):
 
         self.client.save({"profile1": profile1, "profile2": profile2})
         self.client.run("create . --name=lib --version=1.0 --profile profile2 -pr profile1")
-        self.assertIn(dedent("""\
+        assert dedent("""\
                              [settings]
                              arch=x86_64
                              compiler=msvc
                              compiler.runtime=dynamic
                              compiler.runtime_type=Release
                              compiler.version=191
-                             os=Windows"""), self.client.out)
+                             os=Windows""") in self.client.out
 
 
 def test_profile_from_cache_path():

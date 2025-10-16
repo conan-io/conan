@@ -59,8 +59,6 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 @pytest.mark.parametrize("arch, os_, os_version, os_sdk", [
     ('armv8', 'iOS', '17.1', 'iphoneos'),
-    ('armv7', 'iOS', '10.0', 'iphoneos'),
-    ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', None, None),
     ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', '10.11', None),

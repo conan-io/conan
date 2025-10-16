@@ -1,4 +1,4 @@
-from conan.tools.apple import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_key
 
 
 class XcodeBuild(object):
@@ -8,6 +8,8 @@ class XcodeBuild(object):
         self._arch = to_apple_arch(self._conanfile)
         self._sdk = conanfile.settings.get_safe("os.sdk") or ""
         self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
+        self._os = conanfile.settings.get_safe("os")
+        self._os_version = conanfile.settings.get_safe("os.version")
 
     @property
     def _verbosity(self):
@@ -36,8 +38,13 @@ class XcodeBuild(object):
                        will build all the targets passing the ``-alltargets`` argument instead.
         :return: the return code for the launched ``xcodebuild`` command.
         """
-        target = "-target {}".format(target) if target else "-alltargets"
-        cmd = "xcodebuild -project {} -configuration {} -arch {} " \
+        target = "-target '{}'".format(target) if target else "-alltargets"
+        cmd = "xcodebuild -project '{}' -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,
                                 self._verbosity, target)
+
+        deployment_target_key = xcodebuild_deployment_target_key(self._os)
+        if deployment_target_key and self._os_version:
+            cmd += f" {deployment_target_key}={self._os_version}"
+
         self._conanfile.run(cmd)

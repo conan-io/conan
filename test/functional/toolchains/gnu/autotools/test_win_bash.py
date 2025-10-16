@@ -10,7 +10,6 @@ from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -70,7 +69,8 @@ def test_autotools_bash_complete():
 @pytest.mark.tool("msys2")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
-def test_autotools_bash_complete_clang(frontend, runtime):
+@pytest.mark.parametrize("build_type", ("Debug", "Release"))
+def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
     clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
@@ -81,7 +81,7 @@ def test_autotools_bash_complete_clang(frontend, runtime):
         [settings]
         os=Windows
         arch=x86_64
-        build_type=Release
+        build_type={build_type}
         compiler=clang
         compiler.version=18
         compiler.cppstd=14
@@ -92,6 +92,7 @@ def test_autotools_bash_complete_clang(frontend, runtime):
         tools.build:compiler_executables={comps}
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
+        tools.compilation:verbosity=verbose
         """)
 
     main = gen_function_cpp(name="main")
@@ -131,13 +132,13 @@ def test_autotools_bash_complete_clang(frontend, runtime):
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__18" in client.out
-    check_exe_run(client.out, "main", "clang", None, "Release", "x86_64", None)
+    check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
 
     static_runtime = runtime == "static"
-    check_vs_runtime("main.exe", client, "17", build_type="Release", static_runtime=static_runtime)
+    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -155,10 +156,10 @@ def test_add_msys2_path_automatically():
     except KeyError:
         pytest.skip("msys2 path not defined")
 
-    save(client.paths.new_config_path, textwrap.dedent("""
+    client.save_home({"global.conf": textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
-            """.format(bash_path)))
+            """.format(bash_path))})
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -274,7 +275,7 @@ def test_msys2_and_msbuild():
         """)
 
     # A minimal project is sufficient - here just copy the application file to another directory
-    my_vcxproj = """<?xml version="1.0" encoding="utf-8"?>
+    my_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
         <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
         <ItemGroup Label="ProjectConfigurations">
         <ProjectConfiguration Include="Debug|Win32">

@@ -8,12 +8,12 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
-from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conan.test.utils.env import environment_update
+from conan.internal.errors import ConanConnectionError
 from conan.internal.util.files import save
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.env import environment_update
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestParamErrors:
@@ -66,13 +66,15 @@ class TestParamErrors:
         c.run("list --graph graph.json --format=json", redirect_stdout="pkglist.json")
         c.run("list --graph pkglist.json", assert_error=True)
         assert (
-            'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running'
+            'Expected a graph file but found an unexpected JSON file format. '
+            'You can create a "graph" JSON file by running'
             in c.out
         )
         assert (
             "conan [ graph-info | create | export-pkg | install | test ] --format=json > graph.json"
             in c.out
         )
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -225,6 +227,17 @@ class TestListRefs:
                          'zlib/1.0.0@user/channel': {},
                          'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
+
+    def test_version_range_prerelease(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("foo", "1.0-pre.1")})
+        tc.run("export .")
+        tc.run("list * ",)
+        assert "foo/1.0-pre.1" in tc.out
+        tc.run("list foo/[>=1.0]")
+        assert "foo/1.0-pre.1" not in tc.out
+        tc.run("list foo/[>=1.0] -cc core.version_ranges:resolve_prereleases=True")
+        assert "foo/1.0-pre.1" in tc.out
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_versions_exact(self, client, remote):
@@ -760,7 +773,7 @@ class TestListRemotes:
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, client, exc, output):
-        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+        with patch("conan.api.subapi.list._search_recipes", new=Mock(side_effect=exc)):
             client.run(f'list whatever/1.0 -r="*"')
         expected_output = textwrap.dedent(f"""\
             default
@@ -853,7 +866,8 @@ class TestListCompact:
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*#*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#*",
-        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e"
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#"
+        "0ba8627bd47edc3a501e8f0eb9a79e5e"
     ])
     def test_list_compact_patterns(self, pattern):
         c = TestClient(light=True)
@@ -947,3 +961,32 @@ def test_overlapping_versions():
     tc.run("list * -c -f=json", redirect_stdout="list.json")
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
+
+
+def test_list_local_recipe_index():
+    c = TestClient(light=True)
+    c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
+    c.run(f"remote add local '{c.current_folder}'")
+
+    c.run("list '*' -r=local")
+    assert "Found 1 pkg/version recipes matching * in local" in c.out
+    c.run("list '*/*' -r=local")
+    assert "Found 1 pkg/version recipes matching */* in local" in c.out
+    c.run("list '*/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching */0.1 in local" in c.out
+    c.run("list 'pkg/*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/* in local" in c.out
+    c.run("list 'pkg/0.*' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.* in local" in c.out
+    c.run("list 'pkg' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg in local" in c.out
+    c.run("list 'pkg/0.1' -r=local")
+    assert "Found 1 pkg/version recipes matching pkg/0.1 in local" in c.out
+    c.run("list 'foo' -r=local")
+    assert "ERROR: Recipe 'foo' not found" in c.out
+    c.run("list '/#@&%%&@#/' -r=local")
+    assert "ERROR: Recipe '/' not found" in c.out
+    c.run("list 'pkg/0.1@a' -r=local")
+    assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
+    c.run("list 'pkg%0.1#a@b/c' -r=local")
+    assert "ERROR: Recipe 'pkg%0.1' not found" in c.out

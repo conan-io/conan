@@ -51,6 +51,8 @@ def test_cross_build():
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+    # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct
+    # assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
     client.run("install . --profile:build=windows --profile:host=embedwin")
     toolchain = client.load("conan_toolchain.cmake")
@@ -87,6 +89,8 @@ def test_cross_build_linux_to_macos():
     assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 22)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
+    # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct
+    # assert "set(CMAKE_TRY_COMPILE_CONFIGURATION Release)" in toolchain
 
 
 def test_cross_build_user_toolchain():
@@ -775,7 +779,7 @@ def test_toolchain_cache_variables():
     assert cache_variables["NUMBER"] == 1
 
     def _format_val(val):
-        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+        return f'"{val}"' if isinstance(val, str) and " " in val else f"{val}"
 
     for var, value in cache_variables.items():
         assert f"-D{var}={_format_val(value)}" in client.out
@@ -887,24 +891,25 @@ def test_android_legacy_toolchain_with_compileflags(cmake_legacy_toolchain):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_presets_paths_normalization():
     # https://github.com/conan-io/conan/issues/11795
+    # But then also https://github.com/conan-io/conan/issues/18434
     client = TestClient()
     conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
 
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain"
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
 
-                def layout(self):
-                    cmake_layout(self)
-            """)
+            def layout(self):
+                cmake_layout(self)
+        """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
     client.run("install .")
 
     presets = json.loads(client.load("CMakeUserPresets.json"))
-
-    assert "/" not in presets["include"]
+    assert "/" in presets["include"][0]
+    assert "\\" not in presets["include"][0]
 
 
 @pytest.mark.parametrize("arch, arch_toolset", [("x86", "x86_64"), ("x86_64", "x86_64"),
@@ -1115,7 +1120,7 @@ def test_build_folder_vars_editables():
     c.run("editable add dep")
     conf = "tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\", \"settings.build_type\"]'"
     settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
-    c.run("install app -c={} {}".format(conf, settings))
+    c.run("install app -c={} {} --build=editable".format(conf, settings))
     assert os.path.exists(os.path.join(c.current_folder, "dep", "build", "freebsd-debug"))
 
 
@@ -1771,3 +1776,36 @@ def test_cmake_presets_compiler():
     # https://github.com/microsoft/vscode-cmake-tools/blob/a1ceda25ea93fc0060324de15970a8baa69addf6/src/presets/preset.ts#L1095C23-L1095C35
     assert cache_variables["CMAKE_C_COMPILER"] == "cl"
     assert cache_variables["CMAKE_CXX_COMPILER"] == "cl.exe"
+
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("CMakeToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'string(APPEND CONAN_CXX_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
+    assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain

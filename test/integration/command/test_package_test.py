@@ -1,7 +1,6 @@
 import json
 import os
 import textwrap
-import unittest
 
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
@@ -9,14 +8,14 @@ from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanf
 from conan.internal.util.files import load
 
 
-class TestPackageTest(unittest.TestCase):
+class TestPackageTest:
 
     def test_basic(self):
         client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
+        client.save({CONANFILE: GenConanfile("hello", "0.1"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Created package", client.out)
+        assert "hello/0.1@lasote/stable: Created package" in client.out
 
     def test_basic_json(self):
         client = TestClient()
@@ -34,18 +33,18 @@ class TestPackageTest(unittest.TestCase):
         client.run("create . --user=lasote --channel=stable")
         client.run("test test_package hello/0.1@lasote/stable")
 
-        self.assertNotIn("Exporting package recipe", client.out)
-        self.assertNotIn("Forced build from source", client.out)
-        self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertNotIn("Forced build from source", client.out)
-        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
+        assert "Exporting package recipe" not in client.out
+        assert "Forced build from source" not in client.out
+        assert "Package '%s' created" % NO_SETTINGS_PACKAGE_ID not in client.out
+        assert "Forced build from source" not in client.out
+        assert "hello/0.1@lasote/stable: Already installed!" in client.out
 
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
         client.run("test test_package hello/0.1@lasote/stable")
-        self.assertNotIn("hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertNotIn("hello/0.1@lasote/stable: Created package", client.out)
-        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("hello/0.1@lasote/stable (test package): Running test()", client.out)
+        assert "hello/0.1@lasote/stable: Configuring sources" not in client.out
+        assert "hello/0.1@lasote/stable: Created package" not in client.out
+        assert "hello/0.1@lasote/stable: Already installed!" in client.out
+        assert "hello/0.1@lasote/stable (test package): Running test()" in client.out
 
     def test_wrong_version(self):
         test_conanfile = GenConanfile().with_test("pass").with_require("hello/0.2@user/cc")
@@ -66,11 +65,11 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        self.assertIn("hello/0.1@user/channel: Created package", client.out)
+        assert "hello/0.1@user/channel: Created package" in client.out
 
         # explicit override of user/channel works
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Created package", client.out)
+        assert "hello/0.1@lasote/stable: Created package" in client.out
 
     def test_test_with_path_errors(self):
         client = TestClient()
@@ -79,15 +78,13 @@ class TestPackageTest(unittest.TestCase):
         # Path with conanfile.txt
         client.run("test conanfile.txt other/0.2@user2/channel2", assert_error=True)
 
-        self.assertIn("A conanfile.py is needed, %s is not acceptable"
-                      % os.path.join(client.current_folder, "conanfile.txt"),
-                      client.out)
+        assert ("A conanfile.py is needed, %s is not acceptable"
+                % os.path.join(client.current_folder, "conanfile.txt") in client.out)
 
         # Path with wrong conanfile path
         client.run("test not_real_dir/conanfile.py other/0.2@user2/channel2", assert_error=True)
-        self.assertIn("Conanfile not found at %s"
-                      % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
-                      client.out)
+        assert ("Conanfile not found at %s"
+                % os.path.join(client.current_folder, "not_real_dir", "conanfile.py") in client.out)
 
     def test_check_version(self):
         client = TestClient()
@@ -116,9 +113,9 @@ class TestPackageTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --name=hello --version=0.1")
-        self.assertIn("hello/0.1: BUILD Dep VERSION 1.1", client.out)
-        self.assertIn("hello/0.1 (test package): BUILD HELLO VERSION 0.1", client.out)
-        self.assertIn("hello/0.1 (test package): TEST HELLO VERSION 0.1", client.out)
+        assert "hello/0.1: BUILD Dep VERSION 1.1" in client.out
+        assert "hello/0.1 (test package): BUILD HELLO VERSION 0.1" in client.out
+        assert "hello/0.1 (test package): TEST HELLO VERSION 0.1" in client.out
 
 
 class TestPackageBuild:
@@ -181,7 +178,7 @@ class TestPackageBuild:
                                test_package=True)
 
 
-class ConanTestTest(unittest.TestCase):
+class TestConanTestTest:
 
     def test_partial_reference(self):
         # Create two packages to test with the same test
@@ -213,7 +210,7 @@ class HelloTestConan(ConanFile):
     def test(self):
         self.output.warning("Tested ok!")
 ''', "hello/0.1@conan/stable")
-        self.assertIn("Tested ok!", client.out)
+        assert "Tested ok!" in client.out
 
     def test_test_package_env(self):
         client = TestClient()
@@ -283,17 +280,14 @@ class HelloReuseConan(ConanFile):
         ref = RecipeReference.loads("hello/0.1@lasote/stable")
         client.run(f"test test {str(ref)}")
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-        self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+        assert "Hello FindCmake" == load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake"))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run(f"test test {str(ref)}")  # Test do not rebuild the package
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-        self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+        assert "Hello FindCmake" == load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake"))
         client.run("create . --user=lasote --channel=stable")  # create rebuild the package
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-        self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+        assert "Bye FindCmake" == load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake"))
 
 
 def test_no_reference_in_test_package():

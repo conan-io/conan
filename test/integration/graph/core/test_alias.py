@@ -14,9 +14,9 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
-        liba = app.dependencies[0].dst
+        liba = app.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app])
         self._check_node(app, "app/0.1", deps=[liba])
@@ -30,10 +30,10 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        libb = app.dependencies[1].dst
+        liba = app.edges[0].dst
+        libb = app.edges[1].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app, libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -58,10 +58,10 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(latest)", "libb/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        liba = app.dependencies[0].dst
-        libb = app.dependencies[1].dst
+        liba = app.edges[0].dst
+        libb = app.edges[1].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app, libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -88,11 +88,11 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/(latest)", "libc/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -117,11 +117,11 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -145,9 +145,9 @@ class TestAlias(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["liba/(giga)"])
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
-        liba = app.dependencies[0].dst
+        liba = app.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app])
         self._check_node(app, "app/0.1", deps=[liba])
@@ -156,7 +156,7 @@ class TestAlias(GraphManagerTest):
         _check_transitive(app, [(liba, True, True, False, False)])
 
 
-class AliasBuildRequiresTest(GraphManagerTest):
+class TestAliasBuildRequires(GraphManagerTest):
 
     def test_non_conflicting_alias(self):
         # https://github.com/conan-io/conan/issues/5468
@@ -170,11 +170,11 @@ class AliasBuildRequiresTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba_build = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba_build = app.edges[1].dst
+        liba = libb.edges[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
         self._check_node(liba_build, "liba/0.2#123", dependents=[app])

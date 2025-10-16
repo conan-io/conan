@@ -21,7 +21,7 @@ class TestProfileDetectAPI:
             compiler.version={{detect_api.default_compiler_version(compiler, version)}}
             compiler.runtime={{runtime}}
             compiler.cppstd={{detect_api.default_cppstd(compiler, version)}}
-            # detect_msvc_update returns the real update, like 12 for VS 17.12 so 
+            # detect_msvc_update returns the real update, like 12 for VS 17.12 so
             # we have to convert to the setting that's 0-10
             compiler.update={{ (detect_api.detect_msvc_update(version) | int) % 10 }}
 
@@ -31,7 +31,7 @@ class TestProfileDetectAPI:
 
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1 --context=host")
-        #FIXME: check update setting
+        # FIXME: check update setting
         update = str(int(detect_api.detect_msvc_update("194")) % 10)
         expected = textwrap.dedent(f"""\
             [settings]
@@ -91,6 +91,7 @@ class TestProfileDetectAPI:
         client.run("profile show -pr=profile1")
         sdk_version = detect_api.detect_sdk_version(sdk="macosx")
         assert f"os.sdk_version={sdk_version}" in client.out
+
 
 @pytest.mark.parametrize("context", [None, "host", "build"])
 @pytest.mark.parametrize("f", ["json", "text"])

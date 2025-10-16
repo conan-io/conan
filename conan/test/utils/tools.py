@@ -11,6 +11,7 @@ import textwrap
 import traceback
 import uuid
 import zipfile
+import subprocess
 from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
@@ -23,7 +24,6 @@ from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
-from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
@@ -32,6 +32,7 @@ from conan.internal import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
+from conan.internal.model.conf import load_global_conf
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
 from conan.api.model import PkgReference
@@ -73,7 +74,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=15
+        compiler.version=17
         compiler.libcxx=libc++
         build_type=Release
         """)
@@ -451,10 +452,26 @@ class TestClient:
         except IOError:
             return None
 
+    def open(self, filename):
+        # CI is set by default by GitHub Actions
+        if os.environ.get("CI", False):
+            assert False, "TestClient::open should not be used in CI"
+
+        current_path = os.path.join(self.current_folder, filename)
+        if platform.system() == "Windows":
+            os.startfile(os.path.normpath(current_path))
+        elif platform.system() == "Darwin":
+            subprocess.call(["open", current_path])
+        else:
+            subprocess.call(["xdg-open", current_path])
+
+    def open_home(self, filename):
+        return self.open(os.path.join(self.cache_folder, filename))
+
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
+        return PkgCache(self.cache_folder, load_global_conf(self.cache_folder))
 
     @property
     def paths(self):

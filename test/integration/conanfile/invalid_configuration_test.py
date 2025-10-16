@@ -1,12 +1,13 @@
-import unittest
+import pytest
 
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conan.test.utils.tools import TestClient
 
 
-class InvalidConfigurationTest(unittest.TestCase):
+class TestInvalidConfiguration:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
 from conan import ConanFile
@@ -29,27 +30,27 @@ class MyPkg(ConanFile):
         self.client.run("install . %s" % self.settings_msvc15)
 
         error = self.client.run("install . %s" % self.settings_msvc12, assert_error=True)
-        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("Invalid configuration: user says that compiler.version=12 is invalid",
-                      self.client.out)
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "Invalid configuration: user says that compiler.version=12 is invalid" \
+                      in self.client.out
 
     def test_info_method(self):
         self.client.run("graph info . %s" % self.settings_msvc15)
 
         error = self.client.run("graph info . %s" % self.settings_msvc12,
                                 assert_error=True)
-        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: conanfile.py: Invalid configuration: "
-                      "user says that compiler.version=12 is invalid", self.client.out)
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "ERROR: conanfile.py: Invalid configuration: " \
+                      "user says that compiler.version=12 is invalid" in self.client.out
 
     def test_create_method(self):
         self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test %s" % self.settings_msvc15)
 
         error = self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test %s" % self.settings_msvc12,
                                 assert_error=True)
-        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
-                      "compiler.version=12 is invalid", self.client.out)
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "name/ver@jgsogo/test: Invalid configuration: user says that " \
+                      "compiler.version=12 is invalid" in self.client.out
 
     def test_as_requirement(self):
         self.client.run("create . --name=name --version=ver %s" % self.settings_msvc15)
@@ -65,6 +66,6 @@ class MyPkg(ConanFile):
 
         error = self.client.run("create other/ --name=other --version=1.0 %s" % self.settings_msvc12,
                                 assert_error=True)
-        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("name/ver: Invalid configuration: user says that "
-                      "compiler.version=12 is invalid", self.client.out)
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "name/ver: Invalid configuration: user says that " \
+                      "compiler.version=12 is invalid" in self.client.out

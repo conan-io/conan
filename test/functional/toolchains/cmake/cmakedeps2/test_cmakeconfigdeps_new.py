@@ -15,12 +15,12 @@ new_value = "will_break_next"
 
 @pytest.mark.tool("cmake")
 class TestExes:
-    @pytest.mark.parametrize("tool_requires", [False, True])
-    def test_exe(self, tool_requires):
+    @pytest.mark.parametrize("editable", [False, True])
+    def test_exe(self, editable):
         conanfile = textwrap.dedent(r"""
-            import os
+            import os, platform
             from conan import ConanFile
-            from conan.tools.cmake import CMake
+            from conan.tools.cmake import CMake, cmake_layout
 
             class Test(ConanFile):
                 name = "mytool"
@@ -29,6 +29,13 @@ class TestExes:
                 settings = "os", "arch", "compiler", "build_type"
                 generators = "CMakeToolchain"
                 exports_sources = "*"
+
+                def layout(self):
+                    cmake_layout(self)
+                    self.cpp.build.exe = "mytool"
+                    name = "mytool.exe" if platform.system() == "Windows" else "mytool"
+                    app_loc = os.path.join("build", str(self.settings.build_type), name)
+                    self.cpp.build.location = app_loc
 
                 def build(self):
                     cmake = CMake(self)
@@ -57,46 +64,48 @@ class TestExes:
         c.run("new cmake_exe -d name=mytool -d version=0.1")
         c.save({"conanfile.py": conanfile,
                 "src/main.cpp": main})
+        if editable:
+            c.run("editable add .")
         c.run("create .")
 
-        requires = "tool_requires" if tool_requires else "requires"
-        consumer = textwrap.dedent(f"""
-            from conan import ConanFile
-            from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
-            class Consumer(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                {requires} = "mytool/0.1"
+        for requires in ("tool_requires", "requires"):
+            consumer = textwrap.dedent(f"""
+                from conan import ConanFile
+                from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
+                class Consumer(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    {requires} = "mytool/0.1"
 
-                def generate(self):
-                    deps = CMakeDeps(self)
-                    deps.generate()
-                    tc = CMakeToolchain(self)
-                    tc.generate()
+                    def generate(self):
+                        deps = CMakeDeps(self)
+                        deps.generate()
+                        tc = CMakeToolchain(self)
+                        tc.generate()
 
-                def layout(self):
-                    cmake_layout(self)
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-            """)
-        cmake = textwrap.dedent("""
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
-            cmake_minimum_required(VERSION 3.15)
-            project(consumer C)
+                    def layout(self):
+                        cmake_layout(self)
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
+                """)
+            cmake = textwrap.dedent("""
+                set(CMAKE_C_COMPILER_WORKS 1)
+                set(CMAKE_C_ABI_COMPILED 1)
+                cmake_minimum_required(VERSION 3.15)
+                project(consumer C)
 
-            find_package(mytool)
-            add_custom_command(OUTPUT out.c COMMAND MyTool::myexe)
-            add_library(myLib out.c)
-            """)
-        c.save({"conanfile.py": consumer,
-                "CMakeLists.txt": cmake}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
-        assert "find_package(mytool)" in c.out
-        assert "target_link_libraries(..." not in c.out
-        assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
-        assert "Mytool generating out.c!!!!!" in c.out
+                find_package(mytool)
+                add_custom_command(OUTPUT out.c COMMAND MyTool::myexe)
+                add_library(myLib out.c)
+                """)
+            c.save({f"consumer_{requires}/conanfile.py": consumer,
+                    f"consumer_{requires}/CMakeLists.txt": cmake})
+            c.run(f"build consumer_{requires} -c tools.cmake.cmakedeps:new={new_value}")
+            assert "find_package(mytool)" in c.out
+            assert "target_link_libraries(..." not in c.out
+            assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
+            assert "Mytool generating out.c!!!!!" in c.out
 
     def test_exe_components(self):
         conanfile = textwrap.dedent(r"""
@@ -1515,3 +1524,51 @@ class TestCppInfoChecks:
         args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
         c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
+
+
+
+def test_multiple_find_package_subfolder():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class TestPackage(ConanFile):
+        name = "matrix"
+        version = "1.0"
+        def package_info(self):
+            self.cpp_info.system_libs = ["mysystemlib"]
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app NONE)
+
+        find_package(matrix CONFIG REQUIRED)
+        add_subdirectory(subdir)
+        """)
+    subcmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(subdir NONE)
+
+        find_package(matrix CONFIG REQUIRED)
+        """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Pkg(ConanFile):
+            requires = "matrix/1.0"
+            generators = "CMakeToolchain", "CMakeDeps"
+            settings = "os", "compiler", "build_type", "arch"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake,
+            "subdir/CMakeLists.txt": subcmake}, clean_first=True)
+
+    c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+    assert "find_package(matrix)" in c.out
+    assert "target_link_libraries(... matrix::matrix)" in c.out
+    assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out

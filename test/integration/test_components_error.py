@@ -167,3 +167,26 @@ def test_unused_tool_requirement():
     t.run('create top.py --name=top2 --version=version')
     t.run('create consumer.py --name=wrong --version=version')
     # This runs without crashing, because it is not chcking that top::other doesn't exist
+
+
+def test_component_double_colon_error_message():
+    c = TestClient()
+    t2 = textwrap.dedent("""
+        from conan import ConanFile
+
+        class t2Conan(ConanFile):
+            name = "t2"
+            version = "0.1.0"
+            requires = "t1/0.1.0"
+            def package_info(self):
+                self.cpp_info.requires.append("t1::comp1::other")
+        """)
+
+    c.save({"t1/conanfile.py": GenConanfile("t1", "0.1.0"),
+            "t2/conanfile.py": t2,
+            "t2/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                          .with_generator("CMakeDeps")
+                                                          .with_test("pass")})
+    c.run("create t1")
+    c.run("create t2", assert_error=True)
+    assert "Component 't1::comp1::other' not found in 't1' package requirement" in c.out

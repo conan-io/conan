@@ -26,6 +26,11 @@ def _cmake_cmd_line_args(conanfile, generator):
     if "Visual Studio" in generator:
         verbosity = msbuild_verbosity_cmd_line_arg(conanfile)
         if verbosity:
+            # trying to avoid issues with powershell and - : characters preceded by --
+            # -verbosity -> /verbosity
+            # https://github.com/PowerShell/PowerShell/issues/17399
+            if conanfile.conf.get("tools.env.virtualenv:powershell"):
+                verbosity = verbosity.replace('-', '/', 1)
             args.append(verbosity)
 
     return args
@@ -209,8 +214,13 @@ class CMake:
             arg_list.extend(["--component", component])
         arg_list.extend(self._compilation_verbosity_arg)
 
-        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
-        if do_strip:
+        deprecated_install_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        if deprecated_install_strip:
+            self._conanfile.output.warning("The 'tools.cmake:install_strip' configuration is deprecated, "
+                                           "use 'tools.build:install_strip' instead.", warn_tag="deprecated")
+
+        do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+        if do_strip or deprecated_install_strip:
             arg_list.append("--strip")
 
         if cli_args:

@@ -99,3 +99,9 @@ class CacheDatabase:
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
                 for d in self._packages.get_package_references(ref, only_latest_prev)]
+
+    def path_to_ref(self, path):
+        ref = self._recipes.path_to_ref(path)
+        if ref is not None:
+            return ref
+        return self._packages.path_to_ref(path)
