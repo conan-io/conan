@@ -154,9 +154,20 @@ class ConfigAPI:
     @property
     def settings_yml(self):
         """ Get the contents of the settings.yml and user_settings.yml files,
-            which define the possible values for settings."""
+            which define the possible values for settings.
 
-        class SettingsInterface:
+            Note that this is different from the settings present in a conanfile,
+            which represent the actual values for a specific package, while this
+            property represents the possible values for each setting.
+
+            :returns: A read-only object representing the settings scheme, with a
+                ``possible_values()`` method that returns a dictionary with the possible values for each setting,
+                and a ``fields`` property that returns an ordered list with the fields of each setting.
+                Note that it's possible to access nested settings using attribute access,
+                such as ``settings_yml.compiler.possible_values()``.
+        """
+
+        class SettingsYmlInterface:
             def __init__(self, settings):
                 self._settings = settings
 
@@ -170,9 +181,9 @@ class ConfigAPI:
                 return self._settings.fields
 
             def __getattr__(self, item):
-                return SettingsInterface(getattr(self._settings, item))
+                return SettingsYmlInterface(getattr(self._settings, item))
 
             def __str__(self):
                 return str(self._settings)
 
-        return SettingsInterface(self._helpers.settings_yml)
+        return SettingsYmlInterface(self._helpers.settings_yml)
