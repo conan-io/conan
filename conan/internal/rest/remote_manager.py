@@ -253,13 +253,12 @@ class RemoteManager:
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_package_revisions(self, pref: PkgReference, remote: Remote,
-                              headers=None) -> List[PkgReference]:
+    def get_package_revisions(self, pref: PkgReference, remote: Remote) -> List[PkgReference]:
         # Used by ListAPI to retrieve multiple package revisions
         assert pref.revision is None, "get_package_revisions_references of a reference with revision"
         if remote.recipes_only:
             return []
-        return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
+        return self._call_remote(remote, "get_package_revisions_references", pref)
 
     def get_package_revision(self, pref: PkgReference, remote: Remote) -> PkgReference:
         # Used by UploadUpstreamChecker to see if the revision exist in the server
