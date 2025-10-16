@@ -71,6 +71,8 @@ def export_pkg(conan_api, parser, *args):
     # Now export the final binary
     ConanOutput().title("Exporting recipe and package to the cache")
     conan_api.export.export_pkg(graph, output_folder)
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
 
     test_package_folder = getattr(conanfile, "test_package_folder", None) \
         if args.test_folder is None else args.test_folder
