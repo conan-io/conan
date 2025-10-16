@@ -171,7 +171,7 @@ class GraphBinariesAnalyzer:
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
-            found_compatible = self._find_matching_package_ids(node, compatibles, remotes, update)
+            found_compatible = self._find_compatible_package_id(node, compatibles, remotes, update)
             if found_compatible:
                 node._package_id = found_compatible[0]
                 node.binary = BINARY_DOWNLOAD
@@ -185,7 +185,7 @@ class GraphBinariesAnalyzer:
         node.binary = original_binary
         node._package_id = original_package_id
 
-    def _find_matching_package_ids(self, node, collected_ids, remotes, update):
+    def _find_compatible_package_id(self, node, compatibility_candidate_ids, remotes, update):
         """ check through all the selected remotes:
         - if not --update: get the first package found
         - if --update: get the latest remote searching in all of them
@@ -193,11 +193,11 @@ class GraphBinariesAnalyzer:
         results = []
         for r in remotes:
             try:
-                matching_packageids = self._remote_manager.search_packages(r, node.ref, list_only=True)
-                if matching_packageids:
+                remote_packages = self._remote_manager.search_packages(r, node.ref, list_only=True)
+                if remote_packages:
                     results.extend([ref.package_id, r]
-                                   for ref in matching_packageids
-                                   if ref.package_id in collected_ids)
+                                   for ref in remote_packages
+                                   if ref.package_id in compatibility_candidate_ids)
                     if len(results) > 0 and not should_update_reference(node.ref, update):
                         break
             except ConanConnectionError:
@@ -209,14 +209,17 @@ class GraphBinariesAnalyzer:
         if not remotes and should_update_reference(node.ref, update):
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
+        node.conanfile.output.info(f"Found {len(results)} compatible candidates in remotes")
+
         if not results:
             return None
 
-        id_orders = list(collected_ids.keys())
-        ordered_results = [(id_orders.index(result[0]), result) for result in results]
-        # TODO: How to order this, how to handle update. More?
-        ordered_pair_results = sorted(ordered_results, key=lambda pair: pair[0])
-        return ordered_pair_results[0][1]
+        for compatibility_candidate in compatibility_candidate_ids:
+            for result in results:
+                if result[0] == compatibility_candidate:
+                    return result
+        # Can't reach, but to satisfy all paths
+        return None
 
     def _find_build_compatible_binary(self, node, compatibles):
         original_binary = node.binary

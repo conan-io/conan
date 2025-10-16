@@ -762,6 +762,7 @@ class TestRemoteCompatibility:
         tc.run("remove * -c")
         tc.run(f"remove pkg/0.1:{std17_id} -r=default -c")
         tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17")
+        assert "Found 2 compatible candidates in remotes" in tc.out
         assert f"Found compatible package '{std14_id}'" in tc.out
 
         tc.run(f"create . {compiler_args} -s=compiler.cppstd=11")
@@ -771,5 +772,6 @@ class TestRemoteCompatibility:
         tc.run("remove * -c")
         tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 -vvv")
         assert f"Found compatible package '{std11_id}'" in tc.out
-        # A HTTP request is made to the server to search for compatible packages
-        assert f"{std11_layout.reference.ref.revision}/search?list_only=True"
+        # An HTTP request is made to the server to search for compatible packages
+        assert "Found 3 compatible candidates in remotes" in tc.out
+        assert f"{std11_layout.reference.ref.revision}/search?list_only=True" in tc.out
