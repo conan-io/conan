@@ -156,7 +156,8 @@ def test_missing_external_components():
             "consumer/conanfile.py": foo})
     t.run('create foo')
     t.run("create bar")
-    t.run('create consumer', assert_error=True)
+    t.run('create consumer')
+    assert "package_info(): There are direct requirements" in t.out
 
 
 def test_unused_tool_requirement():
