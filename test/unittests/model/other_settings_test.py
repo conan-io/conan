@@ -11,9 +11,9 @@ from conan.internal.util.files import load, save
 class TestSettings:
 
     def _get_conaninfo(self, reference, client):
-        ref = client.cache.get_latest_recipe_reference(RecipeReference.loads(reference))
+        ref = client.cache.get_latest_recipe_revision(RecipeReference.loads(reference))
         pkg_ids = client.cache.get_package_references(ref)
-        pref = client.cache.get_latest_package_reference(pkg_ids[0])
+        pref = client.cache.get_latest_package_revision(pkg_ids[0])
         pkg_folder = client.cache.pkg_layout(pref).package()
         return load_binary_info(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
