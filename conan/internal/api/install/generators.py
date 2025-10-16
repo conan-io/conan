@@ -235,12 +235,22 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                return "\r\n".join(['& "{}"'.format(b) for b in files])
+                aggregated_calls = "\r\n".join(['& "{}"'.format(b) for b in files])
+                if True or use_deactivate_function:
+                    content = aggregated_calls + "\n"
+                    content += f"function global:deactivate_conan{group} {{\n"
+                    for deactivate_name in deactivate_function_names(shs):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += "}\n"
+                    return content
+                else:
+                    return aggregated_calls
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 ps1_content(deactivates(ps1s)))
+            if not use_deactivate_function:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     ps1_content(deactivates(ps1s)))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")

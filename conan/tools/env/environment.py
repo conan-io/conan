@@ -4,7 +4,7 @@ from shlex import quote
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, LEVEL_VERBOSE
 from conan.internal.api.install.generators import relativize_paths
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
@@ -348,6 +348,7 @@ class EnvVars:
         self._subsystem = deduce_subsystem(conanfile, scope)
         self._use_deactivate_function = conanfile.conf.get("tools.env:deactivate_function",
                                                            default=False, check_type=bool)
+        self._verbose = conanfile.output.level_allowed(LEVEL_VERBOSE)
 
     @property
     def _pathsep(self):
@@ -455,7 +456,8 @@ class EnvVars:
 
     def save_ps1(self, file_location, generate_deactivate=True,):
         _, filename = os.path.split(file_location)
-        deactivate = _ps1_deactivate_contents(self._use_deactivate_function, self._values, filename)
+        deactivate = _ps1_deactivate_contents(self._use_deactivate_function, self._values, filename,
+                                              self._verbose)
         capture = textwrap.dedent("""\
             {deactivate}
         """).format(deactivate=deactivate if generate_deactivate else "")
@@ -472,6 +474,8 @@ class EnvVars:
             if value:
                 value = value.replace('"', '`"')  # escape quotes
                 result.append('$env:{}="{}"'.format(varname, value))
+                if self._verbose:
+                    result.append(f'Write-Host "Setting {varname} to: {value}"')
             else:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
@@ -503,6 +507,8 @@ class EnvVars:
                 )
             if value:
                 result.append('export {}="{}"'.format(varname, value))
+                if self._verbose:
+                    result.append(f'echo "Setting {varname} to: {value}"')
             else:
                 result.append('unset {}'.format(varname))
 
@@ -577,7 +583,7 @@ def _old_env_prefix(filename):
     return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
 
 
-def _sh_deactivate_contents(use_deactivate_function, values, filename):
+def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
     if use_deactivate_function:
         # The variable handling can be improved, now it is very basic
         deactivate = textwrap.dedent("""\
@@ -590,10 +596,11 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename):
                     eval "is_set=\\${{${{old_var}}+x}}"
                     if [ -n "${{is_set}}" ]; then
                         eval "old_value=\\${{${{old_var}}}}"
-                        echo "Restoring ${{v}} to ${{old_value}}"
+                        {verbose_old_value}
                         eval "export ${{v}}=\\${{old_value}}"
                     else
                         echo "Unsetting ${{v}}"
+                        {verbose_unset}
                         unset "${{v}}"
                     fi
                     unset "${{old_var}}"
@@ -602,7 +609,9 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename):
             }}
         """.format(vars_list=" ".join(quote(v) for v in values.keys()),
                    var_prefix=_old_env_prefix(filename),
-                   func_name=_deactivate_func_name(filename)))
+                   func_name=_deactivate_func_name(filename),
+                   verbose_old_value='echo "Restoring ${{v}} to ${{old_value}}"' if verbose else "",
+                   verbose_unset='echo "Unsetting ${{v}}"' if verbose else ""))
     else:
         deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
@@ -622,25 +631,28 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename):
     return deactivate
 
 
-def _ps1_deactivate_contents(use_deactivate_function, values, filename):
-    if use_deactivate_function:
-        vars_list=", ".join(quote(v) for v in values.keys())
-        var_prefix=_old_env_prefix(filename)
-        func_name=_deactivate_func_name(filename)
+def _ps1_deactivate_contents(use_deactivate_function, values, filename, verbose):
+    if True or use_deactivate_function:
+        vars_list = ", ".join(f'"{v}"' for v in values.keys())
+        var_prefix = _old_env_prefix(filename)
+        func_name = _deactivate_func_name(filename)
 
         deactivate = textwrap.dedent(f"""\
-            function global:{func_name} {{
+            function global:deactivate_{func_name} {{
                 Write-Host "Restoring environment"
-                $vars = @({vars_list})
-                foreach ($v in $vars) {{
+                foreach ($v in @({vars_list})) {{
                     $oldVarName = "{var_prefix}_$v"
                     $oldValue = Get-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
-                    if ($null -ne $oldValue) {{
+                    if (Test-Path env:$oldValue) {{
+                        {'Write-Host "Unsetting $v"' if verbose else ''}
+                        Remove-Item -Path "Env:$v" -ErrorAction SilentlyContinue
+                    }} else {{
+                        {'Write-Host "Restoring $v to $($oldValue.Value)"' if verbose else ''}
                         Set-Item -Path "Env:$v" -Value $oldValue.Value
-                        Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
                     }}
+                    Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
                 }}
-                Remove-Item function:global:{func_name} -ErrorAction SilentlyContinue
+                Remove-Item -Path function:deactivate_{func_name} -ErrorAction SilentlyContinue
             }}
         """)
     else:
@@ -664,7 +676,8 @@ def _ps1_deactivate_contents(use_deactivate_function, values, filename):
                 }}
             }}
             Pop-Location
-        """).format(deactivate_file=deactivate_file, vars=",".join(['"{}"'.format(var) for var in values.keys()]))
+        """).format(deactivate_file=deactivate_file,
+                    vars=",".join(['"{}"'.format(var) for var in values.keys()]))
     return deactivate
 
 
