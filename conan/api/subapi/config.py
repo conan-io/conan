@@ -42,7 +42,7 @@ class ConfigAPI:
         """
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
-        requester = self._conan_api.remotes.requester
+        requester = self._helpers.requester
         configuration_install(cache_folder, requester, path_or_url, verify_ssl,
                               config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
@@ -103,7 +103,7 @@ class ConfigAPI:
 
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
-        requester = self._conan_api.remotes.requester
+        requester = self._helpers.requester
         configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
                               verify_ssl=False, config_type="dir",
                               ignore=["conaninfo.txt", "conanmanifest.txt"])

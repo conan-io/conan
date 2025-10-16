@@ -520,7 +520,6 @@ class ConfigInstallTest(unittest.TestCase):
         assert "Defining remotes from remotes.json" in self.client.out
         assert "Copying file myfuncs.py" in self.client.out
 
-
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)

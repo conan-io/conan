@@ -44,8 +44,8 @@ class ConanAPI:
         """
 
         version = sys.version_info
-        if version.major == 2 or version.minor < 6:
-            raise ConanException("Conan needs Python >= 3.6")
+        if version.major == 2 or version.minor < 7:
+            raise ConanException("Conan needs Python >= 3.7")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
@@ -95,7 +95,6 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         self._api_helpers.reinit()
-        self.remotes.reinit()
         self.local.reinit()
 
     def migrate(self):
@@ -111,6 +110,8 @@ class ConanAPI:
             self._cli_core_confs = None
             self._init_global_conf()
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            # Wraps an http_requester to inject proxies, certs, etc
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -135,7 +136,13 @@ class ConanAPI:
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
 
         @property
         def settings_yml(self):
             return load_settings_yml(self._conan_api.home_folder)
+
+        @property
+        def requester(self):
+            return self._requester
+

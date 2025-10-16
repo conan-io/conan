@@ -582,3 +582,62 @@ def test_correctly_handle_transitive_components():
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
     assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
+
+
+def test_dont_add_skipped_xcconfigs_when_required_by_components():
+    client = TestClient()
+    regular_lib = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgWithComponents(ConanFile):
+            name = 'regular_lib'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def requirements(self):
+                self.requires('header_skip/1.0')
+                self.requires('header_transitive/1.0', transitive_headers=True)
+            def package_info(self):
+                self.cpp_info.components['component'].requires = ['header_skip::header_skip',
+                                                                  'header_transitive::header_transitive']
+        """)
+
+    header_transitive = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'header_transitive'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            package_type = 'header-library'
+            def package_info(self):
+                self.cpp_info.includedirs = ["include"]
+        """)
+
+    header_skip = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'header_skip'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            package_type = 'header-library'
+            def package_info(self):
+                self.cpp_info.includedirs = ["include"]
+        """)
+
+    client.save({"header_transitive.py": header_transitive,
+                 "header_skip.py": header_skip,
+                 "regular_lib.py": regular_lib})
+    client.run("create header_transitive.py")
+    client.run("create header_skip.py")
+    client.run("create regular_lib.py")
+    client.run("install --requires=regular_lib/1.0 -g XcodeDeps")
+
+    conandeps = client.load("conan_regular_lib_component.xcconfig")
+    assert '#include "conan_header_skip.xcconfig"' not in conandeps
+    assert '#include "conan_header_transitive.xcconfig"' in conandeps
+
+    # Verify that header_skip xcconfig files are NOT generated (skipped dependency)
+    skip_files = [f for f in os.listdir(client.current_folder) if 'header_skip' in f and f.endswith('.xcconfig')]
+    assert len(skip_files) == 0, f"Header skip files should not be generated: {skip_files}"
+
+    # Verify that header_transitive xcconfig files ARE generated (transitive dependency)
+    transitive_files = [f for f in os.listdir(client.current_folder) if 'header_transitive' in f and f.endswith('.xcconfig')]
+    assert len(transitive_files) > 0, f"Header transitive files should be generated: {transitive_files}"

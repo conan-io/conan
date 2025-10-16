@@ -304,7 +304,9 @@ class Requirement:
             elif pkg_type is PackageType.HEADER:
                 downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type == PackageType.UNKNOWN
+                if pkg_type != PackageType.UNKNOWN:
+                    raise ConanException(f"Package '{self.ref}' with type '{pkg_type}' cannot have "
+                                         f"a '{dep_pkg_type}' dependency to '{require.ref}'")
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
