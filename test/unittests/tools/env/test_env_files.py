@@ -103,7 +103,8 @@ def test_env_files_bat(env, prevenv):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_env_files_ps1(env, prevenv):
+@pytest.mark.parametrize("use_function", [True, False])
+def test_env_files_ps1(env, prevenv, use_function):
     prevenv.update(dict(os.environ.copy()))
 
     display = textwrap.dedent("""\
@@ -121,11 +122,15 @@ def test_env_files_ps1(env, prevenv):
     """)
 
     with chdir(temp_folder()):
-        env = env.vars(ConanFileMock())
+        conanfile = ConanFileMock()
+        if use_function:
+            conanfile.conf.define("tools.env:deactivate_function", True)
+        env = env.vars(conanfile)
         env._subsystem = WINDOWS
         env.save_ps1("test.ps1")
         save("display.ps1", display)
-        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        deactivate_cmd = "deactivate_test" if use_function else ".\\deactivate_test.ps1"
+        cmd = f"powershell.exe .\\test.ps1 ; .\\display.ps1 ; {deactivate_cmd} ; .\\display.ps1"
         check_env_files_output(cmd, prevenv)
 
 

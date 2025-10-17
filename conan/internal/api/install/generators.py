@@ -236,10 +236,10 @@ def _generate_aggregated_env(conanfile):
         if ps1s:
             def ps1_content(files):
                 aggregated_calls = "\r\n".join(['& "{}"'.format(b) for b in files])
-                if True or use_deactivate_function:
+                if use_deactivate_function:
                     content = aggregated_calls + "\n"
                     content += f"function global:deactivate_conan{group} {{\n"
-                    for deactivate_name in deactivate_function_names(shs):
+                    for deactivate_name in deactivate_function_names(ps1s):
                         content += f"    deactivate_{deactivate_name}\n"
                     content += "}\n"
                     return content

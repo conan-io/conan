@@ -633,7 +633,7 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
 
 
 def _ps1_deactivate_contents(use_deactivate_function, values, filename, verbose):
-    if True or use_deactivate_function:
+    if use_deactivate_function:
         vars_list = ", ".join(f'"{v}"' for v in values.keys())
         var_prefix = _old_env_prefix(filename)
         func_name = _deactivate_func_name(filename)
