@@ -8,6 +8,7 @@ from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conan.tools.cmake.utils import cmake_escape_value
 
 
 class TargetConfigurationTemplate2:
@@ -86,10 +87,14 @@ class TargetConfigurationTemplate2:
                                    f"'{required_pkg}::{required_comp}' but component "
                                    f"'{required_comp}' not found in {required_pkg}")
                             raise ConanException(msg)
+                        if dep.package_type is PackageType.APP:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED
                     else:
+                        if dep_comp.type is PackageType.APP or dep_comp.exe:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and
@@ -181,20 +186,24 @@ class TargetConfigurationTemplate2:
                                for i in info.includedirs) if info.includedirs else ""
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
-        defines = " ".join(info.defines)
-        # TODO: Missing escaping?
+        defines = " ".join(cmake_escape_value(f) for f in info.defines)
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
+        consumer = self._cmakedeps._conanfile  # noqa
+        cflags = info.cflags_consumer(consumer)
+        cxxflags = info.cxxflags_consumer(consumer)
+        sharedlinkflags = info.sharedlinkflags_consumer(consumer)
+        exelinkflags = info.exelinkflags_consumer(consumer)
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
-                  "cxxflags": " ".join(info.cxxflags),
-                  "cflags": " ".join(info.cflags),
-                  "sharedlinkflags": " ".join(info.sharedlinkflags),
-                  "exelinkflags": " ".join(info.exelinkflags),
+                  "cxxflags": " ".join(cmake_escape_value(f) for f in cxxflags),
+                  "cflags": " ".join(cmake_escape_value(f) for f in cflags),
+                  "sharedlinkflags": " ".join(cmake_escape_value(v) for v in sharedlinkflags),
+                  "exelinkflags": " ".join(cmake_escape_value(v) for v in exelinkflags),
                   "system_libs": " ".join(info.system_libs),
                   "sources": " ".join(sources)
         }
@@ -305,11 +314,6 @@ class TargetConfigurationTemplate2:
                 return f"${{{pkg_folder_var}}}/{escape(rel)}"
             return escape(p)
         return f"${{{pkg_folder_var}}}/{escape(p)}"
-
-    @staticmethod
-    def _escape_cmake_string(values):
-        return " ".join(v.replace("\\", "\\\\").replace('$', '\\$').replace('"', '\\"')
-                        for v in values)
 
     @property
     def _template(self):

@@ -760,29 +760,34 @@ class TestCompatibleFlags:
         consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-                settings = "os"
+                settings = "os", "build_type"
                 requires = "pkg/0.1"
-                def generate(self):
-                    cpp_info = self.dependencies["pkg"].cpp_info
-                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
-                    self.output.info(f"CFLAGS: {cpp_info.cflags}!!!")
-                    self.output.info(f"EXEFLAGS: {cpp_info.exelinkflags}!!!")
-                    self.output.info(f"SHAREDFLAGS: {cpp_info.sharedlinkflags}!!!")
+                generators = "CMakeDeps"
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
 
         c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
-        c.run("install consumer -s os=Linux")
-        for f in ("CXXFLAGS", "CFLAGS", "EXEFLAGS", "SHAREDFLAGS"):
-            assert f"conanfile.py: {f}: ['-mylinuxflag']!!!" in c.out
-        c.run("install consumer -s os=Windows")
-        for f in ("CXXFLAGS", "CFLAGS", "EXEFLAGS", "SHAREDFLAGS"):
-            assert f"conanfile.py: {f}: ['-mywinflag']!!!" in c.out
-        c.run("install consumer -s os=Macos")
-        for f in ("CXXFLAGS", "CFLAGS", "EXEFLAGS", "SHAREDFLAGS"):
-            assert f"conanfile.py: {f}: ['-other-os-flag']!!!" in c.out
+        def _check(flag, cmake_file):
+            assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>)" in cmake_file
+            assert f"$<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:RELEASE>:{flag}>>)" in cmake_file
+            assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:"
+                    f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
+            assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:"
+                    f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
+
+        c.run("install consumer -s os=Linux -c tools.cmake.cmakedeps:new=will_break_next")
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-mylinuxflag", cmake)
+
+        c.run("install consumer -s os=Windows -c tools.cmake.cmakedeps:new=will_break_next")
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-mywinflag", cmake)
+
+        c.run("install consumer -s os=Macos -c tools.cmake.cmakedeps:new=will_break_next")
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-other-os-flag", cmake)
 
     def test_simple_lambda(self):
         """ same as above, but more compact condition
@@ -803,7 +808,7 @@ class TestCompatibleFlags:
                 requires = "pkg/0.1"
                 def generate(self):
                     cpp_info = self.dependencies["pkg"].cpp_info
-                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
+                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags_consumer(self)}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
@@ -815,7 +820,6 @@ class TestCompatibleFlags:
         assert f"conanfile.py: CXXFLAGS: ['-mywinflag']!!!" in c.out
         c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
         assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
-
 
     def test_compatible_flags_direct(self):
         """  same as above but without compatibility
@@ -841,7 +845,7 @@ class TestCompatibleFlags:
                 settings = "os"
                 requires = "pkg/0.1"
                 def generate(self):
-                    flags = self.dependencies["pkg"].cpp_info.cxxflags
+                    flags = self.dependencies["pkg"].cpp_info.cxxflags_consumer(self)
                     self.output.info(f"FLAGS: {flags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
@@ -865,3 +869,47 @@ class TestCompatibleFlags:
               "-s os=Macos --build=missing")
         assert "dep1/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
         assert "dep2/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
+
+
+def test_compatibility_remove_cppstd():
+    """ This test tries to reflect the following scenario:
+    - User recently added compiler.cppstd to their settings
+    - But up until now, no package was built with that setting
+    - At the user's own risk, we can tell Conan to accept packages built without that setting
+    """
+    tc = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        """)
+    tc.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("compiler"),
+             "profile": profile})
+    tc.run("create . -pr=profile")
+    dep_package_id = tc.created_package_id("dep/1.0")
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17", assert_error=True)
+    # We can't compile, because the dep is not compatible, it's looking for a package with cppstd
+    assert "Missing prebuilt package for 'dep/1.0'" in tc.out
+
+    # Let's create a compatibility extensions
+    no_cppstd_compat = textwrap.dedent("""
+        from conan.tools.scm import Version
+
+        def no_cppstd_compat(conanfile):
+            # Do we have the setting?
+            cppstd_version = conanfile.settings.get_safe("compiler.cppstd")
+            if cppstd_version is None:
+                return []
+            return [{"compiler.cppstd": None}]
+        """)
+    compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+    compat = "from no_cppstd_compat import no_cppstd_compat\n" + compat
+    compat = compat.replace("# Append more factors for your custom compatibility rules here",
+                            "factors.append(no_cppstd_compat(conanfile))")
+    tc.save_home({"extensions/plugins/compatibility/no_cppstd_compat.py": no_cppstd_compat,
+                  "extensions/plugins/compatibility/compatibility.py": compat})
+
+    # Now we try again, this time app will find the compatible dep without cppstd
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
+    assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out

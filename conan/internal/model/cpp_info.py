@@ -104,14 +104,6 @@ class _Component:
         self._location = None
         self._link_location = None
 
-        # consumer conditional evaluation
-        self._consumer = None
-
-    def set_consumer(self, consumer_conanfile):
-        # This might have race-conditions if consumers generate() of the same graph was
-        # concurrent, but it is not
-        self._consumer = consumer_conanfile
-
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -343,11 +335,14 @@ class _Component:
 
     @property
     def cflags(self):
-        if callable(self._cflags):
-            return self._cflags(self._consumer)
-        if self._cflags is None:
+        if self._cflags is None or callable(self._cflags):
             self._cflags = []
         return self._cflags
+
+    def cflags_consumer(self, consumer):
+        if callable(self._cflags):
+            return self._cflags(consumer)
+        return self.cflags
 
     @cflags.setter
     def cflags(self, value):
@@ -355,11 +350,14 @@ class _Component:
 
     @property
     def cxxflags(self):
-        if callable(self._cxxflags):
-            return self._cxxflags(self._consumer)
-        if self._cxxflags is None:
+        if self._cxxflags is None or callable(self._cxxflags):  # To not break
             self._cxxflags = []
         return self._cxxflags
+
+    def cxxflags_consumer(self, consumer):
+        if callable(self._cxxflags):
+            return self._cxxflags(consumer)
+        return self.cxxflags
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -367,11 +365,14 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
-        if callable(self._sharedlinkflags):
-            return self._sharedlinkflags(self._consumer)
-        if self._sharedlinkflags is None:
+        if self._sharedlinkflags is None or callable(self._sharedlinkflags):
             self._sharedlinkflags = []
         return self._sharedlinkflags
+
+    def sharedlinkflags_consumer(self, consumer):
+        if callable(self._sharedlinkflags):
+            return self._sharedlinkflags(consumer)
+        return self.sharedlinkflags
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -379,11 +380,14 @@ class _Component:
 
     @property
     def exelinkflags(self):
-        if callable(self._exelinkflags):
-            return self._exelinkflags(self._consumer)
-        if self._exelinkflags is None:
+        if self._exelinkflags is None or callable(self._exelinkflags):
             self._exelinkflags = []
         return self._exelinkflags
+
+    def exelinkflags_consumer(self, consumer):
+        if callable(self._exelinkflags):
+            return self._exelinkflags(consumer)
+        return self.exelinkflags
 
     @exelinkflags.setter
     def exelinkflags(self, value):
@@ -664,7 +668,7 @@ class _Component:
                                  "cannot deduce locations")
         # fully defined by user in conanfile, nothing to do.
         if self._location or self._link_location:
-            if self._type not in [PackageType.SHARED, PackageType.STATIC]:
+            if self._type is None or self._type not in [PackageType.SHARED, PackageType.STATIC]:
                 raise ConanException(f"{name} location defined without defined library type")
             return
 
@@ -688,13 +692,6 @@ class CppInfo:
         self.components = defaultdict(lambda: _Component(set_defaults))
         self.default_components = None
         self._package = _Component(set_defaults)
-
-    def set_consumer(self, consumer_conanfile):
-        # This might have race-conditions if consumers generate() of the same graph was
-        # concurrent, but it is not
-        self._package.set_consumer(consumer_conanfile)
-        for c in self.components.values():
-            c.set_consumer(consumer_conanfile)
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
