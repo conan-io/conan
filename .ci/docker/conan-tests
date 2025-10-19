@@ -10,6 +10,7 @@ ENV PY37=3.7.9 \
     PY310=3.10.16 \
     PY312=3.12.3 \
     PY313=3.13.0 \
+    PY314=3.14.0 \
     CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
     CMAKE_3_16=/usr/share/cmake-3.16.9/bin/cmake \
     CMAKE_3_17=/usr/share/cmake-3.17.5/bin/cmake \
@@ -100,7 +101,7 @@ RUN curl https://pyenv.run | bash && \
     pyenv install $PY39 && \
     pyenv install $PY310 && \
     pyenv install $PY312 && \
-    pyenv install $PY313 && \
+    pyenv install $PY314 && \
     pyenv global $PY39 && \
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python get-pip.py && \

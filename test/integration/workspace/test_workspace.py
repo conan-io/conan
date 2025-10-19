@@ -703,6 +703,21 @@ class TestMeta:
         c.run("workspace super-install -of=build -o *:myoption=1")
         assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
 
+    def test_intermediate_non_editable(self):
+        c = TestClient(light=True)
+
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+                "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1")})
+
+        c.run("workspace init")
+        c.run("workspace add liba")
+        c.run("export libb")
+        c.run("workspace add libc")
+        c.run("workspace super-install", assert_error=True)
+        assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
+                "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()

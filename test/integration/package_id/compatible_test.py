@@ -724,3 +724,47 @@ def test_compatibility_new_setting_forwards_compat():
     tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
     assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
            f"libc_version=2" in tc.out
+
+
+def test_compatibility_remove_cppstd():
+    """ This test tries to reflect the following scenario:
+    - User recently added compiler.cppstd to their settings
+    - But up until now, no package was built with that setting
+    - At the user's own risk, we can tell Conan to accept packages built without that setting
+    """
+    tc = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        """)
+    tc.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("compiler"),
+             "profile": profile})
+    tc.run("create . -pr=profile")
+    dep_package_id = tc.created_package_id("dep/1.0")
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17", assert_error=True)
+    # We can't compile, because the dep is not compatible, it's looking for a package with cppstd
+    assert "Missing prebuilt package for 'dep/1.0'" in tc.out
+
+    # Let's create a compatibility extensions
+    no_cppstd_compat = textwrap.dedent("""
+        from conan.tools.scm import Version
+
+        def no_cppstd_compat(conanfile):
+            # Do we have the setting?
+            cppstd_version = conanfile.settings.get_safe("compiler.cppstd")
+            if cppstd_version is None:
+                return []
+            return [{"compiler.cppstd": None}]
+        """)
+    compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+    compat = "from no_cppstd_compat import no_cppstd_compat\n" + compat
+    compat = compat.replace("# Append more factors for your custom compatibility rules here",
+                            "factors.append(no_cppstd_compat(conanfile))")
+    tc.save_home({"extensions/plugins/compatibility/no_cppstd_compat.py": no_cppstd_compat,
+                  "extensions/plugins/compatibility/compatibility.py": compat})
+
+    # Now we try again, this time app will find the compatible dep without cppstd
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
+    assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
