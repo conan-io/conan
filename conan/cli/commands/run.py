@@ -10,7 +10,7 @@ from conan.internal.util.files import rmdir
 @conan_command(group="Consumer")
 def run(conan_api, parser, *args):
     """
-    Run a command given a set of requirements from a recipe or from command line.
+    (Experimental) Run a command given a set of requirements from a recipe or from command line.
     """
     common_graph_args(parser)
     parser.add_argument("command", help="Command to run", nargs='+')
