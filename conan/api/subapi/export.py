@@ -30,10 +30,15 @@ class ExportAPI:
         A "recipe-revision" will be computed and assigned.
         :param path: Path to the conanfile to be exported
         :param name: Optional package name. Typically not necessary as it is defined by the recipe
+          attribute or dynamically with the 'set_name()' method.
+          If it is defined in recipe and argumment, but it doesn't match, it will raise an error.
         :param version: Optional version. It can be defined in the recipe with the version
-          attribute or dynamically with set_version()
+          attribute or dynamically with the 'set_version()' method.
+          If it is defined in recipe and argumment, but it doesn't match, it will raise an error.
         :param user: Optional user. Can be defined by recipe attribute.
+          If it is defined in recipe and argumment, but it doesn't match, it will raise an error.
         :param channel: Optional channel. Can be defined by recipe attribute.
+          If it is defined in recipe and argumment, but it doesn't match, it will raise an error.
         :param lockfile: Optional, only relevant if the recipe has 'python-requires' to be locked
         :param remotes: Optional, only relevant to resolve 'python-requires' in remotes
         :return: A tuple of the exported RecipeReference and a ConanFile object
@@ -98,11 +103,11 @@ class ExportAPI:
                                            output_folder=output_folder)
         return deps_graph
 
-    def export_pkg(self, deps_graph, output_folder=None) -> None:
+    def export_pkg(self, graph, output_folder=None) -> None:
         """
         Executes the package() method of the exported recipe in order to copy the artifacts
         from user folder to the Conan cache package folder
-        :param deps_graph: A Graph object
+        :param graph: A Graph object
         :param output_folder: Optional folder where generated files like environment scripts
           of dependencies have been installed
         """
@@ -113,7 +118,7 @@ class ExportAPI:
         # to be downloaded from remotes
         # passing here the create_reference=ref argument is useful so the recipe is in "develop",
         # because the "package()" method is in develop=True already
-        pkg_node = deps_graph.root
+        pkg_node = graph.root
         ref = pkg_node.ref
         source_folder = os.path.dirname(pkg_node.path)
         out = ConanOutput(scope=pkg_node.conanfile.display_name)
