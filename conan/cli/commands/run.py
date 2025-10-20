@@ -27,6 +27,10 @@ def run(conan_api, parser, *args):
     setattr(args, "output_folder", ".conanrun")
     setattr(args, "generator", [])
 
+    # TODO: Consider having --no-remote by default for run, and forcing the users use
+    #  --remote if they want to access remotes, which would differ from conan install behaviour
+    #  but might save time for some common use cases
+
     ConanOutput().info("Installing and building dependencies, this might take a while...",
                        fg=Color.BRIGHT_MAGENTA)
     previous_log_level = ConanOutput._conan_output_level
