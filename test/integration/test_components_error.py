@@ -157,7 +157,8 @@ def test_missing_external_components():
     t.run('create foo')
     t.run("create bar")
     t.run('create consumer', assert_error=True)
-    assert "The direct dependency 'foo' is not used by any '(cpp_info/components).requires" in t.out
+    assert ("package_info(): There are direct dependencies, "
+            "but no '(cpp_info/components).requires' to them.") in t.out
 
 
 def test_unused_tool_requirement():
