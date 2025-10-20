@@ -1,6 +1,6 @@
 import os
 
-from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_VERBOSE, LEVEL_STATUS
+from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_VERBOSE, LEVEL_STATUS, Color
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.commands.install import run_install_command
@@ -29,7 +29,8 @@ def run(conan_api, parser, *args):
     setattr(args, "output_folder", ".conanrun")
     setattr(args, "generator", [])
 
-    ConanOutput().warning("Installing and building dependencies, this might take a while...")
+    ConanOutput().info("Installing and building dependencies, this might take a while...",
+                       fg=Color.BRIGHT_MAGENTA)
     previous_log_level = ConanOutput._conan_output_level
     if previous_log_level == LEVEL_STATUS:
         ConanOutput._conan_output_level = LEVEL_WARNING
