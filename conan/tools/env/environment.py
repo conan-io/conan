@@ -586,33 +586,29 @@ def _old_env_prefix(filename):
 
 def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
     if use_deactivate_function:
-        # The variable handling can be improved, now it is very basic
-        deactivate = textwrap.dedent("""\
+        _func_name = _deactivate_func_name(filename)
+        vars_list = " ".join(quote(v) for v in values.keys())
+        deactivate = textwrap.dedent(f"""\
             # sh-like function to restore environment
-            deactivate_{func_name} () {{
+            deactivate_{_func_name} () {{
                 echo "Restoring environment"
                 for v in {vars_list}; do
-                    old_var="{var_prefix}_${{v}}"
+                    old_var="{_old_env_prefix(filename)}_${{v}}"
                     # Use eval for indirect expansion (POSIX safe)
                     eval "is_set=\\${{${{old_var}}+x}}"
                     if [ -n "${{is_set}}" ]; then
                         eval "old_value=\\${{${{old_var}}}}"
-                        {verbose_old_value}
+                        {'echo "Restoring ${{v}} to ${{old_value}}"' if verbose else ''}
                         eval "export ${{v}}=\\${{old_value}}"
                     else
-                        echo "Unsetting ${{v}}"
-                        {verbose_unset}
+                        {'echo "Unsetting ${{v}}"' if verbose else ''}
                         unset "${{v}}"
                     fi
                     unset "${{old_var}}"
                 done
-                unset -f deactivate_{func_name}
+                unset -f deactivate_{_func_name}
             }}
-        """.format(vars_list=" ".join(quote(v) for v in values.keys()),
-                   var_prefix=_old_env_prefix(filename),
-                   func_name=_deactivate_func_name(filename),
-                   verbose_old_value='echo "Restoring ${{v}} to ${{old_value}}"' if verbose else "",
-                   verbose_unset='echo "Unsetting ${{v}}"' if verbose else ""))
+        """)
     else:
         deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\

@@ -577,6 +577,50 @@ def test_multiple_deactivate_order(use_function):
         assert "MYVAR=!!" in out
 
 
+@pytest.mark.parametrize("use_function", [True, False])
+def test_deactivate_missing_vars_stay_missing(use_function):
+    """ Tests that these two cases preserve variable status
+    1.
+    export FOO=
+    ./conanrunenv.sh that changes FOO to something with a value
+    ./deactivate_conanrunenv.sh
+    FOO is still empty
+
+    2.
+    BAR is not defined
+    ./conanrunenv.sh that changes BAR to something with a value
+    ./deactivate_conanrunenv.sh
+    BAR is still not defined
+    """
+    conanfile = textwrap.dedent(r"""
+            from conan import ConanFile
+            from conan.tools.env import Environment
+            class Pkg(ConanFile):
+                def generate(self):
+                    e1 = Environment()
+                    e1.define("FOO", "Value1")
+                    e1.define("BAR", "Value2")
+                    e1.vars(self).save_script("mybuild1")
+            """)
+    display_sh = textwrap.dedent("""\
+            echo FOO=$FOO!!
+            if [ -n "${BAR+x}" ]; then echo "BAR EXISTS!!"; fi;
+            """)
+    client = TestClient(light=True)
+    client.save({"conanfile.py": conanfile,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run(f"install . -c=tools.env:deactivate_function={use_function}")
+
+    deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
+    cmd = f'export FOO=&& . ./conanbuild.sh && {deactivate_cmd} && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "FOO=!!" in out
+    assert "BAR EXISTS!!" not in out
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
 @pytest.mark.parametrize("num_deps", [3, ])
 def test_massive_paths(num_deps):
