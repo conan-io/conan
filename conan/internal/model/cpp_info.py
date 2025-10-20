@@ -803,14 +803,13 @@ class CppInfo:
                   f"other internal components that are not defined: {missing_internal}"
             raise ConanException(msg)
         external = [c[0] for c in comps if c[0] is not None]
-        internal = [c[1] for c in comps if c[0] is None]
         # Only direct host (not test) dependencies can define required components
         # We use conanfile.dependencies to use the already replaced ones by "replace_requires"
         # So consumers can keep their ``self.cpp_info.requires = ["pkg_name::comp"]``
         direct_dependencies = [r.ref.name for r, d in conanfile.dependencies.items() if r.direct
                                and not r.build and not r.is_test and r.visible and not r.override]
         if not external:
-            if direct_dependencies and internal:
+            if direct_dependencies and comps:
                 msg = (f"{conanfile}: package_info(): There are direct dependencies, "
                        "but no '(cpp_info/components).requires' to them.")
                 raise ConanException(msg)
