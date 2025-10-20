@@ -125,9 +125,8 @@ class BaseConanCommand:
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
-    def __init__(self, conan_api, command, *args, **kwargs):
+    def __init__(self, conan_api, *args, **kwargs):
         self._conan_api = conan_api
-        self._command = command
         super().__init__(*args, **kwargs)
 
     def parse_args(self, args=None, namespace=None):
@@ -148,11 +147,6 @@ class ConanArgumentParser(argparse.ArgumentParser):
                                                             default=[], check_type=list))
         return args
 
-    def parse_known_args(self, args=None, namespace=None):
-        self._command._init_formatters(self)
-        self._command._init_core_options(self)
-        return super().parse_known_args(args, namespace)
-
 
 class ConanCommand(BaseConanCommand):
     def __init__(self, method, group=None, formatters=None):
@@ -169,8 +163,9 @@ class ConanCommand(BaseConanCommand):
         parser = ConanArgumentParser(conan_api, description=self._doc,
                                      prog="conan {}".format(self._name),
                                      formatter_class=SmartFormatter,
-                                     add_help=False,
-                                     command=self)
+                                     add_help=False)
+        self._init_formatters(parser)
+        self._init_core_options(parser)
         parser.suggest_on_error = True
         info = self._method(conan_api, parser, *args)
         if not self._subcommands:
@@ -194,6 +189,8 @@ class ConanCommand(BaseConanCommand):
                                      formatter_class=SmartFormatter,
                                      add_help=False,
                                      command=self)
+        self._init_formatters(parser)
+        self._init_core_options(parser)
         parser.suggest_on_error = True
 
         info = self._method(conan_api, parser, *args)
@@ -242,6 +239,8 @@ class ConanSubCommand(BaseConanCommand):
         self._parser = subcommand_parser.add_parser(self._name, conan_api=conan_api, help=self._doc,
                                                     add_help=False, command=self)
         self._parser.description = self._doc
+        self._init_formatters(self._parser)
+        self._init_core_options(self._parser)
         self._parser.suggest_on_error = True
 
 
