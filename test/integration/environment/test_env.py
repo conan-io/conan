@@ -577,6 +577,7 @@ def test_multiple_deactivate_order(use_function):
         assert "MYVAR=!!" in out
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Shell script test")
 @pytest.mark.parametrize("use_function", [True, False])
 def test_deactivate_missing_vars_stay_missing(use_function):
     """ Tests that these two cases preserve variable status
