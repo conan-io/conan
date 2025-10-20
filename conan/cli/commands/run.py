@@ -16,16 +16,14 @@ def run(conan_api, parser, *args):
     parser.add_argument("command", help="Command to run", nargs='+')
     parser.add_argument("--context", help="Context to use, host or build",
                         choices=["host", "build"], default="build")
-    # TODO: is this needed?
-    # parser.add_argument("--build-require", action='store_true', default=False,
-    #                     help='Whether the provided path is a build-require')
+    parser.add_argument("--build-require", action='store_true', default=False,
+                        help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
     command = " ".join(args.command)
     cwd = os.getcwd()
 
     # Default values for install
-    setattr(args, "build_require", False)
     setattr(args, "output_folder", ".conanrun")
     setattr(args, "generator", [])
 
