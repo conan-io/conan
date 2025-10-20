@@ -8,10 +8,10 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Uses UNIX commands")
 def test_rosenv():
     """
-    Test that the ROSEnv generator generates the environment files and that the environment variables are correctly set
+    Test that the ROSEnv generator generates the environment files and that
+    the environment variables are correctly set.
     """
     client = TestClient()
     conanfile3 = textwrap.dedent('''
@@ -25,18 +25,37 @@ def test_rosenv():
         "conanfile3.txt": conanfile3
     })
 
+    if platform.system() == "Windows":
+        conanrosenv_file = "conanrosenv.bat"
+        conanrosenv_build = "conanrosenv-build.bat"
+        build_type = "Release"
+        cmd_source = "call"
+        cmd_env = "set"
+    else:
+        conanrosenv_file = "conanrosenv.sh"
+        conanrosenv_build = "conanrosenv-build.sh"
+        build_type = '"Release"'
+        cmd_source = "."
+        cmd_env = "env"
+
+
     client.run("install conanfile3.txt --output-folder install/conan")
-    assert "Generated ROSEnv Conan file: conanrosenv.sh" in client.out
+    assert f"Generated ROSEnv Conan file: {conanrosenv_file}" in client.out
     install_folder = os.path.join(client.current_folder, "install", "conan")
-    conanrosenv_path = os.path.join(install_folder, "conanrosenv.sh")
+    conanrosenv_path = os.path.join(install_folder, conanrosenv_file)
     assert os.path.exists(conanrosenv_path)
-    conanrosenvbuild_path = os.path.join(install_folder, "conanrosenv-build.sh")
+    conanrosenvbuild_path = os.path.join(install_folder, conanrosenv_build)
     assert os.path.exists(conanrosenvbuild_path)
-    toolchain_path = os.path.join(client.current_folder, "install", "conan", "conan_toolchain.cmake")
+    toolchain_path = os.path.join(client.current_folder, "install", "conan",
+                                  "conan_toolchain.cmake")
     content = client.load(conanrosenvbuild_path)
-    assert f'CMAKE_TOOLCHAIN_FILE="{toolchain_path}"' in content
-    assert 'CMAKE_BUILD_TYPE="Release"' in content
-    client.run_command(f'. "{conanrosenv_path}" && env')
+    if platform.system() != "Windows":
+        assert f'CMAKE_TOOLCHAIN_FILE="{toolchain_path}"' in content
+    else:
+        assert f'CMAKE_TOOLCHAIN_FILE={toolchain_path}' in content
+    assert f'CMAKE_BUILD_TYPE={build_type}' in content
+
+    client.run_command(f'{cmd_source} "{conanrosenv_path}" && {cmd_env}')
     assert f"CMAKE_TOOLCHAIN_FILE={toolchain_path}" in client.out
     assert "CMAKE_BUILD_TYPE=Release" in client.out
 

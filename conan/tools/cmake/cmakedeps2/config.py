@@ -124,12 +124,6 @@ class ConfigTemplate2:
                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
         endif()
 
-        # build_modules_paths comes from last configuration only
-        {% for build_module in build_modules_paths %}
-        message(STATUS "Conan: Including build module from '{{build_module}}'")
-        include("{{ build_module }}")
-        {% endfor %}
-
         {% if components %}
         set({{filename}}_PACKAGE_PROVIDED_COMPONENTS {{components}})
         foreach(comp {%raw%}${{%endraw%}{{filename}}_FIND_COMPONENTS})
@@ -155,6 +149,14 @@ class ConfigTemplate2:
         {% if definitions is not none %}
         set({{ prefix }}_DEFINITIONS {{ definitions}} )
         {% endif %}
+        {% endfor %}
+
+        # build_modules_paths comes from last configuration only
+        # Some build modules in ConanCenter use try_compile variables and legacy, so this
+        # include() needs to happen after the above variables are defined
+        {% for build_module in build_modules_paths %}
+        message(STATUS "Conan: Including build module from '{{build_module}}'")
+        include("{{ build_module }}")
         {% endfor %}
 
         # Definition of extra CMake variables from cmake_extra_variables

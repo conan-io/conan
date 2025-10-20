@@ -112,6 +112,7 @@ class ConanAPI:
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -137,10 +138,13 @@ class ConanAPI:
             self._init_global_conf()
             self.hook_manager.reinit()
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         @property
         def settings_yml(self):
-            return load_settings_yml(self._conan_api.home_folder)
+            if self._settings_yml is None:
+                self._settings_yml = load_settings_yml(self._conan_api.home_folder)
+            return self._settings_yml
 
         @property
         def requester(self):
