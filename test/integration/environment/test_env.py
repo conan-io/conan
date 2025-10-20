@@ -591,6 +591,18 @@ def test_deactivate_missing_vars_stay_missing(use_function):
     ./conanrunenv.sh that changes BAR to something with a value
     ./deactivate_conanrunenv.sh
     BAR is still not defined
+
+    3.
+    BAZ is defined to some value
+    ./conanrunenv.sh that unsets BAZ
+    ./deactivate_conanrunenv.sh
+    BAZ is still defined to some value
+
+    4.
+    FOOBAR is empty
+    ./conanrunenv.sh that unsets FOOBAR
+    ./deactivate_conanrunenv.sh
+    FOOBAR is still empty
     """
     conanfile = textwrap.dedent(r"""
             from conan import ConanFile
@@ -600,11 +612,15 @@ def test_deactivate_missing_vars_stay_missing(use_function):
                     e1 = Environment()
                     e1.define("FOO", "Value1")
                     e1.define("BAR", "Value2")
+                    e1.unset("BAZ")
+                    e1.unset("FOOBAR")
                     e1.vars(self).save_script("mybuild1")
             """)
     display_sh = textwrap.dedent("""\
             echo FOO=$FOO!!
             if [ -n "${BAR+x}" ]; then echo "BAR EXISTS!!"; fi;
+            echo BAZ=$BAZ!!
+            echo FOOBAR=$FOOBAR!!
             """)
     client = TestClient(light=True)
     client.save({"conanfile.py": conanfile,
@@ -613,12 +629,15 @@ def test_deactivate_missing_vars_stay_missing(use_function):
     client.run(f"install . -c=tools.env:deactivate_function={use_function}")
 
     deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
-    cmd = f'export FOO=&& . ./conanbuild.sh && {deactivate_cmd} && ./display.sh'
+    cmd = (f'export FOO=&& export BAZ=Value3 && export FOOBAR='
+           f'&& . ./conanbuild.sh && {deactivate_cmd} && ./display.sh')
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
     assert "FOO=!!" in out
     assert "BAR EXISTS!!" not in out
+    assert "BAZ=Value3!!" in out
+    assert "FOOBAR=!!" in out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
