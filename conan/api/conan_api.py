@@ -66,6 +66,7 @@ class ConanAPI:
         self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
+        #: Used to export recipes and packages to the local cache
         self.export = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
