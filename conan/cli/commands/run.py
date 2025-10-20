@@ -29,6 +29,7 @@ def run(conan_api, parser, *args):
     setattr(args, "output_folder", ".conanrun")
     setattr(args, "generator", [])
 
+    ConanOutput().warning("Installing and building dependencies, this might take a while...")
     previous_log_level = ConanOutput._conan_output_level
     if previous_log_level == LEVEL_STATUS:
         ConanOutput._conan_output_level = LEVEL_WARNING
