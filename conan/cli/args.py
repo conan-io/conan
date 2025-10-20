@@ -44,8 +44,8 @@ def add_lockfile_args(parser):
     return group
 
 
-def add_common_install_arguments(parser, group=None):
-    group = group or parser.add_argument_group("common install options")
+def add_common_install_arguments(parser):
+    group = parser.add_argument_group("common install options")
     group.add_argument("-b", "--build", action="append", help=_help_build_policies)
 
     remotes_group = group.add_mutually_exclusive_group()
@@ -61,8 +61,8 @@ def add_common_install_arguments(parser, group=None):
                    "latest revision for the resolved version range.")
 
     group.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
-    profile_group = add_profiles_args(parser)
-    return group, profile_group
+    add_profiles_args(parser)
+    return group
 
 
 def add_profiles_args(parser):
@@ -133,15 +133,14 @@ def common_graph_args(subparser):
                                 "directory when no --requires or --tool-requires is "
                                 "given",
                            default=None)
-    group = subparser.add_argument_group("common graph options")
-    group.add_argument("--requires", action="append",
-                       help='Directly provide requires instead of a conanfile')
-    group.add_argument("--tool-requires", action='append',
-                       help='Directly provide tool-requires instead of a conanfile')
-    ref_group = add_reference_args(subparser)
-    install_group, profile_group = add_common_install_arguments(subparser, group)
-    lockfile_group = add_lockfile_args(subparser)
-    return ref_group, install_group, profile_group, lockfile_group
+    install_group = add_common_install_arguments(subparser)
+    install_group.add_argument("--requires", action="append",
+                                                  help='Directly provide requires instead of a conanfile')
+    install_group.add_argument("--tool-requires", action='append',
+                                                  help='Directly provide tool-requires instead of a conanfile')
+    add_reference_args(subparser)
+    add_lockfile_args(subparser)
+    return install_group
 
 
 def validate_common_graph_args(args):

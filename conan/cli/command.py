@@ -187,8 +187,7 @@ class ConanCommand(BaseConanCommand):
         parser = ConanArgumentParser(conan_api, description=self._doc,
                                      prog="conan {}".format(self._name),
                                      formatter_class=SmartFormatter,
-                                     add_help=False,
-                                     command=self)
+                                     add_help=False)
         self._init_formatters(parser)
         self._init_core_options(parser)
         parser.suggest_on_error = True
@@ -237,7 +236,7 @@ class ConanSubCommand(BaseConanCommand):
 
     def set_parser(self, subcommand_parser, conan_api):
         self._parser = subcommand_parser.add_parser(self._name, conan_api=conan_api, help=self._doc,
-                                                    add_help=False, command=self)
+                                                    add_help=False)
         self._parser.description = self._doc
         self._init_formatters(self._parser)
         self._init_core_options(self._parser)
