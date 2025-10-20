@@ -214,6 +214,7 @@ def _generate_aggregated_env(conanfile):
                     content += f"deactivate_conan{group}() {{\n"
                     for deactivate_name in deactivate_function_names(shs):
                         content += f"    deactivate_{deactivate_name}\n"
+                    content += f"    unset -f deactivate_conan{group}\n"
                     content += "}\n"
                     return content
                 else:
@@ -241,6 +242,8 @@ def _generate_aggregated_env(conanfile):
                     content += f"function global:deactivate_conan{group} {{\n"
                     for deactivate_name in deactivate_function_names(ps1s):
                         content += f"    deactivate_{deactivate_name}\n"
+                    content += (f"    Remove-Item -Path function:deactivate_conan{group} "
+                                f"-ErrorAction SilentlyContinue")
                     content += "}\n"
                     return content
                 else:

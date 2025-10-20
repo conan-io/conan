@@ -199,7 +199,8 @@ class VCVars:
 
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    message = (f'"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n'
+               'To reset the environment, please close and reopen the terminal."')
     is_ps1 = filename.endswith(".ps1")
     if is_ps1:
         content = f"Write-Host {message}"
