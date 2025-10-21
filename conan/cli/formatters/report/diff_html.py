@@ -485,6 +485,11 @@ diff_html = r"""
                         elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
                     }
 
+                    if (elem.getAttribute("data-is-linked") === "true") {
+                        // We need to scroll to the element again now that its height has changed
+                        elem.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                    }
+
                     observer.unobserve(elem);
                 }
               });
