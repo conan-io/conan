@@ -208,19 +208,15 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                aggregated_calls = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                content = ". " + " && . ".join('"{}"'.format(s) for s in files)
                 if use_deactivate_function:
-                    content = aggregated_calls + "\n"
-                    content += f"deactivate_conan{group}() {{\n"
+                    content += f"\n\ndeactivate_conan{group}() {{\n"
                     for deactivate_name in deactivate_function_names(shs):
                         content += f"    deactivate_{deactivate_name}\n"
-                    content += f"    unset -f deactivate_conan{group}\n"
-                    content += "}\n"
-                    return content
-                else:
-                    return aggregated_calls
+                    content += (f"    unset -f deactivate_conan{group}\n}}\n"
+                                f'echo "Environment activated. Run \"deactivate_conan{group}\" to restore."\n')
+                return content
             filename = "conan{}.sh".format(group)
-
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
             if not use_deactivate_function:
@@ -236,18 +232,16 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                aggregated_calls = "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n".join(['& "{}"'.format(b) for b in files])
                 if use_deactivate_function:
-                    content = aggregated_calls + "\n"
-                    content += f"function global:deactivate_conan{group} {{\n"
+                    content += f"\n\nfunction global:deactivate_conan{group} {{\n"
                     for deactivate_name in deactivate_function_names(ps1s):
                         content += f"    deactivate_{deactivate_name}\n"
                     content += (f"    Remove-Item -Path function:deactivate_conan{group} "
-                                f"-ErrorAction SilentlyContinue")
-                    content += "}\n"
-                    return content
-                else:
-                    return aggregated_calls
+                                "-ErrorAction SilentlyContinue"
+                                "\n}\n"
+                                f'echo \'Environment activated. Run \"deactivate_conan{group}\" to restore.\'\n')
+                return content
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
