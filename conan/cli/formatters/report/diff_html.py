@@ -536,7 +536,11 @@ diff_html = r"""
                     const [lines, new_count, old_count] = makeDiffLines(data[path]);
                     const diffLines = elem.querySelector(".diff-lines")
 
-                    //diffLines.style.height = "auto";
+                    // If we're scrolling up, new lines are added to the top, so we need to
+                    // preserve the scroll position relative to the bottom of the new content
+                    const prevRect = elem.getBoundingClientRect();
+
+
                     diffLines.appendChild(lines);
 
                     if (new_count !== 0 || old_count !== 0) {
@@ -546,6 +550,13 @@ diff_html = r"""
                     if (elem.getAttribute("data-is-linked") === "true") {
                         // We need to scroll to the element again now that its height has changed
                         elem.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                    } else {
+                        if (prevRect.top < 0) {
+                            const prevBottom = prevRect.bottom;
+                            const newBottom = elem.getBoundingClientRect().bottom;
+                            const container = document.querySelector('.container');
+                            container.scroll(0, container.scrollTop + (newBottom - prevBottom));
+                        }
                     }
 
                     observer.unobserve(elem);
@@ -563,10 +574,10 @@ diff_html = r"""
             const observer = new IntersectionObserver(intersectionCallback, options);
 
             document.addEventListener("DOMContentLoaded", (e) => {
+                setDataIsLinked(null);
                 document.querySelectorAll('.diff-container').forEach((section) => {
                     observer.observe(section);
                 });
-                setDataIsLinked(null);
             });
 
             function debounce(func, delay) {
@@ -663,6 +674,10 @@ diff_html = r"""
                 document.querySelectorAll('.diff-container').forEach((section) => {
                     if (section.id === hash) {
                         section.setAttribute("data-is-linked", "true");
+                        if (!event) {
+                            // Scroll to the linked element on page load
+                            section.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                        }
                     } else {
                         section.setAttribute("data-is-linked", "false");
                     }
