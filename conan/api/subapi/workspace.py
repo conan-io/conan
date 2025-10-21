@@ -380,4 +380,8 @@ class WorkspaceAPI:
             install_graph.raise_errors()
             install_order.merge(install_graph)
 
+            lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph,
+                                                          args.lockfile_packages,
+                                                          clean=args.lockfile_clean)
+
         return install_order

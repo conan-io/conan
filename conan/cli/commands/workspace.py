@@ -186,6 +186,11 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                         ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)
 
+    # Update lockfile if necessary
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
+
 
 @conan_subcommand()
 def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
@@ -232,6 +237,11 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None
     conan_api.install.install_consumer(ws_graph, args.generator, ws_folder, output_folder,
                                        envs_generation=args.envs_generation)
+
+    # Update lockfile if necessary
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
 @conan_subcommand()

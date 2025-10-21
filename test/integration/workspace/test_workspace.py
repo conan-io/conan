@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import ConanFileMock
@@ -717,6 +718,26 @@ class TestMeta:
         c.run("workspace super-install", assert_error=True)
         assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
                 "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
+    def test_install_create_lockfile(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile()})
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        c.save({"conanws.yml": "",
+                "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("dep1/0.1",
+                                                                               "dep2/0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1",
+                                                                               "dep1/0.1")},
+               clean_first=True)
+        c.run("workspace add liba")
+        c.run("workspace add libb")
+        c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
+              "--envs-generation=false --lockfile-out=ws.lock")
+        lock = json.loads(c.load("ws.lock"))
+        refs = [RecipeReference.loads(r).repr_notime() for r in lock["requires"]]
+        assert refs == ['libb/0.1', 'liba/0.1', 'dep2/0.1#4d670581ccb765839f2239cc8dff8fbd',
+                        'dep1/0.1#4d670581ccb765839f2239cc8dff8fbd']
 
 
 def test_workspace_with_local_recipes_index():
