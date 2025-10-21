@@ -609,7 +609,7 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
     deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
     return textwrap.dedent(f"""\
         echo "echo Restoring environment" > "{deactivate_file}"
-        for v in {vars}
+        for v in {vars_list}
         do
            is_defined="true"
            value=$(printenv $v) || is_defined="" || true
