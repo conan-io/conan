@@ -68,7 +68,7 @@ def add_common_install_arguments(parser):
 def add_profiles_args(parser):
     contexts = ["build", "host"]
 
-    group = parser.add_argument_group("configuration options")
+    group = parser.add_argument_group("profile options")
 
     # This comes from the _AppendAction code but modified to add to the contexts
     class ContextAllAction(argparse.Action):
