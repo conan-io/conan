@@ -47,7 +47,6 @@ diff_html = r"""
         </div>
     {%- endfor %}
 {% endmacro %}
-<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -295,12 +294,6 @@ diff_html = r"""
 
             .diff-header {
                 padding: 0px 5px 5px 5px;
-            }
-
-            .diff-subheader {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
             }
 
             .filename {
@@ -695,10 +688,8 @@ diff_html = r"""
                 <span id="empty_search" style="display:none">No results found</span>
             </div>
             <div class='content'>
-                <div class="diff-header"><div class="diff-header">
+                <div class="diff-header">
                     <h2>Diff Report Between <b class="del">{{ old_reference.repr_notime() }}</b> And <b class="add">{{ new_reference.repr_notime() }}</b></h2>
-                    <div class="diff-subheader">
-                    </div>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
                 {{ render_diff_folder(per_folder) }}
