@@ -27,7 +27,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 
 
 def add_lockfile_args(parser):
-    group = parser.add_argument_group("lockfile options")
+    group = parser.add_argument_group("lockfile arguments")
     group.add_argument("-l", "--lockfile", action=OnceArgument,
                        help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                             "existing 'conan.lock' file")
@@ -45,10 +45,9 @@ def add_lockfile_args(parser):
 
 
 def add_common_install_arguments(parser):
-    group = parser.add_argument_group("common install options")
-    group.add_argument("-b", "--build", action="append", help=_help_build_policies)
+    parser.add_argument("-b", "--build", action="append", help=_help_build_policies)
 
-    remotes_group = group.add_mutually_exclusive_group()
+    remotes_group = parser.add_mutually_exclusive_group()
     remotes_group.add_argument("-r", "--remote", action="append", default=None,
                                help='Look in the specified remote or remotes server')
     remotes_group.add_argument("-nr", "--no-remote", action="store_true",
@@ -60,15 +59,14 @@ def add_common_install_arguments(parser):
                    "satisfies the range. It will update to the "
                    "latest revision for the resolved version range.")
 
-    group.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
-    return group
 
 
 def add_profiles_args(parser):
     contexts = ["build", "host"]
 
-    group = parser.add_argument_group("profile options")
+    group = parser.add_argument_group("profile arguments")
 
     # This comes from the _AppendAction code but modified to add to the contexts
     class ContextAllAction(argparse.Action):
@@ -113,7 +111,7 @@ def add_profiles_args(parser):
 
 
 def add_reference_args(parser):
-    group = parser.add_argument_group("reference options")
+    group = parser.add_argument_group("reference arguments")
     group.add_argument("--name", action=OnceArgument,
                        help='Provide a package name if not specified in conanfile')
     group.add_argument("--version", action=OnceArgument,
@@ -133,14 +131,13 @@ def common_graph_args(subparser):
                                 "directory when no --requires or --tool-requires is "
                                 "given",
                            default=None)
-    install_group = add_common_install_arguments(subparser)
-    install_group.add_argument("--requires", action="append",
+    add_common_install_arguments(subparser)
+    subparser.add_argument("--requires", action="append",
                                                   help='Directly provide requires instead of a conanfile')
-    install_group.add_argument("--tool-requires", action='append',
+    subparser.add_argument("--tool-requires", action='append',
                                                   help='Directly provide tool-requires instead of a conanfile')
     add_reference_args(subparser)
     add_lockfile_args(subparser)
-    return install_group
 
 
 def validate_common_graph_args(args):
