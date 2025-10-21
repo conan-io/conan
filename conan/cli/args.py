@@ -47,7 +47,8 @@ def add_lockfile_args(parser):
 def add_common_install_arguments(parser):
     parser.add_argument("-b", "--build", action="append", help=_help_build_policies)
 
-    remotes_group = parser.add_mutually_exclusive_group()
+    group = parser.add_argument_group("remote arguments")
+    remotes_group = group.add_mutually_exclusive_group()
     remotes_group.add_argument("-r", "--remote", action="append", default=None,
                                help='Look in the specified remote or remotes server')
     remotes_group.add_argument("-nr", "--no-remote", action="store_true",
@@ -59,7 +60,7 @@ def add_common_install_arguments(parser):
                    "satisfies the range. It will update to the "
                    "latest revision for the resolved version range.")
 
-    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
+    group.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
 
 
@@ -133,7 +134,7 @@ def common_graph_args(subparser):
                            default=None)
     add_common_install_arguments(subparser)
     subparser.add_argument("--requires", action="append",
-                                                  help='Directly provide requires instead of a conanfile')
+                           help='Directly provide requires instead of a conanfile')
     subparser.add_argument("--tool-requires", action='append',
                                                   help='Directly provide tool-requires instead of a conanfile')
     add_reference_args(subparser)
