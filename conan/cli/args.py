@@ -49,9 +49,9 @@ def add_common_install_arguments(parser):
     group = parser.add_argument_group("remote arguments")
     exclusive_group = group.add_mutually_exclusive_group()
     exclusive_group.add_argument("-r", "--remote", action="append", default=None,
-                               help='Look in the specified remote or remotes server')
+                                 help='Look in the specified remote or remotes server')
     exclusive_group.add_argument("-nr", "--no-remote", action="store_true",
-                               help='Do not use remote, resolve exclusively in the cache')
+                                 help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
                    "for the given reference name, or all references in the graph if no argument is supplied. "
