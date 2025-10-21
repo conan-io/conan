@@ -677,7 +677,6 @@ diff_html = r"""
                     <div class="search-area">
                         <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                         <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                        <a href="#">Top</a>
                         <span id="searching_icon" style="display:none">...</span>
                         <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
                     </div>
