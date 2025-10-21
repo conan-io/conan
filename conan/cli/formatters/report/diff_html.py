@@ -26,12 +26,50 @@ diff_html = r"""
         <meta charset="utf-8">
         <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
+            /* --- Colors --- */
+            :root {
+                --body-bgColor: #f8f8f8;
+                --sidebar-bgColor: #f4f4f466;
+                --sidebar-borderColor: #ccc;
+                --sidebar-contents-bgColor: #f4f4f4;
+                --content-bgColor: #f8f8f8;
+                --search-area-borderColor: #ccc;
+                --search-field-borderColor: #ccc;
+                --file-list-borderColor: #ddd;
+                --folder-summary-hover-bgColor: #e0e0e033;
+                --folder-ul-hover-borderColor: #00000066;
+                --sidebar-li-a-hover-bgColor: #e0e0e0;
+                --sidebar-link-color: black;
+                --sidebar-link-hover-color: var(--sidebar-link-color);
+                --sidebar-link-visited-color: var(--sidebar-link-color);
+                --sidebar-file-new-color: green;
+                --sidebar-file-old-color: gray;
+                --sidebar-file-deleted-color: red;
+                --diff-content-borderColor: black;
+                --diff-content-bgColor: white;
+                --diff-container-linked-borderColor: #0078d7;
+                --diff-summary-borderColor: #ccc;
+                --diff-summary-bgColor: #f8f8f8;
+                --diff-summary-hover-bgColor: #f0f0f0;
+                --new-lines-count-color: green;
+                --old-lines-count-color: black;
+                --context-line-color: #888;
+                --context-chunk-header-bgColor: #cef8ff;
+                --context-chunk-header-color: var(--context-line-color);
+                --added-line-bgColor: #cbfcd9;
+                --added-line-color: black;
+                --deleted-line-bgColor: #ffebe9;
+                --deleted-line-color: black;
+                --line-number-added-bgColor: #76ffbb;
+                --line-number-deleted-bgColor: #fdb9c1;
+            }
+
             /* --- Global Styles --- */
 
             body {
                 font-family: monospace;
                 margin: 0px;
-                background-color: #f8f8f8;
+                background-color: var(--body-bgColor);
             }
 
             /* --- Main Layout --- */
@@ -48,8 +86,8 @@ diff_html = r"""
                 max-width: 33%;
                 padding: 10px;
                 overflow: scroll;
-                background: #f4f4f466;
-                border-right: 1px solid #ccc;
+                background: var(--sidebar-bgColor);
+                border-right: 1px solid var(--sidebar-borderColor);
                 resize: horizontal;
                 position: sticky;
                 top: 0;
@@ -57,25 +95,25 @@ diff_html = r"""
 
             .content {
                 padding: 20px;
-                background: #f8f8f8;
+                background: var(--content-bgColor);
                 width: 100%;
             }
 
             /* --- Sidebar & File Tree --- */
 
             #sidebar-contents {
-                background: #f4f4f4;
+                background: var(--sidebar-contents-bgColor);
                 border-radius: 7px;
                 overflow-y: hidden;
                 padding-top: 5px;
             }
 
             .search-area {
-                border-bottom: 1px solid #ccc;
+                border-bottom: 1px solid var(--search-area-borderColor);
             }
 
             .search-field {
-                border: 1px solid #ccc;
+                border: 1px solid var(--search-field-borderColor);
                 border-radius: 5px;
                 padding: 5px;
                 margin: 5px;
@@ -92,7 +130,7 @@ diff_html = r"""
             }
 
             .file-list li ul {
-                border-left: 1px solid #ddd;
+                border-left: 1px solid var(--file-list-borderColor);
                 margin-left: 3px;
             }
 
@@ -110,7 +148,7 @@ diff_html = r"""
             }
 
             .folder > summary:hover {
-                background-color: #e0e0e033;
+                background-color: var(--folder-summary-hover-bgColor);
             }
 
             .folder:not(:open) > summary:before {
@@ -126,7 +164,7 @@ diff_html = r"""
             }
 
             details.folder ul:hover {
-                border-left: 1px solid #00000066;
+                border-left: 1px solid var(--folder-ul-hover-borderColor);
             }
 
             .sidebar li {
@@ -139,19 +177,19 @@ diff_html = r"""
             .sidebar li a {
                 text-decoration: none;
                 padding: 5px;
-                color: black;
+                color: var(--sidebar-link-color);
             }
 
             .sidebar li a:hover {
                 text-decoration: none;
                 border-radius: 5px;
-                background-color: #e0e0e0;
+                background-color: var(--sidebar-li-a-hover-bgColor);
                 padding: 5px;
-                color: black;
+                color: var(--sidebar-link-hover-color);
             }
 
             .sidebar li a:visited {
-                color: black;
+                color: var(--sidebar-link-visited-color);
             }
 
             .side-link {
@@ -168,18 +206,18 @@ diff_html = r"""
 
             .sidebar li.file-new:before {
                 content: "+";
-                color: green;
+                color: var(--sidebar-file-new-color);
                 font-weight: bold;
             }
 
             .sidebar li.file-old:before {
                 content: "\00B1";
-                color: gray;
+                color: var(--sidebar-file-old-color);
             }
 
             .sidebar li.file-deleted:before {
                 content: "-";
-                color: red;
+                color: var(--sidebar-file-deleted-color);
                 font-weight: bold;
             }
 
@@ -191,14 +229,14 @@ diff_html = r"""
 
             .diff-content {
                 padding-bottom: 7px;
-                border: 1px solid black;
+                border: 1px solid var(--diff-content-borderColor);
                 border-radius: 7px;
                 margin-bottom: 10px;
-                background-color: white;
+                background-color: var(--diff-content-bgColor);
             }
 
             .diff-container[data-is-linked="true"] .diff-content {
-                border: 2px solid #0078d7;
+                border: 2px solid var(--diff-container-linked-borderColor);
             }
 
             details.diff-details summary.diff-summary {
@@ -206,16 +244,16 @@ diff_html = r"""
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 1px solid #ccc;
+                border-bottom: 1px solid var(--diff-summary-borderColor);
                 padding: 5px 0px;
                 position: sticky;
                 top: 0;
-                background-color: #f8f8f8;
+                background-color: var(--diff-summary-bgColor);
                 border-radius: 7px 7px 0px 0px;
             }
 
             details.diff-details summary.diff-summary:hover {
-                background-color: #f0f0f0;
+                background-color: var(--diff-summary-hover-bgColor);
             }
 
             details:open .diff-summary .filename:before {
@@ -249,12 +287,12 @@ diff_html = r"""
             }
 
             .new-lines-count {
-                color: green;
+                color: var(--new-lines-count-color);
                 font-weight: bold;
             }
 
             .old-lines-count {
-                color: black;
+                color: var(--old-lines-count-color);
                 font-weight: bold;
             }
 
@@ -266,8 +304,8 @@ diff_html = r"""
 
             .context-chunk-header {
                 list-style: none;
-                background-color: #cef8ff;
-                color: #888;
+                background-color: var(--context-chunk-header-bgColor);
+                color: var(--context-chunk-header-color);
                 line-height: 1.5;
                 cursor: pointer;
             }
@@ -295,17 +333,17 @@ diff_html = r"""
             }
 
             .context-line {
-                color: #888;
+                color: var(--context-line-color);
             }
 
             .add {
-                background-color: #cbfcd9;
-                color: black;
+                background-color: var(--added-line-bgColor);
+                color: var(--added-line-color);
             }
 
             .del {
-                background-color: #ffebe9;
-                color: black;
+                background-color: var(--deleted-line-bgColor);
+                color: var(--deleted-line-color);
             }
 
             .add,
@@ -321,11 +359,11 @@ diff_html = r"""
             }
 
             .line-number.add {
-                background-color: #76ffbb;
+                background-color: var(--line-number-added-bgColor);
             }
 
             .line-number.del {
-                background-color: #fdb9c1;
+                background-color: var(--line-number-deleted-bgColor);
             }
 
             .line-number.add,
