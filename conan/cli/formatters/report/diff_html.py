@@ -15,7 +15,7 @@ diff_html = r"""
         <li class="file file-{{ "deleted" if file_info["is_deleted"] else (
                                 "new" if file_info["is_new"] else "old") }}"
             data-path="{{ file_info["relative_path"] }}">
-            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
+            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" onclick="setDataIsLinked(event)" class="side-link">
                 {{ name }}
             </a>
         </li>
@@ -92,7 +92,7 @@ diff_html = r"""
             }
 
             .file-list li ul {
-                border-left: 2px solid #ddd;
+                border-left: 1px solid #ddd;
                 margin-left: 3px;
             }
 
@@ -106,29 +106,52 @@ diff_html = r"""
 
             .folder > summary {
                 cursor: pointer;
+                list-style: none;
             }
 
             .folder > summary:hover {
                 background-color: #e0e0e033;
             }
 
+            .folder:not(:open) > summary:before {
+                content: "\1F4C1";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
+            .folder:open > summary:before {
+                content: "\1F4C2";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
             details.folder ul:hover {
-                background-color: #e0e0e033;
-                border-left: 2px solid #00000066;
+                border-left: 1px solid #00000066;
             }
 
             .sidebar li {
-                line-height: 1.5;
+                line-height: 1.8;
                 list-style: none;
                 list-style-position: inside;
+                user-select: none;
             }
 
             .sidebar li a {
                 text-decoration: none;
+                padding: 5px;
+                color: black;
             }
 
             .sidebar li a:hover {
-                text-decoration: underline;
+                text-decoration: none;
+                border-radius: 5px;
+                background-color: #e0e0e0;
+                padding: 5px;
+                color: black;
+            }
+
+            .sidebar li a:visited {
+                color: black;
             }
 
             .side-link {
@@ -151,7 +174,7 @@ diff_html = r"""
 
             .sidebar li.file-old:before {
                 content: "\00B1";
-                color: black;
+                color: gray;
             }
 
             .sidebar li.file-deleted:before {
@@ -162,12 +185,20 @@ diff_html = r"""
 
             /* --- Diff View Components --- */
 
+            .diff-container {
+                scroll-margin-top: 10px;
+            }
+
             .diff-content {
                 padding-bottom: 7px;
                 border: 1px solid black;
                 border-radius: 7px;
-                margin-bottom: 10;
+                margin-bottom: 10px;
                 background-color: white;
+            }
+
+            .diff-container[data-is-linked="true"] .diff-content {
+                border: 2px solid #0078d7;
             }
 
             details.diff-details summary.diff-summary {
@@ -251,8 +282,13 @@ diff_html = r"""
                 display: inline-block;
             }
 
+            .diff-lines {
+                line-break: anywhere;
+            }
+
             .line-number {
                 width: 4ch;
+                min-width: 4ch;
                 display: inline-block;
                 text-align: center;
                 user-select: none;
@@ -263,13 +299,25 @@ diff_html = r"""
             }
 
             .add {
-                background-color: #76ffbbBB;
+                background-color: #cbfcd9;
                 color: black;
             }
 
             .del {
-                background-color: #fdb9c1BB;
+                background-color: #ffebe9;
                 color: black;
+            }
+
+            .add,
+            .del,
+            .context-line {
+                height: 100%;
+            }
+
+            .diff-line {
+                display: flex;
+                box-sizing: border-box;
+                line-height: 1.5em;
             }
 
             .line-number.add {
@@ -278,6 +326,11 @@ diff_html = r"""
 
             .line-number.del {
                 background-color: #fdb9c1;
+            }
+
+            .line-number.add,
+            .line-number.del {
+                height: auto;
             }
 
             /* --- Utility & Page States --- */
@@ -320,6 +373,8 @@ diff_html = r"""
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i];
                     let spanLine = document.createElement("span");
+                    const lineDiv = document.createElement("div");
+                    lineDiv.className = "diff-line";
                     let shouldAddLine = true;
                     if (line.startsWith("+++")) {
                         seen_header = true;
@@ -360,7 +415,7 @@ diff_html = r"""
                         const lineNumberSpan = document.createElement("span");
                         lineNumberSpan.className = "line-number add";
                         lineNumberSpan.textContent = new_line_index;
-                        currentDetails.appendChild(lineNumberSpan);
+                        lineDiv.appendChild(lineNumberSpan);
 
                         new_line_index += 1;
                         new_line_count += 1;
@@ -371,7 +426,7 @@ diff_html = r"""
                         const lineNumberSpan = document.createElement("span");
                         lineNumberSpan.className = "line-number del";
                         lineNumberSpan.textContent = old_line_index;
-                        currentDetails.appendChild(lineNumberSpan);
+                        lineDiv.appendChild(lineNumberSpan);
 
                         old_line_index += 1;
                         old_line_count += 1;
@@ -389,14 +444,16 @@ diff_html = r"""
                         const lineNumberSpan = document.createElement("span");
                         lineNumberSpan.className = "line-number context-line";
                         lineNumberSpan.textContent = new_line_index;
-                        currentDetails.appendChild(lineNumberSpan);
+                        lineDiv.appendChild(lineNumberSpan);
 
                         new_line_index += 1;
                         old_line_index += 1;
                     }
                     if (shouldAddLine) {
-                        currentDetails.appendChild(spanLine);
-                        currentDetails.appendChild(document.createElement("br"));
+                        lineDiv.appendChild(spanLine);
+
+                        currentDetails.appendChild(lineDiv);
+                        //currentDetails.appendChild(document.createElement("br"));
                     }
                 }
                 if (!seen_header) {
@@ -419,7 +476,10 @@ diff_html = r"""
                     let elem = entry.target;
                     const path = elem.dataset.path;
                     const [lines, new_count, old_count] = makeDiffLines(data[path]);
-                    elem.querySelector(".diff-lines").appendChild(lines);
+                    const diffLines = elem.querySelector(".diff-lines")
+
+                    //diffLines.style.height = "auto";
+                    diffLines.appendChild(lines);
 
                     if (new_count !== 0 || old_count !== 0) {
                         elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
@@ -443,6 +503,7 @@ diff_html = r"""
                 document.querySelectorAll('.diff-container').forEach((section) => {
                     observer.observe(section);
                 });
+                setDataIsLinked(null);
             });
 
             function debounce(func, delay) {
@@ -524,7 +585,7 @@ diff_html = r"""
 
             const debouncedOnSearchInput = debounce(onSearchInput, 300);
 
-             async function onExcludeSearchInput(event) {
+            async function onExcludeSearchInput(event) {
                 excludeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput(event);
             }
@@ -533,6 +594,17 @@ diff_html = r"""
                 includeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput(event);
             }
+
+            function setDataIsLinked(event) {
+                const hash = event ? event.currentTarget.getAttribute("href").substring(1) : window.location.hash.substring(1);
+                document.querySelectorAll('.diff-container').forEach((section) => {
+                    if (section.id === hash) {
+                        section.setAttribute("data-is-linked", "true");
+                    } else {
+                        section.setAttribute("data-is-linked", "false");
+                    }
+                });
+            }
         </script>
     </head>
     <body>
@@ -540,8 +612,8 @@ diff_html = r"""
             <div class='sidebar'>
                 <div id="sidebar-contents">
                     <div class="search-area">
-                        <input type="text" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
-                        <input type="text" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                        <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                        <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
                         <span id="searching_icon" style="display:none">...</span>
                         <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
                     </div>
@@ -568,7 +640,8 @@ diff_html = r"""
                                     </b>
                                     <div class="changes-count-container"></div>
                                 </summary>
-                                <div class="diff-lines"></div>
+                                <div class="diff-lines">
+                                </div>
                             </details>
                         </div>
                     </div>
