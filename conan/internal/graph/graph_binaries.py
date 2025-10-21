@@ -23,11 +23,6 @@ from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import load
 
 
-class _CompatibilityAnalyzer:
-    def __init__(self):
-        pass
-
-
 class GraphBinariesAnalyzer:
 
     def __init__(self, conan_app, global_conf, hook_manager):
