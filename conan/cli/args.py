@@ -41,17 +41,16 @@ def add_lockfile_args(parser):
                        help="Remove unused entries from the lockfile")
     group.add_argument("--lockfile-overrides",
                        help="Overwrite lockfile overrides")
-    return group
 
 
 def add_common_install_arguments(parser):
     parser.add_argument("-b", "--build", action="append", help=_help_build_policies)
 
     group = parser.add_argument_group("remote arguments")
-    remotes_group = group.add_mutually_exclusive_group()
-    remotes_group.add_argument("-r", "--remote", action="append", default=None,
+    exclusive_group = group.add_mutually_exclusive_group()
+    exclusive_group.add_argument("-r", "--remote", action="append", default=None,
                                help='Look in the specified remote or remotes server')
-    remotes_group.add_argument("-nr", "--no-remote", action="store_true",
+    exclusive_group.add_argument("-nr", "--no-remote", action="store_true",
                                help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
@@ -108,7 +107,6 @@ def add_profiles_args(parser):
     create_config("o", "options", '-o="pkg/*:with_qt=True"')
     create_config("s", "settings", '-s="compiler=gcc"')
     create_config("c", "conf", '-c="tools.cmake.cmaketoolchain:generator=Xcode"')
-    return group
 
 
 def add_reference_args(parser):
@@ -121,7 +119,6 @@ def add_reference_args(parser):
                        help='Provide a user if not specified in conanfile')
     group.add_argument("--channel", action=OnceArgument,
                        help='Provide a channel if not specified in conanfile')
-    return group
 
 
 def common_graph_args(subparser):
