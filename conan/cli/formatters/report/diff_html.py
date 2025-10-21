@@ -1,12 +1,12 @@
 diff_html = r"""
-{% macro render_folder(folder, folder_info) %}
+{% macro render_sidebar_folder(folder, folder_info) %}
     {%- for name, sub_folder_info in folder_info["folders"].items() %}
         {% set folder_name = folder + "/" + name %}
         <li>
             <details open class="folder">
                 <summary>{{ name }}</summary>
                 <ul>
-                    {{ render_folder(folder_name, sub_folder_info) }}
+                    {{ render_sidebar_folder(folder_name, sub_folder_info) }}
                 </ul>
             </details>
         </li>
@@ -15,12 +15,39 @@ diff_html = r"""
         <li class="file file-{{ "deleted" if file_info["is_deleted"] else (
                                 "new" if file_info["is_new"] else "old") }}"
             data-path="{{ file_info["relative_path"] }}">
-            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" onclick="setDataIsLinked(event)" class="side-link">
+            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
+                onclick="setDataIsLinked(event)" draggable="false"
+                class="side-link">
                 {{ name }}
             </a>
         </li>
     {%- endfor %}
 {% endmacro %}
+
+{% macro render_diff_folder(folder_info) %}
+    {%- for name, sub_folder_info in folder_info["folders"].items() %}
+        {{ render_diff_folder(sub_folder_info) }}
+    {%- endfor %}
+    {%- for name, file_info in folder_info["files"].items() %}
+        {% set filename = file_info["filename"] %}
+
+        <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
+            <div class="diff-content">
+                <details open class="diff-details">
+                    <summary class="diff-summary">
+                        <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
+                            <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                        </b>
+                        <div class="changes-count-container"></div>
+                    </summary>
+                    <div class="diff-lines">
+                    </div>
+                </details>
+            </div>
+        </div>
+    {%- endfor %}
+{% endmacro %}
+<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -306,7 +333,7 @@ diff_html = r"""
                 list-style: none;
                 background-color: var(--context-chunk-header-bgColor);
                 color: var(--context-chunk-header-color);
-                line-height: 1.5;
+                line-height: 2;
                 cursor: pointer;
             }
 
@@ -657,11 +684,12 @@ diff_html = r"""
                     <div class="search-area">
                         <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
                         <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                        <a href="#">Top</a>
                         <span id="searching_icon" style="display:none">...</span>
                         <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
                     </div>
                     <ul class="file-list">
-                        {{ render_folder("", per_folder) }}
+                        {{ render_sidebar_folder("", per_folder) }}
                     </ul>
                 </div>
                 <span id="empty_search" style="display:none">No results found</span>
@@ -673,22 +701,7 @@ diff_html = r"""
                     </div>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
-                {%- for filename, lines in content.items() -%}
-                    <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
-                        <div class="diff-content">
-                            <details open class="diff-details">
-                                <summary class="diff-summary">
-                                    <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
-                                        <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
-                                    </b>
-                                    <div class="changes-count-container"></div>
-                                </summary>
-                                <div class="diff-lines">
-                                </div>
-                            </details>
-                        </div>
-                    </div>
-                {%- endfor -%}
+                {{ render_diff_folder(per_folder) }}
             </div>
         </div>
     </body>
