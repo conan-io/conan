@@ -223,17 +223,12 @@ class TestPkgListFindRemote:
 
         # Create input pkglist for find-remote
         c.run(f"list * --format=json", redirect_stdout="mylist.json")
-        print(c.load("mylist.json"))
         pkglist = json.loads(c.load("mylist.json"))
         expected = {"zlib/1.0": {}}
         assert pkglist["Local Cache"] == expected
 
         c.run("pkglist find-remote mylist.json --format=json --remote default")
-        print(c.out)
-        # TODO: Is this the expected output? This is failing now
-        #  Or it should error saying that at least recipe-revisions are mandatory
-        #  Or the find-remotes should complete information of the things found, like at least the
-        #  last revision? or all revisions found that match?
+        pkglist = json.loads(c.stdout)
         assert pkglist["default"] == expected
 
     def test_input_recipe_revisions(self):
@@ -244,62 +239,64 @@ class TestPkgListFindRemote:
 
         # Create input pkglist for find-remote
         c.run(f"list *#* --format=json", redirect_stdout="mylist.json")
-        print(c.load("mylist.json"))
-        pkglist = json.loads(c.load("mylist.json"))
-        revs = pkglist["Local Cache"]["zlib/1.0"]["revisions"]
-        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
-        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
 
-        c.run("pkglist find-remote mylist.json --format=json --remote default")
-        print(c.out)
-        pkglist = json.loads(c.stdout)
-        revs = pkglist["default"]["zlib/1.0"]["revisions"]
-        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
-        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+            assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+        _check("Local Cache")
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
 
     def test_input_only_package_ids(self):
         c = TestClient(default_server_user=True, light=True)
-        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
-        c.run("create zlib")
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
         c.run("upload zlib* -c -r=default")
 
         # Create input pkglist for find-remote
         c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
-        print(c.load("mylist.json"))
-        pkglist = json.loads(c.load("mylist.json"))
-        revs = pkglist["Local Cache"]["zlib/1.0"]["revisions"]
-        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
-        assert (revs["c570d63921c5f2070567da4bf64ff261"]["packages"] ==
-                {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}})
 
-        c.run("pkglist find-remote mylist.json --format=json --remote default")
-        print(c.out)
-        pkglist = json.loads(c.stdout)
-        revs = pkglist["default"]["zlib/1.0"]["revisions"]
-        assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
-        assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            info = {"info": {'settings': {'os': 'Linux'}}}
+            expected = {"9a4eb3c8701508aa9458b1a73d0633783ecc2270": info}
+            assert revs["1cb7410d0365f87510a6767c7bef804e"]["packages"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
 
     def test_graph_pkg_list_of_recipes_and_binaries(self):
         c = TestClient(default_server_user=True, light=True)
-        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
-        c.run("create zlib")
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
         c.run("upload zlib* -c -r=default")
 
         # Create input pkglist for find-remote
         c.run(f"list *#*:*#* --format=json", redirect_stdout="mylist.json")
-        pkglist_request = json.loads(c.load("mylist.json"))
-        input_rev = pkglist_request["Local Cache"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
 
-        c.run("pkglist find-remote mylist.json --format=json --remote default")
-        pkglist_request = json.loads(c.stdout)
-        rev = pkglist_request["default"]["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
-        assert rev, "find-remote shall always list the revision"
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            expected = {'settings': {'os': 'Linux'}}
+            pkgs = revs["1cb7410d0365f87510a6767c7bef804e"]["packages"]
+            assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            assert pkg["info"] == expected
+            assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
 
-        if "packages" in input_rev:
-            assert rev["packages"], "Result does not contain information about binaries"
-            assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in rev["packages"]
-        else:
-            assert "packages" not in rev, "Result contains information about binaries even if not requested"
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
 
     def test_graph_pkg_list_counter_example(self):
         c = TestClient(default_server_user=True, light=True)
@@ -315,20 +312,17 @@ class TestPkgListFindRemote:
         # Create input pkglist for find-remote
         c.run(f"list zlib/1.0#latest:*#latest --format=json", redirect_stdout="mylist.json")
 
-        def pkg_revs(origin):
-            prevs = origin["zlib/1.0"]["revisions"]
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            prevs = pkglist[origin]["zlib/1.0"]["revisions"]
             input_pkgs = prevs["212b9babae6a4b8a8362703cec4257ad"]["packages"]
-            input_pkg_revs = input_pkgs["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
-            return input_pkg_revs
+            prevs = input_pkgs["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
+            assert len(prevs) == 1
 
-        pkglist = json.loads(c.load("mylist.json"))
-        revs = pkg_revs(pkglist["Local Cache"])
-        assert len(revs) == 1
-
-        c.run("pkglist find-remote mylist.json --format=json --remote default")
-        pkglist = json.loads(c.stdout)
-        revs = pkg_revs(pkglist["default"])
-        assert len(revs) == 1
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
 
 
 class TestPkgListMerge:

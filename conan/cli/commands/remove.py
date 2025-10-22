@@ -103,16 +103,15 @@ def remove(conan_api: ConanAPI, parser, *args):
                 result.add_ref(ref)
                 result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages"
         else:
+            if not packages: # weird, there is inner package-ids but without prevs
+                ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
+                continue
             for pref, pkg_id_info in packages.items():
-                if not pref.revision:
-                    # Recipe revision is mandatory here, ignore remove request if not present.
-                    ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
-                    continue
                 if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
                     if not args.dry_run:
                         conan_api.remove.package(pref, remote=remote)
                     result.add_ref(ref)
-                    result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages" anymore
+                    result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages"
                     result.add_pref(pref, pkg_id_info)
                     pkg_dict = package_list.package_dict(pref)
                     result.package_dict(pref).update(pkg_dict)
