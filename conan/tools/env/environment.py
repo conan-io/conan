@@ -473,8 +473,6 @@ class EnvVars:
             if value:
                 value = value.replace('"', '`"')  # escape quotes
                 result.append(f'$env:{varname}="{value}"')
-                if self._verbose:
-                    result.append(f'Write-Host "Setting {varname} to: {value}"')
             else:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
@@ -505,8 +503,6 @@ class EnvVars:
                 )
             if value:
                 result.append(f'export {varname}="{value}"')
-                if self._verbose:
-                    result.append(f'echo "Setting {varname} to: {value}"')
             else:
                 result.append(f'unset {varname}')
 
@@ -595,10 +591,8 @@ def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
                     eval "is_set=\\${{${{old_var}}+x}}"
                     if [ -n "${{is_set}}" ]; then
                         eval "old_value=\\${{${{old_var}}}}"
-                        {'echo "Restoring ${{v}} to ${{old_value}}"' if verbose else ''}
                         eval "export ${{v}}=\\${{old_value}}"
                     else
-                        {'echo "Unsetting ${{v}}"' if verbose else ''}
                         unset "${{v}}"
                     fi
                     unset "${{old_var}}"
@@ -635,10 +629,8 @@ def _ps1_deactivate_contents(use_deactivate_function, values, filename, verbose)
                     $oldVarName = "{var_prefix}_$v"
                     $oldValue = Get-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
                     if (Test-Path env:$oldValue) {{
-                        {'Write-Host "Unsetting $v"' if verbose else ''}
                         Remove-Item -Path "Env:$v" -ErrorAction SilentlyContinue
                     }} else {{
-                        {'Write-Host "Restoring $v to $($oldValue.Value)"' if verbose else ''}
                         Set-Item -Path "Env:$v" -Value $oldValue.Value
                     }}
                     Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue

@@ -213,8 +213,7 @@ def _generate_aggregated_env(conanfile):
                     content += f"\n\ndeactivate_conan{group}() {{\n"
                     for deactivate_name in deactivate_function_names(shs):
                         content += f"    deactivate_{deactivate_name}\n"
-                    content += (f"    unset -f deactivate_conan{group}\n}}\n"
-                                f'echo "Environment activated. Run \"deactivate_conan{group}\" to restore."\n')
+                    content += f"    unset -f deactivate_conan{group}\n}}\n"
                 return content
             filename = "conan{}.sh".format(group)
             generated.append(filename)
@@ -239,8 +238,7 @@ def _generate_aggregated_env(conanfile):
                         content += f"    deactivate_{deactivate_name}\n"
                     content += (f"    Remove-Item -Path function:deactivate_conan{group} "
                                 "-ErrorAction SilentlyContinue"
-                                "\n}\n"
-                                f'echo \'Environment activated. Run \"deactivate_conan{group}\" to restore.\'\n')
+                                "\n}\n")
                 return content
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
