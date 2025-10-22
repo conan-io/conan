@@ -48,3 +48,16 @@ def test_msbuildtoolchain_winsdk_version():
     # I have verified also opening VS IDE that the setting is correctly configured
     # because the test always run over vcvars that already activates it
     assert "amd64 - winsdk_version=10.0 - vcvars_ver=14.3" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_msbuildtoolchain_compiler_update():
+    # It only works for update=8, because 19.38 is the compiler in Github actions!
+    client = TestClient(path_with_spaces=False)
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
+    #  conantoolchain.props is already imported in the msbuild_exe tempalte
+    client.run("create . -s arch=x86_64 -s compiler.version=193 -s compiler.update=8")
+    # I have verified also opening VS IDE that the setting is correctly configured
+    # because the test always run over vcvars that already activates it
+    assert "amd64 - winsdk_version=None - vcvars_ver=14.38" in client.out
+    assert "hello/0.1: _MSC_VER1938" in client.out
