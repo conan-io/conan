@@ -78,7 +78,7 @@ class GraphBinariesAnalyzer:
         for r in remotes:
             try:
                 info = node.conanfile.info
-                latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
+                latest_pref = self._remote_manager.get_latest_package_revision(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not should_update_reference(node.ref, update):
                     break
@@ -265,7 +265,7 @@ class GraphBinariesAnalyzer:
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
+            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
             if cache_latest_prev is None:
                 break
             package_layout = self._cache.pkg_layout(cache_latest_prev)
@@ -300,7 +300,7 @@ class GraphBinariesAnalyzer:
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
+            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
             if cache_latest_prev is None:
                 break
             package_layout = self._cache.pkg_layout(cache_latest_prev)

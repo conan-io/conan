@@ -199,6 +199,7 @@ class RemoteManager:
             raise
 
     def search_recipes(self, remote, pattern):
+        # Used by ListAPI to "conan list *" recipes, and by RangeResolver to resolve version-ranges
         cached_method = remote._caching.setdefault("search_recipes", {})
         try:
             return cached_method[pattern]
@@ -208,6 +209,7 @@ class RemoteManager:
             return result
 
     def search_packages(self, remote, ref):
+        # Used only by ListAPI to list the different package_ids for a reference
         if remote.recipes_only:
             return {}
         packages = self._call_remote(remote, "search_packages", ref)
@@ -232,21 +234,42 @@ class RemoteManager:
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password, enforce_disabled=False)
 
-    def get_recipe_revisions_references(self, ref, remote):
+    def get_recipe_revisions(self, ref: RecipeReference, remote: Remote) -> List[RecipeReference]:
+        # Used by ListAPI to list recipe revisions for a ref without revision
+        # and by ConanProxy resolving legacy_update Conan 1 logic
         assert ref.revision is None, "get_recipe_revisions_references of a reference with revision"
         return self._call_remote(remote, "get_recipe_revisions_references", ref)
 
-    def get_package_revisions_references(self, pref, remote, headers=None) -> List[PkgReference]:
-        assert pref.revision is None, "get_package_revisions_references of a reference with revision"
-        if remote.recipes_only:
-            return []
-        return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
+    def get_recipe_revision(self, ref: RecipeReference, remote: Remote) -> RecipeReference:
+        # Used by UploadUpstreamChecker to see if the revision exist in the server
+        # Used by Download, to get timestamp from server and respect it
+        # Used by ConanProxy to confirm existence of specific revision
+        assert ref.revision is not None, "recipe_exists needs a revision"
+        return self._call_remote(remote, "get_recipe_revision_reference", ref)
 
-    def get_latest_recipe_reference(self, ref, remote):
+    def get_latest_recipe_revision(self, ref: RecipeReference, remote: Remote) -> RecipeReference:
+        # Used by ListAPI to retrieve the latest revision
+        # Used by ConanProxy to resolve to the latest revision
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
+    def get_package_revisions(self, pref: PkgReference, remote: Remote) -> List[PkgReference]:
+        # Used by ListAPI to retrieve multiple package revisions
+        assert pref.revision is None, "get_package_revisions_references of a reference with revision"
+        if remote.recipes_only:
+            return []
+        return self._call_remote(remote, "get_package_revisions_references", pref)
+
+    def get_package_revision(self, pref: PkgReference, remote: Remote) -> PkgReference:
+        # Used by UploadUpstreamChecker to see if the revision exist in the server
+        # Used by Download, to get timestamp from server and respect it
+        assert pref.revision is not None, "get_package_revision_reference needs a revision"
+        return self._call_remote(remote, "get_package_revision_reference", pref)
+
+    def get_latest_package_revision(self, pref: PkgReference, remote: Remote,
+                                    info=None) -> PkgReference:
+        # Used by List to resolve the latest package revision
+        # Used by GraphBinariesAnalyzer to resolve to latest package revision
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
         if remote.recipes_only:
             raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
@@ -282,14 +305,6 @@ class RemoteManager:
                 # Let's raise it
                 raise NotFoundException(result.message)
             return result
-
-    def get_recipe_revision_reference(self, ref, remote) -> bool:
-        assert ref.revision is not None, "recipe_exists needs a revision"
-        return self._call_remote(remote, "get_recipe_revision_reference", ref)
-
-    def get_package_revision_reference(self, pref, remote) -> bool:
-        assert pref.revision is not None, "get_package_revision_reference needs a revision"
-        return self._call_remote(remote, "get_package_revision_reference", pref)
 
     def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))

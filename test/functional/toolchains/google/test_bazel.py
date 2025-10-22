@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
@@ -341,3 +342,45 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         client.run(f"create . -o '*:shared={shared}'")
         assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
         assert "myfirstlib/1.2.11: Hello World Release!"
+
+
+@pytest.mark.tool("bazel", "8.0.0")
+def test_empty_bazel_query():
+    """
+    Test that following a simple steps using the BazelDeps and running
+    a global `bazel query //...` runs OK (bazel >= 8.0)
+
+    Issue related: https://github.com/conan-io/conan/issues/18743
+    """
+    zlib = GenConanfile("zlib", "0.1")
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.google import BazelDeps, bazel_layout
+
+    class App(ConanFile):
+        settings = "os", "arch", "compiler", "build_type"
+        requires = "zlib/0.1"
+
+        def layout(self):
+            bazel_layout(self)
+
+        def generate(self):
+            bz = BazelDeps(self)
+            bz.generate()
+    """)
+    module = textwrap.dedent("""\
+    load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
+    use_repo(load_conan_dependencies, "zlib")
+    """)
+    client = TestClient()
+    client.save({
+        "zlib/conanfile.py": zlib,
+        "consumer/conanfile.py": consumer,
+        "consumer/MODULE.bazel": module,
+    })
+    client.run("create zlib")
+    client.run("install consumer")
+    with client.chdir("consumer"):
+        client.run_command("bazel query //...")
+    assert "//conan/zlib:zlib" in client.out
+    assert "//conan/zlib:zlib_binaries" in client.out

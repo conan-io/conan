@@ -74,6 +74,7 @@ class DepsGraphBuilder:
         #    node -(require)-> previous (creates a diamond with a previously existing node)
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
+        self._deduce_host_version(require, node)
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous is not None:
@@ -338,7 +339,8 @@ class DepsGraphBuilder:
             node.replaced_requires[original_require] = require
             break  # First match executes the alternative and finishes checking others
 
-    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+    @staticmethod
+    def _deduce_host_version(require, node):
         require_version = str(require.ref.version)
         if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
@@ -357,6 +359,7 @@ class DepsGraphBuilder:
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system(node, require, profile_build, profile_host,
                                          self._resolve_prereleases)
         if graph_lock is not None:

@@ -648,7 +648,7 @@ class _Component:
                                  "cannot deduce locations")
         # fully defined by user in conanfile, nothing to do.
         if self._location or self._link_location:
-            if self._type not in [PackageType.SHARED, PackageType.STATIC]:
+            if self._type is None or self._type not in [PackageType.SHARED, PackageType.STATIC]:
                 raise ConanException(f"{name} location defined without defined library type")
             return
 
