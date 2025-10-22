@@ -514,7 +514,7 @@ def test_multiple_deactivate(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:deactivate_function={use_function}")
+    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
@@ -561,7 +561,7 @@ def test_multiple_deactivate_order(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:deactivate_function={use_function}")
+    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
@@ -627,7 +627,7 @@ def test_deactivate_missing_vars_stay_missing(use_function):
     client.save({"conanfile.py": conanfile,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:deactivate_function={use_function}")
+    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
 
     deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
     cmd = (f'export FOO=&& export BAZ=Value3 && export FOOBAR='
@@ -728,7 +728,7 @@ def test_profile_build_env_spaces(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -g VirtualBuildEnv -pr=profile -c=tools.env:deactivate_function={use_function}")
+    client.run(f"install . -g VirtualBuildEnv -pr=profile -c=tools.env:new_deactivate={use_function}")
 
     if platform.system() == "Windows":
         cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"

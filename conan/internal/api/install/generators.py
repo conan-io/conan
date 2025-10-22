@@ -186,8 +186,7 @@ def _generate_aggregated_env(conanfile):
         return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
                 for s in reversed(filenames)]
 
-    use_deactivate_function = conanfile.conf.get("tools.env:deactivate_function", default=False,
-                                                 check_type=bool)
+    use_deactivate_function = conanfile.conf.get("tools.env:new_deactivate", default=False, check_type=bool)
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)

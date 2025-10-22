@@ -459,8 +459,7 @@ class EnvVars:
 
         result = []
         if generate_deactivate:
-            result.append(_ps1_deactivate_contents(self._use_deactivate_function, self._values,
-                                                   filename, self._verbose))
+            result.append(_ps1_deactivate_contents(self._use_deactivate_function, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
@@ -487,8 +486,7 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         result = []
         if generate_deactivate:
-            result.append(_sh_deactivate_contents(self._use_deactivate_function, self._values,
-                                                  filename, self._verbose))
+            result.append(_sh_deactivate_contents(self._use_deactivate_function, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
@@ -577,47 +575,7 @@ def _old_env_prefix(filename):
     return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
 
 
-def _sh_deactivate_contents(use_deactivate_function, values, filename, verbose):
-    vars_list = " ".join(quote(v) for v in values.keys())
-    if use_deactivate_function:
-        func_name = _deactivate_func_name(filename)
-        return textwrap.dedent(f"""\
-            # sh-like function to restore environment
-            deactivate_{func_name} () {{
-                echo "Restoring environment"
-                for v in {vars_list}; do
-                    old_var="{_old_env_prefix(filename)}_${{v}}"
-                    # Use eval for indirect expansion (POSIX safe)
-                    eval "is_set=\\${{${{old_var}}+x}}"
-                    if [ -n "${{is_set}}" ]; then
-                        eval "old_value=\\${{${{old_var}}}}"
-                        eval "export ${{v}}=\\${{old_value}}"
-                    else
-                        unset "${{v}}"
-                    fi
-                    unset "${{old_var}}"
-                done
-                unset -f deactivate_{func_name}
-            }}
-        """)
-    deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
-    return textwrap.dedent(f"""\
-        echo "echo Restoring environment" > "{deactivate_file}"
-        for v in {vars_list}
-        do
-           is_defined="true"
-           value=$(printenv $v) || is_defined="" || true
-           if [ -n "$value" ] || [ -n "$is_defined" ]
-           then
-               echo export "$v='$value'" >> "{deactivate_file}"
-           else
-               echo unset $v >> "{deactivate_file}"
-           fi
-        done
-    """)
-
-
-def _ps1_deactivate_contents(use_deactivate_function, values, filename, verbose):
+def _ps1_deactivate_contents(use_deactivate_function, values, filename):
     vars_list = ", ".join(f'"{v}"' for v in values.keys())
     if use_deactivate_function:
         var_prefix = _old_env_prefix(filename)
@@ -659,6 +617,45 @@ def _ps1_deactivate_contents(use_deactivate_function, values, filename, verbose)
             }}
         }}
         Pop-Location
+    """)
+
+def _sh_deactivate_contents(use_deactivate_function, values, filename):
+    vars_list = " ".join(quote(v) for v in values.keys())
+    if use_deactivate_function:
+        func_name = _deactivate_func_name(filename)
+        return textwrap.dedent(f"""\
+            # sh-like function to restore environment
+            deactivate_{func_name} () {{
+                echo "Restoring environment"
+                for v in {vars_list}; do
+                    old_var="{_old_env_prefix(filename)}_${{v}}"
+                    # Use eval for indirect expansion (POSIX safe)
+                    eval "is_set=\\${{${{old_var}}+x}}"
+                    if [ -n "${{is_set}}" ]; then
+                        eval "old_value=\\${{${{old_var}}}}"
+                        eval "export ${{v}}=\\${{old_value}}"
+                    else
+                        unset "${{v}}"
+                    fi
+                    unset "${{old_var}}"
+                done
+                unset -f deactivate_{func_name}
+            }}
+        """)
+    deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
+    return textwrap.dedent(f"""\
+        echo "echo Restoring environment" > "{deactivate_file}"
+        for v in {vars_list}
+        do
+           is_defined="true"
+           value=$(printenv $v) || is_defined="" || true
+           if [ -n "$value" ] || [ -n "$is_defined" ]
+           then
+               echo export "$v='$value'" >> "{deactivate_file}"
+           else
+               echo unset $v >> "{deactivate_file}"
+           fi
+        done
     """)
 
 
