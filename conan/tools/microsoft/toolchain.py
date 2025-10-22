@@ -226,23 +226,23 @@ class MSBuildToolchain:
 
 
 def _get_toolset_props(conanfile):
-    vs_version = vs_ide_version(conanfile)
-    if int(vs_version) <= 14:
-        return
-    compiler_version = str(conanfile.settings.compiler.version)
     msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
     compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
     if compiler_update is None:
         return
-    # The equivalent of compiler 19.26 is toolset 14.26
-    vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
 
+    vs_version = vs_ide_version(conanfile)
+    if int(vs_version) <= 14:
+        return
     vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
     vs_path = vs_install_path or vs_installation_path(vs_version)
     if not vs_path or not os.path.isdir(vs_path):
         return
 
     basebuild = os.path.normpath(os.path.join(vs_path, "VC/Auxiliary/Build"))
+    # The equivalent of compiler 19.26 is toolset 14.26
+    compiler_version = str(conanfile.settings.compiler.version)
+    vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
     for folder in os.listdir(basebuild):
         if not os.path.isdir(os.path.join(basebuild, folder)):
             continue
