@@ -4,7 +4,7 @@ from shlex import quote
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.api.output import ConanOutput, LEVEL_VERBOSE
+from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
@@ -348,7 +348,6 @@ class EnvVars:
         self._subsystem = deduce_subsystem(conanfile, scope)
         self._use_deactivate_function = conanfile.conf.get("tools.env:deactivate_function",
                                                            default=False, check_type=bool)
-        self._verbose = conanfile.output.level_allowed(LEVEL_VERBOSE)
 
     @property
     def _pathsep(self):
