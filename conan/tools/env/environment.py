@@ -486,6 +486,7 @@ class EnvVars:
         if generate_deactivate:
             result.append(_sh_deactivate_contents(self._deactivation_mode, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
+        result.append("conan_verbose=${conan_verbose:-false}")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
@@ -498,8 +499,10 @@ class EnvVars:
                     f'fi;'
                 )
             if value:
+                result.append(f'${{conan_verbose}} && echo "Exporting {varname}={value}"')
                 result.append(f'export {varname}="{value}"')
             else:
+                result.append(f'${{conan_verbose}} && echo "Unsetting {varname}"')
                 result.append(f'unset {varname}')
 
         content = "\n".join(result)
@@ -625,14 +628,17 @@ def _sh_deactivate_contents(deactivation_mode, values, filename):
             # sh-like function to restore environment
             deactivate_{func_name} () {{
                 echo "Restoring environment"
+                conan_verbose=${{conan_verbose:-false}}
                 for v in {vars_list}; do
                     old_var="{_old_env_prefix(filename)}_${{v}}"
                     # Use eval for indirect expansion (POSIX safe)
                     eval "is_set=\\${{${{old_var}}+x}}"
                     if [ -n "${{is_set}}" ]; then
                         eval "old_value=\\${{${{old_var}}}}"
+                        "${{conan_verbose}}" && echo "Restoring ${{v}} to ${{old_value}}"
                         eval "export ${{v}}=\\${{old_value}}"
                     else
+                        "${{conan_verbose}}" && echo "Unsetting ${{v}}"
                         unset "${{v}}"
                     fi
                     unset "${{old_var}}"

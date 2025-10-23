@@ -2,6 +2,7 @@ import inspect
 import os
 import traceback
 import importlib
+import textwrap
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.subsystems import deduce_subsystem, subsystem_path
@@ -207,12 +208,30 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                content = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                content = textwrap.dedent(f'''
+                [ "$1" = "-h" ] || [ "$1" = "--help" ] && {{
+                    printf "%s [-v|--verbose]\\n" "$0"
+                    printf "  Activate Conan {group} environment\\n"
+                    printf "  -v, --verbose   Print information about the modified variables\\n"
+                    return 0
+                }}
+                {". " + " && . ".join('"{}"'.format(s) for s in files)}
+                ''')
                 if deactivation_mode == "function":
-                    content += f"\n\ndeactivate_conan{group}() {{\n"
-                    for deactivate_name in deactivate_function_names(shs):
-                        content += f"    deactivate_{deactivate_name}\n"
-                    content += f"    unset -f deactivate_conan{group}\n}}\n"
+                    content += textwrap.dedent(f'''
+                    deactivate_conan{group}() {{
+                        [ "$1" = "-h" ] || [ "$1" = "--help" ] && {{
+                            printf "deactivate_conanbuild [-v|--verbose]\\n"
+                            printf "  Restores the environment modified by conanbuild.sh\\n"
+                            printf "  -v, --verbose   Print information about the restored variables"
+                            return 0
+                        }}
+                        conan_verbose=false; [ "$1" = "-v" ] || [ "$1" = "--verbose" ] && conan_verbose=true
+
+                        {"\n".join([f"deactivate_{deactivate_name}" for deactivate_name in deactivate_function_names(shs)])}
+                        unset -f deactivate_conan{group}
+                    }}
+                    ''')
                 return content
             filename = "conan{}.sh".format(group)
             generated.append(filename)
