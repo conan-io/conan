@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import mock
 from mock import Mock, MagicMock
@@ -18,20 +17,20 @@ class MockRequesterGet(Mock):
         self.verify = kwargs.get('verify', None)
 
 
-class ConanRequesterCacertPathTests(unittest.TestCase):
+class TestConanRequesterCacertPath:
     def test_default_no_verify(self):
         mocked_requester = MockRequesterGet()
         with mock.patch("conan.internal.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(ConfDefinition())
             requester.get(url="aaa", verify=False)
-            self.assertEqual(requester._http_requester.verify, False)
+            assert requester._http_requester.verify == False
 
     def test_default_verify(self):
         mocked_requester = MockRequesterGet()
         with mock.patch("conan.internal.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(ConfDefinition())
             requester.get(url="aaa", verify=True)
-            self.assertEqual(requester._http_requester.verify, True)
+            assert requester._http_requester.verify == True
 
     def test_cache_config(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
@@ -42,18 +41,18 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         with mock.patch("conan.internal.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(config)
             requester.get(url="bbbb", verify=True)
-        self.assertEqual(requester._http_requester.verify, file_path)
+        assert requester._http_requester.verify == file_path
 
 
-class ConanRequesterHeadersTests(unittest.TestCase):
+class TestConanRequesterHeaders:
     def test_user_agent(self):
         mock_http_requester = MagicMock()
         with mock.patch("conan.internal.rest.conan_requester.requests", mock_http_requester):
             requester = ConanRequester(ConfDefinition())
             requester.get(url="aaa")
             headers = requester._http_requester.get.call_args[1]["headers"]
-            self.assertIn("Conan/%s" % __version__, headers["User-Agent"])
+            assert "Conan/%s" % __version__ in headers["User-Agent"]
 
             requester.get(url="aaa", headers={"User-Agent": "MyUserAgent"})
             headers = requester._http_requester.get.call_args[1]["headers"]
-            self.assertEqual("MyUserAgent", headers["User-Agent"])
+            assert "MyUserAgent" == headers["User-Agent"]

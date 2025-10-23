@@ -25,7 +25,6 @@ def test_cache_clean(use_pkglist):
 
     if use_pkglist:
         c.run("list *:*#* -f=json", redirect_stdout="pkglist.json")
-        pkglist = c.load("pkglist.json")
     arg = "--list=pkglist.json" if use_pkglist else "*"
     c.run(f'cache clean {arg} -s -b -v')
     assert f"{ref_layout.reference.repr_notime()}: Cleaning recipe cache contents" in c.out

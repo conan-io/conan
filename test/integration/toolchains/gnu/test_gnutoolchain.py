@@ -592,3 +592,43 @@ def test_toolchain_crossbuild_to_android():
         "conanfile.py": consumer
     })
     client.run("create . -pr:h host -pr:b build")
+
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("GnuToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    os = platform.system()
+    toolchain = client.load(
+        "conangnutoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+
+    if os == "Windows":
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
+    else:
+        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
+        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain

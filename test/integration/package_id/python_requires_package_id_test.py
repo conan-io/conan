@@ -3,7 +3,6 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient, GenConanfile
-from conan.internal.util.files import save
 
 
 PKG_ID_1 = "47b42eaf657374a3d040394f03961b66c53bda5e"
@@ -48,7 +47,7 @@ class TestPythonRequiresPackageID:
 
     def test_change_mode_conf(self):
         # change the policy in conan.conf
-        save(self.client2.paths.new_config_path, "core.package_id:default_python_mode=patch_mode")
+        self.client2.save_home({"global.conf": "core.package_id:default_python_mode=patch_mode"})
         self.client2.run("create . --name=pkg --version=0.1")
         assert "tool/1.1.1" in self.client2.out
         self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1, "Build")})
@@ -61,8 +60,7 @@ class TestPythonRequiresPackageID:
 
     def test_unrelated_conf(self):
         # change the policy in conan.conf
-        save(self.client2.paths.new_config_path,
-             "core.package_id:default_python_mode=unrelated_mode")
+        self.client2.save_home({"global.conf": "core.package_id:default_python_mode=unrelated_mode"})
         self.client2.run("create . --name=pkg --version=0.1")
         assert "tool/1.1.1" in self.client2.out
         pkg_id = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
@@ -97,7 +95,7 @@ class TestPythonRequiresPackageID:
 
 def test_python_requires_for_build_requires():
     client = TestClient()
-    save(client.paths.new_config_path, "core.package_id:default_python_mode=full_version_mode")
+    client.save_home({"global.conf": "core.package_id:default_python_mode=full_version_mode"})
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=tool --version=1.1.1")
 

@@ -389,8 +389,8 @@ def test_conf_scope_patterns_ok(scope, conf):
 
 @pytest.mark.parametrize("conf", ["user.foo.bar=1"])
 @pytest.mark.parametrize("scope, assert_message", [
-    ("", "Either 'user.foo.bar' does not exist in configuration list"),
-    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+    ("", "User conf 'user.foo.bar' invalid format, not 'user.org.group:conf'"),
+    ("pkg/1.0:", "'pkg/1.0:user.foo.bar' does not exist in configuration list"),
 ])
 def test_conf_scope_patterns_bad(scope, conf, assert_message):
     final_conf = scope + conf

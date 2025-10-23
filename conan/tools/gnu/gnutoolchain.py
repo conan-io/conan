@@ -1,13 +1,14 @@
 import os
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
-from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.internal_tools import is_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, \
-    libcxx_flags, llvm_clang_front
+    libcxx_flags, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
@@ -33,7 +34,6 @@ class GnuToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
-        raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
         self._namespace = namespace
         self._is_apple_system = is_apple_os(self._conanfile)
@@ -58,6 +58,7 @@ class GnuToolchain:
         self.cppstd = cppstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile)
         self.arch_ld_flag = architecture_link_flag(self._conanfile)
+        self.threads_flags = threads_flags(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
@@ -65,6 +66,13 @@ class GnuToolchain:
         self.msvc_runtime_link_flags = []
         if llvm_clang_front(self._conanfile) == "clang":
             self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
+
+        self._is_universal_arch = is_universal_arch(conanfile.settings.get_safe("arch"),
+                                                    conanfile.settings.possible_values().get("arch"))
+        if self._is_universal_arch and not is_apple_os(self._conanfile):
+            arch_str = conanfile.settings.get_safe('arch')
+            raise ConanException(f"Universal arch '{arch_str}' is only supported in Apple OSes")
+
         extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
                                                         check_type=list,
                                                         default=[])
@@ -75,7 +83,7 @@ class GnuToolchain:
             "host": {"triplet": self._conanfile.conf.get("tools.gnu:host_triplet")},
             "build": {"triplet": self._conanfile.conf.get("tools.gnu:build_triplet")}
         }
-        self._is_cross_building = cross_building(self._conanfile)
+        self._is_cross_building = not self._is_universal_arch and cross_building(self._conanfile)
         if self._is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
             # Host triplet
@@ -103,12 +111,15 @@ class GnuToolchain:
         # Apple stuff
         is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
-                                 and is_apple_os(conanfile))
-        min_flag, arch_flag, isysroot_flag = (
-            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx)
+                                 and is_apple_os(conanfile)
+                                 and not self._is_universal_arch)
+
+        min_flag, arch_flags, isysroot_flag = (
+            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx,
+                                is_universal=self._is_universal_arch)
         )
         # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-        self.apple_arch_flag = arch_flag
+        self.apple_arch_flag = arch_flags
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
@@ -268,7 +279,7 @@ class GnuToolchain:
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
-               self.sysroot_flag]
+               self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
@@ -279,7 +290,7 @@ class GnuToolchain:
     @property
     def cflags(self):
         fpic = "-fPIC" if self.fpic else None
-        ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
+        ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
@@ -289,7 +300,7 @@ class GnuToolchain:
 
     @property
     def ldflags(self):
-        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag]
+        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],

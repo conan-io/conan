@@ -139,6 +139,28 @@ def test_missing_internal(component):
            "to other internal components that are not defined: ['other', 'another']" in t.out
 
 
+def test_missing_external_components():
+    foo = textwrap.dedent("""
+        from conan import ConanFile
+        class Recipe(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "foo/1.0", "bar/1.0"
+            def package_info(self):
+                self.cpp_info.components["comp1"].libs = []
+                self.cpp_info.components["comp2"].requires = ["comp1"]
+        """)
+    t = TestClient()
+    t.save({'bar/conanfile.py': GenConanfile("bar", "1.0"),
+            'foo/conanfile.py': GenConanfile("foo", "1.0"),
+            "consumer/conanfile.py": foo})
+    t.run('create foo')
+    t.run("create bar")
+    t.run('create consumer', assert_error=True)
+    assert ("package_info(): There are direct dependencies, "
+            "but no '(cpp_info/components).requires' to them.") in t.out
+
+
 def test_unused_tool_requirement():
     """ Requires should include all listed requirements
         This error is known when creating the package if the requirement is consumed.
@@ -167,3 +189,26 @@ def test_unused_tool_requirement():
     t.run('create top.py --name=top2 --version=version')
     t.run('create consumer.py --name=wrong --version=version')
     # This runs without crashing, because it is not chcking that top::other doesn't exist
+
+
+def test_component_double_colon_error_message():
+    c = TestClient()
+    t2 = textwrap.dedent("""
+        from conan import ConanFile
+
+        class t2Conan(ConanFile):
+            name = "t2"
+            version = "0.1.0"
+            requires = "t1/0.1.0"
+            def package_info(self):
+                self.cpp_info.requires.append("t1::comp1::other")
+        """)
+
+    c.save({"t1/conanfile.py": GenConanfile("t1", "0.1.0"),
+            "t2/conanfile.py": t2,
+            "t2/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                          .with_generator("CMakeDeps")
+                                                          .with_test("pass")})
+    c.run("create t1")
+    c.run("create t2", assert_error=True)
+    assert "Component 't1::comp1::other' not found in 't1' package requirement" in c.out

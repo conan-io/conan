@@ -22,20 +22,20 @@ class IntegrityChecker:
 
     def check(self, pkg_list):
         corrupted = False
-        for ref, recipe_bundle in pkg_list.refs().items():
+        for ref, packages in pkg_list.items():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref, prev_bundle in pkg_list.prefs(ref, recipe_bundle).items():
+            for pref in packages:
                 corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
     def _recipe_corrupted(self, ref: RecipeReference):
         layout = self._cache.recipe_layout(ref)
-        output = ConanOutput()
+        output = ConanOutput(scope=f"{ref.repr_notime()}")
         try:
             read_manifest, expected_manifest = layout.recipe_manifests()
         except FileNotFoundError:
-            output.error(f"{ref.repr_notime()}: Manifest missing", error_type="exception")
+            output.error("Manifest missing", error_type="exception")
             return True
         # Filter exports_sources from read manifest if there are no exports_sources locally
         # This happens when recipe is downloaded without sources (not built from source)
@@ -45,28 +45,28 @@ class IntegrityChecker:
                                        if not k.startswith("export_source")}
 
         if read_manifest != expected_manifest:
-            output.error(f"{ref}: Manifest mismatch", error_type="exception")
-            output.error(f"Folder: {layout.export()}", error_type="exception")
+            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.package()}"]
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})", error_type="exception")
+                output_lines.append(f"        {fname} (manifest: {h1}, file: {h2})")
+            output.error("\n".join(output_lines), error_type="exception")
             return True
-        output.info(f"{ref}: Integrity checked: ok")
+        output.info("Integrity check: ok")
 
     def _package_corrupted(self, ref: PkgReference):
         layout = self._cache.pkg_layout(ref)
-        output = ConanOutput()
+        output = ConanOutput(scope=f"{ref.repr_notime()}")
         try:
             read_manifest, expected_manifest = layout.package_manifests()
         except FileNotFoundError:
-            output.error(f"{ref.repr_notime()}: Manifest missing", error_type="exception")
+            output.error("Manifest missing", error_type="exception")
             return True
 
         if read_manifest != expected_manifest:
-            output.error(f"{ref}: Manifest mismatch", error_type="exception")
-            output.error(f"Folder: {layout.package()}", error_type="exception")
+            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.package()}"]
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})", error_type="exception")
+                output_lines.append(f"        {fname} (manifest: {h1}, file: {h2})")
+            output.error("\n".join(output_lines), error_type="exception")
             return True
-        output.info(f"{ref}: Integrity checked: ok")
+        output.info("Integrity check: ok")

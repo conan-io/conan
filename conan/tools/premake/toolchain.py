@@ -1,4 +1,4 @@
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 import os
 import textwrap
 from pathlib import Path
@@ -16,19 +16,19 @@ def _generate_flags(self, conanfile):
     template = textwrap.dedent(
         """\
         {% if extra_cflags %}
-        -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags) and extra_cflags
+        -- C flags retrieved from CFLAGS environment, conan.conf(tools.build:cflags), extra_cflags and compiler settings
         filter { files { "**.c" } }
             buildoptions { {{ extra_cflags }} }
         filter {}
         {% endif %}
         {% if extra_cxxflags %}
-        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags) and extra_cxxflags
+        -- CXX flags retrieved from CXXFLAGS environment, conan.conf(tools.build:cxxflags), extra_cxxflags and compiler settings
         filter { files { "**.cpp", "**.cxx", "**.cc" } }
             buildoptions { {{ extra_cxxflags }} }
         filter {}
         {% endif %}
         {% if extra_ldflags %}
-        -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags) and extra_cxxflags
+        -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags), extra_cxxflags and compiler settings
         linkoptions { {{ extra_ldflags }} }
         {% endif %}
         {% if extra_defines %}
@@ -47,6 +47,7 @@ def _generate_flags(self, conanfile):
     arch_flags = to_list(architecture_flag(self._conanfile))
     cxx_flags, libcxx_compile_definitions = libcxx_flags(self._conanfile)
     arch_link_flags = to_list(architecture_link_flag(self._conanfile))
+    thread_flags_list = threads_flags(self._conanfile)
 
     extra_defines = format_list(
         conanfile.conf.get("tools.build:defines", default=[], check_type=list)
@@ -54,13 +55,17 @@ def _generate_flags(self, conanfile):
         + to_list(libcxx_compile_definitions)
     )
     extra_c_flags = format_list(
-        conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self.extra_cflags + arch_flags
+        conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        + self.extra_cflags
+        + arch_flags
+        + thread_flags_list
     )
     extra_cxx_flags = format_list(
         conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         + to_list(cxx_flags)
         + self.extra_cxxflags
         + arch_flags
+        + thread_flags_list
     )
     extra_ld_flags = format_list(
         conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
@@ -68,6 +73,7 @@ def _generate_flags(self, conanfile):
         + self.extra_ldflags
         + arch_flags
         + arch_link_flags
+        + thread_flags_list
     )
 
     return (

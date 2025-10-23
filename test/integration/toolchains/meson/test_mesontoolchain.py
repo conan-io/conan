@@ -230,7 +230,6 @@ def test_custom_arch_flag_via_toolchain():
     assert re.search(r"cpp_link_args =.+-mmy-flag.+", content)
 
 
-
 def test_linker_scripts_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -256,8 +255,10 @@ def test_linker_scripts_via_conf():
 
     t.run("install . -pr:b=profile -pr=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
-    assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
+    assert ("c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', "
+            "'-T/linker/scripts/flash.ld', '-T/linker/scripts/extra_data.ld']") in content
+    assert ("cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', "
+            "'-T/linker/scripts/flash.ld', '-T/linker/scripts/extra_data.ld']") in content
 
 
 def test_correct_quotes():
@@ -823,3 +824,82 @@ def test_conf_extra_apple_flags():
         assert f"{flags} = ['-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
     for flags in ["objcpp_args", "objc_args"]:
         assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("MesonToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    toolchain = client.load("conan_meson_cross.ini")
+    assert f"c_args = ['{flags}']" in toolchain
+    assert f"c_link_args = ['{flags}']" in toolchain
+    assert f"cpp_args = ['{flags}', '-stdlib=libc++']" in toolchain
+    assert f"cpp_link_args = ['{flags}', '-stdlib=libc++']" in toolchain
+
+
+def test_new_public_attributes():
+    host = textwrap.dedent(f"""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [conf]
+    tools.meson.mesontoolchain:backend=xcode
+    """)
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.backend = "vs2022"  # conf has more prio
+            tc.b_staticpic = True
+            tc.buildtype = "Debug"
+            tc.default_library = "shared"
+            tc.cpp_std="c++20"
+            tc.c_std="c20"
+            tc.b_vscrt="MD"
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "host": host})
+    client.run("install . -pr:a host")
+    content = client.load(MesonToolchain.native_filename)
+    expected = textwrap.dedent("""\
+    buildtype = 'Debug'
+    default_library = 'shared'
+    b_vscrt = 'MD'
+    b_ndebug = 'true'
+    b_staticpic = true
+    cpp_std = 'c++20'
+    c_std = 'c20'
+    backend = 'xcode'
+    """)
+    assert expected in content

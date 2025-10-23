@@ -3,7 +3,7 @@ import json
 from jinja2 import select_autoescape, Template
 
 from conan.api.output import cli_out_write, Color
-from conan.errors import ConanException
+
 
 severity_order = {
     "Critical": 4,

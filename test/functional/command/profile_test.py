@@ -1,7 +1,6 @@
 import os
 import platform
 import textwrap
-import unittest
 
 import pytest
 
@@ -14,12 +13,12 @@ from conan.internal.util.runners import detect_runner
 from conan.tools.microsoft.visual import vcvars_command
 
 
-class TestProfile(unittest.TestCase):
+class TestProfile:
 
     def test_list_empty(self):
         client = TestClient()
         client.run("profile list")
-        self.assertIn("Profiles found in the cache:", client.out)
+        assert "Profiles found in the cache:" in client.out
 
     def test_list(self):
         client = TestClient()
@@ -65,20 +64,20 @@ class TestProfile(unittest.TestCase):
         save(os.path.join(client.paths.profiles_path, "profile1"), profile1)
 
         client.run("profile show -pr=profile1")
-        self.assertIn("[settings]\nos=Windows", client.out)
-        self.assertIn("MyOption=32", client.out)
-        # self.assertIn("CC=/path/tomy/gcc_build", client.out)
-        # self.assertIn("CXX=/path/tomy/g++_build", client.out)
-        # self.assertIn("package:VAR=value", client.out)
-        self.assertIn("tools.build:jobs=20", client.out)
+        assert "[settings]\nos=Windows" in client.out
+        assert "MyOption=32" in client.out
+        # assert "CC=/path/tomy/gcc_build", client.out)
+        # assert "CXX=/path/tomy/g++_build", client.out)
+        # assert "package:VAR=value", client.out)
+        assert "tools.build:jobs=20" in client.out
 
     def test_missing_subarguments(self):
         client = TestClient()
         client.run("profile", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", client.out)
+        assert "ERROR: Exiting with code: 2" in client.out
 
 
-class DetectCompilersTest(unittest.TestCase):
+class TestDetectCompilers:
     def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",
@@ -91,7 +90,7 @@ class DetectCompilersTest(unittest.TestCase):
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
         if platform_compiler is not None:
-            self.assertEqual(result.get("compiler", None), platform_compiler)
+            assert result.get("compiler", None) == platform_compiler
 
     @pytest.mark.tool("gcc")
     @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
@@ -113,8 +112,8 @@ class DetectCompilersTest(unittest.TestCase):
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected
-        self.assertIsNone(result.get("compiler", None))
-        self.assertIn("gcc detected as a frontend using apple-clang", output)
+        assert result.get("compiler", None) is None
+        assert "gcc detected as a frontend using apple-clang" in output
 
     def test_profile_new(self):
         c = TestClient()

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
     Intel generator module for oneAPI Toolkits.
 
@@ -75,6 +73,10 @@ class IntelCC:
     def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
         check_duplicated_generator(self, self._conanfile)
+        intel_cc_path = self._conanfile.conf.get("tools.intel:installation_path")
+        if intel_cc_path == "":
+            return
+
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off

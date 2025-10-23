@@ -520,7 +520,6 @@ class ConfigInstallTest(unittest.TestCase):
         assert "Defining remotes from remotes.json" in self.client.out
         assert "Copying file myfuncs.py" in self.client.out
 
-
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
@@ -587,7 +586,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
-        conf = load(client.paths.new_config_path)
+        client.load_home("global.conf")  # check it is there
         dirs = os.listdir(client.cache_folder)
         assert ".git" not in dirs
 
@@ -754,6 +753,7 @@ class TestConfigInstallPkg:
         # This uses the same server and URL, because the TestClient+TestServer
         # does not allow atm to test this, as it requires the remote to be defined
         c.run(f"config install-pkg myconf/[*] --url={remote_url}")
+        assert "Connecting to remote 'config_install_url' with user 'admin'" in c.out
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")

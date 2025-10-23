@@ -1,6 +1,5 @@
 import os
 import stat
-import unittest
 
 from conan.tools.files import replace_in_file, unzip
 from conan.test.utils.mocks import ConanFileMock
@@ -10,7 +9,7 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import load, save
 
 
-class ConanfileToolsTest(unittest.TestCase):
+class TestConanfileTools:
 
     def test_save_append(self):
         # https://github.com/conan-io/conan/issues/2841 (regression)
@@ -24,7 +23,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "World"})
         client.run("source .")
-        self.assertEqual("WorldHello", client.load("myfile.txt"))
+        assert "WorldHello" == client.load("myfile.txt")
 
     def test_untar(self):
         tmp_dir = temp_folder()
@@ -43,14 +42,14 @@ class Pkg(ConanFile):
         output_dir = os.path.join(tmp_dir, "output_dir")
         unzip(ConanFileMock(), tar_path, output_dir)
         content = load(os.path.join(output_dir, "example.txt"))
-        self.assertEqual(content, "Hello world!")
+        assert content == "Hello world!"
 
     def test_replace_in_file(self):
         tmp_dir = temp_folder()
         text_file = os.path.join(tmp_dir, "text.txt")
         save(text_file, "ONE TWO THREE")
         replace_in_file(ConanFileMock(), text_file, "ONE TWO THREE", "FOUR FIVE SIX")
-        self.assertEqual(load(text_file), "FOUR FIVE SIX")
+        assert load(text_file) == "FOUR FIVE SIX"
 
     def test_replace_in_file_readonly(self):
         """
@@ -63,5 +62,8 @@ class Pkg(ConanFile):
         os.chmod(text_file,
                  os.stat(text_file).st_mode & ~(stat.S_IWRITE | stat.S_IWGRP | stat.S_IWOTH))
 
-        with self.assertRaises(PermissionError):
+        try:
             replace_in_file(ConanFileMock(), text_file, "ONE TWO THREE", "FOUR FIVE SIX")
+            assert False, "Expected PermissionError"
+        except PermissionError:
+            pass

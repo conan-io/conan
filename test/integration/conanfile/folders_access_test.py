@@ -1,5 +1,6 @@
 import textwrap
-import unittest
+
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -85,13 +86,14 @@ class AConan(ConanFile):
 """
 
 
-class TestFoldersAccess(unittest.TestCase):
+class TestFoldersAccess:
     """"Tests the presence of self.source_folder, self.build_folder, self.package_folder
     in the conanfile methods. Also the availability of the self.deps_cpp_info, self.deps_user_info
     and self.deps_env_info."""
 
-    def setUp(self):
-        self.client = TestClient()
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.client = TestClient(light=True)
         self.client.save({"conanfile.py": conanfile_parent})
         self.client.run("export . --user=conan --channel=stable")
 
@@ -130,7 +132,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("create . --user=conan --channel=stable --build='*'")
 
 
-class RecipeFolderTest(unittest.TestCase):
+class TestRecipeFolder:
     recipe_conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import load
@@ -158,33 +160,33 @@ class RecipeFolderTest(unittest.TestCase):
         """)
 
     def test_recipe_folder(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("INIT: MYFILE!", client.out)
-        self.assertIn("SET_NAME: MYFILE!", client.out)
+        assert "INIT: MYFILE!" in client.out
+        assert "SET_NAME: MYFILE!" in client.out
         client.save({}, clean_first=True)
         client.run("install --requires=pkg/0.1@user/testing --build='*'")
-        self.assertIn("pkg/0.1@user/testing: INIT: MYFILE!", client.out)
-        self.assertNotIn("SET_NAME", client.out)
-        self.assertIn("pkg/0.1@user/testing: CONFIGURE: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/testing: REQUIREMENTS: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/testing: PACKAGE: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!", client.out)
+        assert "pkg/0.1@user/testing: INIT: MYFILE!" in client.out
+        assert "SET_NAME" not in client.out
+        assert "pkg/0.1@user/testing: CONFIGURE: MYFILE!" in client.out
+        assert "pkg/0.1@user/testing: REQUIREMENTS: MYFILE!" in client.out
+        assert "pkg/0.1@user/testing: PACKAGE: MYFILE!" in client.out
+        assert "pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!" in client.out
 
     def test_local_flow(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
         client.run("install .")
-        self.assertIn("INIT: MYFILE!", client.out)
-        self.assertIn("SET_NAME: MYFILE!", client.out)
-        self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
-        self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
+        assert "INIT: MYFILE!" in client.out
+        assert "SET_NAME: MYFILE!" in client.out
+        assert "conanfile.py: CONFIGURE: MYFILE!" in client.out
+        assert "conanfile.py: REQUIREMENTS: MYFILE!" in client.out
 
     def test_editable(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":
@@ -193,7 +195,7 @@ class RecipeFolderTest(unittest.TestCase):
 
         client.run("install consumer")
         client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})
-        self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)
+        assert "pkg/0.1@user/stable: INIT: MYFILE!" in client.out
+        assert "pkg/0.1@user/stable: CONFIGURE: MYFILE!" in client.out
+        assert "pkg/0.1@user/stable: REQUIREMENTS: MYFILE!" in client.out
+        assert "pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!" in client.out

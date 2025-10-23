@@ -10,10 +10,10 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration, parse_extra_variable
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -237,8 +237,8 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""\
-        # Define C++ flags, C flags and linker flags from 'settings.arch'
         {% if arch_flag %}
+        # Define C++ flags, C flags and linker flags from 'settings.arch'
         message(STATUS "Conan toolchain: Defining architecture flag: {{ arch_flag }}")
         string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
         string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
@@ -250,14 +250,24 @@ class ArchitectureBlock(Block):
         string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_link_flag }}")
         string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_link_flag }}")
         {% endif %}
+        {% if thread_flags_list %}
+        # Define C++ flags, C flags and linker flags from 'compiler.threads'
+        message(STATUS "Conan toolchain: Defining thread flags: {{ thread_flags_list }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_C_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ thread_flags_list }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ thread_flags_list }}")
+        {% endif %}
         """)
 
     def context(self):
         arch_flag = architecture_flag(self._conanfile)
         arch_link_flag = architecture_link_flag(self._conanfile)
-        if not arch_flag and not arch_link_flag:
+        thread_flags_list = " ".join(threads_flags(self._conanfile))
+        if not arch_flag and not arch_link_flag and not thread_flags_list:
             return
-        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag}
+        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
+                "thread_flags_list": thread_flags_list}
 
 
 class LinkerScriptsBlock(Block):
@@ -874,13 +884,28 @@ class CMakeFlagsInitBlock(Block):
 class TryCompileBlock(Block):
     template = textwrap.dedent("""\
         # Blocks after this one will not be added when running CMake try/checks
-
+        {% if config %}
+        if(NOT DEFINED CMAKE_TRY_COMPILE_CONFIGURATION)  # to allow user command line override
+            set(CMAKE_TRY_COMPILE_CONFIGURATION {{config}})
+        endif()
+        {% endif %}
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(_CMAKE_IN_TRY_COMPILE)
             message(STATUS "Running toolchain IN_TRY_COMPILE")
             return()
         endif()
         """)
+
+    def context(self):
+        # Only for well known CMake configurations, but not for custom ones
+        # Revert of https://github.com/conan-io/conan/pull/18559, even if it was correct, there are
+        # legacy code using check_function_exists that breaks in CMake with MSVC, see
+        # https://github.com/conan-io/conan/issues/18689
+        # TODO: Resume this effort when other try_compile things are sorted out
+        # bt = self._conanfile.settings.get_safe("build_type")
+        # config = bt if bt in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"] else None
+        config = None  # Keep it defined but as `None` in case some user already customized it
+        return {"config": config}
 
 
 class CompilersBlock(Block):
@@ -1176,44 +1201,15 @@ class ExtraVariablesBlock(Block):
         {% endif %}
     """)
 
-    CMAKE_CACHE_TYPES = ["BOOL", "FILEPATH", "PATH", "STRING", "INTERNAL"]
-
-    def get_exact_type(self, key, value):
-        if isinstance(value, str):
-            return f"\"{value}\""
-        elif isinstance(value, (int, float)):
-            return value
-        elif isinstance(value, dict):
-            var_value = self.get_exact_type(key, value.get("value"))
-            is_force = value.get("force")
-            if is_force:
-                if not isinstance(is_force, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" must be a boolean')
-            is_cache = value.get("cache")
-            if is_cache:
-                if not isinstance(is_cache, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "cache" must be a boolean')
-                var_type = value.get("type")
-                if not var_type:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" needs "type" defined for cache variable')
-                if var_type not in self.CMAKE_CACHE_TYPES:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" invalid type "{var_type}" for cache variable. Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
-                # Set docstring as variable name if not defined
-                docstring = value.get("docstring") or key
-                force_str = " FORCE" if is_force else ""  # Support python < 3.11
-                return f"{var_value} CACHE {var_type} \"{docstring}\"{force_str}"
-            else:
-                if is_force:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" is only allowed for cache variables')
-                return var_value
-
     def context(self):
+        from conan.tools.cmake.utils import parse_extra_variable
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
-            parsed_extra_variables[key] = self.get_exact_type(key, value)
+            parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",
+                                                               key, value)
         return {"extra_variables": parsed_extra_variables}
 
 

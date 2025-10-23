@@ -3,6 +3,7 @@ import json
 import os
 import base64
 
+from conan.api.output import ConanOutput
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode
@@ -19,7 +20,7 @@ class AuditAPI:
     """
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
         self._provider_cls = {
@@ -28,12 +29,14 @@ class AuditAPI:
         }
 
     @staticmethod
-    def scan(deps_graph, provider):
+    def scan(deps_graph, provider, context=None):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                          for node in deps_graph.nodes[1:]), key=lambda ref: ref.name)
+                          for node in deps_graph.nodes[1:]
+                          if context is None or node.context == context),
+                      key=lambda ref: ref.name)
         return provider.get_cves(refs)
 
     @staticmethod
@@ -86,7 +89,7 @@ class AuditAPI:
 
         provider_cls = self._provider_cls.get(provider_data["type"])
 
-        return provider_cls(self.conan_api, provider_name, provider_data)
+        return provider_cls(self._conan_api, provider_name, provider_data)
 
     def list_providers(self):
         """
@@ -96,7 +99,7 @@ class AuditAPI:
         result = []
         for name, provider_data in providers.items():
             provider_cls = self._provider_cls.get(provider_data["type"])
-            result.append(provider_cls(self.conan_api, name, provider_data))
+            result.append(provider_cls(self._conan_api, name, provider_data))
         return result
 
     def add_provider(self, name, url, provider_type):

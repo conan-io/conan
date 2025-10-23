@@ -266,8 +266,11 @@ def _qcc_supported_cppstd(version):
 
     if version < "5":
         return ["98", "gnu98"]
-    else:
+    elif version < "12":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    else:
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
 
 def _emcc_supported_cppstd(version):
     """

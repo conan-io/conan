@@ -1,5 +1,3 @@
-import unittest
-
 from conan.internal.api.detect.detect_api import default_cstd
 from conan.tools.build.flags import cstd_flag
 from conan.internal.model.version import Version

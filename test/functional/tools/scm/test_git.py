@@ -1301,7 +1301,7 @@ class TestGitTreelessRemote:
 
     def test_treeless_clone_with_parenthesis(self):
         """
-        Windows can use C:\Program Files (x86) path, which contains parenthesis.
+        Windows can use C:/Program Files (x86) path, which contains parenthesis.
         As the URL will have (fetch) or (push), get_remote_url() should be able to parse it.
         """
         repository = os.path.join(temp_folder(), "Program Files (x86)", "myrepo")

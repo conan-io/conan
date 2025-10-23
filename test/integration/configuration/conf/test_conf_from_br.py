@@ -293,3 +293,35 @@ def test_error_bad_types(conf):
     assert f'self.conf_info.{conf}' in c.out
     assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
 
+
+@pytest.mark.parametrize("conf", ["tools.myorg.myconf", "user.myorg.myconf"])
+def test_error_missing_colon_define(conf):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                self.conf_info.define("{conf}", 42)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "ERROR: tool/0.1: Error in package_info() method:" in c.out
+    if conf == "tools.myorg.myconf":
+        assert "[conf] 'tools.myorg.myconf' does not exist in configuration" in c.out
+    else:
+        assert f"User conf '{conf}' invalid format, not 'user.org.group:conf'" in c.out
+
+
+def test_error_missing_colon_consume():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def generate(self):
+                self.conf.get("user.myorg.myconf")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "User conf 'user.myorg.myconf' invalid format, not 'user.org.group:conf'" in c.out

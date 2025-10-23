@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -137,3 +139,33 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
                                         "foo/1.0@user/testing": (foo_id, foo),
                                         "foobar/1.0@user/testing": (foobar_id, foobar),
                                         })
+
+
+def test_build_consumer():
+    """ If the consumer is built from sources, the dependencies must be built too
+    """
+    client = TestClient()
+    client.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0").with_build_msg("TEST: Building dep1"),
+                 "dep2/conanfile.py": GenConanfile("dep2", "1.0").with_build_msg("TEST: Building dep2"),
+                 "conanfile.py": GenConanfile("consumer", "1.0")
+                    .with_build_msg("TEST: Building consumer").with_requires("dep1/1.0", "dep2/1.0")})
+    client.run("create dep1")
+    client.run("create dep2")
+    client.run("export .")
+
+
+    # Still makes little sense, but just to test the logic
+    client.run("create . --build=* --build=!&", assert_error=True)
+    assert "TEST: Building consumer" not in client.out
+
+    client.run(f"graph info --requires=consumer/1.0 --build=& -f=json", redirect_stdout="graph.json")
+    graph = json.loads(client.load("graph.json"))
+    assert graph["graph"]["nodes"]["1"]["binary"] == "Build"  # Would be missing if not built
+    assert graph["graph"]["nodes"]["2"]["binary"] == "Cache"
+    assert graph["graph"]["nodes"]["3"]["binary"] == "Cache"
+
+    client.run(f"graph info . --build=& -f=json", redirect_stdout="graph.json")
+    graph = json.loads(client.load("graph.json"))
+    assert graph["graph"]["nodes"]["0"]["binary"] is None
+    assert graph["graph"]["nodes"]["1"]["binary"] == "Cache"
+    assert graph["graph"]["nodes"]["2"]["binary"] == "Cache"

@@ -14,3 +14,6 @@ def basic_layout(conanfile, src_folder=".", build_folder=None):
     conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
     conanfile.cpp.build.bindirs = ["."]
     conanfile.cpp.build.libdirs = ["."]
+
+    if not conanfile.cpp.source.includedirs:
+        conanfile.cpp.source.includedirs = ["include"]

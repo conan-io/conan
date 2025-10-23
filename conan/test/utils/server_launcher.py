@@ -17,7 +17,7 @@ TESTING_REMOTE_PRIVATE_USER = "private_user"
 TESTING_REMOTE_PRIVATE_PASS = "private_pass"
 
 
-class TestServerLauncher(object):
+class TestServerLauncher:
 
     def __init__(self, base_path=None, read_permissions=None,
                  write_permissions=None, users=None, base_url=None, plugins=None,
@@ -85,7 +85,7 @@ class TestServerLauncher(object):
                 self._stop.set()
 
             def stopped(self):
-                return self._stop.isSet()
+                return self._stop.is_set()
 
         self.t1 = StoppableThread(target=self.ra.run, kwargs={"host": "0.0.0.0", "quiet": True})
         self.t1.daemon = daemon

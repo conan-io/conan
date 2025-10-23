@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 import os
-import unittest
+import pytest
 
 from conan.errors import ConanException
 from conans.server.conf import ConanServerConfigParser
@@ -8,7 +7,7 @@ from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import mkdir, save
 
 
-class ServerConfigParseTest(unittest.TestCase):
+class TestServerConfigParse:
 
     def test_not_allowed_encoding_password(self):
         tmp_dir = temp_folder()
@@ -39,20 +38,20 @@ demo: %s
         save(conf_path, server_conf % "cönan")
 
         server_config = ConanServerConfigParser(tmp_dir)
-        with self.assertRaisesRegex(ConanException, "Password contains invalid characters. Only ASCII encoding is supported"):
+        with pytest.raises(ConanException, match="Password contains invalid characters. Only ASCII encoding is supported"):
             server_config.users
 
         save(conf_path, server_conf % "manol ito!@")
         server_config = ConanServerConfigParser(tmp_dir)
-        self.assertEqual(server_config.users, {"demo": "manol ito!@"})
+        assert server_config.users == {"demo": "manol ito!@"}
 
         # Now test from ENV
         server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo: cönan"})
-        with self.assertRaisesRegex(ConanException, "Password contains invalid characters. Only ASCII encoding is supported"):
+        with pytest.raises(ConanException, match="Password contains invalid characters. Only ASCII encoding is supported"):
             server_config.users
 
         server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo:manolito!@"})
-        self.assertEqual(server_config.users, {"demo": "manolito!@"})
+        assert server_config.users == {"demo": "manolito!@"}
 
     def test_relative_public_url(self):
         tmp_dir = temp_folder()
@@ -69,7 +68,7 @@ demo: %s
         save(conf_path, server_conf)
 
         server_config = ConanServerConfigParser(tmp_dir)
-        self.assertEqual(server_config.public_url, "v2")
+        assert server_config.public_url == "v2"
 
     def test_custom_server_folder_path(self):
         tmp_dir = temp_folder()
@@ -85,7 +84,7 @@ demo: %s
         """
         save(conf_path, server_conf)
         server_config = ConanServerConfigParser(server_dir, is_custom_path=True)
-        self.assertEqual(server_config.conan_folder, server_dir)
+        assert server_config.conan_folder == server_dir
 
     def test_custom_server_path_has_custom_data_path(self):
         tmp_dir = temp_folder()
@@ -102,4 +101,4 @@ disk_storage_path: ./custom_data
         """
         save(conf_path, server_conf)
         server_config = ConanServerConfigParser(server_dir, is_custom_path=True)
-        self.assertEqual(server_config.disk_storage_path, os.path.join(server_dir, "custom_data"))
+        assert server_config.disk_storage_path == os.path.join(server_dir, "custom_data")
