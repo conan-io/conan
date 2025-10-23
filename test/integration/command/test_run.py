@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.fixture(scope="module")
 def client():
-    tc = TestClient(light=True)
+    tc = TestClient(light=True, default_server_user=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import save
@@ -42,6 +42,7 @@ def test_run(client, context_flag, requires_context, use_conanfile):
         None: "",
     }.get(context_flag)
     should_find_binary = (context_flag == requires_context) or (context_flag is None)
+    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
     if use_conanfile:
         conanfile_consumer = GenConanfile("consumer", "1.0").with_settings("os")
         if requires_context == "host":
@@ -50,20 +51,29 @@ def test_run(client, context_flag, requires_context, use_conanfile):
             conanfile_consumer.with_tool_requires("pkg/0.1")
 
         client.save({"conanfile.py": conanfile_consumer})
-        if platform.system() == "Windows":
-            client.run(f"run myapp.bat {context_arg}", assert_error=not should_find_binary)
-        else:
-            client.run(f"run myapp.sh {context_arg}", assert_error=not should_find_binary)
+        client.run(f"run {executable} {context_arg}", assert_error=not should_find_binary)
     else:
         requires = "requires" if requires_context == "host" else "tool-requires"
-        if platform.system() == "Windows":
-            client.run(f"run myapp.bat --{requires}=pkg/0.1 {context_arg}",
-                       assert_error=not should_find_binary)
-        else:
-            client.run(f"run myapp.sh --{requires}=pkg/0.1 {context_arg}",
-                       assert_error=not should_find_binary)
+        client.run(f"run {executable} --{requires}=pkg/0.1 {context_arg}",
+                   assert_error=not should_find_binary)
     if should_find_binary:
         assert "Hello World!" in client.out
     else:
         assert "ERROR" in client.out
 
+
+def test_run_no_remote_default(client):
+    client.run("upload pkg -r=default -c")
+    tc = TestClient(servers=client.servers)
+    tc.run("list pkg -r=default")
+
+    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
+    tc.run(f"run {executable} --requires=pkg/0.1", assert_error=True)
+    assert "ERROR: Package 'pkg/0.1' not resolved: No remote defined" in tc.out
+
+    tc.run(f"run {executable} --requires=pkg/0.1 -r=default")
+    assert "Hello World!" in tc.out
+
+    # And it's now in the cache, this should work
+    tc.run(f"run {executable} --requires=pkg/0.1")
+    assert "Hello World!" in tc.out
