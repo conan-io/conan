@@ -14,8 +14,9 @@ def run(conan_api, parser, *args):
     """
     common_graph_args(parser)
     parser.add_argument("command", help="Command to run", nargs='+')
-    parser.add_argument("--context", help="Context to use, host or build",
-                        choices=["host", "build"], default="build")
+    parser.add_argument("--context", help="Context to use, by default both contexts are activated "
+                                          "if not specified",
+                        choices=["host", "build"], default=None)
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
@@ -39,9 +40,15 @@ def run(conan_api, parser, *args):
     deps_graph, lockfile = run_install_command(conan_api, args, cwd)
     ConanOutput._conan_output_level = previous_log_level
 
-    scope = "run" if args.context == "host" else "build"
+    context_env_map = {
+        "host": "conanrun",
+        "build": "conanbuild"
+    }
+
+    envfiles = ["conanbuild", "conanrun"] if args.context is None else [context_env_map.get(args.context)]
+
     try:
-        deps_graph.root.conanfile.run(command, cwd=cwd, scope=scope)
+        deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
     except:
         raise
     finally:

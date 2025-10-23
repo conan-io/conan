@@ -6,48 +6,64 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("context", ["host", "build"])
-@pytest.mark.parametrize("use_conanfile", [True, False])
-def test_run(context, use_conanfile):
-    tc = TestClient()
+@pytest.fixture(scope="module")
+def client():
+    tc = TestClient(light=True)
     conanfile = textwrap.dedent("""
-    from conan import ConanFile
-    from conan.tools.files import save
-    import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        import os
 
-    class Pkg(ConanFile):
-        name = "pkg"
-        version = "0.1"
-        # So that the requirement is run=True even for --requires
-        package_type = "application"
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            # So that the requirement is run=True even for --requires
+            package_type = "application"
 
-        def package(self):
-            save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), "echo Hello World!")
-            save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), "echo Hello World!")
-            # Make it executable
-            os.chmod(os.path.join(self.package_folder, "bin", "myapp.sh"), 0o755)
-            os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
-    """)
-
-    conanfile_consumer = GenConanfile("consumer", "1.0").with_settings("os")
-    if context == "host":
-        conanfile_consumer.with_requires("pkg/0.1")
-    else:
-        conanfile_consumer.with_tool_requires("pkg/0.1")
-
-    tc.save({"pkg/conanfile.py": conanfile, "conanfile.py": conanfile_consumer })
+            def package(self):
+                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), "echo Hello World!")
+                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), "echo Hello World!")
+                # Make it executable
+                os.chmod(os.path.join(self.package_folder, "bin", "myapp.sh"), 0o755)
+                os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
+        """)
+    tc.save({"pkg/conanfile.py": conanfile})
     tc.run("create pkg")
-    requires = "requires" if context == "host" else "tool-requires"
+    return tc
 
+
+@pytest.mark.parametrize("context_flag", ["host", "build", None])
+@pytest.mark.parametrize("requires_context", ["host", "build",])
+@pytest.mark.parametrize("use_conanfile", [True, False])
+def test_run(client, context_flag, requires_context, use_conanfile):
+    context_arg = {
+        "host": "--context=host",
+        "build": "--context=build",
+        None: "",
+    }.get(context_flag)
+    should_find_binary = (context_flag == requires_context) or (context_flag is None)
     if use_conanfile:
-        if platform.system() == "Windows":
-            tc.run(f"run myapp.bat --context={context}")
+        conanfile_consumer = GenConanfile("consumer", "1.0").with_settings("os")
+        if requires_context == "host":
+            conanfile_consumer.with_requires("pkg/0.1")
         else:
-            tc.run(f"run myapp.sh --context={context}")
+            conanfile_consumer.with_tool_requires("pkg/0.1")
+
+        client.save({"conanfile.py": conanfile_consumer})
+        if platform.system() == "Windows":
+            client.run(f"run myapp.bat {context_arg}", assert_error=not should_find_binary)
+        else:
+            client.run(f"run myapp.sh {context_arg}", assert_error=not should_find_binary)
     else:
+        requires = "requires" if requires_context == "host" else "tool-requires"
         if platform.system() == "Windows":
-            tc.run(f"run myapp.bat --{requires}=pkg/0.1 --context={context}")
+            client.run(f"run myapp.bat --{requires}=pkg/0.1 {context_arg}",
+                       assert_error=not should_find_binary)
         else:
-            tc.run(f"run myapp.sh --{requires}=pkg/0.1 --context={context}")
-    assert "Hello World!" in tc.out
+            client.run(f"run myapp.sh --{requires}=pkg/0.1 {context_arg}",
+                       assert_error=not should_find_binary)
+    if should_find_binary:
+        assert "Hello World!" in client.out
+    else:
+        assert "ERROR" in client.out
 
