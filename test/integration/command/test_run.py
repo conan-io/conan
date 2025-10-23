@@ -6,6 +6,9 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
+executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
+
+
 @pytest.fixture(scope="module")
 def client():
     tc = TestClient(light=True, default_server_user=True)
@@ -23,11 +26,10 @@ def client():
             default_options = {"foo": True}
 
             def package(self):
-                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), f"echo Hello World! foo={self.options.foo}")
-                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), f"echo Hello World! foo={self.options.foo}")
+                executable = os.path.join(self.package_folder, "bin", '""" + executable + """')
+                save(self, executable, f"echo Hello World! foo={self.options.foo}")
                 # Make it executable
-                os.chmod(os.path.join(self.package_folder, "bin", "myapp.sh"), 0o755)
-                os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
+                os.chmod(executable, 0o755)
         """)
     tc.save({"pkg/conanfile.py": conanfile})
     tc.run("create pkg")
@@ -44,7 +46,6 @@ def test_run(client, context_flag, requires_context, use_conanfile):
         None: "",
     }.get(context_flag)
     should_find_binary = (context_flag == requires_context) or (context_flag is None)
-    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
     if use_conanfile:
         conanfile_consumer = GenConanfile("consumer", "1.0").with_settings("os")
         if requires_context == "host":
@@ -67,7 +68,6 @@ def test_run(client, context_flag, requires_context, use_conanfile):
 def test_run_context_priority(client):
     client.run("create pkg -o=pkg/*:foo=False")
 
-    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
     client.run(f"run {executable} --requires=pkg/0.1 --tool-requires=pkg/0.1 -o:b=pkg/*:foo=False")
     # True is host, False is build, run gives priority to host
     assert "Hello World! foo=True" in client.out
