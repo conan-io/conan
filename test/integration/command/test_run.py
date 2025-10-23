@@ -21,8 +21,8 @@ def client():
             package_type = "application"
 
             def package(self):
-                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), "echo Hello World!")
-                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), "echo Hello World!")
+                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), f"echo Hello World!")
+                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), f"echo Hello World!")
                 # Make it executable
                 os.chmod(os.path.join(self.package_folder, "bin", "myapp.sh"), 0o755)
                 os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
@@ -60,20 +60,3 @@ def test_run(client, context_flag, requires_context, use_conanfile):
         assert "Hello World!" in client.out
     else:
         assert "ERROR" in client.out
-
-
-def test_run_no_remote_default(client):
-    client.run("upload pkg -r=default -c")
-    tc = TestClient(servers=client.servers)
-    tc.run("list pkg -r=default")
-
-    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
-    tc.run(f"run {executable} --requires=pkg/0.1", assert_error=True)
-    assert "ERROR: Package 'pkg/0.1' not resolved: No remote defined" in tc.out
-
-    tc.run(f"run {executable} --requires=pkg/0.1 -r=default")
-    assert "Hello World!" in tc.out
-
-    # And it's now in the cache, this should work
-    tc.run(f"run {executable} --requires=pkg/0.1")
-    assert "Hello World!" in tc.out

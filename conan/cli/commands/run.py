@@ -28,9 +28,6 @@ def run(conan_api, parser, *args):
     setattr(args, "output_folder", ".conanrun")
     setattr(args, "generator", [])
 
-    if args.remote is None:
-        args.no_remote = True
-
     ConanOutput().info("Installing and building dependencies, this might take a while...",
                        fg=Color.BRIGHT_MAGENTA)
     previous_log_level = ConanOutput._conan_output_level
