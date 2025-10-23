@@ -1,7 +1,6 @@
 import platform
 import os
 import shutil
-import sys
 
 from conan.tools.build import cmd_args_to_string
 from conan.tools.env.environment import Environment
@@ -26,9 +25,9 @@ class PipEnv:
         env.vars(self._conanfile).save_script(self.env_name)
 
     def _create_venv(self):
-        python_interpreter = self._conanfile.conf.get(
-            "tools.system.pipenv:python_interpreter",
-            default=shutil.which('python') if platform.system() == "Windows" else shutil.which('python3'))
+        default_python = shutil.which('python') if platform.system() == "Windows" else shutil.which('python3')
+        python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter",
+                                                      default=os.path.realpath(default_python) if default_python else None)
         if not python_interpreter:
             raise ConanException("PipEnv could not find a Python executable path.")
 
