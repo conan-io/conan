@@ -232,8 +232,8 @@ def test_windows_case_insensitive_bat(envvars):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.parametrize("deactivate_function", [True, False],)
-def test_windows_case_insensitive_ps1(envvars, deactivate_function):
+@pytest.mark.parametrize("deactivate", ["function", None],)
+def test_windows_case_insensitive_ps1(envvars, deactivate):
     display = textwrap.dedent("""\
         echo "MyVar=$env:MyVar!!"
         echo "MyVar1=$env:MyVar1!!"
@@ -246,10 +246,10 @@ def test_windows_case_insensitive_ps1(envvars, deactivate_function):
     prevenv.update(dict(os.environ.copy()))
 
     with chdir(temp_folder()):
-        envvars._use_deactivate_function = deactivate_function
+        envvars._deactivate_method = deactivate
         envvars.save_ps1("test.ps1")
         save("display.ps1", display)
-        deactivate_cmd = "deactivate_test" if deactivate_function else ".\\deactivate_test.ps1"
+        deactivate_cmd = "deactivate_test" if deactivate else ".\\deactivate_test.ps1"
         cmd = f"powershell.exe .\\test.ps1 ; .\\display.ps1 ; {deactivate_cmd} ; .\\display.ps1"
         check_command_output(cmd, prevenv)
 
