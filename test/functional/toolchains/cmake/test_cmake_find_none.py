@@ -193,10 +193,10 @@ def test_cmake_find_none_relocation_multi():
                     # Create imported target pkg::pkg
                     add_library(pkg::pkg STATIC IMPORTED)
 
-                    if(NOT DEFINED pkg_DIR_MULTI)
-                        get_filename_component(pkg_DIR_MULTI "${CMAKE_CURRENT_LIST_FILE}" PATH)
+                    if(NOT DEFINED CONAN_pkg_DIR_MULTI)
+                        get_filename_component(CONAN_pkg_DIR_MULTI "${CMAKE_CURRENT_LIST_FILE}" PATH)
                     endif()
-                    foreach(_IMPORT_PREFIX ${pkg_DIR_MULTI})
+                    foreach(_IMPORT_PREFIX ${CONAN_pkg_DIR_MULTI})
                         get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
                         get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
 

@@ -205,7 +205,7 @@ class _PathGenerator:
         {% endfor %}
         {% for pkg_name, folders in pkg_paths_multi.items() %}
         {% for folder in folders %}
-        list(APPEND {{pkg_name}}_DIR_MULTI "{{folder}}")
+        list(APPEND CONAN_{{pkg_name}}_DIR_MULTI "{{folder}}")
         {% endfor %}
         {% endfor %}
         {% if host_runtime_dirs %}
@@ -243,7 +243,7 @@ class _PathGenerator:
         pkg_paths_multi = {}
         if os.path.exists(self._conan_cmakedeps_paths):
             existing_toolchain = load(self._conan_cmakedeps_paths)
-            pattern_paths = r"list\(APPEND ([A-Za-z0-9-_]*)_DIR_MULTI \"([^)]*)\"\)"
+            pattern_paths = r"list\(APPEND CONAN_([A-Za-z0-9-_]*)_DIR_MULTI \"([^)]*)\"\)"
             variable_match = re.findall(pattern_paths, existing_toolchain)
             for (captured_name, captured_path) in variable_match:
                 path_list = pkg_paths_multi.setdefault(captured_name, [])
