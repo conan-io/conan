@@ -486,8 +486,8 @@ def test_environment_scripts_generated_envvars(require_run):
         assert "LD_LIBRARY_PATH" in conanrunenv
 
 
-@pytest.mark.parametrize("use_function", [True, False])
-def test_multiple_deactivate(use_function):
+@pytest.mark.parametrize("deactivate", ["function", None])
+def test_multiple_deactivate(deactivate):
     conanfile = textwrap.dedent(r"""
         from conan import ConanFile
         from conan.tools.env import Environment
@@ -514,13 +514,13 @@ def test_multiple_deactivate(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
+    client.run(f"install . {f'-c=tools.env:deactivate={deactivate}' if deactivate else ''} ")
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
             cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
         else:
-            deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
+            deactivate_cmd = "deactivate_conanbuild" if deactivate else ". ./deactivate_conanbuild.sh"
             cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
@@ -532,8 +532,8 @@ def test_multiple_deactivate(use_function):
         assert "VAR2=!!" in out
 
 
-@pytest.mark.parametrize("use_function", [True, False])
-def test_multiple_deactivate_order(use_function):
+@pytest.mark.parametrize("deactivate", ["function", None])
+def test_multiple_deactivate_order(deactivate):
     """
     https://github.com/conan-io/conan/issues/13693
     """
@@ -561,13 +561,13 @@ def test_multiple_deactivate_order(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
+    client.run(f"install . {f'-c=tools.env:deactivate={deactivate}' if deactivate else ''} ")
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
             cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
         else:
-            deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
+            deactivate_cmd = "deactivate_conanbuild" if deactivate else ". ./deactivate_conanbuild.sh"
             cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
@@ -578,8 +578,8 @@ def test_multiple_deactivate_order(use_function):
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Shell script test")
-@pytest.mark.parametrize("use_function", [True, False])
-def test_deactivate_missing_vars_stay_missing(use_function):
+@pytest.mark.parametrize("deactivate", ["function", None])
+def test_deactivate_missing_vars_stay_missing(deactivate):
     """ Tests that these two cases preserve variable status
     1.
     export FOO=
@@ -627,9 +627,9 @@ def test_deactivate_missing_vars_stay_missing(use_function):
     client.save({"conanfile.py": conanfile,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -c=tools.env:new_deactivate={use_function}")
+    client.run(f"install . {f'-c=tools.env:deactivate={deactivate}' if deactivate else ''} ")
 
-    deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
+    deactivate_cmd = "deactivate_conanbuild" if deactivate else ". ./deactivate_conanbuild.sh"
     cmd = (f'export FOO=&& export BAZ=Value3 && export FOOBAR='
            f'&& . ./conanbuild.sh && {deactivate_cmd} && ./display.sh')
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -713,8 +713,8 @@ def test_massive_paths(num_deps):
         assert "MYTOOL {}!!".format(i) in client.out
 
 
-@pytest.mark.parametrize("use_function", [True, False])
-def test_profile_build_env_spaces(use_function):
+@pytest.mark.parametrize("deactivate", ["function", None])
+def test_profile_build_env_spaces(deactivate):
     display_bat = textwrap.dedent("""\
         @echo off
         echo VAR1=%VAR1%!!
@@ -728,12 +728,12 @@ def test_profile_build_env_spaces(use_function):
                  "display.bat": display_bat,
                  "display.sh": display_sh})
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
-    client.run(f"install . -g VirtualBuildEnv -pr=profile -c=tools.env:new_deactivate={use_function}")
+    client.run(f"install . -g VirtualBuildEnv -pr=profile {f'-c=tools.env:deactivate={deactivate}' if deactivate else ''} ")
 
     if platform.system() == "Windows":
         cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
     else:
-        deactivate_cmd = "deactivate_conanbuild" if use_function else ". ./deactivate_conanbuild.sh"
+        deactivate_cmd = "deactivate_conanbuild" if deactivate else ". ./deactivate_conanbuild.sh"
         cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               shell=True, cwd=client.current_folder).communicate()

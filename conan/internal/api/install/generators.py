@@ -186,7 +186,7 @@ def _generate_aggregated_env(conanfile):
         return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
                 for s in reversed(filenames)]
 
-    use_deactivate_function = conanfile.conf.get("tools.env:new_deactivate", default=False, check_type=bool)
+    deactivation = conanfile.conf.get("tools.env:deactivate", default=None, check_type=str)
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
@@ -208,7 +208,7 @@ def _generate_aggregated_env(conanfile):
         if shs:
             def sh_content(files):
                 content = ". " + " && . ".join('"{}"'.format(s) for s in files)
-                if use_deactivate_function:
+                if deactivation == "function":
                     content += f"\n\ndeactivate_conan{group}() {{\n"
                     for deactivate_name in deactivate_function_names(shs):
                         content += f"    deactivate_{deactivate_name}\n"
@@ -217,7 +217,7 @@ def _generate_aggregated_env(conanfile):
             filename = "conan{}.sh".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            if not use_deactivate_function:
+            if not deactivation:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      sh_content(deactivates(shs)))
         if bats:
@@ -231,7 +231,7 @@ def _generate_aggregated_env(conanfile):
         if ps1s:
             def ps1_content(files):
                 content = "\r\n".join(['& "{}"'.format(b) for b in files])
-                if use_deactivate_function:
+                if deactivation == "function":
                     content += f"\n\nfunction global:deactivate_conan{group} {{\n"
                     for deactivate_name in deactivate_function_names(ps1s):
                         content += f"    deactivate_{deactivate_name}\n"
@@ -242,7 +242,7 @@ def _generate_aggregated_env(conanfile):
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
-            if not use_deactivate_function:
+            if not deactivation:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      ps1_content(deactivates(ps1s)))
     if generated:
