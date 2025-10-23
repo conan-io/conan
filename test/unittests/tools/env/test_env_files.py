@@ -103,8 +103,8 @@ def test_env_files_bat(env, prevenv):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.parametrize("deactivate", ["function", None])
-def test_env_files_ps1(env, prevenv, deactivate):
+@pytest.mark.parametrize("deactivation_mode", ["function", None])
+def test_env_files_ps1(env, prevenv, deactivation_mode):
     prevenv.update(dict(os.environ.copy()))
 
     display = textwrap.dedent("""\
@@ -123,20 +123,20 @@ def test_env_files_ps1(env, prevenv, deactivate):
 
     with chdir(temp_folder()):
         conanfile = ConanFileMock()
-        if deactivate:
-            conanfile.conf.define("tools.env:deactivate", deactivate)
+        if deactivation_mode:
+            conanfile.conf.define("tools.env:deactivation_mode", deactivation_mode)
         env = env.vars(conanfile)
         env._subsystem = WINDOWS
         env.save_ps1("test.ps1")
         save("display.ps1", display)
-        deactivate_cmd = "deactivate_test" if deactivate else ".\\deactivate_test.ps1"
+        deactivate_cmd = "deactivate_test" if deactivation_mode else ".\\deactivate_test.ps1"
         cmd = f"powershell.exe .\\test.ps1 ; .\\display.ps1 ; {deactivate_cmd} ; .\\display.ps1"
         check_env_files_output(cmd, prevenv)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
-@pytest.mark.parametrize("deactivate", ["function", None])
-def test_env_files_sh(env, prevenv, deactivate):
+@pytest.mark.parametrize("deactivation_mode", ["function", None])
+def test_env_files_sh(env, prevenv, deactivation_mode):
     display = textwrap.dedent("""\
         echo MyVar=$MyVar!!
         echo MyVar1=$MyVar1!!
@@ -153,14 +153,14 @@ def test_env_files_sh(env, prevenv, deactivate):
 
     with chdir(temp_folder()):
         conanfile = ConanFileMock()
-        if deactivate:
-            conanfile.conf.define("tools.env:deactivate", deactivate)
+        if deactivation_mode:
+            conanfile.conf.define("tools.env:deactivation_mode", deactivation_mode)
         env = env.vars(conanfile)
         env.save_sh("test.sh")
         save("display.sh", display)
         os.chmod("display.sh", 0o777)
         # We include the "set -e" to test it is robust against errors
-        deactivate_cmd = "deactivate_test" if deactivate else ". ./deactivate_test.sh"
+        deactivate_cmd = "deactivate_test" if deactivation_mode else ". ./deactivate_test.sh"
         cmd = f'set -e && . ./test.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
         check_env_files_output(cmd, prevenv)
 

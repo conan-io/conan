@@ -346,7 +346,7 @@ class EnvVars:
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
-        self._deactivate_method = conanfile.conf.get("tools.env:deactivate", default=None, check_type=str)
+        self._deactivation_mode = conanfile.conf.get("tools.env:deactivation_mode", default=None, check_type=str)
 
     @property
     def _pathsep(self):
@@ -457,12 +457,12 @@ class EnvVars:
 
         result = []
         if generate_deactivate:
-            result.append(_ps1_deactivate_contents(self._deactivate_method, self._values, filename))
+            result.append(_ps1_deactivate_contents(self._deactivation_mode, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            if generate_deactivate and self._deactivate_method == "function":
+            if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
                 result.append(
                     f'if ($env:{varname}) {{ $env:{_old_env_prefix(filename)}_{varname} = $env:{varname} }}'
@@ -484,13 +484,13 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         result = []
         if generate_deactivate:
-            result.append(_sh_deactivate_contents(self._deactivate_method, self._values, filename))
+            result.append(_sh_deactivate_contents(self._deactivation_mode, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
-            if generate_deactivate and self._deactivate_method == "function":
+            if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
                 result.append(
                     f'if [ -n "${{{varname}+x}}" ]; then '
@@ -573,9 +573,9 @@ def _old_env_prefix(filename):
     return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
 
 
-def _ps1_deactivate_contents(deactivate_method, values, filename):
+def _ps1_deactivate_contents(deactivation_mode, values, filename):
     vars_list = ", ".join(f'"{v}"' for v in values.keys())
-    if deactivate_method == "function":
+    if deactivation_mode == "function":
         var_prefix = _old_env_prefix(filename)
         func_name = _deactivate_func_name(filename)
         return textwrap.dedent(f"""\
@@ -617,9 +617,9 @@ def _ps1_deactivate_contents(deactivate_method, values, filename):
         Pop-Location
     """)
 
-def _sh_deactivate_contents(deactivate_method, values, filename):
+def _sh_deactivate_contents(deactivation_mode, values, filename):
     vars_list = " ".join(quote(v) for v in values.keys())
-    if deactivate_method == "function":
+    if deactivation_mode == "function":
         func_name = _deactivate_func_name(filename)
         return textwrap.dedent(f"""\
             # sh-like function to restore environment
