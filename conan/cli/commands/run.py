@@ -45,8 +45,6 @@ def run(conan_api, parser, *args):
 
     try:
         deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
-    except:
-        raise
     finally:
         # Remove previous output folder to ensure a clean install
         if os.path.exists(args.output_folder):
