@@ -19,10 +19,12 @@ def client():
             version = "0.1"
             # So that the requirement is run=True even for --requires
             package_type = "application"
+            options = {"foo": [True, False]}
+            default_options = {"foo": True}
 
             def package(self):
-                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), f"echo Hello World!")
-                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), f"echo Hello World!")
+                save(self, os.path.join(self.package_folder, "bin", "myapp.sh"), f"echo Hello World! foo={self.options.foo}")
+                save(self, os.path.join(self.package_folder, "bin", "myapp.bat"), f"echo Hello World! foo={self.options.foo}")
                 # Make it executable
                 os.chmod(os.path.join(self.package_folder, "bin", "myapp.sh"), 0o755)
                 os.chmod(os.path.join(self.package_folder, "bin", "myapp.bat"), 0o755)
@@ -60,3 +62,12 @@ def test_run(client, context_flag, requires_context, use_conanfile):
         assert "Hello World!" in client.out
     else:
         assert "ERROR" in client.out
+
+
+def test_run_context_priority(client):
+    client.run("create pkg -o=pkg/*:foo=False")
+
+    executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
+    client.run(f"run {executable} --requires=pkg/0.1 --tool-requires=pkg/0.1 -o:b=pkg/*:foo=False")
+    # True is host, False is build, run gives priority to host
+    assert "Hello World! foo=True" in client.out
