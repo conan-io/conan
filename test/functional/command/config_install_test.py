@@ -753,6 +753,7 @@ class TestConfigInstallPkg:
         # This uses the same server and URL, because the TestClient+TestServer
         # does not allow atm to test this, as it requires the remote to be defined
         c.run(f"config install-pkg myconf/[*] --url={remote_url}")
+        assert "Connecting to remote 'config_install_url' with user 'admin'" in c.out
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")

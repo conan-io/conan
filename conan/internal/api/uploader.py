@@ -42,7 +42,7 @@ class UploadUpstreamChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
+            server_ref = self._app.remote_manager.get_recipe_revision(ref, remote)
             assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
             ref_bundle["force_upload"] = False
@@ -63,7 +63,7 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
+            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
             assert server_revisions
         except NotFoundException:
             prev_bundle["force_upload"] = False

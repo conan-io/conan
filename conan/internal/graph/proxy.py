@@ -38,7 +38,7 @@ class ConanProxy:
 
         # check if it there's any revision of this recipe in the local cache
         try:
-            cache_ref = self._cache.get_latest_recipe_reference(reference) \
+            cache_ref = self._cache.get_latest_recipe_revision(reference) \
                 if reference.revision is None else reference
             recipe_layout = self._cache.recipe_layout(cache_ref)
             ref = recipe_layout.reference  # latest revision if it was not defined
@@ -113,13 +113,13 @@ class ConanProxy:
                         ConanProxy.update_policy_legacy_warning = True
                         ConanOutput().warning("The 'core:update_policy' conf is deprecated and will "
                                               "be removed in future versions", warn_tag="deprecated")
-                    refs = self._remote_manager.get_recipe_revisions_references(reference, remote)
+                    refs = self._remote_manager.get_recipe_revisions(reference, remote)
                     results.extend([{'remote': remote, 'ref': ref} for ref in refs])
                     continue
                 if not reference.revision:
-                    ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
+                    ref = self._remote_manager.get_latest_recipe_revision(reference, remote)
                 else:
-                    ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
+                    ref = self._remote_manager.get_recipe_revision(reference, remote)
                 if not need_update:
                     return remote, ref
                 results.append({'remote': remote, 'ref': ref})

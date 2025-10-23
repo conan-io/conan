@@ -99,7 +99,7 @@ class TestUpdateFlows:
         assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server0'" in self.client.out
 
-        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("liba/1.0.0@"))
+        latest_rrev = self.client.cache.get_latest_recipe_revision(RecipeReference.loads("liba/1.0.0@"))
         # check that we have stored REV1 in client with the same date from the server0
         assert latest_rrev.timestamp == self.server_times["server0"]
         assert latest_rrev.timestamp == self.server_times["server0"]
@@ -138,7 +138,7 @@ class TestUpdateFlows:
 
         self.client.run("install --requires=liba/1.0.0@ --update")
         # --> result: Update date and server because server0 has a newer date
-        latest_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
+        latest_rrev = self.client.cache.get_latest_recipe_revision(self.liba)
         self.client.assert_listed_require({"liba/1.0.0": "Updated (server2)"})
         assert "liba/1.0.0: Downloaded package" in self.client.out
         assert latest_rrev.timestamp == self.server_times["server2"]
@@ -171,7 +171,7 @@ class TestUpdateFlows:
         # create newer revisions in servers so that the ones from the clients are older
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV3")})
         self.client.run("create .")
-        rev_to_upload = self.client.cache.get_latest_recipe_reference(self.liba)
+        rev_to_upload = self.client.cache.get_latest_recipe_revision(self.liba)
         # the future
         self.the_time = 3000000000.0
         self._upload_ref_to_all_servers(repr(rev_to_upload), self.client)
@@ -194,7 +194,7 @@ class TestUpdateFlows:
                " from remote 'server2'" in self.client2.out
 
         check_ref = RecipeReference.loads(str(rev_to_upload))  # without revision
-        rev_to_upload = self.client2.cache.get_latest_recipe_reference(check_ref)
+        rev_to_upload = self.client2.cache.get_latest_recipe_revision(check_ref)
         assert rev_to_upload.timestamp == self.server_times["server2"]
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
@@ -210,7 +210,7 @@ class TestUpdateFlows:
         # check one revision we already have will not be installed
         # we search for that revision in the cache, we found it
         # --> result: don't install that
-        latest_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
+        latest_rrev = self.client.cache.get_latest_recipe_revision(self.liba)
         self.client.run(f"install --requires={latest_rrev}@#{latest_rrev.revision}")
         self.client.assert_listed_require({"liba/1.0.0": "Cache"})
         assert "liba/1.0.0: Already installed!" in self.client.out
@@ -224,7 +224,7 @@ class TestUpdateFlows:
         # create new older revisions in servers
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV4")})
         self.client.run("create .")
-        server_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
+        server_rrev = self.client.cache.get_latest_recipe_revision(self.liba)
         self.the_time = 0.0
 
         self._upload_ref_to_all_servers("liba/1.0.0", self.client)
@@ -260,7 +260,7 @@ class TestUpdateFlows:
         assert "liba/1.0.0: Checking remote: server2" not in self.client.out
         server_rrev_norev = copy.copy(server_rrev)
         server_rrev_norev.revision = None
-        latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev_norev)
+        latest_cache_revision = self.client.cache.get_latest_recipe_revision(server_rrev_norev)
         assert latest_cache_revision != server_rrev
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
@@ -276,7 +276,7 @@ class TestUpdateFlows:
         # from the remote
         # --> result: update REV4 date to 30 but it won't be latest
 
-        latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev_norev)
+        latest_cache_revision = self.client.cache.get_latest_recipe_revision(server_rrev_norev)
         assert latest_cache_revision != server_rrev
         latest_cache_revision = self.client.cache.recipe_layout(server_rrev).reference
 
@@ -290,7 +290,7 @@ class TestUpdateFlows:
 
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV6")})
         self.client.run("create .")
-        server_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
+        server_rrev = self.client.cache.get_latest_recipe_revision(self.liba)
         self.the_time = 3000000020.0
 
         self._upload_ref_to_all_servers(repr(server_rrev), self.client)
@@ -311,7 +311,7 @@ class TestUpdateFlows:
         # install anything, we are considering revisions fully immutable in 2.0
         # --> results: update revision date in cache, do not install anything
 
-        latest_rrev_cache = self.client.cache.get_latest_recipe_reference(self.liba)
+        latest_rrev_cache = self.client.cache.get_latest_recipe_revision(self.liba)
         assert latest_server_time == latest_rrev_cache.timestamp
         self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
@@ -336,7 +336,7 @@ class TestUpdateFlows:
         # the revision from the server that has the latest date
         # --> results: install from server2
 
-        latest_rrev_cache = self.client.cache.get_latest_recipe_reference(self.liba)
+        latest_rrev_cache = self.client.cache.get_latest_recipe_revision(self.liba)
         assert latest_server_time == latest_rrev_cache.timestamp
         self.client.assert_listed_require({"liba/1.0.0": "Downloaded (server2)"})
 
@@ -384,7 +384,7 @@ class TestUpdateFlows:
         assert "liba/[>0.9.0]: liba/1.0.0" in self.client.out
         self.client.assert_listed_require({"liba/1.0.0": "Downloaded (server0)"})
 
-        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("liba/1.0.0@"))
+        latest_rrev = self.client.cache.get_latest_recipe_revision(RecipeReference.loads("liba/1.0.0@"))
         assert latest_rrev.timestamp == self.server_times["server0"]
 
         # | CLIENT         | CLIENT2        | SERVER0        | SERVER1        | SERVER2        |

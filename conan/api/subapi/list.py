@@ -57,9 +57,9 @@ class ListAPI:
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         app = ConanBasicApp(self._conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
+            ret = app.remote_manager.get_latest_recipe_revision(ref, remote=remote)
         else:
-            ret = app.cache.get_latest_recipe_reference(ref)
+            ret = app.cache.get_latest_recipe_revision(ref)
 
         return ret
 
@@ -69,9 +69,9 @@ class ListAPI:
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
         app = ConanBasicApp(self._conan_api)
         if remote:
-            results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
+            results = app.remote_manager.get_recipe_revisions(ref, remote=remote)
         else:
-            results = app.cache.get_recipe_revisions_references(ref)
+            results = app.cache.get_recipe_revisions(ref)
 
         return results
 
@@ -83,9 +83,9 @@ class ListAPI:
         assert pref.package_id is not None, "package_id must be defined"
         app = ConanBasicApp(self._conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
+            ret = app.remote_manager.get_latest_package_revision(pref, remote=remote)
         else:
-            ret = app.cache.get_latest_package_reference(pref)
+            ret = app.cache.get_latest_package_revision(pref)
         return ret
 
     def package_revisions(self, pref: PkgReference, remote=None):
@@ -93,23 +93,20 @@ class ListAPI:
                                               "check latest first if needed"
         app = ConanBasicApp(self._conan_api)
         if remote:
-            results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
+            results = app.remote_manager.get_package_revisions(pref, remote=remote)
         else:
-            results = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
+            results = app.cache.get_package_revisions(pref)
         return results
 
     def _packages_configurations(self, ref: RecipeReference,
                                  remote=None) -> Dict[PkgReference, dict]:
-        assert ref.revision is not None, "packages: ref should have a revision. " \
-                                         "Check latest if needed."
+        assert ref.revision is not None and ref.revision != "latest", \
+            "packages: ref should have a revision. Check latest if needed."
         app = ConanBasicApp(self._conan_api)
         if not remote:
             prefs = app.cache.get_package_references(ref)
             packages = _get_cache_packages_binary_info(app.cache, prefs)
         else:
-            if ref.revision == "latest":
-                ref.revision = None
-                ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
             packages = app.remote_manager.search_packages(remote, ref)
         return packages
 
@@ -120,8 +117,6 @@ class ListAPI:
         :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :return: Dict[PkgReference, PkgConfiguration]
         """
-        if query is None:
-            return pkg_configurations
         try:
             if "!" in query:
                 raise ConanException("'!' character is not allowed")
@@ -514,7 +509,7 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     result = OrderedDict()
 
     for pref in prefs:
-        latest_prev = cache.get_latest_package_reference(pref)
+        latest_prev = cache.get_latest_package_revision(pref)
         pkg_layout = cache.pkg_layout(latest_prev)
 
         # Read conaninfo

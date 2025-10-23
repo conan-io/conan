@@ -1,78 +1,398 @@
 diff_html = r"""
-{% macro render_folder(folder, folder_info) %}
+{% macro render_sidebar_folder(folder, folder_info) %}
     {%- for name, sub_folder_info in folder_info["folders"].items() %}
         {% set folder_name = folder + "/" + name %}
         <li>
-            <details open>
+            <details open class="folder">
                 <summary>{{ name }}</summary>
                 <ul>
-                    {{ render_folder(folder_name, sub_folder_info) }}
+                    {{ render_sidebar_folder(folder_name, sub_folder_info) }}
                 </ul>
             </details>
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file-{{ "new" if file_info["is_new"] else "old" }}"
+        <li class="file file-{{ "deleted" if file_info["is_deleted"] else (
+                                "new" if file_info["is_new"] else "old") }}"
             data-path="{{ file_info["relative_path"] }}">
-            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}" class="side-link">
+            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
+                onclick="setDataIsLinked(event)" draggable="false"
+                class="side-link">
                 {{ name }}
             </a>
         </li>
     {%- endfor %}
 {% endmacro %}
+
+{% macro render_diff_folder(folder_info) %}
+    {%- for name, sub_folder_info in folder_info["folders"].items() %}
+        {{ render_diff_folder(sub_folder_info) }}
+    {%- endfor %}
+    {%- for name, file_info in folder_info["files"].items() %}
+        {% set filename = file_info["filename"] %}
+
+        <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
+            <div class="diff-content">
+                <details open class="diff-details">
+                    <summary class="diff-summary">
+                        <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
+                            <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                        </b>
+                        <div class="changes-count-container"></div>
+                    </summary>
+                    <div class="diff-lines">
+                    </div>
+                </details>
+            </div>
+        </div>
+    {%- endfor %}
+{% endmacro %}
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>{{ old_reference }} - {{ new_reference }}</title>
+        <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
-            body { font-family: monospace; margin: 0px; }
-            .container { display: flex; height: 100%; }
-            .sidebar {
-                min-width: 17%;
-                max-width: 20%;
-                padding: 10px;
-                overflow-y: scroll;
-                background: #f4f4f4;
-                border-right: 1px solid #ccc;
+            /* --- Colors --- */
+            :root {
+                --body-bgColor: #f8f8f8;
+                --sidebar-bgColor: #f4f4f466;
+                --sidebar-borderColor: #ccc;
+                --sidebar-contents-bgColor: #f4f4f4;
+                --content-bgColor: #f8f8f8;
+                --search-area-borderColor: #ccc;
+                --search-field-borderColor: #ccc;
+                --file-list-borderColor: #ddd;
+                --folder-summary-hover-bgColor: #e0e0e033;
+                --folder-ul-hover-borderColor: #00000066;
+                --sidebar-li-a-hover-bgColor: #e0e0e0;
+                --sidebar-link-color: black;
+                --sidebar-link-hover-color: var(--sidebar-link-color);
+                --sidebar-link-visited-color: var(--sidebar-link-color);
+                --sidebar-file-new-color: green;
+                --sidebar-file-old-color: gray;
+                --sidebar-file-deleted-color: red;
+                --diff-content-borderColor: black;
+                --diff-content-bgColor: white;
+                --diff-container-linked-borderColor: #0078d7;
+                --diff-summary-borderColor: #ccc;
+                --diff-summary-bgColor: #f8f8f8;
+                --diff-summary-hover-bgColor: #f0f0f0;
+                --new-lines-count-color: green;
+                --old-lines-count-color: black;
+                --context-line-color: #888;
+                --context-chunk-header-bgColor: #cef8ff;
+                --context-chunk-header-color: var(--context-line-color);
+                --added-line-bgColor: #cbfcd9;
+                --added-line-color: black;
+                --deleted-line-bgColor: #ffebe9;
+                --deleted-line-color: black;
+                --line-number-added-bgColor: #76ffbb;
+                --line-number-deleted-bgColor: #fdb9c1;
             }
-            details {
+
+            /* --- Global Styles --- */
+
+            body {
+                font-family: monospace;
+                margin: 0px;
+                background-color: var(--body-bgColor);
+            }
+
+            /* --- Main Layout --- */
+
+            .container {
+                display: flex;
+                height: 100%;
+                overflow: scroll;
+            }
+
+            .sidebar {
+                width: 17%;
+                min-width: 10%;
+                max-width: 33%;
+                padding: 10px;
+                overflow: scroll;
+                background: var(--sidebar-bgColor);
+                border-right: 1px solid var(--sidebar-borderColor);
+                resize: horizontal;
+                position: sticky;
+                top: 0;
+            }
+
+            .content {
+                padding: 20px;
+                background: var(--content-bgColor);
+                width: 100%;
+            }
+
+            /* --- Sidebar & File Tree --- */
+
+            #sidebar-contents {
+                background: var(--sidebar-contents-bgColor);
+                border-radius: 7px;
+                overflow-y: hidden;
+                padding-top: 5px;
+            }
+
+            .search-area {
+                border-bottom: 1px solid var(--search-area-borderColor);
+            }
+
+            .search-field {
+                border: 1px solid var(--search-field-borderColor);
+                border-radius: 5px;
+                padding: 5px;
+                margin: 5px;
+            }
+
+            .file-list {
+                padding-left: 10px;
+                width: 100%;
+                overflow-x: clip;
+            }
+
+            .file-list ul li {
+                width: 100%;
+            }
+
+            .file-list li ul {
+                border-left: 1px solid var(--file-list-borderColor);
+                margin-left: 3px;
+            }
+
+            li ul {
+                padding-left: 1ch;
+            }
+
+            details.folder {
                 text-wrap: nowrap;
             }
-            .sidebar li { line-height: 1.5; list-style: none; list-style-position: inside; }
-            .sidebar li.file-new { list-style: none; padding-left: 0; }
-            .sidebar li.file-new:before { content: "+"; color: green; }
-            .sidebar li.file-old { list-style: none; padding-left: 0;  }
-            .sidebar li.file-old:before { content: "*"; color: black; }
+
+            .folder > summary {
+                cursor: pointer;
+                list-style: none;
+            }
+
+            .folder > summary:hover {
+                background-color: var(--folder-summary-hover-bgColor);
+            }
+
+            .folder:not(:open) > summary:before {
+                content: "\1F4C1";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
+            .folder:open > summary:before {
+                content: "\1F4C2";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
+            details.folder ul:hover {
+                border-left: 1px solid var(--folder-ul-hover-borderColor);
+            }
+
+            .sidebar li {
+                line-height: 1.8;
+                list-style: none;
+                list-style-position: inside;
+                user-select: none;
+            }
+
+            .sidebar li a {
+                text-decoration: none;
+                padding: 5px;
+                color: var(--sidebar-link-color);
+            }
+
+            .sidebar li a:hover {
+                text-decoration: none;
+                border-radius: 5px;
+                background-color: var(--sidebar-li-a-hover-bgColor);
+                padding: 5px;
+                color: var(--sidebar-link-hover-color);
+            }
+
+            .sidebar li a:visited {
+                color: var(--sidebar-link-visited-color);
+            }
+
             .side-link {
                 text-wrap: nowrap;
             }
-            .file-list { padding-left: 10px; }
-            .file-list li ul {
-                border-left: 2px solid #ddd;
-                margin-left: 3px;
+
+            /* File Status Indicators */
+            .sidebar li.file-new,
+            .sidebar li.file-old,
+            .sidebar li.file-deleted {
+                list-style: none;
+                padding-left: 0;
             }
-            li ul { padding-left: 1ch; }
-            .content {
-                padding: 20px;
-                background: #fff;
-                overflow-y: scroll;
-                width: auto;
+
+            .sidebar li.file-new:before {
+                content: "+";
+                color: var(--sidebar-file-new-color);
+                font-weight: bold;
             }
+
+            .sidebar li.file-old:before {
+                content: "\00B1";
+                color: var(--sidebar-file-old-color);
+            }
+
+            .sidebar li.file-deleted:before {
+                content: "-";
+                color: var(--sidebar-file-deleted-color);
+                font-weight: bold;
+            }
+
+            /* --- Diff View Components --- */
+
+            .diff-container {
+                scroll-margin-top: 10px;
+            }
+
+            .diff-content {
+                padding-bottom: 7px;
+                border: 1px solid var(--diff-content-borderColor);
+                border-radius: 7px;
+                margin-bottom: 10px;
+                background-color: var(--diff-content-bgColor);
+            }
+
+            .diff-container[data-is-linked="true"] .diff-content {
+                border: 2px solid var(--diff-container-linked-borderColor);
+            }
+
+            details.diff-details summary.diff-summary {
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--diff-summary-borderColor);
+                padding: 5px 0px;
+                position: sticky;
+                top: 0;
+                background-color: var(--diff-summary-bgColor);
+                border-radius: 7px 7px 0px 0px;
+            }
+
+            details.diff-details summary.diff-summary:hover {
+                background-color: var(--diff-summary-hover-bgColor);
+            }
+
+            details:open .diff-summary .filename:before {
+                content: "\25BC";
+                display: inline-block;
+            }
+
+            details:not(:open) .diff-summary .filename:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .diff-header {
+                padding: 0px 5px 5px 5px;
+            }
+
+            .filename {
+                font-size: 1.2em;
+                padding-left: 10px;
+            }
+
+            .changes-count-container {
+                font-size: 0.9em;
+                padding-right: 10px;
+            }
+
+            .new-lines-count {
+                color: var(--new-lines-count-color);
+                font-weight: bold;
+            }
+
+            .old-lines-count {
+                color: var(--old-lines-count-color);
+                font-weight: bold;
+            }
+
+            /* --- Diff Line Styles --- */
+
             .content span {
                 white-space: pre-wrap;
             }
-            .diff-header {
-                background-color: #f0f0f0;
+
+            .context-chunk-header {
+                list-style: none;
+                background-color: var(--context-chunk-header-bgColor);
+                color: var(--context-chunk-header-color);
+                line-height: 2;
+                cursor: pointer;
             }
-            .add { background-color: #76ffbb; }
-            .del { background-color: #fdb9c1; }
-            .context, .context-header, .diff-content { background-color: #f8f8f8; }
-            .context-header { color: gray; }
-            .line-number { width: 4ch; display: inline-block; text-align: left; color: #888; user-select: none; }
-            .filename { background-color: #f0f0f0; }
-            a:visited {
-                color: blue;
+
+            details:open .context-chunk-header .line-number:before {
+                content: "\25BC";
+                display: inline-block;
             }
+
+            details:not(:open) .context-chunk-header .line-number:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .diff-lines {
+                line-break: anywhere;
+            }
+
+            .line-number {
+                width: 4ch;
+                min-width: 4ch;
+                display: inline-block;
+                text-align: center;
+                user-select: none;
+            }
+
+            .context-line {
+                color: var(--context-line-color);
+            }
+
+            .add {
+                background-color: var(--added-line-bgColor);
+                color: var(--added-line-color);
+            }
+
+            .del {
+                background-color: var(--deleted-line-bgColor);
+                color: var(--deleted-line-color);
+            }
+
+            .add,
+            .del,
+            .context-line {
+                height: 100%;
+            }
+
+            .diff-line {
+                display: flex;
+                box-sizing: border-box;
+                line-height: 1.5em;
+            }
+
+            .line-number.add {
+                background-color: var(--line-number-added-bgColor);
+            }
+
+            .line-number.del {
+                background-color: var(--line-number-deleted-bgColor);
+            }
+
+            .line-number.add,
+            .line-number.del {
+                height: auto;
+            }
+
+            /* --- Utility & Page States --- */
+
             #empty_result {
                 justify-content: center;
                 align-items: center;
@@ -83,6 +403,183 @@ diff_html = r"""
             }
         </style>
         <script>
+
+            const data = {{ content | tojson | safe }};
+
+            const oldPattern = "{{ src_prefix[:-1] }}{{ old_cache_path }}";
+            const newPattern = "{{ dst_prefix[:-1] }}{{ new_cache_path }}";
+
+            function extractLineNumbers(hunkHeader) {
+                const regex = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
+                const match = hunkHeader.match(regex);
+                if (!match) {
+                    return [0, 0];
+                }
+                return [parseInt(match[1]), parseInt(match[2])];
+            }
+
+
+            function makeDiffLines(lines) {
+                const element = document.createElement("div");
+                let seen_header = false;
+                let new_line_index = 0;
+                let old_line_index = 0;
+                let new_line_count = 0;
+                let old_line_count = 0;
+                const headerDiv = document.createElement("div");
+                let currentDetails = null;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    let spanLine = document.createElement("span");
+                    const lineDiv = document.createElement("div");
+                    lineDiv.className = "diff-line";
+                    let shouldAddLine = true;
+                    if (line.startsWith("+++")) {
+                        seen_header = true;
+                        spanLine.className = "add";
+                        spanLine.textContent = line.replace(newPattern, "(new)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
+                    } else if (line.startsWith("---")) {
+                        spanLine.className = "del";
+                        spanLine.textContent = line.replace(oldPattern, "(old)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
+                    } else if (line.startsWith("@@")) {
+                        currentDetails = document.createElement("details");
+                        currentDetails.open = true;
+
+                        const summary = document.createElement("summary");
+                        summary.className = "context-chunk-header";
+                        const summaryArrow = document.createElement("span");
+                        summaryArrow.className = "line-number";
+                        const summaryText = document.createElement("span");
+                        summaryText.textContent = line;
+
+                        summary.appendChild(summaryArrow);
+                        summary.appendChild(summaryText);
+
+                        currentDetails.appendChild(summary);
+                        element.appendChild(currentDetails);
+                        shouldAddLine = false;
+
+                        const lineNumbers = extractLineNumbers(line);
+                        old_line_index = lineNumbers[0];
+                        new_line_index = lineNumbers[1];
+                    } else if (line.startsWith("+")) {
+                        spanLine.className = "add";
+                        spanLine.textContent = line;
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number add";
+                        lineNumberSpan.textContent = new_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        new_line_index += 1;
+                        new_line_count += 1;
+                    } else if (line.startsWith("-")) {
+                        spanLine.className = "del";
+                        spanLine.textContent = line;
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number del";
+                        lineNumberSpan.textContent = old_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        old_line_index += 1;
+                        old_line_count += 1;
+                    } else {
+                        spanLine.className = "context-line";
+                        if (!seen_header) {
+                            spanLine.textContent = line.replace(oldPattern, "(old)").replace(newPattern, "(new)");
+                            headerDiv.appendChild(spanLine);
+                            headerDiv.appendChild(document.createElement("br"));
+                            continue;
+                        } else {
+                            spanLine.textContent = line;
+                        }
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number context-line";
+                        lineNumberSpan.textContent = new_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        new_line_index += 1;
+                        old_line_index += 1;
+                    }
+                    if (shouldAddLine) {
+                        lineDiv.appendChild(spanLine);
+
+                        currentDetails.appendChild(lineDiv);
+                        //currentDetails.appendChild(document.createElement("br"));
+                    }
+                }
+                if (!seen_header) {
+                    element.appendChild(headerDiv);
+                }
+                return [element, new_line_count, old_line_count];
+            }
+
+            function createChangesCountElement(new_count, old_count) {
+                const changes = document.createElement("span");
+                changes.className = "changes-count";
+                changes.innerHTML = `<span class="new-lines-count">+${new_count}</span> <span class="old-lines-count">-${old_count}</span>`;
+                return changes;
+            }
+
+
+            function intersectionCallback(entries) {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    let elem = entry.target;
+                    const path = elem.dataset.path;
+                    const [lines, new_count, old_count] = makeDiffLines(data[path]);
+                    const diffLines = elem.querySelector(".diff-lines")
+
+                    // If we're scrolling up, new lines are added to the top, so we need to
+                    // preserve the scroll position relative to the bottom of the new content
+                    const prevRect = elem.getBoundingClientRect();
+
+
+                    diffLines.appendChild(lines);
+
+                    if (new_count !== 0 || old_count !== 0) {
+                        elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
+                    }
+
+                    if (elem.getAttribute("data-is-linked") === "true") {
+                        // We need to scroll to the element again now that its height has changed
+                        elem.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                    } else {
+                        if (prevRect.top < 0) {
+                            const prevBottom = prevRect.bottom;
+                            const newBottom = elem.getBoundingClientRect().bottom;
+                            const container = document.querySelector('.container');
+                            container.scroll(0, container.scrollTop + (newBottom - prevBottom));
+                        }
+                    }
+
+                    observer.unobserve(elem);
+                }
+              });
+            }
+
+            const options = {
+                root: document.querySelector('.content'),
+                rootMargin: "0px",
+                scrollMargin: "0px",
+                threshold: 0.05,
+            };
+
+            const observer = new IntersectionObserver(intersectionCallback, options);
+
+            document.addEventListener("DOMContentLoaded", (e) => {
+                setDataIsLinked(null);
+                document.querySelectorAll('.diff-container').forEach((section) => {
+                    observer.observe(section);
+                });
+            });
+
             function debounce(func, delay) {
                 let timeout;
                 return function(...args) {
@@ -98,12 +595,14 @@ diff_html = r"""
 
             async function onSearchInput(event) {
                 const sidebar = document.querySelectorAll(".sidebar li");
-                const content = document.querySelectorAll(".content .diff-content");
+                const fileList = document.querySelector(".file-list");
+                const content = document.querySelectorAll(".content .diff-container .diff-content");
                 const searchingIcon = document.getElementById("searching_icon");
 
                 searchingIcon.style.display = "inline-block";
 
                 let emptySearch = true;
+                let includedFiles = 0;
 
                 sidebar.forEach(async function(item) {
                     const text = item.dataset.path.toLowerCase();
@@ -117,6 +616,7 @@ diff_html = r"""
                             item.style.display = "none";
                             contentItem.style.display = "none";
                         } else {
+                            includedFiles += 1;
                             item.style.display = "list-item";
                             contentItem.style.display = "block";
                             emptySearch = false;
@@ -134,15 +634,32 @@ diff_html = r"""
                 if (emptySearch) {
                     emptySearchTag.style.display = "block";
                     emptyResultTag.style.display = "block";
+                    fileList.style.display = "none";
                 } else {
                     emptySearchTag.style.display = "none";
                     emptyResultTag.style.display = "none";
+                    fileList.style.display = "block";
                 }
+
+                const fileCountTag = document.getElementById("file-count");
+                fileCountTag.textContent = includedFiles;
+
+                const allDetails = document.querySelectorAll(".sidebar details.folder");
+                allDetails.forEach(function(details) {
+                    details.style.display = "none";
+                    details.querySelectorAll("li.file").forEach(function(li) {
+                        if (li.style.display !== "none") {
+                            details.style.display = "block";
+                            return;
+                        }
+                    });
+                });
+
             }
 
-            const debouncedOnSearchInput = debounce(onSearchInput, 500);
+            const debouncedOnSearchInput = debounce(onSearchInput, 300);
 
-             async function onExcludeSearchInput(event) {
+            async function onExcludeSearchInput(event) {
                 excludeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput(event);
             }
@@ -152,95 +669,44 @@ diff_html = r"""
                 debouncedOnSearchInput(event);
             }
 
-            function toggleSidebar() {
-                const contents = document.querySelector('#sidebar-contents');
-                const sidebar = document.querySelector('.sidebar');
-                if (contents.style.display === 'none') {
-                    contents.style.display = 'initial';
-                    sidebar.style.minWidth = '17%';
-                    event.srcElement.textContent = 'Hide';
-                } else {
-                    contents.style.display = 'none';
-                    sidebar.style.minWidth = 'unset';
-                    event.srcElement.textContent = 'Show';
-                }
+            function setDataIsLinked(event) {
+                const hash = event ? event.currentTarget.getAttribute("href").substring(1) : window.location.hash.substring(1);
+                document.querySelectorAll('.diff-container').forEach((section) => {
+                    if (section.id === hash) {
+                        section.setAttribute("data-is-linked", "true");
+                        if (!event) {
+                            // Scroll to the linked element on page load
+                            section.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                        }
+                    } else {
+                        section.setAttribute("data-is-linked", "false");
+                    }
+                });
             }
         </script>
     </head>
     <body>
         <div class='container'>
             <div class='sidebar'>
-                <button onclick="toggleSidebar()">Hide</button>
                 <div id="sidebar-contents">
-                    <h2>File list:</h2>
-                    <input type="text" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
-                    <input type="text" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                    <span id="searching_icon" style="display:none">...</span>
+                    <div class="search-area">
+                        <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                        <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                        <span id="searching_icon" style="display:none">...</span>
+                        <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
+                    </div>
                     <ul class="file-list">
-                        {{ render_folder("", per_folder) }}
-                        <span id="empty_search" style="display:none">No results found</span>
+                        {{ render_sidebar_folder("", per_folder) }}
                     </ul>
                 </div>
+                <span id="empty_search" style="display:none">No results found</span>
             </div>
             <div class='content'>
                 <div class="diff-header">
-                    <h2>Diff Report:</h2>
-                    <p>Total files: <b>{{ content|length }}</b></p>
-                    <span class="del" style="white-space: nowrap;">
-                        --- (old) belongs to <b>{{ old_reference.repr_notime() }}</b> reference
-                    </span>
-                    <br/>
-                    <span class="add" style="white-space: nowrap;">
-                        +++ (new) belongs to <b>{{ new_reference.repr_notime() }}</b> reference
-                    </span>
+                    <h2>Diff Report Between <b class="del">{{ old_reference.repr_notime() }}</b> And <b class="add">{{ new_reference.repr_notime() }}</b></h2>
                 </div>
                 <span id="empty_result" style="display:none">No matches</span>
-                <div><!--placeholder-->
-                {%- for filename, lines in content.items() -%}
-                    </div>
-                    {% set ns = namespace() %}
-                    {% set ns.old_line_number = 0 %}
-                    {% set ns.new_line_number = 0 %}
-                    {% set ns.seen_header = false %}
-                    <div id="diff_{{ safe_filename(filename) }}" class="diff-content">
-                    {%- for line in lines -%}
-                        {%- if loop.first -%}
-                            <hr/>
-                            <h3 id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="{{ replace_cache_paths(filename) }}">{{ remove_prefixes(line) }}</h3>
-                        {%- elif line.startswith('+++') %}
-                            {% set ns.seen_header = true %}
-                            <span class="add">{{ replace_paths(line) }}</span>
-                            <br/>
-                        {%- elif line.startswith('@@') %}
-                            {% set lines = get_line_numbers(line) %}
-                            {% set ns.old_line_number = lines[0] %}
-                            {% set ns.new_line_number = lines[1] %}
-                            <span class="context-header">{{ line }}</span>
-                            <br/>
-                        {%- elif line.startswith('---') %}
-                            <span class="del">{{ replace_paths(line) }}</span>
-                            <br/>
-                        {%- elif line.startswith('+') %}
-                            <span class="line-number">{{ ns.new_line_number }}</span><span class="add">{{ line }}</span>
-                            <br/>
-                            {% set ns.new_line_number = ns.new_line_number + 1 %}
-                        {%- elif line.startswith('-') %}
-                            <span class="line-number">{{ ns.old_line_number }}</span><span class="del">{{ line }}</span>
-                            <br/>
-                            {% set ns.old_line_number = ns.old_line_number + 1 %}
-                        {%- else %}
-                            {% if ns.seen_header %}
-                                <span class="line-number">{{ ns.new_line_number }}</span>
-                            {% endif %}
-                            <span class="context">{{ line }}</span>
-                            <br/>
-                            {% set ns.new_line_number = ns.new_line_number + 1 %}
-                            {% set ns.old_line_number = ns.old_line_number + 1 %}
-                        {%- endif %}
-                    {%- endfor -%}
-                {%- endfor -%}
-                <hr/>
-                </div>
+                {{ render_diff_folder(per_folder) }}
             </div>
         </div>
     </body>
