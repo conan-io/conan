@@ -11,7 +11,7 @@ executable = "myapp.bat" if platform.system() == "Windows" else "myapp.sh"
 
 @pytest.fixture(scope="module")
 def client():
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import save
@@ -24,6 +24,7 @@ def client():
             package_type = "application"
             options = {"foo": [True, False]}
             default_options = {"foo": True}
+            settings = "os"
 
             def package(self):
                 executable = os.path.join(self.package_folder, "bin", '""" + executable + """')
