@@ -747,6 +747,7 @@ class TestConfigInstallPkg:
 
 
 class TestConfigInstallPkgLockfiles:
+
     @pytest.fixture(scope="class")
     def servers(self):
         c = TestClient(default_server_user=True)
@@ -765,7 +766,7 @@ class TestConfigInstallPkgLockfiles:
         c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
         assert "myconf_a/0.1" in c.out
         assert "myconf_a/0.2" not in c.out
-        c.run("config install-pkg =myconf_a/[*]")
+        c.run("config install-pkg myconf_a/[*]")
         assert "myconf_a/0.2" in c.out
         assert "myconf_a/0.1" not in c.out
 
