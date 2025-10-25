@@ -489,7 +489,9 @@ class TestErrorsCompatibility:
 def test_compatible_prev_from_cache():
     tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
-    tc.run("create . -s=compiler.cppstd=17")
-    tc.run("install --requires=pkg/0.1 -s=compiler.cppstd=14 -u")
-    c.assert_listed_binary({"pkg/0.1": ("13c50710eea8d3ed1a7db623b9ac330f0a2ee2b4",
-                                        "Cache")})
+    settings = ("-s os=Linux -s arch=x86_64 -s compiler=gcc -s compiler.version=8 "
+                "-s compiler.libcxx=libstdc++11")
+    tc.run(f"create . {settings} -s=compiler.cppstd=17")
+    tc.run(f"install --requires=pkg/0.1 {settings} -s=compiler.cppstd=14 -u")
+    tc.assert_listed_binary({"pkg/0.1": ("6179018ccb6b15e6443829bf3640e25f2718b931",
+                                         "Cache")})

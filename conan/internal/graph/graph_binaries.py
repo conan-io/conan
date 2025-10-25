@@ -164,8 +164,9 @@ class GraphBinariesAnalyzer:
             for package_id, compatible_package in compatibles.items():
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._compatible_process_node_cache(node)  # Doesn't check remotes
-                if node.binary == BINARY_CACHE:
+                cache_latest_prev = self._compatible_cache_latest_prev(node)  # not check remotes
+                if cache_latest_prev:
+                    self._binary_in_cache(node, cache_latest_prev)
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
             # If not found in the cache, then look first one in servers
@@ -185,9 +186,9 @@ class GraphBinariesAnalyzer:
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._compatible_process_node_cache(node)  # Doesn't check remotes
-                if node.binary == BINARY_CACHE:
-                    self._evaluate_cache_update(node.pref, node, remotes, update)
+                cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
+                if cache_latest_prev:
+                    self._evaluate_cache_update(cache_latest_prev, node, remotes, update)
                 else:
                     self._evaluate_download(node, remotes, update)
                 if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
@@ -198,7 +199,7 @@ class GraphBinariesAnalyzer:
         node.binary = original_binary
         node._package_id = original_package_id
 
-    def _compatible_process_node_cache(self, node):
+    def _compatible_cache_latest_prev(self, node):
         """ simplified checking of compatible_packages, that should be found existing, but
         will never be built, for example. They cannot be editable either at this point.
         """
@@ -220,14 +221,16 @@ class GraphBinariesAnalyzer:
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
-        if cache_latest_prev is not None:
-            # This binary already exists in the cache, maybe can be updated
-            assert cache_latest_prev.revision
-            assert node.binary is None
-            node.binary = BINARY_CACHE
-            node.binary_remote = None
-            node.prev = cache_latest_prev.revision
-            node.pref_timestamp = cache_latest_prev.timestamp
+        return cache_latest_prev
+
+    @staticmethod
+    def _binary_in_cache(node, cache_latest_prev):
+        assert cache_latest_prev.revision
+        assert node.binary is None
+        node.binary = BINARY_CACHE
+        node.binary_remote = None
+        node.prev = cache_latest_prev.revision
+        node.pref_timestamp = cache_latest_prev.timestamp
 
     def _compatible_find_build_binary(self, node, compatibles):
         original_binary = node.binary
