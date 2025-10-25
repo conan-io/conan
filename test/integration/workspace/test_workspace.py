@@ -1117,6 +1117,11 @@ def test_workspace_defining_only_paths():
     assert "liba/0.1@myuser/mychannel - Editable" in c.out
     assert "libb/0.1 - Editable" in c.out
 
+    c.run("workspace super-install")
+    assert "app1/0.1 - Editable" in c.out
+    assert "liba/0.1@myuser/mychannel - Editable" in c.out
+    assert "libb/0.1 - Editable" in c.out
+
 
 def test_workspace_defining_duplicate_references():
     """

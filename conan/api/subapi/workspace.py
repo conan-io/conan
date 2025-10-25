@@ -263,10 +263,11 @@ class WorkspaceAPI:
 
     def super_build_graph(self, deps_graph, profile_host, profile_build):
         order = []
-        packages = self._ws.packages()
+        packages = self.packages()
 
         def find_folder(ref):
-            return next(p["path"] for p in packages if RecipeReference.loads(p["ref"]) == ref)
+            return next(os.path.dirname(os.path.relpath(p["path"], self._folder)) for p_ref, p in
+                        packages.items() if p_ref == ref)
 
         for level in deps_graph.by_levels():
             items = [item for item in level if item.recipe == "Editable"]

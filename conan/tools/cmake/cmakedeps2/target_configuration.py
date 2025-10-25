@@ -190,6 +190,8 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
@@ -199,7 +201,7 @@ class TargetConfigurationTemplate2:
                   "cflags": " ".join(cmake_escape_value(f) for f in info.cflags),
                   "sharedlinkflags": " ".join(cmake_escape_value(v) for v in info.sharedlinkflags),
                   "exelinkflags": " ".join(cmake_escape_value(v) for v in info.exelinkflags),
-                  "system_libs": " ".join(info.system_libs),
+                  "system_libs": " ".join(info.system_libs + extra_libs),
                   "sources": " ".join(sources)
         }
         # System frameworks (only Apple OS)
@@ -295,6 +297,9 @@ class TargetConfigurationTemplate2:
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
+        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
+                                                  check_type=list) or []
+        ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
 
     @staticmethod

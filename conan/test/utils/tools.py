@@ -663,7 +663,7 @@ class TestClient:
             self.run("export .")
         tmp = copy.copy(ref)
         tmp.revision = None
-        rrev = self.cache.get_latest_recipe_reference(tmp).revision
+        rrev = self.cache.get_latest_recipe_revision(tmp).revision
         tmp = copy.copy(ref)
         tmp.revision = rrev
         return tmp
@@ -696,7 +696,7 @@ class TestClient:
     def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
         ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
-        latest_rrev = self.cache.get_latest_recipe_reference(ref_)
+        latest_rrev = self.cache.get_latest_recipe_revision(ref_)
         if package_id:
             pref = PkgReference(latest_rrev, package_id)
         else:
@@ -706,19 +706,19 @@ class TestClient:
                                           f"provide a single package_id instead" \
                                           if len(package_ids) > 0 else "No binary packages found"
             pref = package_ids[0]
-        return self.cache.get_latest_package_reference(pref)
+        return self.cache.get_latest_package_revision(pref)
 
     def get_latest_pkg_layout(self, pref: PkgReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
-        latest_prev = self.cache.get_latest_package_reference(pref)
+        latest_prev = self.cache.get_latest_package_revision(pref)
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
         if not ref.revision:
-            ref = self.cache.get_latest_recipe_reference(ref)
+            ref = self.cache.get_latest_recipe_revision(ref)
         ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
@@ -731,11 +731,11 @@ class TestClient:
         return api.profiles.get_profile([api.profiles.get_default_build()])
 
     def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions_references(ref)
+        rrev = self.cache.get_recipe_revisions(ref)
         return True if rrev else False
 
     def package_exists(self, pref):
-        prev = self.cache.get_package_revisions_references(pref)
+        prev = self.cache.get_package_revisions(pref)
         return True if prev else False
 
     def assert_listed_require(self, requires, build=False, python=False, test=False,

@@ -91,7 +91,7 @@ def config_install_pkg(conan_api, parser, subparser, *args):
         default_profile = None
     profiles = [default_profile] if default_profile else []
     profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
-    remotes = [Remote("_tmp_conan_config", url=args.url)] if args.url else None
+    remotes = [Remote("config_install_url", url=args.url)] if args.url else None
     if args.path:
         path = make_abs_path(args.path)
         refs = conan_api.config.install_pkg_file(path, lockfile=lockfile, force=args.force,

@@ -1,7 +1,6 @@
 import os
 import shutil
 
-from conan.internal.model.pkg_type import PackageType
 from conan.tools.files import copy
 from conan.api.output import ConanOutput
 from conan.tools.scm import Git
@@ -13,13 +12,13 @@ from conan.internal.paths import DATA_YML
 from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
-def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, user, channel,
+def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
+               name, version, user, channel,
                graph_lock=None, remotes=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    loader, cache = app.loader, app.cache
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
                                    remotes=remotes)
 
