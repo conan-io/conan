@@ -22,10 +22,3 @@ def test_exit_with_code():
     error_code = client.run("build .", assert_error=True)
     assert error_code == 34
     assert "Exiting with code: 34" in client.out
-
-
-def test_wrong_home_error():
-    client = TestClient(light=True)
-    client.save_home({"global.conf": "core.cache:storage_path=//"})
-    client.run("list *")
-    assert "Couldn't initialize storage in" in client.out

@@ -17,7 +17,9 @@ def build(conan_api, parser, *args):
     parser.add_argument("path",
                         help='Path to a python-based recipe file or a folder '
                              'containing a conanfile.py recipe. conanfile.txt '
-                             'cannot be used with conan build.')
+                             'cannot be used with conan build. '
+                             'Defaults to current directory',
+                        default=".", nargs='?')
     add_reference_args(parser)
     parser.add_argument("-g", "--generator", action="append", help='Generators to use')
     parser.add_argument("-of", "--output-folder",

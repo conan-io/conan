@@ -69,7 +69,6 @@ class SourcesCachingDownloader:
                         raise ConanException("Trying to download sources from None backup remote."
                                              f" Remotes were: {backups_urls}")
                     for backup_url in backups_urls:
-
                         is_last = backup_url is backups_urls[-1]
                         if backup_url == "origin":  # recipe defined URLs
                             if self._origin_download(urls, cached_path, retry, retry_wait,

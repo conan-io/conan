@@ -2,7 +2,7 @@ import textwrap
 
 import jinja2
 from jinja2 import Template
-
+from conan.tools.cmake.utils import parse_extra_variable
 from conan.internal.api.install.generators import relativize_path
 
 
@@ -11,9 +11,11 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, cmakedeps, conanfile):
+    def __init__(self, cmakedeps, require, conanfile, full_cpp_info):
         self._cmakedeps = cmakedeps
+        self._require = require
         self._conanfile = conanfile
+        self._full_cpp_info = full_cpp_info
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -57,11 +59,54 @@ class ConfigTemplate2:
                         cmakename = cmakename.split("::", 1)[1]
                     components.append(cmakename or name)
         components = " ".join(components) if components else ""
-        return {"filename": f,
-                "components": components,
-                "pkg_name": pkg_name,
-                "targets_include_file": targets_include,
-                "build_modules_paths": build_modules_paths}
+
+        result = {"filename": f,
+                  "components": components,
+                  "pkg_name": pkg_name,
+                  "targets_include_file": targets_include,
+                  "build_modules_paths": build_modules_paths}
+
+        conf_extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                        default={}, check_type=dict)
+        dep_extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
+                                                           check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones
+        extra_variables = {dep: value for dep, value in dep_extra_variables.items()
+                           if dep not in conf_extra_variables}
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
+                                                               key, value)
+        result["extra_variables"] = parsed_extra_variables
+
+        result.update(self._get_legacy_vars())
+        return result
+
+    def _get_legacy_vars(self):
+        # Auxiliary variables for legacy consumption and try_compile cases
+        pkg_name = self._conanfile.ref.name
+        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
+                                                self._conanfile, check_type=list) or []
+
+        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        prefixes = [f] + prefixes
+        include_dirs = definitions = libraries = None
+        if not self._require.build:  # To add global variables for try_compile and legacy
+            aggregated_cppinfo = self._full_cpp_info.aggregated_components()
+            # FIXME: Proper escaping of paths for CMake
+            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
+            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in incdirs]
+            include_dirs = ";".join(incdirs)
+            definitions = ""
+            root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+            libraries = root_target_name or f"{pkg_name}::{pkg_name}"
+
+        return {"additional_variables_prefixes": prefixes,
+                "version": self._conanfile.ref.version,
+                "include_dirs": include_dirs,
+                "definitions": definitions,
+                "libraries": libraries}
 
     @property
     def _template(self):
@@ -79,12 +124,6 @@ class ConfigTemplate2:
                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
         endif()
 
-        # build_modules_paths comes from last configuration only
-        {% for build_module in build_modules_paths %}
-        message(STATUS "Conan: Including build module from '{{build_module}}'")
-        include("{{ build_module }}")
-        {% endfor %}
-
         {% if components %}
         set({{filename}}_PACKAGE_PROVIDED_COMPONENTS {{components}})
         foreach(comp {%raw%}${{%endraw%}{{filename}}_FIND_COMPONENTS})
@@ -96,4 +135,33 @@ class ConfigTemplate2:
           endif()
         endforeach()
         {% endif %}
+
+        ################# Global variables for try compile and legacy ##############
+        {% for prefix in additional_variables_prefixes %}
+        set({{ prefix }}_VERSION_STRING "{{ version }}")
+        {% if include_dirs is not none %}
+        set({{ prefix }}_INCLUDE_DIRS "{{ include_dirs }}" )
+        set({{ prefix }}_INCLUDE_DIR "{{ include_dirs }}" )
+        {% endif %}
+        {% if libraries is not none %}
+        set({{ prefix }}_LIBRARIES {{ libraries }} )
+        {% endif %}
+        {% if definitions is not none %}
+        set({{ prefix }}_DEFINITIONS {{ definitions}} )
+        {% endif %}
+        {% endfor %}
+
+        # build_modules_paths comes from last configuration only
+        # Some build modules in ConanCenter use try_compile variables and legacy, so this
+        # include() needs to happen after the above variables are defined
+        {% for build_module in build_modules_paths %}
+        message(STATUS "Conan: Including build module from '{{build_module}}'")
+        include("{{ build_module }}")
+        {% endfor %}
+
+        # Definition of extra CMake variables from cmake_extra_variables
+
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
+        {% endfor %}
         """)

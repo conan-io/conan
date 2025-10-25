@@ -1,11 +1,10 @@
-import unittest
 from collections import OrderedDict
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
-class RemoteChecksTest(unittest.TestCase):
+class TestRemoteChecks:
 
     def test_binary_defines_remote(self):
         servers = OrderedDict([("server1", TestServer()),
@@ -28,8 +27,8 @@ class Pkg(ConanFile):
         client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server1)")})
-        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
-                      "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID, client.out)
+        assert "pkg/0.1@lasote/testing: Retrieving package " \
+                      "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Explicit remote also defines the remote
         client.run("remove * -c")
@@ -37,8 +36,8 @@ class Pkg(ConanFile):
         client.run("install --requires=pkg/0.1@lasote/testing -r=server2")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
-        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
+        assert "pkg/0.1@lasote/testing: Retrieving package " \
+                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Ordered search of binary works
         client.run("remove * -c")
@@ -47,8 +46,8 @@ class Pkg(ConanFile):
         client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
-        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
+        assert "pkg/0.1@lasote/testing: Retrieving package " \
+                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Download recipe and binary from the remote2 by iterating
         client.run("remove * -c")
@@ -56,8 +55,8 @@ class Pkg(ConanFile):
         client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
-        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
+        assert "pkg/0.1@lasote/testing: Retrieving package " \
+                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
     def test_binaries_from_different_remotes(self):
         servers = OrderedDict()
@@ -80,8 +79,8 @@ class Pkg(ConanFile):
         # recipe is cached, takes binary from server2
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2")
         client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
-        self.assertIn(f"pkg/0.1@lasote/testing: Retrieving package {package_id2} "
-                      "from remote 'server2'", client.out)
+        assert f"pkg/0.1@lasote/testing: Retrieving package {package_id2} " \
+                      "from remote 'server2'" in client.out
 
         # Nothing to update
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2 -u")
@@ -89,10 +88,10 @@ class Pkg(ConanFile):
 
         # Build missing
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=3 -r=server2", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
+        assert "ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'" in client.out
 
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=3", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
+        assert "ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'" in client.out
 
 
 def test_version_range_multi_remote():

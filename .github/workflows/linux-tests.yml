@@ -93,7 +93,7 @@ jobs:
           test-type: ${{ matrix.test-type }}
           tests: test/${{ matrix.test-type }}
 
-  linux_docker_tests:
+  linux_runner_tests:
     needs: build_container
     runs-on: ubuntu-latest
     strategy:
@@ -101,7 +101,7 @@ jobs:
         # Use modern versions due to docker incompatibility with python <3.8
         python-version: ${{ github.event_name != 'pull_request' && fromJson('["3.13", "3.9"]') || fromJson('["3.10"]') }}
 
-    name: Docker Runner Tests (${{ matrix.python-version }})
+    name: Runner Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -125,10 +125,10 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_runner.txt
 
-      - name: Run tests
+      - name: Run runner tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
-          test-type: docker
+          test-type: runners
           tests: '-m docker_runner -rs'
           workers: 1

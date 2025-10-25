@@ -32,7 +32,7 @@ def test_install_reference_error(client):
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
     client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     client.run("install . --channel=testing", assert_error=True)
-    assert "Can't specify channel without user" in client.out
+    assert "Can't specify channel 'testing' without user" in client.out
 
 
 def test_install_args_error():
@@ -191,9 +191,13 @@ def test_install_with_profile(client):
 
 
 def test_install_with_path_errors(client):
-    # Install without path param not allowed
+    # Install without path param allowed, but nothing found
     client.run("install", assert_error=True)
-    assert "ERROR: Please specify a path" in client.out
+    assert "Conanfile not found" in client.out
+
+    # Install without path param allowed, but nothing found
+    client.run("install . --requires=foo/1.0", assert_error=True)
+    assert "--requires and --tool-requires arguments are incompatible with [path]" in client.out
 
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)

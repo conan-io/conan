@@ -3,7 +3,8 @@ from collections import OrderedDict
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
-from conan.internal.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
+from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
+                                       PythonRequiresInfo)
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -60,7 +61,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
     node.package_id = info.package_id()
 
 
-def run_validate_package_id(conanfile, hook_manager=None):
+def run_validate_package_id(conanfile, hook_manager):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
@@ -71,14 +72,15 @@ def run_validate_package_id(conanfile, hook_manager=None):
                     # This 'cant_build' will be ignored if we don't have to build the node.
                     conanfile.info.cant_build = str(e)
 
-    if hasattr(conanfile, "validate"):
+    if hasattr(conanfile, "validate") or hook_manager.validate_hook:
         with conanfile_exception_formatter(conanfile, "validate"):
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
-                    if hook_manager:
+                    if hook_manager.validate_hook:
                         hook_manager.execute("pre_validate", conanfile=conanfile)
-                    conanfile.validate()
-                    if hook_manager:
+                    if hasattr(conanfile, "validate"):
+                        conanfile.validate()
+                    if hook_manager.validate_hook:
                         hook_manager.execute("post_validate", conanfile=conanfile)
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
@@ -90,5 +92,9 @@ def run_validate_package_id(conanfile, hook_manager=None):
                 conanfile.package_id()
     elif "auto_header_only" in conanfile.implements:
         auto_header_only_package_id(conanfile)
+    if hook_manager.post_package_id_hook:
+        with conanfile_exception_formatter(conanfile, "package_id"):
+            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+                hook_manager.execute("post_package_id", conanfile=conanfile)
 
     conanfile.info.validate()

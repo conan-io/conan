@@ -10,20 +10,28 @@ from conan.internal.util.dates import timestamp_to_str
 
 @total_ordering
 class RecipeReference:
-    """ an exact (no version-range, no alias) reference of a recipe.
-    Should be enough to locate a recipe in the cache or in a server
-    Validation will be external to this class, at specific points (export, api, etc)
+    """ An exact (no version-range, no alias) reference of a recipe,
+    it represents a reference of the form ``name/version[@user/channel][#revision][%timestamp]``.
+    Should be enough to locate a recipe in the cache or in a server, and
+    validation will be external to this class, at specific points (export, api, etc).
     """
 
     def __init__(self, name=None, version=None, user=None, channel=None, revision=None,
                  timestamp=None):
-        self.name = name
+        """ The attributes should be regarded as immutable, and should not be modified by the user."""
+        #: Name of the reference
+        self.name: str = name
         if version is not None and not isinstance(version, Version):
             version = Version(version)
-        self.version = version  # This MUST be a version if we want to be able to order
+        #: Version of the reference
+        self.version: Version = version  # This MUST be a version if we want to be able to order
+        #: User of the reference, if any
         self.user = user
+        #: Channel of the reference, if any
         self.channel = channel
+        #: Revision of the reference, if any
         self.revision = revision
+        #: Timestamp of the reference, if any
         self.timestamp = timestamp
 
     def copy(self):
@@ -90,6 +98,8 @@ class RecipeReference:
 
     @staticmethod
     def loads(rref):
+        """ Instantiates an object from a string, in the form:
+        ``name/version[@user/channel][#revision][%timestamp]``"""
         try:
             # timestamp
             tokens = rref.rsplit("%", 1)
@@ -120,8 +130,7 @@ class RecipeReference:
                 f" in the form name/version[@user/channel]")
 
     def validate_ref(self, allow_uppercase=False):
-        """ at the moment only applied to exported (exact) references, but not for requires
-        that could contain version ranges
+        """ Check that the reference is valid, and raise a ``ConanException`` if not.
         """
         from conan.api.output import ConanOutput
         self_str = str(self)
@@ -159,6 +168,13 @@ class RecipeReference:
                                   f"'{self.channel}'")
 
     def matches(self, pattern, is_consumer):
+        """ fnmatches the reference against the provided pattern.
+
+        :parameter str pattern: the pattern to match against, it can contain wildcards,
+            and can start with ``!`` or ``~`` to negate the match.
+            A special value of ``&`` will return a match only of ``is_consumer`` is ``True``
+        :parameter bool is_consumer: if ``True``, the pattern ``&`` will match this reference.
+        """
         negate = False
         if pattern.startswith("!") or pattern.startswith("~"):
             pattern = pattern[1:]
@@ -182,9 +198,7 @@ class RecipeReference:
         return condition
 
     def partial_match(self, pattern):
-        """
-        Finds if pattern matches any of partial sums of tokens of conan reference
-        """
+        # Finds if pattern matches any of partial sums of tokens of conan reference
         tokens = [self.name, "/", str(self.version)]
         if self.user:
             tokens += ["@", self.user]

@@ -98,7 +98,7 @@ class Node:
 
     def __lt__(self, other):
         """
-        @type other: Node
+        :type other: Node
         """
         # TODO: Remove this order, shouldn't be necessary
         return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
@@ -127,7 +127,7 @@ class Node:
                 raise GraphConflictError(self, require, existing.node, existing.require, node)
             ill_formed = ((require.direct or existing.require.direct)
                           and require.visible != existing.require.visible)
-            if ill_formed:
+            if ill_formed and not (require.test or existing.require.test):
                 visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
             require.aggregate(existing.require)
             # An override can be overriden by a downstream force/override
@@ -138,11 +138,13 @@ class Node:
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
-        self.transitive_deps.pop(require, None)
+        poped = self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
-        if ill_formed:  # remove dead .edges, to avoid orphans
-            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
-            self.edges = [e for e in self.edges if e.dst in direct_nodes]
+        if poped is not None:  # adjust .edges, to avoid orphans
+            for e in self.edges:
+                if e.dst is poped.node:  # check for identity, pointing to that node
+                    e.dst = node
+                    break
 
         if self.conanfile.vendor:
             return
@@ -356,7 +358,7 @@ class Overrides:
 
     def update(self, other):
         """
-        @type other: Overrides
+        :type other: Overrides
         """
         for require, override_info in other._overrides.items():
             self._overrides.setdefault(require, set()).update(override_info)
@@ -365,9 +367,8 @@ class Overrides:
         return self._overrides.items()
 
     def serialize(self):
-        return {k.repr_notime():
-                    sorted([e.repr_notime() if e else None for e in v],
-                           key= lambda e: "" if e is None else e)
+        return {k.repr_notime(): sorted([e.repr_notime() if e else None for e in v],
+                                        key=lambda e: "" if e is None else e)
                 for k, v in self._overrides.items()}
 
     @staticmethod
@@ -455,7 +456,8 @@ class DepsGraph:
         result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         result["overrides"] = self.overrides().serialize()
-        result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
+        result["resolved_ranges"] = {repr(r): s.repr_notime()
+                                     for r, s in self.resolved_ranges.items()}
         result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
         result["error"] = self.error.serialize() if isinstance(self.error, GraphError) else None
         return result

@@ -1,13 +1,11 @@
-import unittest
-
-from parameterized.parameterized import parameterized
+import pytest
 
 from conan.test.utils.tools import TestClient
 
 
-class ConanfileHelpersTest(unittest.TestCase):
+class TestConanfileHelpers:
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("scope_imports", [True, False])
     def test_helpers_same_name(self, scope_imports):
         helpers = '''
 def build_helper(output):
@@ -64,7 +62,7 @@ class ConanFileToolsTest(ConanFile):
                                     test2/2.3@user/testing"""}
         client.save(files, clean_first=True)
         client.run("install . --build='*'")
-        self.assertIn("test/1.9@user/testing: Building 1!", client.out)
-        self.assertIn("test/1.9@user/testing: Source 1!", client.out)
-        self.assertIn("test2/2.3@user/testing: Building 2!", client.out)
-        self.assertIn("test2/2.3@user/testing: Source 2!", client.out)
+        assert "test/1.9@user/testing: Building 1!" in client.out
+        assert "test/1.9@user/testing: Source 1!" in client.out
+        assert "test2/2.3@user/testing: Building 2!" in client.out
+        assert "test2/2.3@user/testing: Source 2!" in client.out

@@ -19,7 +19,7 @@ class TestProvidesTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
 
@@ -36,7 +36,7 @@ class TestProvidesTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = libb.edges[0].dst
@@ -62,7 +62,7 @@ class TestProvidesTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -80,7 +80,7 @@ class TestProvidesTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
         br = app.edges[0].dst
@@ -107,7 +107,7 @@ class TestProvidesTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        assert 5 == len(deps_graph.nodes)
         app = deps_graph.root
         libb = app.edges[0].dst
         libc = app.edges[1].dst
@@ -133,7 +133,7 @@ class TestProvidesTest(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
 
         app = deps_graph.root
         libc = app.edges[0].dst
@@ -146,7 +146,7 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
 
-class ProvidesBuildRequireTest(GraphManagerTest):
+class TestProvidesBuildRequire(GraphManagerTest):
     def test_build_require_no_conflict(self):
         # app (provides libjpeg) -(build)-> br/v1 -> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
@@ -155,7 +155,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
         br = app.edges[0].dst
@@ -177,7 +177,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
         lib = app.edges[0].dst
@@ -202,7 +202,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
         br = app.edges[0].dst
@@ -223,7 +223,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         assert type(deps_graph.error) == GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
         br1 = app.edges[0].dst

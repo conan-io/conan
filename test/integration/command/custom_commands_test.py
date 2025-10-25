@@ -488,3 +488,28 @@ class TestCommandsRemoteCaching:
         c.run("mycache")
         # Does not break unexpectedly, caching is working
         assert "WARN: Cache invalidated, as expected: Invalid URL 'broken" in c.out
+
+
+def test_custom_command_settings_access():
+    tc = TestClient()
+    mycommand = textwrap.dedent("""
+        from conan.cli.command import conan_command
+        from conan.api.output import ConanOutput
+
+        @conan_command(group="custom commands")
+        def mycommand(conan_api, parser, *args, **kwargs):
+            \"""
+            test
+            \"""
+            settings = conan_api.config.settings_yml
+            ConanOutput().info(f"settings.fields: {settings.fields}")
+            ConanOutput().info(f"settings.possible_values(): {settings.possible_values()}")
+            ConanOutput().info(f"settings.compiler: {settings.compiler}")
+            ConanOutput().info(f"settings.compiler.possible_values(): {settings.compiler.possible_values()}")
+        """)
+    command_file_path = os.path.join('extensions', 'commands', 'cmd_mycommand.py')
+    tc.save_home({f"{command_file_path}": mycommand})
+    tc.run("mycommand")
+    assert "settings.fields: ['arch', 'build_type', 'compiler', 'os']" in tc.out
+    # No values here, but as it does not fail, the interface is working fine
+    assert "settings.compiler: None" in tc.out

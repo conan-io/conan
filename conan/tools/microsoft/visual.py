@@ -70,7 +70,8 @@ def msvc_version_to_vs_ide_version(version):
                 '191': '15',
                 '192': '16',
                 '193': '17',
-                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
+                '194': '17',  # Note both 193 and 194 belong to VS 17 2022
+                '195': '18'}
     return _visuals[str(version)]
 
 
@@ -87,7 +88,8 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143',
-                "194": 'v143'}
+                "194": 'v143',
+                "195": 'v145'}
     return toolsets.get(str(version))
 
 
@@ -197,7 +199,7 @@ class VCVars:
 
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n"
     is_ps1 = filename.endswith(".ps1")
     if is_ps1:
         content = f"Write-Host {message}"
@@ -296,6 +298,7 @@ def _vcvars_path(version, vs_install_path):
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
     else:
         vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    vcpath = os.path.normpath(vcpath)
     return vcpath
 
 
@@ -314,7 +317,8 @@ def _vcvars_versions(conanfile):
                       "v143": "17",
                       "v144": "17"}.get(toolset_version)
         if vs_version is None:
-            raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
+            raise ConanException("Visual Studio Runtime version (v140-v144) not defined. Please, "
+                                 "add the compiler.runtime_version=[v140-v144] setting to your profile.")
         vcvars_ver = {"v140": "14.0",
                       "v141": "14.1",
                       "v142": "14.2",

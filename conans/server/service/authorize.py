@@ -1,13 +1,11 @@
-'''
-
+"""
 This module handles user authentication and permissions
 for read or write a conans or package.
 
 This only reads from file the users and permissions.
 
 Replace this module with other that keeps the interface or super class.
-
-'''
+"""
 
 from abc import ABCMeta, abstractmethod
 
