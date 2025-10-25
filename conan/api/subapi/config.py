@@ -51,11 +51,9 @@ class ConfigAPI:
         self._conan_api.reinit()
 
     def install_pkg(self, require, lockfile=None, force=False, remotes=None, profile=None):
-        prefs = []
-        pref = self._install_pkg(require, lockfile, force, remotes, profile)
-        prefs.append(pref)
+        ref = self._install_pkg(require, lockfile, force, remotes, profile)
         self._conan_api.reinit()
-        return prefs
+        return ref
 
     def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
         if os.path.isdir(path):
@@ -69,7 +67,7 @@ class ConfigAPI:
         return refs
 
     def _install_pkg(self, ref, lockfile=None, force=False, remotes=None,
-                     profile=None)-> PkgReference:
+                     profile=None) -> PkgReference:
         """ install configuration stored inside a Conan package
         The installation of configuration will reinitialize the full ConanAPI
         """

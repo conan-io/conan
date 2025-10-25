@@ -763,7 +763,6 @@ class TestConfigInstallPkgLockfiles:
         """
         c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
-        print(c.load("config.lock"))
         c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
         assert "myconf_a/0.1" in c.out
         assert "myconf_a/0.2" not in c.out
@@ -777,7 +776,8 @@ class TestConfigInstallPkgLockfiles:
                                                                    "myconf_b/0.1"]})})
         c.run("config install-pkg --path=.")
         # First are the newest installed
-        configs = yaml.safe_load(c.load_home("conanconfig.json"))["config_version"]
+        path = HomePaths(c.cache_folder).config_version_path
+        configs = json.loads(c.load_home(path))["config_version"]
         configs = [str(RecipeReference.loads(r)) for r in configs]
         assert configs == ["myconf_a/0.1", "myconf_b/0.1"]
 

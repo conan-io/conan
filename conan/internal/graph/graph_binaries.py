@@ -1,5 +1,4 @@
 import os
-import yaml
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
