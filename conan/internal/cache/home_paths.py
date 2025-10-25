@@ -87,4 +87,4 @@ class HomePaths:
 
     @property
     def config_version_path(self):
-        return os.path.join(self._home, "conanconfig.yml")
+        return os.path.join(self._home, "conanconfig.json")

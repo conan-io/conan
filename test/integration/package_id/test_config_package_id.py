@@ -16,7 +16,7 @@ from conan.internal.util.files import save
     ("myconfig/1.2.3", "minor_mode", "myconfig/1.2.Z")])
 def test_config_package_id(config_version, mode, result):
     c = TestClient()
-    config_version = yaml.dump({"packages": [{"ref": config_version}]})
+    config_version = json.dumps({"config_version": [config_version]})
     save(c.paths.config_version_path, config_version)
     save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -40,7 +40,7 @@ def test_error_config_package_id():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .", assert_error=True)
     assert "ERROR: core.package_id:config_mode defined, " \
-           "but error while loading 'conanconfig.yml'" in c.out
+           "but error while loading 'conanconfig.json'" in c.out
 
 
 @pytest.mark.parametrize("config_version, mode, result", [
@@ -49,7 +49,7 @@ def test_error_config_package_id():
 ])
 def test_config_package_id_clear(config_version, mode, result):
     c = TestClient(light=True)
-    config_version = yaml.dump({"packages": [{"ref": config_version}]})
+    config_version = json.dumps({"config_version": [config_version]})
     save(c.paths.config_version_path, config_version)
     save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_id("self.info.clear()")})

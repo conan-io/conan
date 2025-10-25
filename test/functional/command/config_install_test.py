@@ -648,14 +648,14 @@ class TestConfigInstallPkg:
     def test_config_install_from_pkg(self, client):
         # Now install it
         c = client
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
 
         # Just to make sure it doesn't crash in the update
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         # Conan will not re-download fromthe server the same revision
         assert "myconf/0.1: Downloaded package revision" not in c.out
         # It doesn't re-install either
@@ -664,7 +664,7 @@ class TestConfigInstallPkg:
         assert "user.myteam:myconf: myvalue" in c.out
 
         # We can force the re-installation
-        c.run("config install-pkg --requires=myconf/[*] --force")
+        c.run("config install-pkg myconf/[*] --force")
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
@@ -678,7 +678,7 @@ class TestConfigInstallPkg:
         c2.run("export-pkg .")
         c2.run("upload * -r=default -c")
 
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: othervalue" in c.out
@@ -698,7 +698,7 @@ class TestConfigInstallPkg:
         conanfile = GenConanfile("myconf", "0.1")
         c.save({"myconf/conanfile.py": conanfile})
         c.run("create myconf")
-        c.run("config install-pkg --requires=myconf/[*]", assert_error=True)
+        c.run("config install-pkg myconf/[*]", assert_error=True)
         assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
 
     def test_create_also(self):
@@ -721,7 +721,7 @@ class TestConfigInstallPkg:
         c.run("upload * -r=default -c")
         c.run("remove * -c")
 
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
 
@@ -738,7 +738,7 @@ class TestConfigInstallPkg:
 
         # This uses the same server and URL, because the TestClient+TestServer
         # does not allow atm to test this, as it requires the remote to be defined
-        c.run(f"config install-pkg --requires=myconf/[*] --url={remote_url}")
+        c.run(f"config install-pkg myconf/[*] --url={remote_url}")
         assert "Connecting to remote 'config_install_url' with user 'admin'" in c.out
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
@@ -761,11 +761,11 @@ class TestConfigInstallPkgLockfiles:
         """ it should be able to install the config using a lockfile
         """
         c = TestClient(servers=servers)
-        c.run("config install-pkg --requires=myconf_a/0.1 --lockfile-out=config.lock")
-        c.run("config install-pkg --requires=myconf_a/[*] --lockfile=config.lock")
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
         assert "myconf_a/0.1" in c.out
         assert "myconf_a/0.2" not in c.out
-        c.run("config install-pkg --requires=myconf_a/[*]")
+        c.run("config install-pkg =myconf_a/[*]")
         assert "myconf_a/0.2" in c.out
         assert "myconf_a/0.1" not in c.out
 
@@ -776,17 +776,17 @@ class TestConfigInstallPkgLockfiles:
                 - ref: myconf_a/0.1
                 - ref: myconf_b/0.1
             """)
-        c.save({"conanconfig.yml": conanconfig})
+        c.save({"conanconfig.json": conanconfig})
         c.run("config install-pkg .")
         # First are the newest installed
-        configs = yaml.safe_load(c.load_home("conanconfig.yml"))["packages"]
+        configs = yaml.safe_load(c.load_home("conanconfig.json"))["packages"]
         configs = [str(RecipeReference.loads(r["ref"])) for r in configs]
         assert configs == ["myconf_a/0.1", "myconf_b/0.1"]
 
     def test_install_from_file_with_lockfile(self, servers):
         # it should stay in version 0.1
         c = TestClient(servers=servers)
-        c.run("config install-pkg --requires=myconf_a/0.1 --lockfile-out=conan.lock")
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=conan.lock")
         conanconfig = textwrap.dedent("""
             packages:
                 - ref: myconf_a/[>=0.1 <1.0]
@@ -834,13 +834,13 @@ class TestConfigInstallPkgSettings:
         c = client
         if not default_profile:
             os.remove(os.path.join(c.cache_folder, "profiles", "default"))
-        c.run("config install-pkg --requires=myconf/[*] -s os=Windows")
+        c.run("config install-pkg myconf/[*] -s os=Windows")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -s os=Linux --force")
+        c.run("config install-pkg myconf/[*] -s os=Linux --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -849,7 +849,7 @@ class TestConfigInstallPkgSettings:
     def test_error_no_settings_defined(self, client):
         c = client
         os.remove(os.path.join(c.cache_folder, "profiles", "default"))
-        c.run("config install-pkg --requires=myconf/[*]", assert_error=True)
+        c.run("config install-pkg myconf/[*]", assert_error=True)
         assert "There are invalid packages:" in c.out
         assert "myconf/0.1: Invalid: 'settings.os' value not defined" in c.out
 
@@ -858,13 +858,13 @@ class TestConfigInstallPkgSettings:
         c = client
         c.save({"win.profile": "[settings]\nos=Windows",
                 "nix.profile": "[settings]\nos=Linux"})
-        c.run("config install-pkg --requires=myconf/[*] -pr=win.profile")
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile --force")
+        c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -874,14 +874,14 @@ class TestConfigInstallPkgSettings:
         # Now install it
         c = client
         c.save_home({"profiles/default": "[settings]\nos=Windows"})
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.save_home({"profiles/default": "[settings]\nos=Linux"})
-        c.run("config install-pkg --requires=myconf/[*] --force")
+        c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -923,13 +923,13 @@ class TestConfigInstallPkgOptions:
         c = client
         if not default_profile:
             os.remove(os.path.join(c.cache_folder, "profiles", "default"))
-        c.run("config install-pkg --requires=myconf/[*] -o &:project=project1")
+        c.run("config install-pkg myconf/[*] -o &:project=project1")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -o &:project=project2 --force")
+        c.run("config install-pkg myconf/[*] -o &:project=project2 --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -938,7 +938,7 @@ class TestConfigInstallPkgOptions:
     def test_no_option_defined(self, client):
         c = client
         os.remove(os.path.join(c.cache_folder, "profiles", "default"))
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
@@ -948,13 +948,13 @@ class TestConfigInstallPkgOptions:
         c = client
         c.save({"win.profile": "[options]\n&:project=project1",
                 "nix.profile": "[options]\n&:project=project2"})
-        c.run("config install-pkg --requires=myconf/[*] -pr=win.profile")
+        c.run("config install-pkg myconf/[*] -pr=win.profile")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg --requires=myconf/[*] -pr=nix.profile --force")
+        c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -964,14 +964,14 @@ class TestConfigInstallPkgOptions:
         # Now install it
         c = client
         c.save_home({"profiles/default": "[options]\n&:project=project1"})
-        c.run("config install-pkg --requires=myconf/[*]")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
         c.save_home({"profiles/default": "[options]\n&:project=project2"})
-        c.run("config install-pkg --requires=myconf/[*] --force")
+        c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")

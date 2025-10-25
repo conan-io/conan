@@ -1,6 +1,5 @@
+import json
 import os
-
-import yaml
 
 from conan.api.output import ConanOutput
 
@@ -51,21 +50,20 @@ class ConfigAPI:
                               source_folder=source_folder, target_folder=target_folder)
         self._conan_api.reinit()
 
-    def install_pkg(self, requires, lockfile=None, force=False, remotes=None, profile=None):
+    def install_pkg(self, require, lockfile=None, force=False, remotes=None, profile=None):
         prefs = []
-        for require in requires:
-            pref = self._install_pkg(require, lockfile, force, remotes, profile)
-            prefs.append(pref)
+        pref = self._install_pkg(require, lockfile, force, remotes, profile)
+        prefs.append(pref)
         self._conan_api.reinit()
         return prefs
 
     def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
         if os.path.isdir(path):
-            path = os.path.join(path, "conanconfig.yml")
+            path = os.path.join(path, "conanconfig.json")
         requires = loadconanconfig(path)
         refs = []
         for require in requires:
-            ref = self._install_pkg(require["ref"], lockfile, force, remotes, profile)
+            ref = self._install_pkg(require, lockfile, force, remotes, profile)
             refs.append(ref)
         self._conan_api.reinit()
         return refs
@@ -113,7 +111,7 @@ class ConfigAPI:
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
             config_versions = loadconanconfig(config_version_file)
-            if any(config_pref == r["ref"] for r in config_versions):
+            if any(config_pref == r for r in config_versions):
                 if force:
                     ConanOutput().info(f"Package '{pkg}' already configured, "
                                        "but re-installation forced")
@@ -130,9 +128,9 @@ class ConfigAPI:
                               ignore=["conaninfo.txt", "conanmanifest.txt"])
         # We save the current reference in the file for future
         # To make it latest
-        config_versions = [c for c in config_versions if c["ref"].split("/", 1)[0] != pkg.ref.name]
-        config_versions.append({"ref": pkg.ref.repr_notime()})
-        save(config_version_file, yaml.dump({"packages": config_versions}))
+        config_versions = [c for c in config_versions if c.split("/", 1)[0] != pkg.ref.name]
+        config_versions.append(pkg.ref.repr_notime())
+        save(config_version_file, json.dumps({"config_version": config_versions}))
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):

@@ -402,7 +402,7 @@ class GraphBinariesAnalyzer:
             config_refs = loadconanconfig(config_version_file)
             result = {}
             for r in config_refs:
-                config_ref = RecipeReference.loads(r["ref"])
+                config_ref = RecipeReference.loads(r)
                 req_info = RequirementInfo(config_ref, None, config_mode)
                 result[config_ref] = req_info
         except Exception as e:

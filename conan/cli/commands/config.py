@@ -61,10 +61,9 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     """
     (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
     """
-    subparser.add_argument("path", nargs="?",
-                           help="Path to a folder containing a 'conanconfig.yml' file")
-    subparser.add_argument("--requires", action="append",
-                           help="Directly provide requires instead of a 'conanconfig.yml'")
+    subparser.add_argument("pkg", nargs="?",
+                           help = "Packag reference 'pkg/version' to install configuration from")
+    subparser.add_argument("-p", "--path", action=OnceArgument, help = "Path too'conanconfig.json'")
     subparser.add_argument("-l", "--lockfile", action=OnceArgument,
                            help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                                 "existing 'conan.lock' file")
@@ -82,6 +81,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     subparser.add_argument("-o", "--options", action="append", help="Options to install config")
     args = parser.parse_args(*args)
 
+    if args.path and args.item:
+        raise ConanException("Cannot specify both 'path' and 'pkg'")
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
 
@@ -92,12 +93,13 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     profiles = [default_profile] if default_profile else []
     profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
     remotes = [Remote("config_install_url", url=args.url)] if args.url else None
+
     if args.path:
-        path = make_abs_path(args.path)
-        refs = conan_api.config.install_pkg_file(path, lockfile=lockfile, force=args.force,
+        conanconfig = make_abs_path(args.path)
+        refs = conan_api.config.install_pkg_file(conanconfig, lockfile=lockfile, force=args.force,
                                                  remotes=remotes, profile=profile)
     else:
-        refs = conan_api.config.install_pkg(args.requires, lockfile=lockfile, force=args.force,
+        refs = conan_api.config.install_pkg(args.pkg, lockfile=lockfile, force=args.force,
                                             remotes=remotes, profile=profile)
     lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=refs)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
