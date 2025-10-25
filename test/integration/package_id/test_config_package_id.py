@@ -39,7 +39,7 @@ def test_error_config_package_id():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .", assert_error=True)
     assert "ERROR: core.package_id:config_mode defined, " \
-           "but error while loading 'conanconfig.json'" in c.out
+           "but error while loading 'config_version.json'" in c.out
 
 
 @pytest.mark.parametrize("config_version, mode, result", [

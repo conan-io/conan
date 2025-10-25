@@ -18,7 +18,6 @@ from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.api.model import RecipeReference
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.util.files import load
 
 
 class GraphBinariesAnalyzer:
