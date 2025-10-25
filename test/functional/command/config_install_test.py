@@ -763,6 +763,7 @@ class TestConfigInstallPkgLockfiles:
         """
         c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        print(c.load("config.lock"))
         c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
         assert "myconf_a/0.1" in c.out
         assert "myconf_a/0.2" not in c.out
@@ -772,32 +773,25 @@ class TestConfigInstallPkgLockfiles:
 
     def test_install_from_file(self, servers):
         c = TestClient(servers=servers)
-        conanconfig = textwrap.dedent("""
-            packages:
-                - ref: myconf_a/0.1
-                - ref: myconf_b/0.1
-            """)
-        c.save({"conanconfig.json": conanconfig})
-        c.run("config install-pkg .")
+        c.save({"conanconfig.json": json.dumps({"config_version": ["myconf_a/0.1",
+                                                                   "myconf_b/0.1"]})})
+        c.run("config install-pkg --path=.")
         # First are the newest installed
-        configs = yaml.safe_load(c.load_home("conanconfig.json"))["packages"]
-        configs = [str(RecipeReference.loads(r["ref"])) for r in configs]
+        configs = yaml.safe_load(c.load_home("conanconfig.json"))["config_version"]
+        configs = [str(RecipeReference.loads(r)) for r in configs]
         assert configs == ["myconf_a/0.1", "myconf_b/0.1"]
 
     def test_install_from_file_with_lockfile(self, servers):
         # it should stay in version 0.1
         c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=conan.lock")
-        conanconfig = textwrap.dedent("""
-            packages:
-                - ref: myconf_a/[>=0.1 <1.0]
-            """)
-        c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg .")
+        conanconfig = json.dumps({"config_version": ["myconf_a/[>=0.1 <1.0]"]})
+        c.save({"conanconfig.json": conanconfig})
+        c.run("config install-pkg --path=.")
         path = HomePaths(c.cache_folder).config_version_path
         # First are the newest installed
-        configs = yaml.safe_load(load(path))["packages"]
-        configs = [str(RecipeReference.loads(r["ref"])) for r in configs]
+        configs = json.loads(load(path))["config_version"]
+        configs = [str(RecipeReference.loads(r)) for r in configs]
         assert configs == ["myconf_a/0.1"]
 
 

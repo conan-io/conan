@@ -81,7 +81,7 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     subparser.add_argument("-o", "--options", action="append", help="Options to install config")
     args = parser.parse_args(*args)
 
-    if args.path and args.item:
+    if args.path and args.pkg:
         raise ConanException("Cannot specify both 'path' and 'pkg'")
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)

@@ -131,7 +131,7 @@ class ConfigAPI:
         config_versions = [c for c in config_versions if c.split("/", 1)[0] != pkg.ref.name]
         config_versions.append(pkg.ref.repr_notime())
         save(config_version_file, json.dumps({"config_version": config_versions}))
-        return pkg.pref
+        return pkg.ref
 
     def get(self, name, default=None, check_type=None):
         """ get the value of a global.conf item
