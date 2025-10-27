@@ -171,30 +171,32 @@ class GraphBinariesAnalyzer:
                     return
             # If not found in the cache, then look first one in servers
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
-            compatible_package_ids = self._compatible_get_packages_from_remotes(node, remotes)
+            compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
             candidates = {pkg_id: pkg for pkg_id, pkg in compatibles.items()
-                          if pkg_id in compatible_package_ids}
+                          if pkg_id in compatible_packages}
             node.conanfile.output.info(f"Found {len(candidates)} compatible configurations in remotes")
             for package_id, compatible_package in candidates.items():
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 # We already know which remotes have that package_id
-                available_remotes = compatible_package_ids[package_id]
+                available_remotes = compatible_packages[package_id]
                 self._evaluate_download(node, available_remotes, update=False)
                 if node.binary == BINARY_DOWNLOAD:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
         else:  # Need to check in servers too for the latest thing
+            compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
+                available_remotes = compatible_packages.get(package_id, [])
                 if cache_latest_prev:
-                    self._evaluate_cache_update(cache_latest_prev, node, remotes, update)
+                    self._evaluate_cache_update(cache_latest_prev, node, available_remotes, update)
                 else:
-                    self._evaluate_download(node, remotes, update)
+                    self._evaluate_download(node, available_remotes, update)
                 if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
@@ -236,20 +238,20 @@ class GraphBinariesAnalyzer:
         node.prev = cache_latest_prev.revision
         node.pref_timestamp = cache_latest_prev.timestamp
 
-    def _compatible_get_packages_from_remotes(self, node, remotes):
+    def _compatible_get_packages_from_remotes(self, ref, remotes):
         """
-
+        Get available package ids in remotes for the given node reference
         """
         results = {}
         for r in remotes:
             try:
-                remote_packages = self._remote_manager.search_packages(r, node.ref, list_only=True)
+                remote_packages = self._remote_manager.search_packages(r, ref, list_only=True)
                 if remote_packages:
                     for ref in remote_packages:
                         results.setdefault(ref.package_id, []).append(r)
             except ConanConnectionError:
                 ConanOutput().error(
-                    f"Failed finding for package ids '{node.ref}' in remote '{r.name}': "
+                    f"Failed finding for package ids '{ref}' in remote '{r.name}': "
                     "remote not available")
                 raise
 
