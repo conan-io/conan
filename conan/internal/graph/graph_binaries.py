@@ -172,16 +172,19 @@ class GraphBinariesAnalyzer:
             # If not found in the cache, then look first one in servers
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
             compatible_package_ids = self._compatible_get_packages_from_remotes(node, remotes)
-            for package_id, compatible_package in compatibles.items():
-                if package_id in compatible_package_ids:
-                    node._package_id = package_id  # Modifying package id under the hood, FIXME
-                    node.binary = None  # Invalidate it
-                    self._evaluate_download(node, remotes, update=False)
-                    if node.binary == BINARY_DOWNLOAD:
-                        self._compatible_found(conanfile, package_id, compatible_package)
-                        return
+            candidates = {pkg_id: pkg for pkg_id, pkg in compatibles.items()
+                          if pkg_id in compatible_package_ids}
+            node.conanfile.output.info(f"Found {len(candidates)} compatible configurations in remotes")
+            for package_id, compatible_package in candidates.items():
+                node._package_id = package_id  # Modifying package id under the hood, FIXME
+                node.binary = None  # Invalidate it
+                # We already know which remotes have that package_id
+                available_remotes = compatible_package_ids[package_id]
+                self._evaluate_download(node, available_remotes, update=False)
+                if node.binary == BINARY_DOWNLOAD:
+                    self._compatible_found(conanfile, package_id, compatible_package)
+                    return
         else:  # Need to check in servers too for the latest thing
-            # compatible_package_ids = self._compatible_get_packages_from_remotes(node, remotes)
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
@@ -249,8 +252,6 @@ class GraphBinariesAnalyzer:
                     f"Failed finding for package ids '{node.ref}' in remote '{r.name}': "
                     "remote not available")
                 raise
-
-        node.conanfile.output.info(f"Found {len(results)} compatible candidates in remotes")
 
         return results
 
