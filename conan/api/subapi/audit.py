@@ -3,6 +3,7 @@ import json
 import os
 import base64
 
+from conan.api.output import ConanOutput
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode
@@ -28,12 +29,14 @@ class AuditAPI:
         }
 
     @staticmethod
-    def scan(deps_graph, provider):
+    def scan(deps_graph, provider, context=None):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                          for node in deps_graph.nodes[1:]), key=lambda ref: ref.name)
+                          for node in deps_graph.nodes[1:]
+                          if context is None or node.context == context),
+                      key=lambda ref: ref.name)
         return provider.get_cves(refs)
 
     @staticmethod

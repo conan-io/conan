@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 from collections import OrderedDict
 
@@ -20,8 +21,7 @@ GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
 def _format_name(name):
-    name = name.replace(".", "_").replace("-", "_")
-    return name.lower()
+    return re.sub(r'[^A-Za-z0-9_]', '_', name).lower()
 
 
 def _xcconfig_settings_filename(settings, configuration):
@@ -93,7 +93,7 @@ class XcodeDeps(object):
         // Link options for {{pkg_name}}_{{comp_name}}
         LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
         OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
-         """)
+        """)
 
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file
@@ -256,7 +256,10 @@ class XcodeDeps(object):
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
+            transitive_requires = [r for r, _ in
+                                   get_transitive_requires(self._conanfile, dep).items()]
             if dep.cpp_info.has_components:
+                transitive_dep_names = [_format_name(dep.ref.name) for dep in transitive_requires]
 
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
@@ -266,7 +269,8 @@ class XcodeDeps(object):
                     #           "list of names from required components from other packages")
                     def _get_component_requires(component):
                         requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
-                                             component.requires if "::" in req]
+                                             component.requires if "::" in req
+                                             and req.split("::")[0] in transitive_dep_names]
                         requires_internal = [dep.cpp_info.components.get(req) for req in
                                              component.requires if "::" not in req]
                         return requires_internal, requires_external
@@ -301,7 +305,6 @@ class XcodeDeps(object):
                     result.update(component_content)
             else:
                 public_deps = []
-                transitive_requires = [r for r, _ in get_transitive_requires(self._conanfile, dep).items()]
                 for r, d in dep.dependencies.direct_host.items():
                     if r not in transitive_requires:
                         continue

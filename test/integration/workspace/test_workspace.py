@@ -119,6 +119,23 @@ class TestAddRemove:
         assert "dep1/0.1" in c.out
         assert "dep2" not in c.out
 
+    def test_add_modified(self):
+        # https://github.com/conan-io/conan/issues/18942
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1")})
+        c.run("workspace add dep1")
+        assert "Reference 'dep1/0.1' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.1" in c.out
+        c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.2")})
+        c.run("workspace add dep1")
+        assert "Package dep1 already exists, updating its reference" in c.out
+        assert "Reference 'dep1/0.2' added to workspace" in c.out
+        c.run("workspace info")
+        assert "dep1/0.2" in c.out
+        assert "dep1/0.1" not in c.out
+
     @pytest.mark.parametrize("api", [False, True])
     def test_dynamic_editables(self, api):
         c = TestClient(light=True)
@@ -686,6 +703,21 @@ class TestMeta:
         c.run("workspace super-install -of=build -o *:myoption=1")
         assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
 
+    def test_intermediate_non_editable(self):
+        c = TestClient(light=True)
+
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+                "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1")})
+
+        c.run("workspace init")
+        c.run("workspace add liba")
+        c.run("export libb")
+        c.run("workspace add libc")
+        c.run("workspace super-install", assert_error=True)
+        assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
+                "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()
@@ -1082,6 +1114,11 @@ def test_workspace_defining_only_paths():
     assert expected in c.out
     c.run("workspace install")
     assert "conanfile.py (app1/0.1)" in c.out
+    assert "liba/0.1@myuser/mychannel - Editable" in c.out
+    assert "libb/0.1 - Editable" in c.out
+
+    c.run("workspace super-install")
+    assert "app1/0.1 - Editable" in c.out
     assert "liba/0.1@myuser/mychannel - Editable" in c.out
     assert "libb/0.1 - Editable" in c.out
 
