@@ -210,10 +210,12 @@ class RemoteManager:
 
     def search_packages(self, remote, ref, list_only=False):
         # Used only by ListAPI to list the different package_ids for a reference
-        packages = self._call_remote(remote, "search_packages", ref)
         if remote.recipes_only:
-            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+            return {}
+        packages = self._call_remote(remote, "search_packages", ref, list_only)
         if list_only:
+            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+        else:
             # Avoid serializing conaninfo in server side
             packages = {PkgReference(ref, pid): load_binary_info(data["content"])
                         if "content" in data else data
