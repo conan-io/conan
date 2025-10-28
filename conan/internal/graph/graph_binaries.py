@@ -159,7 +159,9 @@ class GraphBinariesAnalyzer:
         original_package_id = node.package_id
         conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
-        use_compatibility_optimization = len(compatibles) >= 5
+        # As a conf for testing for now, this will be removed before merge
+        # use_compatibility_optimization = len(compatibles) >= node.conanfile.conf.get("user.graph:compatibility_optimization_threshold", 5)
+        use_compatibility_optimization = True
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
             for package_id, compatible_package in compatibles.items():
@@ -181,6 +183,8 @@ class GraphBinariesAnalyzer:
                 candidates = compatibles
                 compatible_packages = {}
             for package_id, compatible_package in candidates.items():
+                conanfile.output.info(f"'{package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
                 # We already know which remotes have that package_id
