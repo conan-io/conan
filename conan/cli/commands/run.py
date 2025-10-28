@@ -25,23 +25,23 @@ def run(conan_api, parser, *args):
     cwd = os.getcwd()
 
     ConanOutput().info("Installing and building dependencies, this might take a while...",
-                       fg=Color.BRIGHT_MAGENTA)
+                       fg=Color.BRIGHT_MAGENTA, newline=False)
     previous_log_level = ConanOutput._conan_output_level
     if previous_log_level == LEVEL_STATUS:
         ConanOutput._conan_output_level = LEVEL_WARNING
 
-    with tempfile.TemporaryDirectory("conanrun") as tmpdir:
+    with (tempfile.TemporaryDirectory("conanrun") as tmpdir):
         # Default values for install
         setattr(args, "output_folder", tmpdir)
         setattr(args, "generator", [])
-
+        time.sleep(1)
         deps_graph, lockfile = run_install_command(conan_api, args, cwd)
-        ConanOutput._conan_output_level = previous_log_level
 
+        ConanOutput().clear_line()
         context_env_map = {
             "host": "conanrun",
             "build": "conanbuild"
         }
-
-        envfiles = ["conanbuild", "conanrun"] if args.context is None else [context_env_map.get(args.context)]
+        envfiles = ["conanbuild", "conanrun"] if args.context is None \
+            else [context_env_map.get(args.context)]
         deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
