@@ -30,7 +30,7 @@ def run(conan_api, parser, *args):
     if previous_log_level == LEVEL_STATUS:
         ConanOutput._conan_output_level = LEVEL_WARNING
 
-    with (tempfile.TemporaryDirectory("conanrun") as tmpdir):
+    with tempfile.TemporaryDirectory("conanrun") as tmpdir:
         # Default values for install
         setattr(args, "output_folder", tmpdir)
         setattr(args, "generator", [])
