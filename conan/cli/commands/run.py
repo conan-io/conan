@@ -34,7 +34,6 @@ def run(conan_api, parser, *args):
         # Default values for install
         setattr(args, "output_folder", tmpdir)
         setattr(args, "generator", [])
-        time.sleep(1)
         deps_graph, lockfile = run_install_command(conan_api, args, cwd)
 
         ConanOutput().clear_line()
