@@ -469,8 +469,10 @@ class EnvVars:
                 )
             if value:
                 value = value.replace('"', '`"')  # escape quotes
+                result.append(f'Write-Verbose "Exporting {varname}={value}"')
                 result.append(f'$env:{varname}="{value}"')
             else:
+                result.append(f'Write-Verbose "Unsetting {varname}"')
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
@@ -583,13 +585,17 @@ def _ps1_deactivate_contents(deactivation_mode, values, filename):
         func_name = _deactivate_func_name(filename)
         return textwrap.dedent(f"""\
             function global:deactivate_{func_name} {{
+                [CmdletBinding()]
+                param()
                 Write-Host "Restoring environment"
                 foreach ($v in @({vars_list})) {{
                     $oldVarName = "{var_prefix}_$v"
                     $oldValue = Get-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
                     if (Test-Path env:$oldValue) {{
+                        Write-Verbose "Unsetting $v"
                         Remove-Item -Path "Env:$v" -ErrorAction SilentlyContinue
                     }} else {{
+                        Write-Verbose "Restoring $v to $oldValue.Value"
                         Set-Item -Path "Env:$v" -Value $oldValue.Value
                     }}
                     Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue

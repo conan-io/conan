@@ -9,6 +9,7 @@ from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.util.files import save, mkdir, chdir
+from .templates import powershell_virtualenv_template, sh_virtualenv_template
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -208,31 +209,14 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                content = textwrap.dedent(f'''
-                [ "$1" = "-h" ] || [ "$1" = "--help" ] && {{
-                    printf "%s [-v|--verbose]\\n" "$0"
-                    printf "  Activate Conan {group} environment\\n"
-                    printf "  -v, --verbose   Print information about the modified variables\\n"
-                    return 0
-                }}
-                {". " + " && . ".join('"{}"'.format(s) for s in files)}
-                ''')
                 if deactivation_mode == "function":
-                    content += textwrap.dedent(f'''
-                    deactivate_conan{group}() {{
-                        [ "$1" = "-h" ] || [ "$1" = "--help" ] && {{
-                            printf "deactivate_conanbuild [-v|--verbose]\\n"
-                            printf "  Restores the environment modified by conanbuild.sh\\n"
-                            printf "  -v, --verbose   Print information about the restored variables"
-                            return 0
-                        }}
-                        conan_verbose=false; [ "$1" = "-v" ] || [ "$1" = "--verbose" ] && conan_verbose=true
-
-                        {"\n".join([f"deactivate_{deactivate_name}" for deactivate_name in deactivate_function_names(shs)])}
-                        unset -f deactivate_conan{group}
-                    }}
-                    ''')
-                return content
+                    return sh_virtualenv_template.render(
+                        group=group,
+                        files=files,
+                        deactivate_function_names=deactivate_function_names,
+                    )
+                else:
+                    return ". " + " && . ".join('"{}"'.format(s) for s in files)
             filename = "conan{}.sh".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
@@ -249,15 +233,15 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                content = "\r\n".join(['& "{}"'.format(b) for b in files])
                 if deactivation_mode == "function":
-                    content += f"\n\nfunction global:deactivate_conan{group} {{\n"
-                    for deactivate_name in deactivate_function_names(ps1s):
-                        content += f"    deactivate_{deactivate_name}\n"
-                    content += (f"    Remove-Item -Path function:deactivate_conan{group} "
-                                "-ErrorAction SilentlyContinue"
-                                "\n}\n")
-                return content
+                    return powershell_virtualenv_template.render(
+                        group=group,
+                        files=files,
+                        deactivate_function_names=deactivate_function_names,
+                    )
+                else:
+                    return "\r\n".join(['& "{}"'.format(b) for b in files])
+
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
