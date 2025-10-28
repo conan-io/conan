@@ -1,7 +1,8 @@
 import os
+import subprocess
 from pathlib import Path
 
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_QUIET
 from conan.internal.subsystems import command_env_wrapper
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import MockInfoProperty
@@ -388,6 +389,9 @@ class ConanFile:
         if not quiet:
             ConanOutput().info(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
+        if quiet or ConanOutput()._conan_output_level == LEVEL_QUIET:
+            stdout = subprocess.DEVNULL
+            stderr = subprocess.DEVNULL
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
         if not quiet:
             ConanOutput().writeln("")

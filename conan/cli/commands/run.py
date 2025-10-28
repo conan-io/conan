@@ -1,7 +1,8 @@
 import os
 import tempfile
 
-from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_STATUS, Color
+from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_STATUS, Color, LEVEL_ERROR, \
+    LEVEL_QUIET
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.commands.install import run_install_command
@@ -28,7 +29,7 @@ def run(conan_api, parser, *args):
                        fg=Color.BRIGHT_MAGENTA, newline=False)
     previous_log_level = ConanOutput._conan_output_level
     if previous_log_level == LEVEL_STATUS:
-        ConanOutput._conan_output_level = LEVEL_WARNING
+        ConanOutput._conan_output_level = LEVEL_QUIET
 
     with tempfile.TemporaryDirectory("conanrun") as tmpdir:
         # Default values for install
@@ -43,4 +44,5 @@ def run(conan_api, parser, *args):
         }
         envfiles = ["conanbuild", "conanrun"] if args.context is None \
             else [context_env_map.get(args.context)]
+        ConanOutput._conan_output_level = LEVEL_ERROR
         deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
