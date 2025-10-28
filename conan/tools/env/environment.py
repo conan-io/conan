@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
 from conan.internal.api.install.generators import relativize_paths
+from conan.internal.api.install.templates import  ps_virtualenv_function_template, ps_virtualenv_script_template, sh_virtualenv_function_template, sh_virtualenv_script_template
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
@@ -454,61 +455,32 @@ class EnvVars:
 
     def save_ps1(self, file_location, generate_deactivate=True):
         _, filename = os.path.split(file_location)
-
-        result = []
-        if generate_deactivate:
-            result.append(_ps1_deactivate_contents(self._deactivation_mode, self._values, filename))
         abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
+        values = {}
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
-                                      root_path=abs_base_path, script_path=new_path)
-            if generate_deactivate and self._deactivation_mode == "function":
-                # Check environment variable existence before saving value
-                result.append(
-                    f'if ($env:{varname}) {{ $env:{_old_env_prefix(filename)}_{varname} = $env:{varname} }}'
-                )
-            if value:
-                value = value.replace('"', '`"')  # escape quotes
-                result.append(f'Write-Verbose "Exporting {varname}={value}"')
-                result.append(f'$env:{varname}="{value}"')
-            else:
-                result.append(f'Write-Verbose "Unsetting {varname}"')
-                result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
-
-        content = "\n".join(result)
-        # It is very important to save it correctly with utf-16, the Conan util save() is broken
-        # and powershell uses utf-16 files!!!
+            values[varname] = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
+                                                root_path=abs_base_path, script_path=new_path).replace('"', '`"')  # escape quotes
+        template = ps_virtualenv_function_template if self._deactivation_mode == "function" else ps_virtualenv_script_template
+        content = template.render(generate_deactivate=generate_deactivate,
+                                  values=values,
+                                  filename=filename,
+                                  vars_list=", ".join(f'"{v}"' for v in values.keys()))
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         with open(file_location, "w", encoding="utf-16") as f:
             f.write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
-        filepath, filename = os.path.split(file_location)
-        result = []
-        if generate_deactivate:
-            result.append(_sh_deactivate_contents(self._deactivation_mode, self._values, filename))
+        _, filename = os.path.split(file_location)
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
-        result.append("conan_verbose=${conan_verbose:-false}")
+        values = {}
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
-                                      root_path=abs_base_path, script_path=new_path)
-            value = value.replace('"', '\\"')
-            if generate_deactivate and self._deactivation_mode == "function":
-                # Check environment variable existence before saving value
-                result.append(
-                    f'if [ -n "${{{varname}+x}}" ]; then '
-                    f'export {_old_env_prefix(filename)}_{varname}="${{{varname}}}"; '
-                    f'fi;'
-                )
-            if value:
-                result.append(f'${{conan_verbose}} && echo "Exporting {varname}={value}"')
-                result.append(f'export {varname}="{value}"')
-            else:
-                result.append(f'${{conan_verbose}} && echo "Unsetting {varname}"')
-                result.append(f'unset {varname}')
-
-        content = "\n".join(result)
-        content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
+            values[varname] = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
+                                                root_path=abs_base_path, script_path=new_path).replace('"', '\\"')
+        template = sh_virtualenv_function_template if self._deactivation_mode == "function" else sh_virtualenv_script_template
+        content = template.render(generate_deactivate=generate_deactivate,
+                                  values=values,
+                                  filename=filename,
+                                  vars_list=" ".join(quote(v) for v in values.keys()))
         save(file_location, content)
 
     def save_script(self, filename):
@@ -568,105 +540,6 @@ class EnvVars:
 
         if self._scope:
             register_env_script(self._conanfile, path, self._scope)
-
-
-def _deactivate_func_name(filename):
-    return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
-
-
-def _old_env_prefix(filename):
-    return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
-
-
-def _ps1_deactivate_contents(deactivation_mode, values, filename):
-    vars_list = ", ".join(f'"{v}"' for v in values.keys())
-    if deactivation_mode == "function":
-        var_prefix = _old_env_prefix(filename)
-        func_name = _deactivate_func_name(filename)
-        return textwrap.dedent(f"""\
-            function global:deactivate_{func_name} {{
-                [CmdletBinding()]
-                param()
-                Write-Host "Restoring environment"
-                foreach ($v in @({vars_list})) {{
-                    $oldVarName = "{var_prefix}_$v"
-                    $oldValue = Get-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
-                    if (Test-Path env:$oldValue) {{
-                        Write-Verbose "Unsetting $v"
-                        Remove-Item -Path "Env:$v" -ErrorAction SilentlyContinue
-                    }} else {{
-                        Write-Verbose "Restoring $v to $oldValue.Value"
-                        Set-Item -Path "Env:$v" -Value $oldValue.Value
-                    }}
-                    Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
-                }}
-                Remove-Item -Path function:deactivate_{func_name} -ErrorAction SilentlyContinue
-            }}
-        """)
-
-    deactivate_file = "deactivate_{}".format(filename)
-    return textwrap.dedent(f"""\
-        Push-Location $PSScriptRoot
-        "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
-        $vars = (Get-ChildItem env:*).name
-        $updated_vars = @({vars_list})
-
-        foreach ($var in $updated_vars)
-        {{
-            if ($var -in $vars)
-            {{
-                $var_value = (Get-ChildItem env:$var).value
-                Add-Content "{deactivate_file}" "`n`$env:$var = `"$var_value`""
-            }}
-            else
-            {{
-                Add-Content "{deactivate_file}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
-            }}
-        }}
-        Pop-Location
-    """)
-
-def _sh_deactivate_contents(deactivation_mode, values, filename):
-    vars_list = " ".join(quote(v) for v in values.keys())
-    if deactivation_mode == "function":
-        func_name = _deactivate_func_name(filename)
-        return textwrap.dedent(f"""\
-            # sh-like function to restore environment
-            deactivate_{func_name} () {{
-                echo "Restoring environment"
-                conan_verbose=${{conan_verbose:-false}}
-                for v in {vars_list}; do
-                    old_var="{_old_env_prefix(filename)}_${{v}}"
-                    # Use eval for indirect expansion (POSIX safe)
-                    eval "is_set=\\${{${{old_var}}+x}}"
-                    if [ -n "${{is_set}}" ]; then
-                        eval "old_value=\\${{${{old_var}}}}"
-                        "${{conan_verbose}}" && echo "Restoring ${{v}} to ${{old_value}}"
-                        eval "export ${{v}}=\\${{old_value}}"
-                    else
-                        "${{conan_verbose}}" && echo "Unsetting ${{v}}"
-                        unset "${{v}}"
-                    fi
-                    unset "${{old_var}}"
-                done
-                unset -f deactivate_{func_name}
-            }}
-        """)
-    deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
-    return textwrap.dedent(f"""\
-        echo "echo Restoring environment" > "{deactivate_file}"
-        for v in {vars_list}
-        do
-           is_defined="true"
-           value=$(printenv $v) || is_defined="" || true
-           if [ -n "$value" ] || [ -n "$is_defined" ]
-           then
-               echo export "$v='$value'" >> "{deactivate_file}"
-           else
-               echo unset $v >> "{deactivate_file}"
-           fi
-        done
-    """)
 
 
 class ProfileEnvironment:

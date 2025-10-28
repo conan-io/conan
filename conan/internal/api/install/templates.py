@@ -1,6 +1,7 @@
-from jinja2 import Template
+from jinja2 import Environment, Template
+import os
 
-powershell_virtualenv_template = Template('''<#
+ps_virtualenv_global_template = Template('''<#
 .SYNOPSIS
     Activates the Conan {{group}} environment for the current shell session.
 .DESCRIPTION
@@ -54,8 +55,7 @@ function global:deactivate_conan{{group}} {
 ''')
 
 
-
-sh_virtualenv_template = Template('''
+sh_virtualenv_global_template = Template('''
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     printf "%s [-v|--verbose]\\n" "$0"
     printf "  Activate Conan {{group}} environment\\n"
@@ -88,3 +88,152 @@ deactivate_conan{{group}}() {
 }
 
 ''')
+
+
+def _deactivate_func_name(filename):
+    return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
+
+
+def _old_env_prefix(filename):
+    return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
+
+
+env = Environment()
+env.globals["old_env_prefix"] = _old_env_prefix
+env.globals["deactivate_func_name"] = _deactivate_func_name
+
+ps_virtualenv_function_template = env.from_string("""
+{% if generate_deactivate -%}
+{% set func_name = "deactivate_" + deactivate_func_name(filename) -%}
+{% set var_prefix = old_env_prefix(filename) -%}
+function global:{{func_name}} {
+    [CmdletBinding()]
+    param()
+    Write-Host "Restoring environment"
+    foreach ($v in @({{vars_list}})) {
+        $oldVarName = "{{var_prefix}}_$v"
+        $oldValue = Get-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
+        if (Test-Path env:$oldValue) {
+            Write-Verbose "Unsetting $v"
+            Remove-Item -Path "Env:$v" -ErrorAction SilentlyContinue
+        } else {
+            Write-Verbose "Restoring $v to $oldValue.Value"
+            Set-Item -Path "Env:$v" -Value $oldValue.Value
+        }
+        Remove-Item -Path "Env:$oldVarName" -ErrorAction SilentlyContinue
+    }
+    Remove-Item -Path function:{{func_name}} -ErrorAction SilentlyContinue
+}
+{% endif -%}
+
+
+{% for varname, value in values.items() -%}
+if ($env:{{varname}}) { $env:{{old_env_prefix(filename)}}_{{varname}} = $env:{{varname}} }
+{% if value -%}
+Write-Verbose "Exporting {{varname}}={{value}}"
+$env:{{varname}}="{{value}}"
+{% else -%}
+if (Test-Path env:{{varname}}) { Write-Verbose "Unsetting {{varname}}"; Remove-Item env:{{varname}} }
+{% endif %}
+{% endfor %}
+""")
+
+ps_virtualenv_script_template = env.from_string("""
+{% set deactivate_file = "deactivate_{{filename}}" -%}
+Push-Location $PSScriptRoot
+{% if generate_deactivate -%}
+"echo `"Restoring environment`"" | Out-File -FilePath "{{deactivate_file}}"
+$vars = (Get-ChildItem env:*).name
+$updated_vars = @({{vars_list}})
+
+foreach ($var in $updated_vars)
+{
+    if ($var -in $vars)
+    {
+        $var_value = (Get-ChildItem env:$var).value
+        Add-Content "{{deactivate_file}}" "`n`$env:$var = `"$var_value`""
+    }
+    else
+    {
+        Add-Content "{{deactivate_file}}" "`nif (Test-Path env:$var) { Remove-Item env:$var }"
+    }
+}
+Pop-Location
+{% endif -%}
+
+{% for varname, value in values.items() -%}
+{% if value -%}
+$env:{{varname}}="{{value}}"
+{% else -%}
+if (Test-Path env:{{varname}}) { Write-Verbose "Unsetting {{varname}}"; Remove-Item env:{{varname}} }
+{% endif %}
+{% endfor %}
+""")
+
+
+sh_virtualenv_function_template = env.from_string("""
+{% if generate_deactivate -%}
+{% set func_name = "deactivate_" + deactivate_func_name(filename) -%}
+# sh-like function to restore environment
+{{func_name}} () {
+    echo "Restoring environment"
+    conan_verbose=${conan_verbose:-false}
+    for v in {{vars_list}}; do
+        old_var="{{old_env_prefix(filename)}}_${v}"
+        # Use eval for indirect expansion (POSIX safe)
+        eval "is_set=\\${${old_var}+x}"
+        if [ -n "${is_set}" ]; then
+            eval "old_value=\\${${old_var}}"
+            "${conan_verbose}" && echo "Restoring ${v} to ${old_value}"
+            eval "export ${v}=\\${old_value}"
+        else
+            "${conan_verbose}" && echo "Unsetting ${v}"
+            unset "${v}"
+        fi
+        unset "${old_var}"
+    done
+    unset -f {{func_name}}
+}
+{% endif -%}
+
+conan_verbose=${conan_verbose:-false}
+
+{% for varname, value in values.items() -%}
+{% raw %}if [ -n "${{% endraw %}{{ varname }}{% raw %}+x}" ]; then export {% endraw %}{{ old_env_prefix(filename) }}{% raw %}_{% endraw %}{{ varname }}{% raw %}="${{% endraw %}{{ varname }}{% raw %}}";fi{% endraw %}
+{% if value %}
+${conan_verbose} && echo "Exporting {{varname}}={{value}}"
+export {{varname}}="{{value}}"'
+{% else -%}
+${conan_verbose} && echo "Unsetting {{varname}}"
+unset {{varname}}
+{% endif %}
+{% endfor %}
+""")
+
+
+sh_virtualenv_script_template = env.from_string("""
+{% if generate_deactivate %}
+{% set deactivate_file = os.path.join(os.path.abspath(filepath), "deactivate_{}".format(filename)) %}
+echo "echo Restoring environment" > "{{deactivate_file}}"
+for v in {{vars_list}}
+do
+   is_defined="true"
+   value=$(printenv $v) || is_defined="" || true
+   if [ -n "$value" ] || [ -n "$is_defined" ]
+   then
+       echo export "$v='$value'" >> "{{deactivate_file}}"
+   else
+       echo unset $v >> "{{deactivate_file}}"
+   fi
+done
+{% endif %}
+
+{% for varname, value in values.items() -%}
+{% if value %}
+export {{varname}}="{{value}}"'
+{% else %}
+unset {{varname}}
+{% endif %}
+{% endfor %}
+""")
+

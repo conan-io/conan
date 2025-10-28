@@ -9,7 +9,7 @@ from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.util.files import save, mkdir, chdir
-from .templates import powershell_virtualenv_template, sh_virtualenv_template
+from .templates import ps_virtualenv_global_template, sh_virtualenv_global_template
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -210,7 +210,7 @@ def _generate_aggregated_env(conanfile):
         if shs:
             def sh_content(files):
                 if deactivation_mode == "function":
-                    return sh_virtualenv_template.render(
+                    return sh_virtualenv_global_template.render(
                         group=group,
                         files=files,
                         deactivate_function_names=deactivate_function_names,
@@ -234,7 +234,7 @@ def _generate_aggregated_env(conanfile):
         if ps1s:
             def ps1_content(files):
                 if deactivation_mode == "function":
-                    return powershell_virtualenv_template.render(
+                    return ps_virtualenv_global_template.render(
                         group=group,
                         files=files,
                         deactivate_function_names=deactivate_function_names,
