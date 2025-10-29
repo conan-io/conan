@@ -29,7 +29,10 @@ class PipEnv:
         python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter",
                                                       default=os.path.realpath(default_python) if default_python else None)
         if not python_interpreter:
-            raise ConanException("PipEnv could not find a Python executable path.")
+            raise ConanException("PipEnv could not find a Python executable path."
+                                 "Please set 'tools.system.pipenv:python_interpreter' to '</your/python/full/path>' "
+                                 "in the [conf] section of the profile, or in the command line using "
+                                 "'-c tools.system.pipenv:python_interpreter=</your/python/full/path>'")
 
         try:
             self._conanfile.run(cmd_args_to_string([python_interpreter, '-m', 'venv', self._env_dir]))
