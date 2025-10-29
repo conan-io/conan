@@ -10,7 +10,6 @@ from conan.test.utils.mocks import ConanFileMock
 def test_pipenv_conf(mock_shutil_which):
     conanfile = ConanFileMock()
     conanfile.settings = Settings()
-    mock_shutil_which.side_effect = Exception()
     conanfile.conf.define("tools.system.pipenv:python_interpreter", "/python/interpreter/from/config")
     result = "/python/interpreter/from/config -m venv"
     pipenv = PipEnv(conanfile, "testenv")
@@ -20,6 +19,7 @@ def test_pipenv_conf(mock_shutil_which):
         return 100
     conanfile.run = fake_run
     pipenv._create_venv()
+    mock_shutil_which.assert_not_called()
 
 
 @patch('shutil.which')
