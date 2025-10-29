@@ -32,15 +32,14 @@ class PipEnv:
     def _create_venv(self):
         python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter") or self._default_python()
         if not python_interpreter:
-            raise ConanException("PipEnv could not find a Python executable path."
-                                 "Please set 'tools.system.pipenv:python_interpreter' to '</your/python/full/path>' "
-                                 "in the [conf] section of the profile, or in the command line using "
-                                 "'-c tools.system.pipenv:python_interpreter=</your/python/full/path>'")
+            raise ConanException("PipEnv could not find a Python executable path. "
+                                 "Please, install Python system-wide or set the 'tools.system.pipenv:python_interpreter' "
+                                 "conf to the full path of a Python executable")
 
         try:
             self._conanfile.run(cmd_args_to_string([python_interpreter, '-m', 'venv', self._env_dir]))
-        except ConanException:
-            raise ConanException("PipEnv could not create a Python virtual environment.")
+        except ConanException as e:
+            raise ConanException(f"PipEnv could not create a Python virtual environment using '{python_interpreter}': {e}")
 
     def install(self, packages, pip_args=None):
         """
