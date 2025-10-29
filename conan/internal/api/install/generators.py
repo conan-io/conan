@@ -9,7 +9,7 @@ from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.util.files import save, mkdir, chdir
-from .templates import ps_virtualenv_global_template, sh_virtualenv_global_template
+from .templates import ps_virtualenv_global_template, ps_virtualenv_call_scripts, sh_virtualenv_global_template, sh_virtualenv_call_scripts
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -208,21 +208,14 @@ def _generate_aggregated_env(conanfile):
                 # This $PSScriptRoot uses the current script directory
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
-            def sh_content(files):
-                if deactivation_mode == "function":
-                    return sh_virtualenv_global_template.render(
-                        group=group,
-                        files=files,
-                        deactivate_function_names=deactivate_function_names,
-                    )
-                else:
-                    return ". " + " && . ".join('"{}"'.format(s) for s in files)
+            template = sh_virtualenv_global_template if deactivation_mode == "function" else sh_virtualenv_call_scripts
+            content = template.render(group=group, files=shs)
             filename = "conan{}.sh".format(group)
             generated.append(filename)
-            save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            save(os.path.join(conanfile.generators_folder, filename), content)
             if not deactivation_mode:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                     sh_content(deactivates(shs)))
+                     sh_virtualenv_call_scripts.render(files=(deactivates(ps1s))))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
@@ -232,22 +225,14 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  bat_content(deactivates(bats)))
         if ps1s:
-            def ps1_content(files):
-                if deactivation_mode == "function":
-                    return ps_virtualenv_global_template.render(
-                        group=group,
-                        files=files,
-                        deactivate_function_names=deactivate_function_names,
-                    )
-                else:
-                    return "\r\n".join(['& "{}"'.format(b) for b in files])
-
+            template = ps_virtualenv_global_template if deactivation_mode == "function" else ps_virtualenv_call_scripts
+            content = template.render(group=group, files=ps1s)
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
-            save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
+            save(os.path.join(conanfile.generators_folder, filename), content)
             if not deactivation_mode:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                     ps1_content(deactivates(ps1s)))
+                     ps_virtualenv_call_scripts.render(files=(deactivates(ps1s))))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")

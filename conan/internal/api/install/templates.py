@@ -1,7 +1,25 @@
-from jinja2 import Environment, Template
+from jinja2 import Environment
 import os
 
-ps_virtualenv_global_template = Template('''<#
+def _deactivate_func_name(filename):
+    return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
+
+
+def _old_env_prefix(filename):
+    return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
+
+
+def _deactivate_function_names(filenames):
+    return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+            for s in reversed(filenames)]
+
+env = Environment()
+env.globals["old_env_prefix"] = _old_env_prefix
+env.globals["deactivate_func_name"] = _deactivate_func_name
+env.globals["deactivate_func_names"] = _deactivate_function_names
+env.globals["os"] = os
+
+ps_virtualenv_global_template = env.from_string('''<#
 .SYNOPSIS
     Activates the Conan {{group}} environment for the current shell session.
 .DESCRIPTION
@@ -45,7 +63,7 @@ function global:deactivate_conan{{group}} {
     param()
 
     # Call deactivation functions
-    {% for name in deactivate_function_names(files) -%}
+    {% for name in deactivate_func_names(files) -%}
     & "deactivate_{{name}}" @PSBoundParameters
     {% endfor %}
     # Cleanup (Remove the function itself)
@@ -54,8 +72,13 @@ function global:deactivate_conan{{group}} {
 
 ''')
 
+ps_virtualenv_call_scripts = env.from_string("""
+{% for file in files -%}
+& "{{file}}"
+{% endfor %}
+""")
 
-sh_virtualenv_global_template = Template('''
+sh_virtualenv_global_template = env.from_string('''
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     printf "%s [-v|--verbose]\\n" "$0"
     printf "  Activate Conan {{group}} environment\\n"
@@ -77,11 +100,10 @@ deactivate_conan{{group}}() {
         return 0
     fi
     conan_verbose=false; [ "$1" = "-v" ] || [ "$1" = "--verbose" ] && conan_verbose=true
-
     # Call deactivation functions
-    {% for name in deactivate_function_names(files) -%}
+    {% for name in deactivate_func_names(files) -%}
     "deactivate_{{name}}"
-    {% endfor %}
+    {% endfor -%}
 
     # Remove the function itself
     unset -f deactivate_conan{{group}}
@@ -89,18 +111,11 @@ deactivate_conan{{group}}() {
 
 ''')
 
-
-def _deactivate_func_name(filename):
-    return os.path.splitext(os.path.basename(filename))[0].replace("-", "_")
-
-
-def _old_env_prefix(filename):
-    return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
-
-
-env = Environment()
-env.globals["old_env_prefix"] = _old_env_prefix
-env.globals["deactivate_func_name"] = _deactivate_func_name
+sh_virtualenv_call_scripts = env.from_string("""
+{% for file in files -%}
+. "{{file}}"
+{% endfor %}
+""")
 
 ps_virtualenv_function_template = env.from_string("""
 {% if generate_deactivate -%}
@@ -200,9 +215,9 @@ conan_verbose=${conan_verbose:-false}
 
 {% for varname, value in values.items() -%}
 {% raw %}if [ -n "${{% endraw %}{{ varname }}{% raw %}+x}" ]; then export {% endraw %}{{ old_env_prefix(filename) }}{% raw %}_{% endraw %}{{ varname }}{% raw %}="${{% endraw %}{{ varname }}{% raw %}}";fi{% endraw %}
-{% if value %}
+{% if value -%}
 ${conan_verbose} && echo "Exporting {{varname}}={{value}}"
-export {{varname}}="{{value}}"'
+export {{varname}}="{{value}}"
 {% else -%}
 ${conan_verbose} && echo "Unsetting {{varname}}"
 unset {{varname}}
@@ -210,10 +225,10 @@ unset {{varname}}
 {% endfor %}
 """)
 
-
 sh_virtualenv_script_template = env.from_string("""
-{% if generate_deactivate %}
-{% set deactivate_file = os.path.join(os.path.abspath(filepath), "deactivate_{}".format(filename)) %}
+{% if generate_deactivate -%}
+script_folder={{os.path.abspath(filepath)}}
+{% set deactivate_file = os.path.join("$script_folder", "deactivate_" + filename) -%}
 echo "echo Restoring environment" > "{{deactivate_file}}"
 for v in {{vars_list}}
 do
@@ -229,11 +244,11 @@ done
 {% endif %}
 
 {% for varname, value in values.items() -%}
-{% if value %}
-export {{varname}}="{{value}}"'
-{% else %}
+{% if value -%}
+export {{varname}}="{{value}}"
+{% else -%}
 unset {{varname}}
-{% endif %}
+{% endif -%}
 {% endfor %}
 """)
 

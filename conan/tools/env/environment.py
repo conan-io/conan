@@ -470,7 +470,7 @@ class EnvVars:
             f.write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
-        _, filename = os.path.split(file_location)
+        filepath, filename = os.path.split(file_location)
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         values = {}
         for varname, varvalues in self._values.items():
@@ -480,6 +480,7 @@ class EnvVars:
         content = template.render(generate_deactivate=generate_deactivate,
                                   values=values,
                                   filename=filename,
+                                  filepath=filepath,
                                   vars_list=" ".join(quote(v) for v in values.keys()))
         save(file_location, content)
 
