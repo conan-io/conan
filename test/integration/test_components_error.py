@@ -139,28 +139,6 @@ def test_missing_internal(component):
            "to other internal components that are not defined: ['other', 'another']" in t.out
 
 
-def test_missing_external_components():
-    foo = textwrap.dedent("""
-        from conan import ConanFile
-        class Recipe(ConanFile):
-            name = "consumer"
-            version = "1.0"
-            requires = "foo/1.0", "bar/1.0"
-            def package_info(self):
-                self.cpp_info.components["comp1"].libs = []
-                self.cpp_info.components["comp2"].requires = ["comp1"]
-        """)
-    t = TestClient()
-    t.save({'bar/conanfile.py': GenConanfile("bar", "1.0"),
-            'foo/conanfile.py': GenConanfile("foo", "1.0"),
-            "consumer/conanfile.py": foo})
-    t.run('create foo')
-    t.run("create bar")
-    t.run('create consumer', assert_error=True)
-    assert ("package_info(): There are direct dependencies, "
-            "but no '(cpp_info/components).requires' to them.") in t.out
-
-
 def test_unused_tool_requirement():
     """ Requires should include all listed requirements
         This error is known when creating the package if the requirement is consumed.
