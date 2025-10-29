@@ -8,10 +8,12 @@ from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
 
 
-def test_pipenv_conf():
+@patch('shutil.which')
+def test_pipenv_conf(mock_shutil_which):
     # https://github.com/conan-io/conan/issues/11661
     conanfile = ConanFileMock()
     conanfile.settings = Settings()
+    mock_shutil_which.side_effect = Exception()
     conanfile.conf.define("tools.system.pipenv:python_interpreter", "/python/interpreter/from/config")
     result = "/python/interpreter/from/config -m venv"
     pipenv = PipEnv(conanfile, "testenv")

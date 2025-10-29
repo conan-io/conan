@@ -24,10 +24,13 @@ class PipEnv:
         env.prepend_path("PATH", self.bin_dir)
         env.vars(self._conanfile).save_script(self.env_name)
 
-    def _create_venv(self):
+    @staticmethod
+    def _default_python():
         default_python = shutil.which('python') if platform.system() == "Windows" else shutil.which('python3')
-        python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter",
-                                                      default=os.path.realpath(default_python) if default_python else None)
+        return os.path.realpath(default_python) if default_python else None
+
+    def _create_venv(self):
+        python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter") or self._default_python()
         if not python_interpreter:
             raise ConanException("PipEnv could not find a Python executable path."
                                  "Please set 'tools.system.pipenv:python_interpreter' to '</your/python/full/path>' "
