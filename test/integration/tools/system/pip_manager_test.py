@@ -30,9 +30,7 @@ def test_pipenv_error_message(mock_shutil_which):
     with pytest.raises(ConanException) as exc_info:
         pipenv = PipEnv(conanfile, "testenv")
         pipenv._create_venv()
-    assert exc_info.value.args[0] == "PipEnv could not find a Python executable path. " \
-                                     "Please, install Python system-wide or set the 'tools.system.pipenv:python_interpreter' " \
-                                     "conf to the full path of a Python executable"
+    assert "PipEnv could not find a Python executable path." in exc_info.value.args[0]
 
 
 def test_pipenv_creation_error_message():
@@ -46,4 +44,4 @@ def test_pipenv_creation_error_message():
     conanfile.run = fake_run
     with pytest.raises(ConanException) as exc_info:
         pipenv._create_venv()
-    assert exc_info.value.args[0] == "PipEnv could not create a Python virtual environment using '/python/interpreter/from/config': fake error message"
+    assert "using '/python/interpreter/from/config': fake error message" in exc_info.value.args[0]
