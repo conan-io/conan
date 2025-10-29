@@ -30,7 +30,7 @@ def test_pipenv_error_message(mock_shutil_which):
     with pytest.raises(ConanException) as exc_info:
         pipenv = PipEnv(conanfile, "testenv")
         pipenv._create_venv()
-    assert "PipEnv could not find a Python executable path." in exc_info.value.args[0]
+    assert "install Python system-wide or set the 'tools.system.pipenv:python_interpreter' conf" in exc_info.value.args[0]
 
 
 def test_pipenv_creation_error_message():
