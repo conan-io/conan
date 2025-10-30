@@ -215,7 +215,7 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, filename), content)
             if not deactivation_mode:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                     sh_virtualenv_call_scripts.render(files=(deactivates(ps1s))))
+                     sh_virtualenv_call_scripts.render(files=(deactivates(shs))))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])

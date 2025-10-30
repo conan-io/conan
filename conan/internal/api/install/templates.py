@@ -72,13 +72,13 @@ function global:deactivate_conan{{group}} {
 
 ''')
 
-ps_virtualenv_call_scripts = env.from_string("""
+ps_virtualenv_call_scripts = env.from_string(("""
 {% for file in files -%}
 & "{{file}}"
 {% endfor %}
-""")
+""").strip())
 
-sh_virtualenv_global_template = env.from_string('''
+sh_virtualenv_global_template = env.from_string(('''
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     printf "%s [-v|--verbose]\\n" "$0"
     printf "  Activate Conan {{group}} environment\\n"
@@ -109,15 +109,15 @@ deactivate_conan{{group}}() {
     unset -f deactivate_conan{{group}}
 }
 
-''')
+''').strip())
 
-sh_virtualenv_call_scripts = env.from_string("""
+sh_virtualenv_call_scripts = env.from_string(("""
 {% for file in files -%}
 . "{{file}}"
 {% endfor %}
-""")
+""").strip())
 
-ps_virtualenv_function_template = env.from_string("""
+ps_virtualenv_function_template = env.from_string(("""
 {% if generate_deactivate -%}
 {% set func_name = "deactivate_" + deactivate_func_name(filename) -%}
 {% set var_prefix = old_env_prefix(filename) -%}
@@ -151,10 +151,10 @@ $env:{{varname}}="{{value}}"
 if (Test-Path env:{{varname}}) { Write-Verbose "Unsetting {{varname}}"; Remove-Item env:{{varname}} }
 {% endif %}
 {% endfor %}
-""")
+""").strip())
 
-ps_virtualenv_script_template = env.from_string("""
-{% set deactivate_file = "deactivate_{{filename}}" -%}
+ps_virtualenv_script_template = env.from_string(("""
+{% set deactivate_file = "deactivate_" + filename -%}
 Push-Location $PSScriptRoot
 {% if generate_deactivate -%}
 "echo `"Restoring environment`"" | Out-File -FilePath "{{deactivate_file}}"
@@ -174,19 +174,18 @@ foreach ($var in $updated_vars)
     }
 }
 Pop-Location
-{% endif -%}
-
+{% endif %}
 {% for varname, value in values.items() -%}
 {% if value -%}
 $env:{{varname}}="{{value}}"
 {% else -%}
 if (Test-Path env:{{varname}}) { Write-Verbose "Unsetting {{varname}}"; Remove-Item env:{{varname}} }
-{% endif %}
-{% endfor %}
-""")
+{% endif -%}
+{% endfor -%}
+""").strip())
 
 
-sh_virtualenv_function_template = env.from_string("""
+sh_virtualenv_function_template = env.from_string(("""
 {% if generate_deactivate -%}
 {% set func_name = "deactivate_" + deactivate_func_name(filename) -%}
 # sh-like function to restore environment
@@ -223,23 +222,23 @@ ${conan_verbose} && echo "Unsetting {{varname}}"
 unset {{varname}}
 {% endif %}
 {% endfor %}
-""")
+""").strip())
 
-sh_virtualenv_script_template = env.from_string("""
+sh_virtualenv_script_template = env.from_string(("""
 {% if generate_deactivate -%}
-script_folder={{os.path.abspath(filepath)}}
+script_folder="{{os.path.abspath(filepath)}}"
 {% set deactivate_file = os.path.join("$script_folder", "deactivate_" + filename) -%}
 echo "echo Restoring environment" > "{{deactivate_file}}"
 for v in {{vars_list}}
 do
-   is_defined="true"
-   value=$(printenv $v) || is_defined="" || true
-   if [ -n "$value" ] || [ -n "$is_defined" ]
-   then
-       echo export "$v='$value'" >> "{{deactivate_file}}"
-   else
-       echo unset $v >> "{{deactivate_file}}"
-   fi
+    is_defined="true"
+    value=$(printenv $v) || is_defined="" || true
+    if [ -n "$value" ] || [ -n "$is_defined" ]
+    then
+        echo export "$v='$value'" >> "{{deactivate_file}}"
+    else
+        echo unset $v >> "{{deactivate_file}}"
+    fi
 done
 {% endif %}
 
@@ -250,5 +249,5 @@ export {{varname}}="{{value}}"
 unset {{varname}}
 {% endif -%}
 {% endfor %}
-""")
+""").strip())
 
