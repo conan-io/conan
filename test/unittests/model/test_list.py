@@ -2,8 +2,7 @@ from conan.api.model import PackagesList
 
 
 def test_package_list_only_recipes():
-    pl = PackagesList()
-    pl.recipes = {
+    data = {
         "foobar/0.1.0": {'revisions':
                              {'85eb0587a3c12b90216c72070e9eef3e':
                                   {'timestamp': 1740151190.975,
@@ -42,8 +41,9 @@ def test_package_list_only_recipes():
                                                   'compiler.version': '11', 'os': 'Linux'},
                                              'options': {'shared': 'True'}}}}}}}
     }
+    pl = PackagesList.deserialize(data)
     pl.only_recipes()
-    assert pl.recipes == {'foobar/0.1.0': {
+    assert pl.serialize() == {'foobar/0.1.0': {
         'revisions': {'85eb0587a3c12b90216c72070e9eef3e': {'timestamp': 1740151190.975}}},
                        'qux/0.2.1': {'revisions': {
                            '71c3c11b98a6f2ae11f0f391f5e62e2b': {'timestamp': 1740151186.976}}}}

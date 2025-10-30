@@ -1,7 +1,6 @@
 import json
 import os
 import base64
-import re
 
 from jinja2 import Template
 
@@ -49,9 +48,6 @@ def _render_diff(content, template, template_folder, **kwargs):
         # Calculate base64 of the filename
         return base64.b64encode(filename.encode(), altchars=b'-_').decode()
 
-    def _get_diff_filename(line):
-        return _get_filenames(line, kwargs["src_prefix"], kwargs["dst_prefix"])[0]
-
     def _remove_prefixes(line):
         return line.replace(kwargs["src_prefix"][:-1], "").replace(kwargs["dst_prefix"][:-1], "")
 
@@ -60,13 +56,6 @@ def _render_diff(content, template, template_folder, **kwargs):
 
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
-
-    def _get_line_numbers(line):
-        match = re.search(r"@@ -(\d+),\d+ \+(\d+),\d+ @@", line)
-        if not match:
-            return 0, 0
-        old, new = match.groups()
-        return int(old), int(new)
 
     per_folder = {"folders": {}, "files": {}}
     for file in content:
@@ -77,6 +66,9 @@ def _render_diff(content, template, template_folder, **kwargs):
         for folder in bits[:-1]:
             cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
         cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path,
+                                  "is_deleted": "+++ /dev/null" in content[file][:10]
+                                                or any("deleted file mode" in line
+                                                       for line in content[file][:10]),
                                   "relative_path": replaced_path}
 
     def flatten_empty_folders(current_node):
@@ -113,8 +105,6 @@ def _render_diff(content, template, template_folder, **kwargs):
                            replace_paths=_replace_paths,
                            replace_cache_paths=_replace_cache_paths,
                            remove_prefixes=_remove_prefixes,
-                           get_diff_filename=_get_diff_filename,
-                           get_line_numbers=_get_line_numbers,
                            **kwargs)
 
 

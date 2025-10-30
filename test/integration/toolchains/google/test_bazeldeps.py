@@ -1,6 +1,9 @@
 import os
 import pathlib
+import platform
 import textwrap
+
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -64,7 +67,9 @@ def test_bazel_relative_paths():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -165,7 +170,9 @@ def test_bazeldeps_and_tool_requires():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -270,7 +277,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "third",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -288,7 +297,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second-mycomponent",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -303,7 +314,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second-myfirstcomp",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -319,7 +332,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -346,7 +361,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib-cmp1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -362,7 +379,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -448,7 +467,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "pkg",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -479,7 +500,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -494,7 +517,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -509,7 +534,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -525,7 +552,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -588,7 +617,9 @@ def test_pkgconfigdeps_with_test_requires():
         name = "{0}",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -664,7 +695,9 @@ def test_with_editable_layout():
             name = "dep",
             hdrs = glob([
                 "include/**",
-            ]),
+            ],
+            allow_empty = True
+            ),
             includes = [
                 "include",
             ],
@@ -762,7 +795,9 @@ def test_tool_requires():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -777,7 +812,9 @@ def test_tool_requires():
         name = "libother-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -792,7 +829,9 @@ def test_tool_requires():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -808,7 +847,9 @@ def test_tool_requires():
         name = "libother",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -1245,7 +1286,9 @@ def test_pkg_with_duplicated_component_requires():
         name = "mylib-myfirstcomp",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -1257,3 +1300,50 @@ def test_pkg_with_duplicated_component_requires():
     )
     """)
     assert myfirstcomp_expected in build_content
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix paths only")
+def test_apple_frameworks_and_frameworkdirs():
+    """
+    Testing that Apple frameworks are included as linkopts
+    Issue: https://github.com/conan-io/conan/issues/18748
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.frameworks = ["CoreFoundation", "Cocoa"]
+                self.cpp_info.frameworkdirs = ["/my/path/to/frw1"]
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g BazelDeps")
+    build_content = load(None, os.path.join(client.current_folder, "mylib", "BUILD.bazel"))
+    build_file_expected = textwrap.dedent("""\
+    cc_library(
+        name = "mylib",
+        hdrs = glob([
+            "include/**",
+        ],
+        allow_empty = True
+        ),
+        includes = [
+            "include",
+        ],
+        linkopts = [
+            "-framework",
+            "CoreFoundation",
+            "-framework",
+            "Cocoa",
+            "-F",
+            "/my/path/to/frw1",
+        ],
+        visibility = ["//visibility:public"],
+    )
+    """)
+    assert build_file_expected in build_content

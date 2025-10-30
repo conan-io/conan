@@ -199,7 +199,7 @@ class VCVars:
 
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n"
     is_ps1 = filename.endswith(".ps1")
     if is_ps1:
         content = f"Write-Host {message}"
@@ -298,6 +298,7 @@ def _vcvars_path(version, vs_install_path):
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
     else:
         vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    vcpath = os.path.normpath(vcpath)
     return vcpath
 
 
