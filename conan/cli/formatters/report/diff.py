@@ -57,18 +57,29 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
 
+    def _parse_rename_header(contents):
+        if not any("similarity index" in line for line in contents):
+            return None
+        for line in contents:
+            if line.startswith("rename to "):
+                renamed = line[len("rename to "):]
+                return _replace_paths(renamed)
+        return None
+
     per_folder = {"folders": {}, "files": {}}
     for file in content:
         replaced_path = _replace_paths(file)
         replaced_file = replaced_path.replace("(old)", "").replace("(new)", "").replace("\\", "/")
         bits = replaced_file.split("/")[1:]
         cur = per_folder
+        header = content[file][:10]
         for folder in bits[:-1]:
             cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
         cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path,
-                                  "is_deleted": "+++ /dev/null" in content[file][:10]
+                                  "is_deleted": "+++ /dev/null" in header
                                                 or any("deleted file mode" in line
-                                                       for line in content[file][:10]),
+                                                       for line in header),
+                                  "renamed_to": _parse_rename_header(header),
                                   "relative_path": replaced_path}
 
     def flatten_empty_folders(current_node):
