@@ -37,6 +37,7 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    "core.cache:path_prefix_fmt": "Format string for the prefix used in cache folders (defaults to ref.name[:5])",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
