@@ -57,29 +57,34 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
 
+    def _extract_header(diff_lines):
+        return diff_lines[:10]  # First 10 lines contain the header
+
     def _parse_rename_header(contents):
         if not any("similarity index" in line for line in contents):
             return None
         for line in contents:
             if line.startswith("rename to "):
-                renamed = line[len("rename to "):]
-                return _replace_paths(renamed)
+                return line[len("rename to "):]
         return None
 
     per_folder = {"folders": {}, "files": {}}
     for file in content:
-        replaced_path = _replace_paths(file)
+        header = _extract_header(content[file])
+        renamed_to = _parse_rename_header(header)
+        replaced_path = _replace_paths(renamed_to or file)
         replaced_file = replaced_path.replace("(old)", "").replace("(new)", "").replace("\\", "/")
         bits = replaced_file.split("/")[1:]
         cur = per_folder
-        header = content[file][:10]
         for folder in bits[:-1]:
             cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
-        cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path,
+        filename = bits[-1]
+        cur["files"][filename] = {"filename": file,  # This is file so renamed use old name
+                                  "is_new": "(new)" in replaced_path,
                                   "is_deleted": "+++ /dev/null" in header
                                                 or any("deleted file mode" in line
                                                        for line in header),
-                                  "renamed_to": _parse_rename_header(header),
+                                  "renamed_to": renamed_to,
                                   "relative_path": replaced_path}
 
     def flatten_empty_folders(current_node):

@@ -41,7 +41,6 @@ class ReportAPI:
                               remotes)
             return export_ref, cache_path
 
-
         old_export_ref, old_cache_path = _source(old_path, old_reference)
         new_export_ref, new_cache_path = _source(new_path, new_reference)
 
