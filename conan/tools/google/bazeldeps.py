@@ -53,6 +53,13 @@ class _BazelDepBuildGenerator:
         {% if lib_info['import_lib_path'] %}
         interface_library = "{{ lib_info['import_lib_path'] }}",
         {% endif %}
+        {% if lib_info["linkopts"] %}
+        linkopts = [
+            {% for linkopt in lib_info["linkopts"] %}
+            {{ linkopt }},
+            {% endfor %}
+        ],
+        {% endif %}
     )
     {% endfor %}
     {% endmacro %}
@@ -276,12 +283,16 @@ class _BazelDepBuildGenerator:
     def _get_lib_info(self, cpp_info, deduced_cpp_info, component_name=None):
 
         def _lib_info(lib_name, virtual_cpp_info):
-            return {
+            info = {
                 "name": lib_name,
                 "is_shared": virtual_cpp_info.type == PackageType.SHARED,
                 "lib_path": _relativize_path(virtual_cpp_info.location, self._package_folder),
-                "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder)
+                "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder),
+                "linkopts": []
             }
+            if info['is_shared'] and not info["lib_path"].endswith(".dll"):
+                info["linkopts"] = [f'"-Wl,-rpath,{cpp_info.libdirs[0]}"']
+            return info
 
         libs = cpp_info.libs
         libs_info = []
