@@ -126,6 +126,38 @@ class TestMetadataCommands:
         assert "mybin!!!!" in load(os.path.join(metadata_path, "logs", "mybin.txt"))
         assert "mybin2!!!!" in load(os.path.join(metadata_path, "logs", "mybin2.txt"))
 
+    def test_overwrite_server_contents(self):
+        # I can overwrite server contents
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        pkgid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        # Add some metadata
+        self.save_metadata_file(c, "pkg/0.1", "mylogs.txt", content="mylogs")
+        self.save_metadata_file(c, f"pkg/0.1:{pkgid}", "mybin.txt", content="mybin")
+
+        # Now upload everything
+        c.run("upload * -c -r=default")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+
+        c2 = TestClient(servers=c.servers, light=True, inputs=["admin", "password"])
+        c2.run("install --requires=pkg/0.1")
+        self.save_metadata_file(c2, "pkg/0.1", "mylogs.txt", content="mylogs2")
+        self.save_metadata_file(c2, f"pkg/0.1:{pkgid}", "mybin.txt", content="mybin2")
+        c2.run("upload * -c -r=default --metadata=*")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+
+        c.run("remove * -c")
+        c.run("download pkg/0.1 -r=default --metadata=*")
+
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mylogs2!!!!" in load(os.path.join(metadata_path, "logs", "mylogs.txt"))
+
+        c.run(f"cache path pkg/0.1:{pkgid} --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mybin2!!!!" in load(os.path.join(metadata_path, "logs", "mybin.txt"))
+
     def test_folder_exist(self, create_conan_pkg):
         """ so we can cp -R to the metadata folder, having to create the folder in the cache
         is weird
