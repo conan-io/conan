@@ -111,7 +111,7 @@ class TestMetadataCommands:
         self.save_metadata_file(c2, "pkg/0.1", "mylogs2.txt", content="mylogs2")
         self.save_metadata_file(c2, f"pkg/0.1:{pkgid}", "mybin2.txt", content="mybin2")
         c2.run("upload * -c -r=default --metadata=*")
-        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+        assert "pkg/0.1: Recipe metadata: 1 files" in c2.out
 
         c.run("remove * -c")
         c.run("download pkg/0.1 -r=default --metadata=*")
