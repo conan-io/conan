@@ -40,7 +40,7 @@ class ConanCenterProvider:
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
 
-        result = {"data": {}, "error": None}
+        result = {"data": {}, "error": None, "provider_url": self.url}
 
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
@@ -119,7 +119,7 @@ class PrivateProvider:
             raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
                                  f"Please authenticate using 'conan audit provider auth' and retry.")
 
-        result = {"data": {}, "error": None}
+        result = {"data": {}, "error": None, "provider_url": self.url}
 
         for ref in refs:
             try:
@@ -150,6 +150,7 @@ class PrivateProvider:
                                 preferredBaseScore
                             }}
                             aliases
+                            withdrawn
                             advisories {{
                                 name
                                 ...on JfrogAdvisory {{
@@ -158,9 +159,25 @@ class PrivateProvider:
                                           fullDescription
                                           url
                                           severity
+                                          impactReasons {{
+                                                description
+                                                name
+                                                isPositive
+                                          }}
                                      }}
                                 }}
                             references
+                            vulnerablePackages(first: 100) {{
+                                totalCount
+                                edges {{
+                                     node {{
+                                        fixVersions {{
+                                            version
+                                        }}
+                                    }}
+                                }}
+
+                            }}
                         }}
                     }}
                 }}

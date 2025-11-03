@@ -84,8 +84,40 @@ def text_vuln_formatter(result):
 
             references = node.get("references")
             if references:
-                cli_out_write(f"  url: {references[0]}", fg=Color.BRIGHT_BLUE)
+                cli_out_write(f"  url: ", endline="", fg=Color.BRIGHT_BLUE)
+                cli_out_write(references[0])
+
+            vulnerablePackages = node.get("vulnerablePackages")
+            if vulnerablePackages:
+                fixVersions = [fix['version']
+                               for fix_edge in vulnerablePackages.get("edges", [])
+                               for fix in fix_edge['node'].get("fixVersions", [])]
+                cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
+                cli_out_write(', '.join(fixVersions))
             cli_out_write("")
+
+            advisories = node.get("advisories", {})
+            jfrog_advisory = [adv for adv in advisories
+                              if adv.get("name", "").startswith("JFSA-")]
+            # Only ever one JFrog advisory per vulnerability
+            adv = jfrog_advisory[0] if jfrog_advisory else None
+            if adv:
+                cli_out_write(f"  JFrog Research ({adv['name']})", fg=Color.BRIGHT_GREEN)
+                if adv.get("severity"):
+                    cli_out_write(f"    Severity: ", endline="")
+                    cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
+                    reasons = adv.get("impactReasons", [])
+                    if reasons:
+                        cli_out_write(f"    Impact reasons:")
+                        for reason in reasons:
+                            cli_out_write(wrap_and_indent(f"* {reason['name']}", indent=8),
+                                          fg=Color.GREEN if reason['isPositive'] else Color.RED)
+                if adv.get("shortDescription"):
+                    cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
+                                  indent=4))
+                expected_url = result["provider_url"].rstrip("/") + f"/ui/catalog/vulnerabilities/details/{adv['name']}"
+                cli_out_write(f"    Url: {expected_url}")
+                cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
 
