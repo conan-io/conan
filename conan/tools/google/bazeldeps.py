@@ -290,7 +290,7 @@ class _BazelDepBuildGenerator:
                 "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder),
                 "linkopts": []
             }
-            if info['is_shared'] and not info["lib_path"].endswith(".dll"):
+            if info['is_shared'] and info["lib_path"] and not info["lib_path"].endswith(".dll"):
                 info["linkopts"] = [f'"-Wl,-rpath,{cpp_info.libdirs[0]}"']
             return info
 
