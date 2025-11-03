@@ -111,7 +111,7 @@ def test_unused_requirement_not_propagated():
             requires = "header/0.1", "lib/0.1"
 
             def package_info(self):
-                self.cpp_info.requires = ["lib::lib"]
+                self.cpp_info.requires = ["lib::lib", "header::header"]
     """)
     t.save({"header/conanfile.py": GenConanfile("header", "0.1").with_package_type("header-library"),
             "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library"),
