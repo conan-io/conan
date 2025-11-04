@@ -16,8 +16,7 @@ class PipEnv:
         :param name: Optional name for the virtualenv, by default "conan_pipenv"
         """
         self._conanfile = conanfile
-        name = f"_{name}" if name else ""
-        self.env_name = f"conan_pipenv{name}"
+        self.env_name = f"conan_pipenv{f'_{name}' if name else ''}"
         self._env_dir = os.path.abspath(os.path.join(folder or conanfile.build_folder,
                                                      self.env_name))
         bins = "Scripts" if platform.system() == "Windows" else "bin"
