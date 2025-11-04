@@ -77,7 +77,7 @@ def text_vuln_formatter(result):
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
-            isWithdrawn = True or node.get("withdrawn", False)
+            isWithdrawn = node.get("withdrawn", False)
 
             cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
             if isWithdrawn:
