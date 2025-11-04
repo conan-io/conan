@@ -71,7 +71,7 @@ def test_run_ctest():
 
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
-    conanfile.conf.define("tools.cmake:ctest_args", ["--progress", "--output-junit myfile"])
+    conanfile.conf.define("tools.cmake:ctest_args", ["--debug", "--output-junit myfile"])
     conanfile.conf.define("tools.build:verbosity", "verbose")
 
     conanfile.folders.generators = "."
@@ -80,5 +80,6 @@ def test_run_ctest():
 
     write_cmake_presets(conanfile, "toolchain", "Ninja", {})
     cmake = CMake(conanfile)
-    cmake.ctest(cli_args=["--schedule-random"])
-    assert "ctest --parallel 8 --schedule-random --verbose --progress --output-junit myfile" in conanfile.command
+    cmake.ctest(cli_args=["--schedule-random", "--quiet"])
+    assert ("ctest --parallel 8 --schedule-random --verbose "
+            "--debug --output-junit myfile") in conanfile.command

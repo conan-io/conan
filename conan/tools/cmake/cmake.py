@@ -316,10 +316,14 @@ class CMake:
             # https://cmake.org/cmake/help/latest/manual/ctest.1.html
             # Options such as --verbose, --extra-verbose, and --debug are
             # ignored if --quiet is specified.
+            arg_list = [a for a in arg_list if a not in ("--quiet", "--verbose")]
             arg_list.append(f"--{verbosity}")
 
         extra_args = self._conanfile.conf.get("tools.cmake:ctest_args", check_type=list)
         if extra_args:
+            # Remove --quiet if incompatible with new args, as latest arg doesn't win in ctest
+            if any(a in ("--debug", "--verbose", "--extra-verbose") for a in extra_args):
+                arg_list = [a for a in arg_list if a != "--quiet"]
             arg_list.extend(extra_args)
 
         arg_list = " ".join(filter(None, arg_list))
