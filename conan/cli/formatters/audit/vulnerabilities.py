@@ -187,6 +187,7 @@ vuln_html = """
     a { color: #007bff; text-decoration: none; }
     a:hover { text-decoration: underline; }
     .jfrog-research-summary { padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #555; }
+    .jfrog-research-details { margin-top: 10px; }
   </style>
   <script
     src="https://code.jquery.com/jquery-3.7.1.min.js"
@@ -248,41 +249,52 @@ vuln_html = """
           <td>
             {% if vuln.research %}
                 <div class="jfrog-research-summary">
-                <strong>Summary provided by JFrog Research <span style="color: green">({{ vuln.research.name }})</span>:</strong><br>
-                {% if vuln.research.shortDescription %}
-                    <b>Short description:</b> {{ vuln.research.shortDescription }}<br>
-                {% endif %}
-                {% if vuln.research.severity %}
-                    <b>Impact severity:</b> <span class="severity-badge severity-{{ vuln.research.severity }}">{{ vuln.research.severity }}</span><br>
-                    {% if vuln.research.impactReasons %}
-                        <b>Impact reasons:</b>
-                        <ul>
-                        {% for reason in vuln.research.impactReasons %}
-                            <li style="color: {{ 'inherit' if reason.isPositive else 'red' }};">{{ reason.name }}</li>
-                        {% endfor %}
-                        </ul>
-                    {% endif %}
-                {% endif %}
-                {% if vuln.provider_url %}
-                    {% set expected_url = vuln.provider_url.rstrip('/') + '/ui/catalog/vulnerabilities/details/' + vuln.research.name %}
-                    <b>More info available in:</b> <a href="{{ expected_url }}" target="_blank">{{ expected_url }}</a><br>
-                {% endif %}
-            </div>
+                    <strong>Summary provided by JFrog Research <span style="color: green">({{ vuln.research.name }})</span></strong>
+                    <div class="jfrog-research-details">
+                        {% if vuln.research.shortDescription %}
+                            <b>Short description:</b> {{ vuln.research.shortDescription }}<br>
+                        {% endif %}
+                        {% if vuln.research.severity %}
+                            <b>Impact severity:</b> <span class="severity-badge severity-{{ vuln.research.severity }}">{{ vuln.research.severity }}</span><br>
+                            {% if vuln.research.impactReasons %}
+                                <b>Impact reasons:</b>
+                                <ul>
+                                {% for reason in vuln.research.impactReasons %}
+                                    <li style="color: {{ 'inherit' if reason.isPositive else 'red' }};">{{ reason.name }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endif %}
+                        {% if vuln.provider_url %}
+                            {% set expected_url = vuln.provider_url.rstrip('/') + '/ui/catalog/vulnerabilities/details/' + vuln.research.name %}
+                            <b>More info available in:</b> <a href="{{ expected_url }}" target="_blank">{{ expected_url }}</a><br>
+                        {% endif %}
+                    </div>
+                </div>
             {% endif %}
+            <strong>Description:</strong>
+            <br>
             {{ vuln.description }}
+            {% if vuln.fixVersions %}
+                <div class="fix-versions-section">
+                    <br>
+                    <strong>Fixed in version(s):</strong>
+                    <br>
+                    {% for version in vuln.fixVersions %}
+                        <span class="severity-badge severity-Medium">{{ version }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
             {% if vuln.references %}
-              <br><br><strong>References:</strong>
+              <br><strong>References:</strong>
               <ul>
                 {% for ref in vuln.references %}
                   <li><a href="{{ ref }}" target="_blank">{{ ref }}</a></li>
                 {% endfor %}
               </ul>
             {% endif %}
-            {% if vuln.fixVersions %}
-                <br><strong>Fixed in version(s):</strong> {{ ', '.join(vuln.fixVersions) }}
-            {% endif %}
             {% if vuln.aliases %}
-              <br><br><strong>Aliases:</strong> {{ ', '.join(vuln.aliases) }}
+              <br><strong>Aliases:</strong> {{ ', '.join(vuln.aliases) }}
             {% endif %}
           </td>
         </tr>
