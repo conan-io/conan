@@ -82,6 +82,8 @@ class _SourceURLCredentials:
                     kwargs["headers"]["Authorization"] = f"Bearer {c.get('token')}"
                 if c.get("user") and c.get("password"):
                     kwargs["auth"] = (c.get("user"), c.get("password"))
+                if c.get("headers"):
+                    kwargs.setdefault("headers", {}).update(c["headers"])
                 return
 
         # Then, try to find the credentials in "_urls"
