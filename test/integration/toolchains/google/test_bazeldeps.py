@@ -1392,4 +1392,4 @@ def test_shared_libs_and_unix_includes_rpath():
     assert '"-Wl,-rpath,' not in build_content
     client.run("install . -g BazelDeps -s 'os=Linux'")
     build_content = load(None, os.path.join(client.current_folder, "csm", "BUILD.bazel"))
-    assert re.search('"-Wl,-rpath,.*/p/lib"', build_content)
+    assert re.search('"-Wl,-rpath,.*/p/lib"', build_content.replace("\\", "/"))
