@@ -39,7 +39,7 @@ def base_profile():
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", "6.5.0")
+@pytest.mark.tool("bazel", "6.x")
 def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
@@ -57,7 +57,7 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", "7.4.1")
+@pytest.mark.tool("bazel", "7.x")
 def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_7_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
@@ -74,7 +74,7 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: Hello World Debug!" in client.out
 
 
-@pytest.mark.tool("bazel", "8.0.0")
+@pytest.mark.tool("bazel", "8.x")
 def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     """
     Issue related: https://github.com/conan-io/conan/issues/17438
@@ -86,7 +86,7 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
 
 
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", "6.5.0")
+@pytest.mark.tool("bazel", "6.x")
 def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
     """
     Testing the next dependencies structure for shared/static libs
@@ -212,7 +212,7 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
 
 
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", "7.4.1")
+@pytest.mark.tool("bazel", "7.x")
 @pytest.mark.skipif(platform.system() == "Linux",
                     reason="Conan CI fails (likely related to parallel "
                            "tests running??). Skipping it for now!")
@@ -344,7 +344,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         assert "myfirstlib/1.2.11: Hello World Release!"
 
 
-@pytest.mark.tool("bazel", "8.0.0")
+@pytest.mark.tool("bazel", "8.x")
 def test_empty_bazel_query():
     """
     Test that following a simple steps using the BazelDeps and running

@@ -39,13 +39,13 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
     def recipe_revision(self, ref):
         tmp = copy.copy(ref)
         tmp.revision = None
-        latest_rrev = self.c_v2.cache.get_latest_recipe_reference(tmp)
+        latest_rrev = self.c_v2.cache.get_latest_recipe_revision(tmp)
         return latest_rrev.revision
 
     def package_revision(self, pref):
         tmp = copy.copy(pref)
         tmp.revision = None
-        latest_prev = self.c_v2.cache.get_latest_package_reference(tmp)
+        latest_prev = self.c_v2.cache.get_latest_package_revision(tmp)
         return latest_prev.revision
 
     def test_install_binary_iterating_remotes_same_rrev(self):
@@ -144,7 +144,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        assert len(self.c_v2.cache.get_recipe_revisions_references(self.ref)) == 0
+        assert len(self.c_v2.cache.get_recipe_revisions(self.ref)) == 0
 
         self.c_v2.run("install --requires={}".format(self.ref))
         local_rev = self.recipe_revision(self.ref)

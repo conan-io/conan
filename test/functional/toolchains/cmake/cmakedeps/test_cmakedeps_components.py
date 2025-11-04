@@ -1,12 +1,11 @@
 import textwrap
-import unittest
 
 import pytest
 
 from conan.test.utils.tools import TestClient
 
 
-class PropagateSpecificComponents(unittest.TestCase):
+class TestPropagateSpecificComponents:
     """
         Feature: recipes can declare the components they are consuming from their requirements,
         only those components should be propagated to their own consumers. If required components
@@ -45,7 +44,8 @@ class PropagateSpecificComponents(unittest.TestCase):
             requires = "middle/version"
         """)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         client = TestClient()
         client.save({
             'top.py': self.top,
@@ -61,8 +61,8 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.save({'conanfile.py': self.app})
         t.run("install .  -g CMakeDeps")
         config = t.load("middle-Target-release.cmake")
-        self.assertIn('top::cmp1', config)
-        self.assertNotIn("top::top", config)
+        assert 'top::cmp1' in config
+        assert "top::top" not in config
 
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
@@ -70,12 +70,12 @@ class PropagateSpecificComponents(unittest.TestCase):
         host_arch = t.get_default_host_profile().settings['arch']
 
         content = t.load(f'middle-release-{host_arch}-data.cmake')
-        self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
+        assert "list(APPEND middle_FIND_DEPENDENCY_NAMES top)" in content
 
         content = t.load('middle-Target-release.cmake')
-        self.assertNotIn("top::top", content)
-        self.assertNotIn("top::cmp2", content)
-        self.assertIn("top::cmp1", content)
+        assert "top::top" not in content
+        assert "top::cmp2" not in content
+        assert "top::cmp1" in content
 
 
 @pytest.fixture
@@ -158,7 +158,8 @@ def test_components_system_libs():
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
-        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET
+                            INTERFACE_LINK_LIBRARIES)
         message("component libs: ${tmp_libs}")
         message("component options: ${tmp_options}")
         message("component deps: ${tmp_deps}")
@@ -166,8 +167,10 @@ def test_components_system_libs():
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
-    assert 'component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:system_lib_component>;' in t.out
+    assert ('component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;'
+            'requirement_requirement_component_DEPS_TARGET') in t.out
+    assert ('component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:'
+            'system_lib_component>;') in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
@@ -360,7 +363,9 @@ def test_cmake_add_subdirectory():
     # The boost::boost target has linked the two components
     assert "AGGREGATED LIBS: boost::boost" in t.out
     assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
-    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
-    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
+    assert ("BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;"
+            "boost_boost_B_DEPS_TARGET") in t.out
+    assert ("BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;"
+            "boost_boost_A_DEPS_TARGET") in t.out
     assert "BOOST_B_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:B_1;B_2>" in t.out
     assert "BOOST_A_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:A_1;A_2>;" in t.out
