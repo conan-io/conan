@@ -77,9 +77,38 @@ def text_vuln_formatter(result):
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
+            isWithdrawn = True or node.get("withdrawn", False)
 
             cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
+            if isWithdrawn:
+                cli_out_write(" [WITHDRAWN]", fg=Color.BRIGHT_CYAN, endline="")
             cli_out_write(f" (Severity: {sev}{score_txt})", fg=sev_color)
+            advisories = node.get("advisories", {})
+            jfrog_advisory = [adv for adv in advisories
+                              if adv.get("name", "").startswith("JFSA-")]
+            # Only ever one JFrog advisory per vulnerability
+            adv = jfrog_advisory[0] if jfrog_advisory else None
+            if adv:
+                cli_out_write(f"  Summary provided by JFrog Research ({adv['name']})",
+                              fg=Color.BRIGHT_GREEN)
+                if adv.get("shortDescription"):
+                    cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
+                                                  indent=4))
+                if adv.get("severity"):
+                    cli_out_write(f"    Severity: ", endline="")
+                    cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
+                    reasons = adv.get("impactReasons", [])
+                    if reasons:
+                        cli_out_write(f"    Impact reasons:")
+                        for reason in reasons:
+                            cli_out_write(wrap_and_indent(f"* {reason['name']}", indent=8),
+                                          fg=Color.GREEN if reason['isPositive'] else Color.RED)
+                if result["provider_url"]:
+                    expected_url = (result["provider_url"].rstrip("/")
+                                    + f"/ui/catalog/vulnerabilities/details/{adv['name']}")
+                    cli_out_write(f"    Url: {expected_url}")
+                cli_out_write("")
+
             cli_out_write("\n" + desc_wrapped)
 
             references = node.get("references")
@@ -92,32 +121,10 @@ def text_vuln_formatter(result):
                 fixVersions = [fix['version']
                                for fix_edge in vulnerablePackages.get("edges", [])
                                for fix in fix_edge['node'].get("fixVersions", [])]
-                cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
-                cli_out_write(', '.join(fixVersions))
+                if fixVersions:
+                    cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(', '.join(fixVersions))
             cli_out_write("")
-
-            advisories = node.get("advisories", {})
-            jfrog_advisory = [adv for adv in advisories
-                              if adv.get("name", "").startswith("JFSA-")]
-            # Only ever one JFrog advisory per vulnerability
-            adv = jfrog_advisory[0] if jfrog_advisory else None
-            if adv:
-                cli_out_write(f"  JFrog Research ({adv['name']})", fg=Color.BRIGHT_GREEN)
-                if adv.get("severity"):
-                    cli_out_write(f"    Severity: ", endline="")
-                    cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
-                    reasons = adv.get("impactReasons", [])
-                    if reasons:
-                        cli_out_write(f"    Impact reasons:")
-                        for reason in reasons:
-                            cli_out_write(wrap_and_indent(f"* {reason['name']}", indent=8),
-                                          fg=Color.GREEN if reason['isPositive'] else Color.RED)
-                if adv.get("shortDescription"):
-                    cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
-                                  indent=4))
-                expected_url = result["provider_url"].rstrip("/") + f"/ui/catalog/vulnerabilities/details/{adv['name']}"
-                cli_out_write(f"    Url: {expected_url}")
-                cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
 
@@ -156,23 +163,21 @@ vuln_html = """
 <head>
   <meta charset="UTF-8">
   <title>Conan Audit Vulnerabilities Report</title>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css">
   <style>
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #333; color: #ffffff; }
-    .container { width: 80%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
+    .container { width: 95%; margin: 40px auto; padding: 20px; background: #222; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
     h1 { text-align: center; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; padding-top: 10px;}
-    col.pkg-col   { width: 15%; }
-    col.id-col    { width: 15%; }
-    col.sev-col   { width: 15%; }
-    col.score-col { width: 15%; }
-    col.desc-col  { width: 40%; }
+    col[data-dt-column="0"] { width: 10%; }
+    col[data-dt-column="1"] { width: 10%; }
+    col[data-dt-column="2"] { width: auto; }
     thead { background: #333; color: #fff; }
     thead th { padding: 12px; text-align: left; }
     tbody tr { border-bottom: 1px solid #ddd; }
     tbody tr:hover { background: #f0f0f0; }
     td { padding: 10px; vertical-align: top; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;}
-    .severity-badge { padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold; display: inline-block; }
+    .severity-badge { padding: 2px 4px; border-radius: 4px; color: #fff; font-weight: bold; display: inline-block; }
     .severity-Critical { background: #d9534f; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217,83,79,0.7); } 70% { box-shadow: 0 0 0 12px rgba(217,83,79,0); } 100% { box-shadow: 0 0 0 0 rgba(217,83,79,0); } }
     .severity-High { background: #f0ad4e; }
@@ -181,17 +186,22 @@ vuln_html = """
     .footer { text-align: center; color: #666; margin-bottom: 10px; }
     a { color: #007bff; text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .jfrog-research-summary { padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #555; }
   </style>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script
+    src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
   <script>
     $(document).ready(function(){
       $('#vuln_table').DataTable({
         "columnDefs": [
-          { "orderable": true, "targets": [0, 1, 2] },
-          { "orderable": false, "targets": [3, 4] }
+          { "orderable": true, "targets": [0, 1] },
+          { "orderable": false, "targets": [2] }
         ],
-        "order": [[2, "desc"]],
+        "order": [[1, "desc"]],
+        "autoWidth": false,
       });
     });
   </script>
@@ -199,20 +209,16 @@ vuln_html = """
 <body>
   <div class="container">
     <h1>Conan Audit Vulnerabilities Report</h1>
-    <table id="vuln_table">
+    <table id="vuln_table" class="stripe">
       <colgroup>
         <col class="pkg-col">
-        <col class="id-col">
-        <col class="sev-col">
-        <col class="score-col">
+        <col class="info-col">
         <col class="desc-col">
       </colgroup>
       <thead>
         <tr>
           <th>Package</th>
-          <th>ID</th>
-          <th>Severity</th>
-          <th>Score</th>
+          <th>Info</th>
           <th>Description</th>
         </tr>
       </thead>
@@ -222,18 +228,47 @@ vuln_html = """
         {% set severity_id = parts[0] %}
         {% set severity_label = parts[1] if parts|length > 1 else parts[0] %}
         <tr>
-          <td>{{ vuln.package }}</td>
-          <td>{{ vuln.vuln_id }}</td>
           <td>
-            <span style="display: none">{% if severity_id == 'N/A' %}-1{% else %}{{ severity_id }}{% endif %}</span>
+            {{ vuln.package }}
+          </td>
+          <td>
+            <span style="display: none">{{ vuln.score }}</span>
+            {% if vuln.withdrawn %}
+                <span style="color: #00ced1; font-weight: bold;">[WITHDRAWN]</span><br>
+            {% endif %}
+            {{ vuln.vuln_id }}
+            <br>
             {% if vuln.severity not in ['N/A', ''] %}
               <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
+            {{ vuln.score }}
           </td>
-          <td>{{ vuln.score }}</td>
           <td>
+            {% if vuln.research %}
+                <div class="jfrog-research-summary">
+                <strong>Summary provided by JFrog Research <span style="color: green">({{ vuln.research.name }})</span>:</strong><br>
+                {% if vuln.research.shortDescription %}
+                    <b>Short description:</b> {{ vuln.research.shortDescription }}<br>
+                {% endif %}
+                {% if vuln.research.severity %}
+                    <b>Impact severity:</b> <span class="severity-badge severity-{{ vuln.research.severity }}">{{ vuln.research.severity }}</span><br>
+                    {% if vuln.research.impactReasons %}
+                        <b>Impact reasons:</b>
+                        <ul>
+                        {% for reason in vuln.research.impactReasons %}
+                            <li style="color: {{ 'inherit' if reason.isPositive else 'red' }};">{{ reason.name }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endif %}
+                {% if vuln.provider_url %}
+                    {% set expected_url = vuln.provider_url.rstrip('/') + '/ui/catalog/vulnerabilities/details/' + vuln.research.name %}
+                    <b>More info available in:</b> <a href="{{ expected_url }}" target="_blank">{{ expected_url }}</a><br>
+                {% endif %}
+            </div>
+            {% endif %}
             {{ vuln.description }}
             {% if vuln.references %}
               <br><br><strong>References:</strong>
@@ -242,6 +277,9 @@ vuln_html = """
                   <li><a href="{{ ref }}" target="_blank">{{ ref }}</a></li>
                 {% endfor %}
               </ul>
+            {% endif %}
+            {% if vuln.fixVersions %}
+                <br><strong>Fixed in version(s):</strong> {{ ', '.join(vuln.fixVersions) }}
             {% endif %}
             {% if vuln.aliases %}
               <br><br><strong>Aliases:</strong> {{ ', '.join(vuln.aliases) }}
@@ -274,7 +312,11 @@ def html_vuln_formatter(result):
                 "severity": "N/A",
                 "score": "-",
                 "description": description,
-                "references": []
+                "references": [],
+                "withdrawn": False,
+                "research": None,
+                "provider_url": result.get("provider_url"),
+                "fixVersions": []
             })
         else:
             sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
@@ -288,6 +330,13 @@ def html_vuln_formatter(result):
                 aliases = node.get("aliases", [])
                 references = node.get("references", [])
                 desc = node.get("description", "")
+                withdrawn = node.get("withdrawn", False)
+                advisories = node.get("advisories", [])
+                jfrogAdvisories = [adv for adv in advisories if adv.get("name", "").startswith("JFSA-")]
+                jfrogResearch = jfrogAdvisories[0] if jfrogAdvisories else None
+                fixVersions = [fix['version']
+                               for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
+                               for fix in fix_edge['node'].get("fixVersions", [])]
                 vulns.append({
                     "package": ref,
                     "vuln_id": name,
@@ -296,6 +345,10 @@ def html_vuln_formatter(result):
                     "score": score_txt,
                     "description": desc,
                     "references": references,
+                    "withdrawn": withdrawn,
+                    "research": jfrogResearch,
+                    "provider_url": result.get("provider_url"),
+                    "fixVersions": fixVersions
                 })
 
     cli_out_write(_render_vulns(vulns, vuln_html))
