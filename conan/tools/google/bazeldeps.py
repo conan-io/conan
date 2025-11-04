@@ -291,6 +291,10 @@ class _BazelDepBuildGenerator:
                 "linkopts": []
             }
             if info['is_shared'] and info["lib_path"] and not info["lib_path"].endswith(".dll"):
+                # Issue: https://github.com/conan-io/conan/issues/19190
+                # Issue: https://github.com/conan-io/conan/issues/19135
+                # (UNIX) Adding the rpath flag as any application could link through the library
+                # which points out a symlink, but that name does not appear in the library location
                 info["linkopts"] = [f'"-Wl,-rpath,{cpp_info.libdirs[0]}"']
             return info
 
