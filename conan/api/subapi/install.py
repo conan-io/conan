@@ -6,7 +6,7 @@ from conan.internal.deploy import do_deploys
 
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.graph.installer import BinaryInstaller
-from conan.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration, ConanException
 
 
 class InstallAPI:
@@ -26,8 +26,11 @@ class InstallAPI:
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
-        installer.install_system_requires(deps_graph, install_order=install_order)
-        installer.install(deps_graph, remotes, install_order=install_order)
+        try:  # To be able to capture the output, report or save graph.json, then raise later
+            installer.install_system_requires(deps_graph, install_order=install_order)
+            installer.install(deps_graph, remotes, install_order=install_order)
+        except ConanException as e:
+            return str(e)
 
     def install_system_requires(self, graph, only_info=False):
         """ Install binaries for dependency graph

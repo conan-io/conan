@@ -72,7 +72,7 @@ def install(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     # Installation of binaries and consumer generators
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+    install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     ConanOutput().title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
                                        deploy=args.deployer, deploy_package=args.deployer_package,
@@ -85,4 +85,5 @@ def install(conan_api, parser, *args):
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": install_error}

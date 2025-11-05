@@ -3,7 +3,10 @@ import os
 import re
 import textwrap
 
+import pytest
+
 from conan.api.model import RecipeReference
+from conan.cli.exit_codes import ERROR_GENERAL
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conan.internal.util.files import load
 
@@ -891,3 +894,38 @@ def test_create_test_package_only_build_python_require():
     c.run("create . -tm --build=missing")
     assert "Testing the package" in c.out
     assert "pkg/0.1 (test package): TEST!!!" in c.out
+
+
+@pytest.mark.parametrize("out_file", [False, True])
+def test_create_build_fail_generate_outfile(out_file):
+    c = TestClient(light=True)
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1")
+           .with_requires("pkgb/0.1")
+           .with_package("raise Exception('myerror')"),
+            "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgc/0.1"),
+            })
+    c.run("export pkga")
+    c.run("export pkgb")
+    c.run("export pkgc")
+    if out_file:
+        error = c.run("create pkgd --build=missing --format=json --out-file=graph.json",
+                      assert_error=True)
+    else:
+        error = c.run("create pkgd --build=missing --format=json", assert_error=True,
+                      redirect_stdout="graph.json")
+    assert error == ERROR_GENERAL
+    assert "ERROR: pkgc/0.1: Error in package() method, line 8" in c.out
+    graph = json.loads(c.load("graph.json"))
+    assert graph["graph"]["nodes"]["1"]["name"] == "pkgd"
+
+    # We can construct a package list from it
+    c.run("list -g=graph.json --graph-binaries=Build --format=json")
+    pkglist = json.loads(c.stdout)
+    # not built packages don't have revisions
+    rrev = pkglist["Local Cache"]["pkgd/0.1"]["revisions"]["8c0991a825a51569f64a66f53806a717"]
+    assert "revisions" not in rrev["packages"]["6b3a55da7b0ca92d509536087f5ffa9281ffe9f5"]
+    # built packages do have package revisions
+    rrev = pkglist["Local Cache"]["pkgb/0.1"]["revisions"]["5b1ae5e3c1f718c0fd90d4dd8d9b57fb"]
+    assert "revisions" in rrev["packages"]["47a5f20ec8fb480e1c5794462089b01a3548fdc5"]
