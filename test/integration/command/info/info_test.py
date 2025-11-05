@@ -415,7 +415,6 @@ class TestErrorsInGraph:
         assert exit_code == 0
 
 
-
 class TestInfoUpdate:
 
     def test_update(self):
