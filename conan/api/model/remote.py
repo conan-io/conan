@@ -9,7 +9,7 @@ class Remote:
                  remote_type=None, recipes_only=False):
         """ A Remote object can be constructed to be passed as an argument to
         RemotesAPI methods. When possible, it is better to use Remote objects returned by the API,
-        but for the ``RemotesAPI.add()`` method, a new constructed object is necessary.
+        but for the ``RemotesAPI.add()`` method, for which a new constructed object is necessary.
         It is recommended to use named arguments like ``Remote(..., verify_ssl=False)`` in
         the constructor.
         :param name: The name of the remote.
