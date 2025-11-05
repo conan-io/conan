@@ -288,11 +288,19 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
     tgz_path = os.path.join(dest_dir, name)
     if ref:
         ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+
+    def myfilter(tinfo):
+        tinfo.uid = tinfo.gid = 0
+        tinfo.uname = tinfo.gname = "conan"
+        tinfo.mtime = 0
+        tinfo.mode = 0
+        return tinfo
+
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
             # recursive is False by default in case it is a symlink to a folder
-            tgz.add(abs_path, filename, recursive=recursive)
+            tgz.add(abs_path, filename, recursive=recursive, filter=myfilter)
         tgz.close()
 
     duration = time.time() - t1

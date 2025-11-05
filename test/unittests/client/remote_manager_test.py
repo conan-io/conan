@@ -1,10 +1,9 @@
 import os
-import pytest
 
 from conan.internal.api.uploader import compress_files
 from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.utils.test_files import temp_folder
-from conan.internal.util.files import save
+from conan.internal.util.files import save, check_with_algorithm_sum
 
 
 class TestRemoteManager:
@@ -23,3 +22,16 @@ class TestRemoteManager:
         assert os.path.exists(path)
         expected_path = os.path.join(folder, PACKAGE_TGZ_NAME)
         assert path == expected_path
+
+    def test_compress_files_checksums(self):
+        folder = temp_folder()
+        save(os.path.join(folder, "one_file.txt"), "The contents")
+        save(os.path.join(folder, "Two_file.txt"), "Two contents")
+
+        files = {
+            "one_file.txt": os.path.join(folder, "one_file.txt"),
+            "Two_file.txt": os.path.join(folder, "Two_file.txt"),
+        }
+
+        path = compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
+        check_with_algorithm_sum("sha1", path, "0bc8b45f526421437d204762ab7424aa644ab7e3")
