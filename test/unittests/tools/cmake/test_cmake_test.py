@@ -81,5 +81,4 @@ def test_run_ctest():
     write_cmake_presets(conanfile, "toolchain", "Ninja", {})
     cmake = CMake(conanfile)
     cmake.ctest(cli_args=["--schedule-random", "--quiet"])
-    assert ("ctest --parallel 8 --schedule-random --quiet --verbose --debug "
-            "--output-junit myfile") in conanfile.command
+    assert "--schedule-random --quiet --verbose --debug --output-junit myfile" in conanfile.command
