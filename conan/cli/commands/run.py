@@ -39,6 +39,10 @@ def run(conan_api, parser, *args):
             deps_graph, lockfile = run_install_command(conan_api, args, cwd)
         except Exception as e:
             ConanOutput.define_log_level(previous_log_level)
+            ConanOutput().error("Error installing the dependencies. To debug this, you can either:\n"
+                                " - Re-run the command with increased verbosity (-v, -vv)\n"
+                                " - Run 'conan install' first to ensure dependencies are installed,"
+                                "or to see errors during installation")
             raise e
 
         context_env_map = {
