@@ -45,7 +45,7 @@ def run(conan_api, parser, *args):
             "host": "conanrun",
             "build": "conanbuild"
         }
-        envfiles = ["conanbuild", "conanrun"] if args.context is None \
+        envfiles = list(context_env_map.values()) if args.context is None \
             else [context_env_map.get(args.context)]
         ConanOutput.define_log_level(LEVEL_ERROR)
         deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)

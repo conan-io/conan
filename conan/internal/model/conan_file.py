@@ -389,7 +389,7 @@ class ConanFile:
         if not quiet:
             ConanOutput().info(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
-        if quiet or ConanOutput()._conan_output_level == LEVEL_QUIET:
+        if quiet or ConanOutput.current_log_level() == LEVEL_QUIET:
             stdout = subprocess.DEVNULL if stdout is None else stdout
             stderr = subprocess.DEVNULL if stderr is None else stderr
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
