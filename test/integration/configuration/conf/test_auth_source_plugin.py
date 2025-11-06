@@ -79,7 +79,7 @@ class TestAuthSourcePlugin:
                 """)
         c.save_home({"extensions/plugins/auth_source.py": auth_plugin})
         source_credentials = json.dumps({"credentials": [{"url": url, "token": "password"}]})
-        save(os.path.join(c.cache_folder, "source_credentials.json"), source_credentials)
+        c.save_home({"source_credentials.json": source_credentials})
         c.run("source conanfile.py")
         # As the auth plugin is not returning any password the code is falling back to the rest of
         # the input methods in this case provided by source_credentials.json.
@@ -99,4 +99,18 @@ class TestAuthSourcePlugin:
             requester.get(url="aaa", source_credentials=True)
             headers = requester._http_requester.get.call_args[1]["headers"]
             assert headers["myheader"] == "myvalue"
+            assert f"Conan/{__version__}" in headers["User-Agent"]
+
+    def test_source_credentials_headers(self):
+        cache_folder = temp_folder()
+        source_credentials = json.dumps({"credentials": [{"url": "aaa", "token": "mytok",
+                                                          "headers": {"myheader2": "myvalue2"}}]})
+        save(os.path.join(cache_folder, "source_credentials.json"), source_credentials)
+
+        mock_http_requester = MagicMock()
+        with mock.patch("conan.internal.rest.conan_requester.requests", mock_http_requester):
+            requester = ConanRequester(ConfDefinition(), cache_folder)
+            requester.get(url="aaa", source_credentials=True)
+            headers = requester._http_requester.get.call_args[1]["headers"]
+            assert headers["myheader2"] == "myvalue2"
             assert f"Conan/{__version__}" in headers["User-Agent"]
