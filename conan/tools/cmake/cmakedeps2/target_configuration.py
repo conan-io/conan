@@ -187,26 +187,22 @@ class TargetConfigurationTemplate2:
                                for i in info.includedirs) if info.includedirs else ""
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
-        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
-                                                  comp_name=comp_name, check_type=list) or []
-        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
-        consumer = self._cmakedeps._conanfile  # noqa
-        cflags = info.cflags_consumer(consumer)
-        cxxflags = info.cxxflags_consumer(consumer)
-        sharedlinkflags = info.sharedlinkflags_consumer(consumer)
-        exelinkflags = info.exelinkflags_consumer(consumer)
-        defines = info.defines_consumer(consumer)
+        defines = " ".join(cmake_escape_value(f) for f in info.defines)
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  comp_name=comp_name, check_type=list) or []
+        sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
+        info.set_consumer(self._cmakedeps._conanfile)  # noqa
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
-                  "defines": " ".join(cmake_escape_value(f) for f in defines or []),
+                  "defines": defines,
                   "requires": requires,
-                  "cxxflags": " ".join(cmake_escape_value(f) for f in cxxflags),
-                  "cflags": " ".join(cmake_escape_value(f) for f in cflags),
-                  "sharedlinkflags": " ".join(cmake_escape_value(v) for v in sharedlinkflags),
-                  "exelinkflags": " ".join(cmake_escape_value(v) for v in exelinkflags),
+                  "cxxflags": " ".join(cmake_escape_value(f) for f in info.cxxflags),
+                  "cflags": " ".join(cmake_escape_value(f) for f in info.cflags),
+                  "sharedlinkflags": " ".join(cmake_escape_value(v) for v in info.sharedlinkflags),
+                  "exelinkflags": " ".join(cmake_escape_value(v) for v in info.exelinkflags),
                   "system_libs": " ".join(info.system_libs + extra_libs),
                   "sources": " ".join(sources)
                   }

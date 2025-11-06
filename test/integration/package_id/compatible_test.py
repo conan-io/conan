@@ -808,7 +808,8 @@ class TestCompatibleFlags:
                 requires = "pkg/0.1"
                 def generate(self):
                     cpp_info = self.dependencies["pkg"].cpp_info
-                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags_consumer(self)}!!!")
+                    cpp_info.set_consumer(self)
+                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
@@ -845,8 +846,9 @@ class TestCompatibleFlags:
                 settings = "os"
                 requires = "pkg/0.1"
                 def generate(self):
-                    flags = self.dependencies["pkg"].cpp_info.cxxflags_consumer(self)
-                    self.output.info(f"FLAGS: {flags}!!!")
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    cpp_info.set_consumer(self)
+                    self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
@@ -869,6 +871,33 @@ class TestCompatibleFlags:
               "-s os=Macos --build=missing")
         assert "dep1/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
         assert "dep2/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
+
+    def test_warnings(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def package_info(self):
+                    def myflags(conanfile):
+                        return ["-myflag"]
+                    self.cpp_info.cxxflags = myflags
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                requires = "pkg/0.1"
+                def generate(self):
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
+                """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
+
+        c.run("create pkg --name=pkg --version=0.1")
+        c.run("install consumer")
+        print(c.out)
+        assert "WARN: Callable for cxxflags:" in c.out
+        assert "FLAGS: []!!!" in c.out
 
 
 def test_compatibility_remove_cppstd():

@@ -89,6 +89,8 @@ class _Component:
         self._sysroot = None
         self._requires = None
 
+        self._consumer_conanfile = None
+
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = MockInfoProperty("cpp_info.names")
         self.filenames = MockInfoProperty("cpp_info.filenames")
@@ -103,6 +105,9 @@ class _Component:
         self._type = None
         self._location = None
         self._link_location = None
+
+    def set_consumer(self, conanfile):
+        self._consumer_conanfile = conanfile
 
     def serialize(self):
         return {
@@ -335,14 +340,15 @@ class _Component:
 
     @property
     def cflags(self):
-        if self._cflags is None or callable(self._cflags):
+        if self._cflags is None:
             self._cflags = []
+        elif callable(self._cflags):
+            if self._consumer_conanfile is None:
+                ConanOutput().warning(f"Callable for cflags: {self._cflags}, but generator "
+                                      "didn't call 'set_consumer()' first")
+                return []
+            return self._cflags(self._consumer_conanfile)
         return self._cflags
-
-    def cflags_consumer(self, consumer):
-        if callable(self._cflags):
-            return self._cflags(consumer)
-        return self.cflags
 
     @cflags.setter
     def cflags(self, value):
@@ -350,14 +356,15 @@ class _Component:
 
     @property
     def cxxflags(self):
-        if self._cxxflags is None or callable(self._cxxflags):  # To not break
+        if self._cxxflags is None:
             self._cxxflags = []
+        elif callable(self._cxxflags):
+            if self._consumer_conanfile is None:
+                ConanOutput().warning(f"Callable for cxxflags: {self._cxxflags}, but generator "
+                                      "didn't call 'set_consumer()' first")
+                return []
+            return self._cxxflags(self._consumer_conanfile)
         return self._cxxflags
-
-    def cxxflags_consumer(self, consumer):
-        if callable(self._cxxflags):
-            return self._cxxflags(consumer)
-        return self.cxxflags
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -365,14 +372,15 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
-        if self._sharedlinkflags is None or callable(self._sharedlinkflags):
+        if self._sharedlinkflags is None:
             self._sharedlinkflags = []
+        elif callable(self._sharedlinkflags):
+            if self._consumer_conanfile is None:
+                ConanOutput().warning(f"Callable for sharedlinkflags: {self._sharedlinkflags}, but "
+                                      f"generator didn't call 'set_consumer()' first")
+                return []
+            return self._sharedlinkflags(self._consumer_conanfile)
         return self._sharedlinkflags
-
-    def sharedlinkflags_consumer(self, consumer):
-        if callable(self._sharedlinkflags):
-            return self._sharedlinkflags(consumer)
-        return self.sharedlinkflags
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -380,14 +388,15 @@ class _Component:
 
     @property
     def exelinkflags(self):
-        if self._exelinkflags is None or callable(self._exelinkflags):
+        if self._exelinkflags is None:
             self._exelinkflags = []
+        elif callable(self._exelinkflags):
+            if self._consumer_conanfile is None:
+                ConanOutput().warning(f"Callable for exelinkflags: {self._exelinkflags}, but "
+                                      f"generator didn't call 'set_consumer()' first")
+                return []
+            return self._exelinkflags(self._consumer_conanfile)
         return self._exelinkflags
-
-    def exelinkflags_consumer(self, consumer):
-        if callable(self._exelinkflags):
-            return self._exelinkflags(consumer)
-        return self.exelinkflags
 
     @exelinkflags.setter
     def exelinkflags(self, value):
