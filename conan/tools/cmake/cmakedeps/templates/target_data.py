@@ -304,6 +304,8 @@ class _TargetDataContext(object):
             # Defines have to be escaped, included spaces
             return "\n\t\t\t".join('"%s%s"' % (prefix, cmake_escape_value(v)) for v in values)
 
+        cpp_info.set_consumer(cmakedeps._conanfile)  # noqa
+
         self.include_paths = join_paths(cpp_info.includedirs)
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)

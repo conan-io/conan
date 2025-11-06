@@ -702,6 +702,11 @@ class CppInfo:
         self.default_components = None
         self._package = _Component(set_defaults)
 
+    def set_consumer(self, conanfile):
+        self._package.set_consumer(conanfile)
+        for comp in self.components.values():
+            comp.set_consumer(conanfile)
+
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
         return getattr(self._package, attr)

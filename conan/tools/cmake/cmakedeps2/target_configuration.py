@@ -194,7 +194,6 @@ class TargetConfigurationTemplate2:
         extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
                                                   comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
-        info.set_consumer(self._cmakedeps._conanfile)  # noqa
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,

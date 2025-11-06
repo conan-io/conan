@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -728,7 +730,8 @@ def test_compatibility_new_setting_forwards_compat():
 
 class TestCompatibleFlags:
 
-    def test_compatible_flags(self):
+    @pytest.mark.parametrize("components", [True, False])
+    def test_compatible_flags(self, components):
         """ The compiler flags depends on the consumer settings, not on the binary compatible
         settings used to create that compatible binary. This test shows how the new info
         can be used to parameterize on the consumer settings
@@ -757,6 +760,8 @@ class TestCompatibleFlags:
                     self.cpp_info.sharedlinkflags = myflags
                     self.cpp_info.exelinkflags = myflags
            """)
+        if components:
+            conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
         consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -788,6 +793,11 @@ class TestCompatibleFlags:
         c.run("install consumer -s os=Macos -c tools.cmake.cmakedeps:new=will_break_next")
         cmake = c.load("consumer/pkg-Targets-release.cmake")
         _check("-other-os-flag", cmake)
+
+        # Check old CMakeDeps generator
+        c.run("install consumer -s os=Linux")
+        cmake = c.load("consumer/pkg-release-data.cmake")
+        assert "-mylinuxflag" in cmake
 
     def test_simple_lambda(self):
         """ same as above, but more compact condition
@@ -895,7 +905,6 @@ class TestCompatibleFlags:
 
         c.run("create pkg --name=pkg --version=0.1")
         c.run("install consumer")
-        print(c.out)
         assert "WARN: Callable for cxxflags:" in c.out
         assert "FLAGS: []!!!" in c.out
 
