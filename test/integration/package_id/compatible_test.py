@@ -791,9 +791,8 @@ def test_compatibility_different_settings_per_context(from_remote, update):
     tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg}")
 
 
-@pytest.mark.parametrize("from_remote", [True, False])
 @pytest.mark.parametrize("update", [True, False])
-def test_compatibility_different_settings_per_context_prevs(from_remote, update):
+def test_compatibility_different_settings_per_context_prevs(update):
     tc = TestClient(default_server_user=True)
     proto = GenConanfile("protobuf", "1.0").with_settings("compiler")
     proto.with_package_file("file.txt", env_var="MY_VAR")
