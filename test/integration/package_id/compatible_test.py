@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -768,3 +770,19 @@ def test_compatibility_remove_cppstd():
     # Now we try again, this time app will find the compatible dep without cppstd
     tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
     assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
+
+
+@pytest.mark.parametrize("from_remote", [True, False])
+def test_compatibility_different_settings_per_context(from_remote):
+    tc = TestClient(default_server_user=True)
+    tc.save({"protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+                .with_settings("compiler"),
+             "conanfile.py": GenConanfile("consumer", "1.0")
+                .with_require("protobuf/1.0")
+                .with_tool_requires("protobuf/1.0")
+    })
+    tc.run("create protobuf -s=compiler.cppstd=14")
+    if from_remote:
+        tc.run("upload * -r=default -c")
+        tc.run("remove * -c")
+    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing")

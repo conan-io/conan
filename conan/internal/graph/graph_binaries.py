@@ -166,7 +166,11 @@ class GraphBinariesAnalyzer:
                 node.binary = None  # Invalidate it
                 cache_latest_prev = self._compatible_cache_latest_prev(node)  # not check remotes
                 if cache_latest_prev:
-                    self._binary_in_cache(node, cache_latest_prev)
+                    # If we have binary info, it means that the package was already processed,
+                    # and we got a hit from the cache of compatibles
+                    if node.binary is None:
+                        self._binary_in_cache(node, cache_latest_prev)
+
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
             # If not found in the cache, then look first one in servers
@@ -205,7 +209,9 @@ class GraphBinariesAnalyzer:
         """
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node):
-            return
+            # If we have already processed this compatible pref,
+            # mark it as usable based on previous evaluation
+            return node.pref if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD) else None
 
         # TODO: Test that this works
         if node.conanfile.info.invalid:
