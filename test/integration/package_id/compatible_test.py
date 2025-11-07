@@ -773,7 +773,8 @@ def test_compatibility_remove_cppstd():
 
 
 @pytest.mark.parametrize("from_remote", [True, False])
-def test_compatibility_different_settings_per_context(from_remote):
+@pytest.mark.parametrize("update", [True, False])
+def test_compatibility_different_settings_per_context(from_remote, update):
     tc = TestClient(default_server_user=True)
     tc.save({"protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
                 .with_settings("compiler"),
@@ -785,4 +786,5 @@ def test_compatibility_different_settings_per_context(from_remote):
     if from_remote:
         tc.run("upload * -r=default -c")
         tc.run("remove * -c")
-    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing")
+    update_arg = "--update" if update else ""
+    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg}")
