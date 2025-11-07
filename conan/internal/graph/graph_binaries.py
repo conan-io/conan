@@ -195,6 +195,7 @@ class GraphBinariesAnalyzer:
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
+
                 if self._evaluate_is_cached(node):
                     # If we have already processed this compatible pref,
                     # mark it as usable based on previous evaluation
