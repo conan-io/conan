@@ -296,8 +296,12 @@ class MesonToolchain:
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
-        build_env = self._conanfile.buildenv_build.vars(self._conanfile) if native else (
-            VirtualBuildEnv(self._conanfile, auto_generate=True).vars())
+        venv = VirtualBuildEnv(self._conanfile, auto_generate=True)
+        if native:
+            # respect any vars from build requirements but prefer build profile vars if there are any
+            build_env = self._conanfile.buildenv_build.compose_env(venv.environment()).vars(self._conanfile)
+        else:
+            build_env = venv.vars()
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.

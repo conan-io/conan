@@ -653,6 +653,68 @@ def test_native_attribute():
     assert "[host_machine]" in cross_content
 
 
+def test_native_attribute_respects_environment_from_build_requirement():
+    """
+    Tests that environment vars set by build requirements are respected by the
+    native toolchain configuration
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    client = TestClient()
+    pkgconf = textwrap.dedent(r"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def package_info(self):
+                    self.buildenv_info.define_path("PKG_CONFIG", "/usr/local/mypkgconf")
+            """)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        tool_requires = "pkgconf/1.0"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.generate()
+            # We're cross-building, no need to check it
+            tc = MesonToolchain(self, native=True)
+            tc.generate()
+    """)
+    client.save({"host": host,
+                 "build": build,
+                 "pkgconf/conanfile.py": pkgconf,
+                 "conanfile.py": conanfile})
+
+    client.run("export pkgconf --name=pkgconf --version=1.0")
+    client.run("install . -pr:h host -pr:b build --build='*'")
+    native_content = client.load(MesonToolchain.native_filename)
+    assert "pkg-config = '/usr/local/mypkgconf'" in native_content
+
+
 def test_native_attribute_error():
     client = TestClient()
     conanfile = textwrap.dedent("""
