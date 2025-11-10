@@ -134,7 +134,7 @@ class TestFilters:
         c.save({"conanfile.py": GenConanfile()
                .with_class_attribute("author = 'myself'")
                .with_class_attribute("license = 'MIT'")
-               .with_class_attribute("url = 'http://url.com'")})
+               .with_class_attribute("url = 'https://url.com'")})
         c.run("graph info . ")
         assert "license: MIT" in c.out
         assert "author: myself" in c.out
@@ -154,7 +154,7 @@ class TestFilters:
         c.save({"conanfile.py": GenConanfile()
                .with_class_attribute("author = 'myself'")
                .with_class_attribute("license = 'MIT'")
-               .with_class_attribute("url = 'http://url.com'")})
+               .with_class_attribute("url = 'https://url.com'")})
         c.run("graph info . --filter=license --format=json")
         assert "author" not in c.out
         assert '"license": "MIT"' in c.out

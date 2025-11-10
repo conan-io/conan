@@ -1,5 +1,4 @@
 from conan.test.utils.tools import TestClient, GenConanfile
-from conan.internal.util.files import save
 
 
 class TestTransitiveIds:
