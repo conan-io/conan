@@ -88,12 +88,11 @@ def text_vuln_formatter(result):
             jfrog_advisories = [adv for adv in advisories
                                 if adv.get("name", "").startswith("JFSA-")]
             for adv in jfrog_advisories:
-                if adv:
+                if adv.get("shortDescription"):
                     cli_out_write(f"  Summary provided by JFrog Research ({adv['name']})",
                                   fg=Color.BRIGHT_GREEN)
-                    if adv.get("shortDescription"):
-                        cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
-                                                      indent=4))
+                    cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
+                                                  indent=4))
                     if adv.get("severity"):
                         cli_out_write(f"    Severity: ", endline="")
                         cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
@@ -253,12 +252,11 @@ vuln_html = """
           </td>
           <td>
             {% for research in vuln.advisories %}
+                {% if research.shortDescription %}
                 <div class="jfrog-research-summary">
                     <strong>Summary provided by JFrog Research <span style="color: green">({{ research.name }})</span></strong>
                     <div class="jfrog-research-details">
-                        {% if research.shortDescription %}
-                            <b>Short description:</b> {{ research.shortDescription }}<br>
-                        {% endif %}
+                        <b>Short description:</b> {{ research.shortDescription }}<br>
                         {% if research.severity %}
                             <b>Impact severity:</b> <span class="severity-badge severity-{{ research.severity }}">{{ research.severity }}</span><br>
                             {% if research.impactReasons %}
@@ -276,6 +274,7 @@ vuln_html = """
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
             {% endfor %}
             <strong>Description:</strong>
             <br>
