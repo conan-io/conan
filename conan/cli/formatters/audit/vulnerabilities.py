@@ -84,30 +84,29 @@ def text_vuln_formatter(result):
                 cli_out_write(" [WITHDRAWN]", fg=Color.BRIGHT_CYAN, endline="")
             cli_out_write(f" (Severity: {sev}{score_txt})", fg=sev_color)
             advisories = node.get("advisories", {})
-            jfrog_advisory = [adv for adv in advisories
-                              if adv.get("name", "").startswith("JFSA-")]
-            # Only ever one JFrog advisory per vulnerability
-            adv = jfrog_advisory[0] if jfrog_advisory else None
-            if adv:
-                cli_out_write(f"  Summary provided by JFrog Research ({adv['name']})",
-                              fg=Color.BRIGHT_GREEN)
-                if adv.get("shortDescription"):
-                    cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
-                                                  indent=4))
-                if adv.get("severity"):
-                    cli_out_write(f"    Severity: ", endline="")
-                    cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
-                    reasons = adv.get("impactReasons", [])
-                    if reasons:
-                        cli_out_write(f"    Impact reasons:")
-                        for reason in reasons:
-                            cli_out_write(wrap_and_indent(f"* {reason['name']}", indent=8),
-                                          fg=Color.GREEN if reason['isPositive'] else Color.RED)
-                if result["provider_url"]:
-                    expected_url = (result["provider_url"].rstrip("/")
-                                    + f"/ui/catalog/vulnerabilities/details/{adv['name']}")
-                    cli_out_write(f"    Url: {expected_url}")
-                cli_out_write("")
+            jfrog_advisories = [adv for adv in advisories
+                                if adv.get("name", "").startswith("JFSA-")]
+            for adv in jfrog_advisories:
+                if adv:
+                    cli_out_write(f"  Summary provided by JFrog Research ({adv['name']})",
+                                  fg=Color.BRIGHT_GREEN)
+                    if adv.get("shortDescription"):
+                        cli_out_write(wrap_and_indent(f"Short description: {adv['shortDescription']}",
+                                                      indent=4))
+                    if adv.get("severity"):
+                        cli_out_write(f"    Severity: ", endline="")
+                        cli_out_write(adv['severity'], fg=severity_colors.get(adv['severity']))
+                        reasons = adv.get("impactReasons", [])
+                        if reasons:
+                            cli_out_write(f"    Impact reasons:")
+                            for reason in reasons:
+                                cli_out_write(wrap_and_indent(f"* {reason['name']}", indent=8),
+                                              fg=Color.GREEN if reason['isPositive'] else Color.RED)
+                    if result["provider_url"]:
+                        expected_url = (result["provider_url"].rstrip("/")
+                                        + f"/ui/catalog/vulnerabilities/details/{adv['name']}")
+                        cli_out_write(f"    Url: {expected_url}")
+                    cli_out_write("")
 
             cli_out_write("\n" + desc_wrapped)
 
@@ -156,6 +155,7 @@ def _render_vulns(vulns, template):
     from conan import __version__
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(vulns=vulns, version=__version__)
+
 
 vuln_html = """
 <!DOCTYPE html>
@@ -247,31 +247,31 @@ vuln_html = """
             {{ vuln.score }}
           </td>
           <td>
-            {% if vuln.research %}
+            {% for research in vuln.advisories %}
                 <div class="jfrog-research-summary">
-                    <strong>Summary provided by JFrog Research <span style="color: green">({{ vuln.research.name }})</span></strong>
+                    <strong>Summary provided by JFrog Research <span style="color: green">({{ research.name }})</span></strong>
                     <div class="jfrog-research-details">
-                        {% if vuln.research.shortDescription %}
-                            <b>Short description:</b> {{ vuln.research.shortDescription }}<br>
+                        {% if research.shortDescription %}
+                            <b>Short description:</b> {{ research.shortDescription }}<br>
                         {% endif %}
-                        {% if vuln.research.severity %}
-                            <b>Impact severity:</b> <span class="severity-badge severity-{{ vuln.research.severity }}">{{ vuln.research.severity }}</span><br>
-                            {% if vuln.research.impactReasons %}
+                        {% if research.severity %}
+                            <b>Impact severity:</b> <span class="severity-badge severity-{{ research.severity }}">{{ research.severity }}</span><br>
+                            {% if research.impactReasons %}
                                 <b>Impact reasons:</b>
                                 <ul>
-                                {% for reason in vuln.research.impactReasons %}
+                                {% for reason in research.impactReasons %}
                                     <li style="color: {{ 'inherit' if reason.isPositive else 'red' }};">{{ reason.name }}</li>
                                 {% endfor %}
                                 </ul>
                             {% endif %}
                         {% endif %}
                         {% if vuln.provider_url %}
-                            {% set expected_url = vuln.provider_url.rstrip('/') + '/ui/catalog/vulnerabilities/details/' + vuln.research.name %}
+                            {% set expected_url = vuln.provider_url.rstrip('/') + '/ui/catalog/vulnerabilities/details/' + research.name %}
                             <b>More info available in:</b> <a href="{{ expected_url }}" target="_blank">{{ expected_url }}</a><br>
                         {% endif %}
                     </div>
                 </div>
-            {% endif %}
+            {% endfor %}
             <strong>Description:</strong>
             <br>
             {{ vuln.description }}
@@ -311,6 +311,7 @@ vuln_html = """
 </html>
 """
 
+
 def html_vuln_formatter(result):
     vulns = []
     for ref, pkg_info in result["data"].items():
@@ -326,7 +327,7 @@ def html_vuln_formatter(result):
                 "description": description,
                 "references": [],
                 "withdrawn": False,
-                "research": None,
+                "advisories": [],
                 "provider_url": result.get("provider_url"),
                 "fixVersions": []
             })
@@ -344,8 +345,8 @@ def html_vuln_formatter(result):
                 desc = node.get("description", "")
                 withdrawn = node.get("withdrawn", False)
                 advisories = node.get("advisories", [])
-                jfrogAdvisories = [adv for adv in advisories if adv.get("name", "").startswith("JFSA-")]
-                jfrogResearch = jfrogAdvisories[0] if jfrogAdvisories else None
+                jfrogAdvisories = [adv for adv in advisories
+                                   if adv.get("name", "").startswith("JFSA-")]
                 fixVersions = [fix['version']
                                for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
                                for fix in fix_edge['node'].get("fixVersions", [])]
@@ -358,7 +359,7 @@ def html_vuln_formatter(result):
                     "description": desc,
                     "references": references,
                     "withdrawn": withdrawn,
-                    "research": jfrogResearch,
+                    "advisories": jfrogAdvisories,
                     "provider_url": result.get("provider_url"),
                     "fixVersions": fixVersions
                 })
