@@ -3,7 +3,6 @@ import json
 import os
 import base64
 
-from conan.api.output import ConanOutput
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode

@@ -151,6 +151,7 @@ class PrivateProvider:
                             }}
                             aliases
                             withdrawn
+                            publishedAt
                             advisories {{
                                 name
                                 ...on JfrogAdvisory {{

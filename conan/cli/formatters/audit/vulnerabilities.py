@@ -78,6 +78,7 @@ def text_vuln_formatter(result):
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
             isWithdrawn = node.get("withdrawn", False)
+            publishedAt = node.get("publishedAt")
 
             cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
             if isWithdrawn:
@@ -109,6 +110,10 @@ def text_vuln_formatter(result):
                     cli_out_write("")
 
             cli_out_write("\n" + desc_wrapped)
+
+            if publishedAt:
+                cli_out_write(f"  Published at: ", endline="", fg=Color.BRIGHT_BLUE)
+                cli_out_write(publishedAt)
 
             references = node.get("references")
             if references:
@@ -275,6 +280,11 @@ vuln_html = """
             <strong>Description:</strong>
             <br>
             {{ vuln.description }}
+            {% if vuln.publishedAt %}
+                <br>
+                <br>
+                <strong>Published at:</strong> {{ vuln.publishedAt }}
+            {% endif %}
             {% if vuln.fixVersions %}
                 <div class="fix-versions-section">
                     <br>
@@ -329,7 +339,8 @@ def html_vuln_formatter(result):
                 "withdrawn": False,
                 "advisories": [],
                 "provider_url": result.get("provider_url"),
-                "fixVersions": []
+                "fixVersions": [],
+                "publishedAt": None
             })
         else:
             sorted_vulns = sorted(edges, key=lambda v: -severity_order.get(v["node"].get("severity", "Medium"), 2))
@@ -361,7 +372,8 @@ def html_vuln_formatter(result):
                     "withdrawn": withdrawn,
                     "advisories": jfrogAdvisories,
                     "provider_url": result.get("provider_url"),
-                    "fixVersions": fixVersions
+                    "fixVersions": fixVersions,
+                    "publishedAt": node.get("publishedAt")
                 })
 
     cli_out_write(_render_vulns(vulns, vuln_html))
