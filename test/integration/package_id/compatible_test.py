@@ -1,6 +1,9 @@
 import json
 import textwrap
 
+import pytest
+
+from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -768,3 +771,51 @@ def test_compatibility_remove_cppstd():
     # Now we try again, this time app will find the compatible dep without cppstd
     tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
     assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
+
+
+@pytest.mark.parametrize("from_remote", [True, False])
+@pytest.mark.parametrize("update", [True, False])
+def test_compatibility_different_settings_per_context(from_remote, update):
+    tc = TestClient(default_server_user=True)
+    tc.save({"protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+                .with_settings("compiler"),
+             "conanfile.py": GenConanfile("consumer", "1.0")
+                .with_require("protobuf/1.0")
+                .with_tool_requires("protobuf/1.0")
+    })
+    tc.run("create protobuf -s=compiler.cppstd=14")
+    if from_remote:
+        tc.run("upload * -r=default -c")
+        tc.run("remove * -c")
+    update_arg = "--update" if update else ""
+    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg}")
+
+
+@pytest.mark.parametrize("update", [True, False])
+def test_compatibility_different_settings_per_context_prevs(update):
+    tc = TestClient(default_server_user=True)
+    proto = GenConanfile("protobuf", "1.0").with_settings("compiler")
+    proto.with_package_file("file.txt", env_var="MY_VAR")
+    consumer = GenConanfile().with_requires("protobuf/1.0").with_tool_requires("protobuf/1.0")
+    tc.save({"protobuf/conanfile.py": proto,
+             "conanfile.py": consumer})
+
+    settings = "-s:a compiler=gcc -s:a compiler.version=9 -s:a compiler.libcxx=libstdc++"
+    with environment_update({"MY_VAR": "value"}):
+        tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+    tc.run("upload * -r=default -c")
+
+    tc2 = TestClient(servers=tc.servers)
+    tc2.save({"conanfile.py": consumer})
+    update_arg = "--update" if update else ""
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                               "Download (default)")})
+
+    with environment_update({"MY_VAR": "value2"}):
+        tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+    tc.run("upload * -r=default -c")
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    origin = "Cache" if not update else "Update (default)"
+    tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                               origin)})
