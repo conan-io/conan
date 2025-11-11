@@ -23,14 +23,14 @@ class TestConanRequesterCacertPath:
         with mock.patch("conan.internal.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(ConfDefinition())
             requester.get(url="aaa", verify=False)
-            assert requester._http_requester.verify == False
+            assert requester._http_requester.verify is False
 
     def test_default_verify(self):
         mocked_requester = MockRequesterGet()
         with mock.patch("conan.internal.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(ConfDefinition())
             requester.get(url="aaa", verify=True)
-            assert requester._http_requester.verify == True
+            assert requester._http_requester.verify is True
 
     def test_cache_config(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")

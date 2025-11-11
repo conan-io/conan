@@ -409,6 +409,31 @@ def test_cmake_extra_dependencies():
            "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep
 
 
+def test_cmake_extra_dependencies_components():
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_dependencies", ["MyOpenMPI"])
+                self.cpp_info.components["mycomp"].set_property("cmake_extra_interface_libs",
+                                                                ["MyOpenMPILib"])
+                self.cpp_info.components["mycomp"].libs = ["mycomplib"]
+                self.cpp_info.components["mycomp"].type = "static-library"
+                self.cpp_info.components["mycomp"].location = "lib/mycomp.a"
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
+    tc.run(f"install --requires=dep/0.1 {args}")
+    dep = tc.load("dep-Targets-release.cmake")
+    assert "find_dependency(MyOpenMPI REQUIRED )" in dep
+    assert "set_property(TARGET dep::mycomp APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep
+
+
 class TestRequiresToApp:
     def test_requires_to_application(self):
         c = TestClient()
@@ -544,7 +569,6 @@ class TestRequiresToApp:
         assert "automake::automake" not in targets
 
 
-
 def test_alias_cmakedeps_set_property():
     tc = TestClient()
     tc.save({"dep/conanfile.py": textwrap.dedent("""
@@ -601,7 +625,8 @@ def test_package_info_extra_variables():
             def package_info(self):
                 self.cpp_info.set_property("cmake_extra_variables", {"FOO": 42,
                                            "BAR": 42,
-                                           "CMAKE_GENERATOR_INSTANCE": "${GENERATOR_INSTANCE}/buildTools/",
+                                           "CMAKE_GENERATOR_INSTANCE":
+                                                 "${GENERATOR_INSTANCE}/buildTools/",
                                            "CACHE_VAR_DEFAULT_DOC": {"value": "hello world",
                                                                      "cache": True, "type": "PATH"}})
     """)

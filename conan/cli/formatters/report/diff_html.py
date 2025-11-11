@@ -12,13 +12,18 @@ diff_html = r"""
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file file-{{ "deleted" if file_info["is_deleted"] else (
-                                "new" if file_info["is_new"] else "old") }}"
+        <li class="file file-{{ "renamed" if file_info["renamed_to"] else (
+                                "deleted" if file_info["is_deleted"] else (
+                                "new" if file_info["is_new"] else "old")) }}"
             data-path="{{ file_info["relative_path"] }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
                 onclick="setDataIsLinked(event)" draggable="false"
                 class="side-link">
-                {{ name }}
+                {% if file_info["renamed_to"] %}
+                    {{ file_info["renamed_to"].split("/")[1:][-1] }}
+                {% else %}
+                    {{ name }}
+                {% endif %}
             </a>
         </li>
     {%- endfor %}
@@ -37,6 +42,10 @@ diff_html = r"""
                     <summary class="diff-summary">
                         <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
                             <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                            {% if file_info["renamed_to"] %}
+                                &nbsp;&#x2192&nbsp;
+                                <span>{{ replace_cache_paths(file_info["renamed_to"]) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                            {% endif %}
                         </b>
                         <div class="changes-count-container"></div>
                     </summary>
@@ -225,7 +234,8 @@ diff_html = r"""
             /* File Status Indicators */
             .sidebar li.file-new,
             .sidebar li.file-old,
-            .sidebar li.file-deleted {
+            .sidebar li.file-deleted,
+            .sidebar li.file-renamed {
                 list-style: none;
                 padding-left: 0;
             }
@@ -244,6 +254,12 @@ diff_html = r"""
             .sidebar li.file-deleted:before {
                 content: "-";
                 color: var(--sidebar-file-deleted-color);
+                font-weight: bold;
+            }
+
+            .sidebar li.file-renamed:before {
+                content: "\2192";
+                color: var(--sidebar-file-old-color);
                 font-weight: bold;
             }
 
