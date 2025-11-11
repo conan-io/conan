@@ -107,16 +107,14 @@ class PkgSignaturesPlugin:
             return {ref.repr_notime(): result}
 
         if context == "upload":
-            for rref, recipe_bundle in upload_data.refs().items():
+            for rref, packages in upload_data.items():
+                recipe_bundle = upload_data.recipe_dict(rref)
                 if recipe_bundle["upload"]:
-                    result = _sign(rref, recipe_bundle["files"],
-                                   self._cache.recipe_layout(rref).download_export())
-                    results.update(result)
-                for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
+                    _sign(rref, recipe_bundle["files"], self._cache.recipe_layout(rref).download_export())
+                for pref in packages:
+                    pkg_bundle = upload_data.package_dict(pref)
                     if pkg_bundle["upload"]:
-                        result = _sign(pref, pkg_bundle["files"],
-                                       self._cache.pkg_layout(pref).download_package())
-                        results.update(result)
+                        _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
         else:
             for rref, recipe_bundle in upload_data.refs().items():
                 if recipe_bundle:

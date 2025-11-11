@@ -124,14 +124,14 @@ class CacheAPI:
             for f in backup_files:
                 remove(f)
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
                 if build:
@@ -150,10 +150,11 @@ class CacheAPI:
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
             ref_layout = cache.recipe_layout(ref)
             recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
             recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
+            ref_bundle = package_list.recipe_dict(ref)
             ref_bundle["recipe_folder"] = recipe_folder
             out.info(f"Saving {ref}: {recipe_folder}")
             # Package only selected folders, not DOWNLOAD one
@@ -167,19 +168,20 @@ class CacheAPI:
             if os.path.exists(path):
                 tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
 
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 pref_layout = cache.pkg_layout(pref)
                 pkg_folder = pref_layout.package()
                 folder = os.path.relpath(pkg_folder, cache_folder)
                 folder = folder.replace("\\", "/")  # make win paths portable
-                pref_bundle["package_folder"] = folder
+                pkg_dict = package_list.package_dict(pref)
+                pkg_dict["package_folder"] = folder
                 out.info(f"Saving {pref}: {folder}")
                 tar_files[folder] = os.path.join(cache_folder, folder)
 
                 if os.path.exists(pref_layout.metadata()):
                     metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
                     metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
-                    pref_bundle["metadata_folder"] = metadata_folder
+                    pkg_dict["metadata_folder"] = metadata_folder
                     out.info(f"Saving {pref} metadata: {metadata_folder}")
                     tar_files[metadata_folder] = os.path.join(cache_folder, metadata_folder)
 
@@ -209,7 +211,8 @@ class CacheAPI:
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
+            ref_bundle = package_list.recipe_dict(ref)
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
             try:
@@ -222,8 +225,9 @@ class CacheAPI:
             # In the case of recipes, they are always "in place", so just checking it
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
             out.info(f"Restore: {ref} in {recipe_folder}")
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 pref.timestamp = revision_timestamp_now()
+                pref_bundle = package_list.package_dict(pref)
                 pref_bundle["timestamp"] = pref.timestamp
                 try:
                     pkg_layout = cache.pkg_layout(pref)
@@ -287,7 +291,7 @@ class CacheAPI:
 def _resolve_latest_ref(cache, ref):
     if ref.revision is None or ref.revision == "latest":
         ref.revision = None
-        result = cache.get_latest_recipe_reference(ref)
+        result = cache.get_latest_recipe_revision(ref)
         if result is None:
             raise ConanException(f"'{ref}' not found in cache")
         ref = result
@@ -298,7 +302,7 @@ def _resolve_latest_pref(cache, pref):
     pref.ref = _resolve_latest_ref(cache, pref.ref)
     if pref.revision is None or pref.revision == "latest":
         pref.revision = None
-        result = cache.get_latest_package_reference(pref)
+        result = cache.get_latest_package_revision(pref)
         if result is None:
             raise ConanException(f"'{pref.repr_notime()}' not found in cache")
         pref = result

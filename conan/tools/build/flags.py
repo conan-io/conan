@@ -1,4 +1,17 @@
+from conan.errors import ConanException
 from conan.internal.model.version import Version
+
+
+def disable_flag(conanfile, flag):
+    disable_flags = conanfile.conf.get("tools.gnu:disable_flags", check_type=list)
+    if disable_flags is None:
+        return False
+    valid = ["arch", "arch_link", "libcxx", "build_type", "build_type_link", "threads",
+             "cppstd", "cstd"]
+    for v in disable_flags:
+        if v not in valid:
+            raise ConanException(f"tools.gnu:disable_flags value '{v}', must be one of: {valid}")
+    return flag in disable_flags
 
 
 def architecture_flag(conanfile):
@@ -6,6 +19,8 @@ def architecture_flag(conanfile):
     returns flags specific to the target architecture and compiler
     Used by CMakeToolchain and AutotoolsToolchain
     """
+    if disable_flag(conanfile, "arch"):
+        return ""
     settings = conanfile.settings
     from conan.tools.apple.apple import _to_apple_arch
     compiler = settings.get_safe("compiler")
@@ -76,6 +91,8 @@ def architecture_link_flag(conanfile):
     """
     returns exclusively linker flags specific to the target architecture and compiler
     """
+    if disable_flag(conanfile, "arch_link"):
+        return ""
     compiler = conanfile.settings.get_safe("compiler")
     arch = conanfile.settings.get_safe("arch")
     if compiler == "emcc":
@@ -89,6 +106,8 @@ def architecture_link_flag(conanfile):
 def libcxx_flags(conanfile):
     libcxx = conanfile.settings.get_safe("compiler.libcxx")
     if not libcxx:
+        return None, None
+    if disable_flag(conanfile, "libcxx"):
         return None, None
     compiler = conanfile.settings.get_safe("compiler")
     lib = stdlib11 = None
@@ -144,6 +163,8 @@ def build_type_flags(conanfile):
     (-s, -g, /Zi, etc.)
     Used only by AutotoolsToolchain
     """
+    if disable_flag(conanfile, "build_type"):
+        return []
     settings = conanfile.settings
     compiler = settings.get_safe("compiler")
     build_type = settings.get_safe("build_type")
@@ -195,10 +216,13 @@ def build_type_flags(conanfile):
             return flags
     return []
 
+
 def threads_flags(conanfile):
     """
     returns flags specific to the threading model used by the compiler
     """
+    if disable_flag(conanfile, "threads"):
+        return []
     compiler = conanfile.settings.get_safe("compiler")
     threads = conanfile.settings.get_safe("compiler.threads")
     if compiler == "emcc":
@@ -207,6 +231,7 @@ def threads_flags(conanfile):
         elif threads == "wasm_workers":
             return ["-sWASM_WORKERS=1"]
     return []
+
 
 def llvm_clang_front(conanfile):
     # Only Windows clang with MSVC backend (LLVM/Clang, not MSYS2 clang)
@@ -217,7 +242,7 @@ def llvm_clang_front(conanfile):
     compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
     if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
         return "clang-cl"  # The MSVC-compatible front
-    return "clang" # The GNU-compatible front
+    return "clang"  # The GNU-compatible front
 
 
 def cppstd_flag(conanfile) -> str:
@@ -239,6 +264,9 @@ def cppstd_flag(conanfile) -> str:
     cppstd = conanfile.settings.get_safe("compiler.cppstd")
 
     if not compiler or not compiler_version or not cppstd:
+        return ""
+
+    if disable_flag(conanfile, "cppstd"):
         return ""
 
     func = {"gcc": _cppstd_gcc,
@@ -576,6 +604,9 @@ def cstd_flag(conanfile) -> str:
     cstd = conanfile.settings.get_safe("compiler.cstd")
 
     if not compiler or not compiler_version or not cstd:
+        return ""
+
+    if disable_flag(conanfile, "cstd"):
         return ""
 
     func = {"gcc": _cstd_gcc,

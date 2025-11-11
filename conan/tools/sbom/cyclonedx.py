@@ -1,5 +1,6 @@
 from conan import conan_version
 
+
 def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
     """
     (Experimental) Generate cyclone 1.4 SBOM with JSON format
@@ -28,25 +29,30 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     from datetime import datetime, timezone
     graph = conanfile.subgraph
 
-    has_special_root_node = not (getattr(graph.root.ref, "name", False) and getattr(graph.root.ref, "version", False) and getattr(graph.root.ref, "revision", False))
+    has_special_root_node = not (getattr(graph.root.ref, "name", False)
+                                 and getattr(graph.root.ref, "version", False)
+                                 and getattr(graph.root.ref, "revision", False))
     special_id = str(uuid.uuid4())
 
     name_default = getattr(graph.root.ref, "name", False) or "conan-sbom"
-    name_default += f"/{graph.root.ref.version}" if bool(getattr(graph.root.ref, "version", False)) else ""
-    nodes = [node for node in graph.nodes if (node.context == "host" or add_build) and (not node.test or add_tests)]
+    name_default += f"/{graph.root.ref.version}" if getattr(graph.root.ref, "version", False) else ""
+
+    nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
 
     dependencies = []
     if has_special_root_node:
         deps = {"ref": special_id,
-                "dependsOn": [_calculate_bomref(d.dst) for d in graph.root.edges]}
+                "dependsOn": [_calculate_bomref(d.dst) for d in graph.root.edges
+                              if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if (d.dst.context == "host" or add_build) and (not d.dst.test or add_tests)]
+        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep]
+        depends_on = [_calculate_bomref(d.dst) for d in dep
+                      if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -90,6 +96,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     }
     return sbom_cyclonedx_1_4
 
+
 def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
     """
     (Experimental) Generate cyclone 1.6 SBOM with JSON format
@@ -118,12 +125,15 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     from datetime import datetime, timezone
     graph = conanfile.subgraph
 
-    has_special_root_node = not (getattr(graph.root.ref, "name", False) and getattr(graph.root.ref, "version", False) and getattr(graph.root.ref, "revision", False))
+    has_special_root_node = not (getattr(graph.root.ref, "name", False)
+                                 and getattr(graph.root.ref, "version", False)
+                                 and getattr(graph.root.ref, "revision", False))
     special_id = str(uuid.uuid4())
 
     name_default = getattr(graph.root.ref, "name", False) or "conan-sbom"
-    name_default += f"/{graph.root.ref.version}" if bool(getattr(graph.root.ref, "version", False)) else ""
-    nodes = [node for node in graph.nodes if (node.context == "host" or add_build) and (not node.test or add_tests)]
+    name_default += f"/{graph.root.ref.version}" if getattr(graph.root.ref, "version", False) else ""
+
+    nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
 
@@ -131,13 +141,15 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     if has_special_root_node:
         deps = {"ref": special_id,
                 "dependsOn": [_calculate_bomref(d.dst)
-                              for d in graph.root.edges]}
+                              for d in graph.root.edges
+                              if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if (d.dst.context == "host" or add_build) and (not d.dst.test or add_tests)]
+        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep]
+        depends_on = [_calculate_bomref(d.dst) for d in dep
+                      if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -167,7 +179,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             },
             "timestamp": f"{datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
             "tools": {
-                "components":[{
+                "components": [{
                     "type": "application",
                     "name": "Conan-io",
                     "version": str(conan_version),
@@ -186,16 +198,18 @@ def _calculate_licenses(component):
     from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
     licenses = component.conanfile.license
 
-    if isinstance(licenses, str): # Just one license
+    if isinstance(licenses, str):  # Just one license
         field = "id" if licenses.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name"
-        return [{"license":{ field: licenses }}]
+        return [{"license": {field: licenses}}]
 
-    return [ # More than one license
+    return [
+        # More than one license
         {"license": {
-            "id" if l.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name": l
+            "id" if lic.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name": lic
         }}
-        for l in licenses
+        for lic in licenses
     ]
+
 
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
@@ -203,4 +217,5 @@ def _calculate_bomref(component):
     return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
 
 
-
+def should_add_node(node, add_build, add_tests):
+    return (node.context == "host" or add_build) and (not node.test or add_tests)

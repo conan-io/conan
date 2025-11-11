@@ -563,9 +563,6 @@ class TestComponentsCMakeGenerators:
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
-        consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
-            .with_generator("CMakeDeps")\
-            .with_requirement(RecipeReference("final", "0.1", None, None))
 
         consumer = textwrap.dedent("""
             from conan import ConanFile

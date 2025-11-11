@@ -23,7 +23,7 @@ class Workspace:
         self.folder = folder
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
-        self.output = ConanOutput(scope=self.name())
+        self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
 
     def name(self):
         return self.conan_data.get("name") or os.path.basename(self.folder)
@@ -48,10 +48,13 @@ class Workspace:
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
         packages = self.conan_data.setdefault("packages", [])
-        if any(p["path"] == path for p in packages):
-            self.output.warning(f"Package {path} already exists, skipping")
-            return
-        packages.append(editable)
+        for p in packages:
+            if p["path"] == path:
+                self.output.warning(f"Package {path} already exists, updating its reference")
+                p["ref"] = editable["ref"]
+                break
+        else:
+            packages.append(editable)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
     def remove(self, path):
@@ -104,3 +107,10 @@ class Workspace:
 
     def root_conanfile(self):  # noqa
         return None
+
+    def build_order(self, order):  # noqa
+        msg = ["Packages build order:"]
+        for level in order:
+            for item in level:
+                msg.append(f"    {item['ref']}")
+        self.output.info("\n".join(msg))

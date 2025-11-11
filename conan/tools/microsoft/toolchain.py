@@ -5,15 +5,16 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
+from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvs_toolset, msvc_runtime_flag, \
-    msvc_platform_from_arch
+    msvc_platform_from_arch, vs_ide_version
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
 
-class MSBuildToolchain(object):
+class MSBuildToolchain:
     """
     MSBuildToolchain class generator
     """
@@ -23,6 +24,9 @@ class MSBuildToolchain(object):
     _config_toolchain_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          {% if toolset_version_full_path %}
+          <Import Project="{{toolset_version_full_path}}" />
+          {% endif %}
           <ItemDefinitionGroup>
             <ClCompile>
               <PreprocessorDefinitions>{{ defines }}%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -76,6 +80,7 @@ class MSBuildToolchain(object):
         #: setting, else, it'll be based on ``msvc`` version.
         self.toolset = msvs_toolset(conanfile)
         self.properties = {}
+        self.toolset_version_full_path = _get_toolset_props(conanfile)
 
     def _name_condition(self, settings):
         platform = msvc_platform_from_arch(settings.get_safe("arch"))
@@ -156,7 +161,8 @@ class MSBuildToolchain(object):
             "compile_options": compile_options,
             "parallel": parallel,
             "properties": self.properties,
-            "winsdk_version": winsdk_version
+            "winsdk_version": winsdk_version,
+            "toolset_version_full_path": self.toolset_version_full_path
         }
 
     def _write_config_toolchain(self, config_filename):
@@ -217,3 +223,29 @@ class MSBuildToolchain(object):
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return cxxflags, cflags, defines, sharedlinkflags, exelinkflags
+
+
+def _get_toolset_props(conanfile):
+    msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
+    compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
+    if compiler_update is None:
+        return
+
+    vs_version = vs_ide_version(conanfile)
+    if int(vs_version) <= 14:
+        return
+    vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+    vs_path = vs_install_path or vs_installation_path(vs_version)
+    if not vs_path or not os.path.isdir(vs_path):
+        return
+
+    basebuild = os.path.normpath(os.path.join(vs_path, "VC/Auxiliary/Build"))
+    # The equivalent of compiler 19.26 is toolset 14.26
+    compiler_version = str(conanfile.settings.compiler.version)
+    vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+    for folder in os.listdir(basebuild):
+        if not os.path.isdir(os.path.join(basebuild, folder)):
+            continue
+        if folder.startswith(vcvars_ver):
+            result = folder
+            return os.path.join(basebuild, result, f"Microsoft.VCToolsVersion.{result}.props")

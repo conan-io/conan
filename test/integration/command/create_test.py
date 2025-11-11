@@ -54,7 +54,7 @@ def test_create():
             self.output.info("Running system requirements!!")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+    client.run("create --name=pkg --version=0.1 --user=lasote --channel=testing")
     assert "Profile host:\n[settings]" in client.out
     assert "pkg/0.1@lasote/testing: Generating the package" in client.out
     assert "Running system requirements!!" in client.out

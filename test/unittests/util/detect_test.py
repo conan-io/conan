@@ -27,7 +27,8 @@ class TestDetect:
         with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \
                 mock.patch("platform.processor", mock.MagicMock(return_value=processor)), \
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
-                mock.patch("conan.internal.api.detect.detect_api._get_aix_conf", mock.MagicMock(return_value=bitness)), \
+                mock.patch("conan.internal.api.detect.detect_api._get_aix_conf",
+                           mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
             result = detect_defaults_settings()
             result = dict(result)
@@ -82,11 +83,13 @@ def test_detect_cc_versioning(detect_runner_mock, version_return, expected_versi
     assert installed_version._value == Version(expected_version)._value
     assert installed_version == Version(expected_version)
 
+
 @pytest.mark.parametrize("function,version_return,expected_version", [
     [detect_suncc_compiler, "Sun C 5.13", ('sun-cc', Version("5.13"), 'cc')],
     [detect_intel_compiler, "Intel C++ Compiler 2025.0", ('intel-cc', Version("2025.0"), 'icx')],
 ])
 def test_detect_compiler(function, version_return, expected_version):
-    with mock.patch("conan.internal.api.detect.detect_api.detect_runner", mock.MagicMock(return_value=(0, version_return))):
+    with mock.patch("conan.internal.api.detect.detect_api.detect_runner",
+                    mock.MagicMock(return_value=(0, version_return))):
         ret = function()
         assert ret == expected_version
