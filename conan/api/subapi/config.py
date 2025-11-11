@@ -109,7 +109,7 @@ class ConfigAPI:
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
             config_versions = loadconanconfig(config_version_file)
-            if any(config_pref == r for r in config_versions):
+            if config_pref in config_versions:
                 if force:
                     ConanOutput().info(f"Package '{pkg}' already configured, "
                                        "but re-installation forced")
@@ -126,6 +126,10 @@ class ConfigAPI:
                               ignore=["conaninfo.txt", "conanmanifest.txt"])
         # We save the current reference in the file for future
         # To make it latest
+        # Not two references for the same package name are allowed, they are assumed to overwrite
+        # the previous one. So if pkg1/0.1 exists and pkg1/0.2 is installed, then the later one
+        # overwrites the previous one, and also changes the order, being latest in the list
+        # But that changes the "package_id" if there are multiple packages, not great
         config_versions = [c for c in config_versions if c.split("/", 1)[0] != pkg.ref.name]
         config_versions.append(pkg.ref.repr_notime())
         save(config_version_file, json.dumps({"config_version": config_versions}))

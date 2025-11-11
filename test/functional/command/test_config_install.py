@@ -5,7 +5,6 @@ import stat
 import textwrap
 
 import pytest
-import yaml
 from mock import patch
 
 from conan.api.model import Remote, RecipeReference

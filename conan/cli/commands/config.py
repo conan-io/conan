@@ -62,8 +62,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
     """
     subparser.add_argument("reference", nargs="?",
-                           help="Packag reference 'pkg/version' to install configuration from")
-    subparser.add_argument("-p", "--path", action=OnceArgument, help="Path too'conanconfig.json'")
+                           help="Package reference 'pkg/version' to install configuration from")
+    subparser.add_argument("-p", "--path", action=OnceArgument, help="Path to 'conanconfig.json'")
     subparser.add_argument("-l", "--lockfile", action=OnceArgument,
                            help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                                 "existing 'conan.lock' file")
