@@ -116,9 +116,9 @@ def test_pkg_sign_canonical():
 
     # Upload sign fails if package signing fails
     c.run("upload * -c -r default", assert_error=True)
-    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n\t:: Package already signed by the same provider" in c.out
-    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n\t:: Warn: Package already signed by another provider" in c.out
-    assert "ERROR: \n[Package signing plugin]\n  lib3fail/0.1#09ccc766ddd11c96aa78307b3f166fd6\n\t:: sign failed" in c.out
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n    :: Package already signed by the same provider" in c.out
+    assert "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n    :: Warn: Package already signed by another provider" in c.out
+    assert "ERROR: \n[Package signing plugin]\n  lib3fail/0.1#09ccc766ddd11c96aa78307b3f166fd6\n    :: sign failed" in c.out
 
     # If upload sign failed, no packages should be uploaded
     c.run("list * -r default")
@@ -131,9 +131,9 @@ def test_pkg_sign_canonical():
 
     # Install verify command should fail if package is signed by another provider
     c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
-    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n\t:: Verification ok" in c.out
+    assert "lib1ok/0.1#a5e2af5522a1edcab963447eec649700\n    :: Verification ok" in c.out
     assert "ERROR: Package 'lib2fail/0.1' not resolved: \n[Package signing plugin]\n  " \
-           "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n\t:: wrong provider" in c.out
+           "lib2fail/0.1#70a185be5a95af3dde25b74ae800b2f2\n    :: wrong provider" in c.out
 
     # Packages that failed in install verification should not appear as installed
     c.run("list *")
