@@ -152,6 +152,7 @@ class ConanCommand(BaseConanCommand):
         self._subcommands = {}
         self._group = group or "Other"
         self._name = method.__name__.replace("_", "-")
+        self._prog = self._name
 
     def add_subcommand(self, subcommand):
         subcommand.set_name(self.name)
@@ -159,7 +160,7 @@ class ConanCommand(BaseConanCommand):
 
     def run_cli(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
         self._init_formatters(parser)
         self._init_core_options(parser)
@@ -182,7 +183,7 @@ class ConanCommand(BaseConanCommand):
 
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
         self._init_formatters(parser)
         self._init_core_options(parser)
