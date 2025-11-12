@@ -9,7 +9,8 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None, no_skip=False):
+                 force=None, override=None, direct=None, options=None, no_skip=False,
+                 package_id_options=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -23,6 +24,7 @@ class Requirement:
         self._transitive_libs = transitive_libs
         self._test = test
         self._package_id_mode = package_id_mode
+        self.package_id_options = package_id_options
         self._force = force
         self._override = override
         self._direct = direct
@@ -382,10 +384,12 @@ class Requirement:
         embed_mode = getattr(dep_conanfile, "package_id_embed_mode", embed_mode)
         non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
         unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
+        pkg_id_options = getattr(dep_conanfile, "package_id_non_embed_options", None)
         if self.headers or self.libs:  # only if linked
             if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 if dep_pkg_type is PackageType.SHARED:
                     self.package_id_mode = non_embed_mode
+                    self.package_id_options = pkg_id_options
                 else:
                     self.package_id_mode = embed_mode
             elif pkg_type is PackageType.STATIC:
@@ -393,6 +397,7 @@ class Requirement:
                     self.package_id_mode = embed_mode
                 else:
                     self.package_id_mode = non_embed_mode
+                    self.package_id_options = pkg_id_options
 
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode

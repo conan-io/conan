@@ -50,6 +50,11 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
+    for require, transitive in node.transitive_deps.items():
+        if require.package_id_options:
+            for pkg_id_option in require.package_id_options:
+                v = getattr(transitive.node.conanfile.options, pkg_id_option)
+                setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)
 
     run_validate_package_id(conanfile, hook_manager)
 

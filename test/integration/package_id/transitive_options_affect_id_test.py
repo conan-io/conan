@@ -95,3 +95,38 @@ class TestTransitiveOptionsAffectPackageID:
                                 "lib3/0.1": ("7b10301e532fc0269d6ac70470aee5780f0836cd", "Build"),
                                 "lib4/0.1": ("dd8f5355b399fd7d96c883ddd39b992ae968cb14", "Build"),
                                 })
+
+    def test_auto_embed_options(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                package_id_non_embed_options = ["shared"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "pkg/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": app})
+        c.run("create pkg")
+        c.run("create pkg -o *:shared=True")
+        c.run("create app")
+        c.assert_listed_binary({"app": ("e822341e143eb3bba372e24b7cd908c8f91dc24e", "Build")})
+
+        c.run("list app/0.1:e822341e143eb3bba372e24b7cd908c8f91dc24e")
+        assert "pkg/*:shared: False" in c.out
+
+        c.run("create app -o *:shared=True")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+
+        c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
+        assert "pkg/*:shared: True" in c.out
