@@ -72,6 +72,7 @@ class PkgSignaturesPlugin:
         self._cache = cache
         self.sign_plugin_path = HomePaths(home_folder).sign_plugin_path
         self._plugin_sign_function = self._plugin_verify_function = None
+        self._output = ConanOutput(scope="[Package signing plugin]")
         if os.path.isfile(self.sign_plugin_path):
             mod, _ = load_python_file(self.sign_plugin_path)
             try:
@@ -86,24 +87,27 @@ class PkgSignaturesPlugin:
     def sign(self, upload_data, context="upload"):  # cache, upload,
         results = {}
         if self._plugin_sign_function is None:
-            ConanOutput().error(f"[Package signing plugin] sign() function not found in "
-                                f"{self.sign_plugin_path}")
+            self._output.error(f"sign() function not found in {self.sign_plugin_path}")
             return results
 
         def _sign(ref, files, folder, context="upload"):
-            output = ConanOutput(scope=f"{ref.repr_notime()}")
+            output = ConanOutput(scope=f"[Package signing plugin]\n  {ref.repr_notime()}\n    :")
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
             sign_tools = PkgSignaturesTools(folder, metadata_sign)
             try:
-                result = self._plugin_sign_function(ref, artifacts_folder=folder,
-                                                    signature_folder=metadata_sign, output=output,
+                result = self._plugin_sign_function(ref,
+                                                    artifacts_folder=folder,
+                                                    signature_folder=metadata_sign,
+                                                    output=output,
                                                     sign_tools=sign_tools)
             except (ConanException, AssertionError) as e:
                 result = _handle_failure(e, context, ref)
             # Add files to the pkglist/bundle
             for f in os.listdir(metadata_sign):
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
+            if result and context == "upload":
+                output.info(result)
             return {ref.repr_notime(): result}
 
         if context == "upload":
@@ -129,11 +133,10 @@ class PkgSignaturesPlugin:
         return results
 
     def verify(self, ref, folder, files, context="install"):
+        output = ConanOutput(scope=f"[Package signing plugin]\n  {ref.repr_notime()}\n    :")
         if self._plugin_verify_function is None:
-            ConanOutput().error(f"[Package signing plugin] verify() function not found in "
-                                f"{self.sign_plugin_path}")
+            self._output.error(f"verify() function not found in {self.sign_plugin_path}")
             return {}
-        output = ConanOutput(scope=f"{ref.repr_notime()}")
         metadata_sign = os.path.join(folder, METADATA, "sign")
         sign_tools = PkgSignaturesTools(folder, metadata_sign)
         try:
@@ -142,13 +145,14 @@ class PkgSignaturesPlugin:
                                                   output=output, sign_tools=sign_tools)
         except (ConanException, AssertionError) as e:
             result = _handle_failure(e, context, ref)
+        if result and context == "install":
+            output.info(result)
         return {ref.repr_notime(): result}
 
     def verify_pkglist(self, pkg_list, context="cache"):  # cache, install, upload
         results = {}
         if self._plugin_verify_function is None:
-            ConanOutput().error(f"[Package signing plugin] verify() function not found in "
-                                f"{self.sign_plugin_path}")
+            self._output.error(f"verify() function not found in {self.sign_plugin_path}")
             return results
 
         for rref, recipe_bundle in pkg_list.refs().items():
@@ -168,7 +172,7 @@ def _handle_failure(exception, action, ref):
     exception_msg = str(exception)
     if action in ["upload", "install"]:
         # TODO: Mark folder with set_dirty(artifacts_folder)
-        raise ConanException(f"{ref.repr_notime()}: {exception_msg}")
+        raise ConanException(f"\n[Package signing plugin]\n  {ref.repr_notime()}\n    :: {exception_msg}")
     else:
         error_msg = f"Failed: {exception_msg}" if exception_msg else "Failed"
         return error_msg
