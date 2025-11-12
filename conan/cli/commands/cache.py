@@ -176,9 +176,9 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     Sign packages with the Package Singing Plugin
     """
     subparser.add_argument("pattern", nargs="?",
-                           help="Selection pattern for references to check integrity for")
+                           help="Selection pattern for references to be signed")
     subparser.add_argument("-l", "--list", action=OnceArgument,
-                           help="Package list of packages to check integrity for")
+                           help="Package list of packages to be signed")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -206,9 +206,9 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     Check the signature of packages with the Package Singing Plugin
     """
     subparser.add_argument("pattern", nargs="?",
-                           help="Selection pattern for references to check integrity for")
+                           help="Selection pattern for references to verify their signature")
     subparser.add_argument("-l", "--list", action=OnceArgument,
-                           help="Package list of packages to check integrity for")
+                           help="Package list of packages to verify their signature")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
