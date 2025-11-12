@@ -444,6 +444,8 @@ def test_msbuild_generator():
     assert "hello1/1.0: Hello World Release" in client.out
 
 
+@pytest.mark.tool("visual_studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_install_reference_gcc():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
@@ -471,6 +473,8 @@ def test_install_reference_gcc():
     assert 'Project="conan_pkg_release_x64.props"' in pkg_props
 
 
+@pytest.mark.tool("visual_studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_custom_configuration():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
@@ -532,6 +536,8 @@ def test_custom_configuration_errors():
     assert "MSBuildDeps.platform is None, it should have a value" in client.out
 
 
+@pytest.mark.tool("visual_studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_install_transitive():
     # https://github.com/conan-io/conan/issues/8065
     client = TestClient()
@@ -626,6 +632,8 @@ def test_install_transitive_build_requires():
     assert "tool_build" not in pkg
 
 
+@pytest.mark.tool("visual_studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_install_reference():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
