@@ -148,6 +148,8 @@ class TestCustomCommands:
         assert "greet:bye" in client.out
 
         # Ensure the prog has the full command name
+        client.run("hello -h")
+        assert "conan hello" in client.out
         client.run("greet:bye -h")
         assert "conan greet:bye" in client.out
         client.run("greet:bye say -h")
