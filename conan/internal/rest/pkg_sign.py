@@ -120,12 +120,14 @@ class PkgSignaturesPlugin:
                     if pkg_bundle["upload"]:
                         _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
         else:
-            for rref, recipe_bundle in upload_data.refs().items():
+            for rref, packages in upload_data.items():
+                recipe_bundle = upload_data.recipe_dict(rref)
                 if recipe_bundle:
                     result = _sign(rref, {}, self._cache.recipe_layout(rref).download_export(),
                                    context)
                     results.update(result)
-                for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle).items():
+                for pref in packages:
+                    pkg_bundle = upload_data.package_dict(pref)
                     if pkg_bundle:
                         result = _sign(pref, {}, self._cache.pkg_layout(pref).download_package(),
                                        context)
@@ -155,12 +157,14 @@ class PkgSignaturesPlugin:
             self._output.error(f"verify() function not found in {self.sign_plugin_path}")
             return results
 
-        for rref, recipe_bundle in pkg_list.refs().items():
+        for rref, packages in pkg_list.items():
+            recipe_bundle = pkg_list.recipe_dict(rref)
             if recipe_bundle:
                 rref_folder = self._cache.recipe_layout(rref).download_export()
                 result = self.verify(rref, rref_folder, os.listdir(rref_folder), context)
                 results.update(result)
-            for pref, pkg_bundle in pkg_list.prefs(rref, recipe_bundle).items():
+            for pref in packages:
+                pkg_bundle = pkg_list.package_dict(pref)
                 if pkg_bundle:
                     pref_folder = self._cache.pkg_layout(pref).download_package()
                     result = self.verify(pref, pref_folder, os.listdir(pref_folder), context)
