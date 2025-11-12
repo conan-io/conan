@@ -502,3 +502,17 @@ def test_graph_info_bundle():
 
     c.run("graph info . -c tools.graph:vendor=build --build='lib*'")
     c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
+def test_graph_info_provides_conflict_html():
+    """ This test also makes sure that the serialization of the GraphProvidesConflict works"""
+    tc = TestClient(light=True)
+    tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
+             "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
+
+    tc.run("export bar")
+    tc.run("export foo")
+    tc.run("graph info --requires=bar/1.0 --requires=foo/1.0 --format=html", assert_error=True)
+    # It got properly serialized
+    assert '"type": "provide_conflict"' in tc.out
+    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'"
