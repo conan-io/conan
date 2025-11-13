@@ -9,6 +9,7 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.assets.visual_project_files import get_vs_project_files
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
+
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
@@ -54,7 +55,7 @@ EndGlobal
 
 myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
-       xmlns="https://schemas.microsoft.com/developer/msbuild/2003">
+       xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -225,7 +226,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 
 myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
-          xmlns="https://schemas.microsoft.com/developer/msbuild/2003">
+          xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -609,6 +610,8 @@ def test_install_build_requires():
     assert "Conan_tools.props not in deps" in client.out
 
 
+@pytest.mark.tool("visual_studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_install_transitive_build_requires():
     # https://github.com/conan-io/conan/issues/8170
     client = TestClient()
@@ -901,7 +904,7 @@ def test_build_requires():
             """)
     hello_vcxproj = textwrap.dedent(r"""<?xml version="1.0" encoding="utf-8"?>
         <Project DefaultTargets="Build" ToolsVersion="15.0"
-               xmlns="https://schemas.microsoft.com/developer/msbuild/2003">
+               xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <ItemGroup Label="ProjectConfigurations">
             <ProjectConfiguration Include="Release|Win32">
               <Configuration>Release</Configuration>
