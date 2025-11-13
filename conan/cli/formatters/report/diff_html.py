@@ -154,6 +154,19 @@ diff_html = r"""
                 margin: 5px;
             }
 
+            .file-tree-controls {
+                border-bottom: 1px solid var(--search-area-borderColor);
+                padding: 5px;
+            }
+
+            .file-tree-controls button {
+                cursor: pointer;
+                border: 1px solid var(--search-field-borderColor);
+                border-radius: 5px;
+                background: none;
+                padding: 5px;
+            }
+
             .file-list {
                 padding-left: 10px;
                 width: 100%;
@@ -699,6 +712,20 @@ diff_html = r"""
                     }
                 });
             }
+
+            function toggleFolders(open) {
+                if (open) {
+                    const toOpen = document.querySelectorAll('details.folder:open > ul > li > details.folder:not(:open)');
+                    if (toOpen.length === 0) {
+                        // We might need to open the root folders
+                        document.querySelectorAll('.file-list > li > details.folder:not(:open)').forEach(d => d.open = true);
+                    } else {
+                        toOpen.forEach(d => d.open = true);
+                    }
+                } else {
+                    document.querySelectorAll('details.folder:open').forEach(d => d.open = false);
+                }
+            }
         </script>
     </head>
     <body>
@@ -711,9 +738,15 @@ diff_html = r"""
                         <span id="searching_icon" style="display:none">...</span>
                         <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
                     </div>
-                    <ul class="file-list">
-                        {{ render_sidebar_folder("", per_folder) }}
-                    </ul>
+                    <div class="file-tree">
+                        <div class="file-tree-controls">
+                            <button onclick="toggleFolders(true)">Expand level</button>
+                            <button onclick="toggleFolders(false)">Collapse all</button>
+                        </div>
+                        <ul class="file-list">
+                            {{ render_sidebar_folder("", per_folder) }}
+                        </ul>
+                    </div>
                 </div>
                 <span id="empty_search" style="display:none">No results found</span>
             </div>
