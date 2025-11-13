@@ -149,7 +149,7 @@ class ConanOutput:
         v = env_level or v
         levels = cls.valid_log_levels()
         try:
-            level = levels[v] if isinstance(v, str) else v
+            level = levels[v] if isinstance(v, (str, None)) else v
         except KeyError:
             msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
