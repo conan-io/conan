@@ -301,7 +301,7 @@ class WorkspaceAPI:
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)
-        conanfile.workspace_packages_options = {}
+        conanfile.workspace_packages = {}
         for node in deps_graph.nodes[1:]:  # Exclude the current root
             if node.recipe != RECIPE_EDITABLE:
                 # sanity check, a pacakge in the cache cannot have dependencies to the workspace
@@ -313,7 +313,7 @@ class WorkspaceAPI:
                                          f"in the workspace: {deps_edit}")
                 result.add_node(node)
                 continue
-            conanfile.workspace_packages_options[node.ref] = node.conanfile.options.serialize()
+            conanfile.workspace_packages[node.ref] = node.conanfile
             for r, t in node.transitive_deps.items():
                 if t.node.recipe == RECIPE_EDITABLE:
                     continue

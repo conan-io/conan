@@ -59,10 +59,11 @@ class Workspace:
 
     def remove(self, path):
         path = self._conan_rel_path(path)
-        package_found = next(package_info for package_info in self.conan_data.get("packages", [])
-                             if package_info["path"].replace("\\", "/") == path)
+        package_found = [p for p in self.conan_data.get("packages", [])
+                         if p["path"].replace("\\", "/") == path]
         if not package_found:
             raise ConanException(f"No editable package to remove from this path: {path}")
+        package_found = package_found[0]
         self.conan_data["packages"].remove(package_found)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
         return path
