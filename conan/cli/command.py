@@ -49,7 +49,7 @@ class BaseConanCommand:
     def _init_core_options(parser):
         # Define possible levels, including "" for verbose
         possible_levels = list(ConanOutput.valid_log_levels().keys())
-        possible_levels[possible_levels.index(None)] = ""
+        possible_levels.pop(possible_levels.index(None))
         parser.add_argument("-v", default="status", nargs='?',
                             help="Level of detail of the output. Valid options from less verbose "
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
