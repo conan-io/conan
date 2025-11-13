@@ -72,7 +72,6 @@ class PkgSignaturesPlugin:
         self._cache = cache
         self.sign_plugin_path = HomePaths(home_folder).sign_plugin_path
         self._plugin_sign_function = self._plugin_verify_function = None
-        self._output = ConanOutput(scope="[Package signing plugin]")
         if os.path.isfile(self.sign_plugin_path):
             mod, _ = load_python_file(self.sign_plugin_path)
             try:
@@ -87,8 +86,8 @@ class PkgSignaturesPlugin:
     def sign(self, upload_data, context="upload"):  # cache, upload,
         results = {}
         if self._plugin_sign_function is None:
-            self._output.error(f"sign() function not found in {self.sign_plugin_path}")
-            return results
+            raise ConanException("[Package Signing Plugin] sign() function not found "
+                                 f"in {self.sign_plugin_path}")
 
         def _sign(ref, files, folder, context="upload"):
             output = ConanOutput(scope=f"[Package signing plugin]\n  {ref.repr_notime()}\n    :")
@@ -137,8 +136,8 @@ class PkgSignaturesPlugin:
     def verify(self, ref, folder, files, context="install"):
         output = ConanOutput(scope=f"[Package signing plugin]\n  {ref.repr_notime()}\n    :")
         if self._plugin_verify_function is None:
-            self._output.error(f"verify() function not found in {self.sign_plugin_path}")
-            return {}
+            raise ConanException("[Package Signing Plugin] verify() function not found in "
+                                 f"{self.sign_plugin_path}")
         metadata_sign = os.path.join(folder, METADATA, "sign")
         sign_tools = PkgSignaturesTools(folder, metadata_sign)
         try:
@@ -154,8 +153,8 @@ class PkgSignaturesPlugin:
     def verify_pkglist(self, pkg_list, context="cache"):  # cache, install, upload
         results = {}
         if self._plugin_verify_function is None:
-            self._output.error(f"verify() function not found in {self.sign_plugin_path}")
-            return results
+            raise ConanException("[Package Signing Plugin] verify() function not found in "
+                                 f"{self.sign_plugin_path}")
 
         for rref, packages in pkg_list.items():
             recipe_bundle = pkg_list.recipe_dict(rref)

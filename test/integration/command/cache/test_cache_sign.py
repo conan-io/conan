@@ -12,10 +12,10 @@ def test_pkg_sign_no_plugin():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
-    c.run("cache sign *")
-    assert "[Package signing plugin]: ERROR: sign() function not found" in c.out
-    c.run("cache verify *")
-    assert "[Package signing plugin]: ERROR: verify() function not found" in c.out
+    c.run("cache sign *", assert_error=True)
+    assert "ERROR: [Package Signing Plugin] sign() function not found" in c.out
+    c.run("cache verify *", assert_error=True)
+    assert "ERROR: [Package Signing Plugin] verify() function not found" in c.out
 
 
 def test_pkg_sign_basic():
