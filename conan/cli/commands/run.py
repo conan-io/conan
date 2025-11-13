@@ -14,7 +14,7 @@ def run(conan_api, parser, *args):
     (Experimental) Run a command given a set of requirements from a recipe or from command line.
     """
     common_graph_args(parser)
-    parser.add_argument("command", help="Command to run", nargs='+')
+    parser.add_argument("command", help="Command to run")
     parser.add_argument("--context", help="Context to use, by default both contexts are activated "
                                           "if not specified",
                         choices=["host", "build"], default=None)
@@ -22,7 +22,6 @@ def run(conan_api, parser, *args):
                         help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-    command = " ".join(args.command)
     cwd = os.getcwd()
 
     ConanOutput().info("Installing and building dependencies, this might take a while...",
@@ -52,4 +51,4 @@ def run(conan_api, parser, *args):
         envfiles = list(context_env_map.values()) if args.context is None \
             else [context_env_map.get(args.context)]
         ConanOutput.define_log_level(LEVEL_ERROR)
-        deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
+        deps_graph.root.conanfile.run(args.command, cwd=cwd, env=envfiles)
