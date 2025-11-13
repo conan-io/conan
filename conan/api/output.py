@@ -127,6 +127,7 @@ class ConanOutput:
     def current_log_level(cls):
         return cls._conan_output_level
 
+    @classmethod
     def valid_log_levels(cls):
         return {"quiet": LEVEL_QUIET,  # -vquiet 80
             "error": LEVEL_ERROR,  # -verror 70
@@ -147,7 +148,7 @@ class ConanOutput:
         v = env_level or v
         levels = cls.valid_log_levels()
         try:
-            level = levels[v]
+            level = levels[v] if isinstance(v, str) else v
         except KeyError:
             msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
