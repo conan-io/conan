@@ -194,7 +194,7 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
     else:
-        ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+        ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     return conan_api.cache.sign(package_list)
 
@@ -224,7 +224,7 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
     else:
-        ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+        ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     return conan_api.cache.verify(package_list)
 
